@@ -35,7 +35,7 @@ function Get-PositionMetrics {
         $minPnl = [double]::MaxValue
         
         foreach ($pos in $positions) {
-            $pnl = [double]$pos.pnl
+            $pnl = [double]$pos.realized_pnl
             $totalPnl += $pnl
             
             if ($pnl -gt 0) { $wins++ }
@@ -56,12 +56,17 @@ function Get-PositionMetrics {
             [math]::Round(($wins / $totalTrades) * 100, 1)
         } else { 0 }
         
-        $avgWin = if ($wins -gt 0) {
-            [math]::Round(($positions | Where-Object { [double]$_.pnl -gt 0 } | Measure-Object -Property { [double]$_.pnl } -Average).Average, 2)
+        $winningTrades = $positions | Where-Object { [double]$_.realized_pnl -gt 0 }
+        $losingTrades = $positions | Where-Object { [double]$_.realized_pnl -lt 0 }
+        
+        $avgWin = if ($wins -gt 0 -and $winningTrades) {
+            $sum = ($winningTrades | ForEach-Object { [double]$_.realized_pnl } | Measure-Object -Sum).Sum
+            [math]::Round($sum / $wins, 2)
         } else { 0 }
         
-        $avgLoss = if ($losses -gt 0) {
-            [math]::Round(($positions | Where-Object { [double]$_.pnl -lt 0 } | Measure-Object -Property { [double]$_.pnl } -Average).Average, 2)
+        $avgLoss = if ($losses -gt 0 -and $losingTrades) {
+            $sum = ($losingTrades | ForEach-Object { [double]$_.realized_pnl } | Measure-Object -Sum).Sum
+            [math]::Round($sum / $losses, 2)
         } else { 0 }
         
         $profitFactor = if ($avgLoss -ne 0) {
@@ -81,8 +86,8 @@ function Get-PositionMetrics {
             }
             
             $marketStats[$market].trades++
-            if ([double]$pos.pnl -gt 0) { $marketStats[$market].wins++ }
-            $marketStats[$market].pnl += [double]$pos.pnl
+            if ([double]$pos.realized_pnl -gt 0) { $marketStats[$market].wins++ }
+            $marketStats[$market].pnl += [double]$pos.realized_pnl
         }
         
         # 5. Top 5 markets
@@ -123,6 +128,20 @@ function Generate-HTML {
     if (-not $Metrics) {
         return "<html><body><h1>Erro ao carregar métricas</h1></body></html>"
     }
+    
+    # Pre-calcular valores para evitar problemas com here-strings
+    $timestamp = $Metrics.timestamp
+    $openPos = $Metrics.open_positions
+    $totalTrades = $Metrics.total_trades
+    $winRate = $Metrics.win_rate
+    $totalPnl = $Metrics.total_pnl
+    $wins = $Metrics.wins
+    $losses = $Metrics.losses
+    $avgWin = $Metrics.avg_win
+    $avgLoss = $Metrics.avg_loss
+    $profitFactor = $Metrics.profit_factor
+    
+    $pnlClass = if ($totalPnl -gt 0) { "positive" } else { "negative" }
     
     $html = @"
 <!DOCTYPE html>
@@ -303,53 +322,53 @@ function Generate-HTML {
     <div class="container">
         <div class="header">
             <h1>📊 Position Management Dashboard</h1>
-            <div class="timestamp">Última atualização: $($Metrics.timestamp)</div>
+            <div class="timestamp">Última atualização: $timestamp</div>
         </div>
         
         <div class="metrics-grid">
             <div class="metric-card">
                 <div class="label">Posições Abertas</div>
-                <div class="value">$($Metrics.open_positions)</div>
+                <div class="value">$openPos</div>
             </div>
             
             <div class="metric-card">
                 <div class="label">Total de Trades</div>
-                <div class="value">$($Metrics.total_trades)</div>
+                <div class="value">$totalTrades</div>
             </div>
             
             <div class="metric-card positive">
                 <div class="label">Win Rate</div>
-                <div class="value">$($Metrics.win_rate)%</div>
+                <div class="value">$winRate%</div>
             </div>
             
-            <div class="metric-card $(if($Metrics.total_pnl -gt 0){'positive'}else{'negative'})">
+            <div class="metric-card $pnlClass">
                 <div class="label">PnL Total</div>
-                <div class="value">$$($Metrics.total_pnl)</div>
+                <div class="value">`$$totalPnl</div>
             </div>
             
             <div class="metric-card positive">
                 <div class="label">Wins</div>
-                <div class="value">$($Metrics.wins)</div>
+                <div class="value">$wins</div>
             </div>
             
             <div class="metric-card negative">
                 <div class="label">Losses</div>
-                <div class="value">$($Metrics.losses)</div>
+                <div class="value">$losses</div>
             </div>
             
             <div class="metric-card positive">
                 <div class="label">Avg Win</div>
-                <div class="value">$$($Metrics.avg_win)</div>
+                <div class="value">`$$avgWin</div>
             </div>
             
             <div class="metric-card negative">
                 <div class="label">Avg Loss</div>
-                <div class="value">$$($Metrics.avg_loss)</div>
+                <div class="value">`$$avgLoss</div>
             </div>
             
             <div class="metric-card">
                 <div class="label">Profit Factor</div>
-                <div class="value">$($Metrics.profit_factor)x</div>
+                <div class="value">$profitFactor`x</div>
             </div>
         </div>
         
@@ -369,19 +388,24 @@ function Generate-HTML {
 "@
     
     foreach ($market in $Metrics.top5_markets) {
-        $winRate = if ($market.Value.trades -gt 0) {
-            [math]::Round(($market.Value.wins / $market.Value.trades) * 100, 1)
+        $marketName = $market.Key
+        $marketTrades = $market.Value.trades
+        $marketWins = $market.Value.wins
+        $marketPnl = [math]::Round($market.Value.pnl, 2)
+        
+        $winRate = if ($marketTrades -gt 0) {
+            [math]::Round(($marketWins / $marketTrades) * 100, 1)
         } else { 0 }
         
-        $pnlClass = if ($market.Value.pnl -gt 0) { "positive" } else { "negative" }
+        $pnlClass = if ($marketPnl -gt 0) { "positive" } else { "negative" }
         
         $html += @"
                     <tr>
-                        <td><strong>$($market.Key)</strong></td>
-                        <td>$($market.Value.trades)</td>
-                        <td>$($market.Value.wins)</td>
+                        <td><strong>$marketName</strong></td>
+                        <td>$marketTrades</td>
+                        <td>$marketWins</td>
                         <td>$winRate%</td>
-                        <td class="$pnlClass">$$([math]::Round($market.Value.pnl, 2))</td>
+                        <td class="$pnlClass">`$$marketPnl</td>
                     </tr>
 "@
     }
@@ -413,28 +437,32 @@ function Generate-HTML {
 "@
         
         foreach ($pos in $Metrics.open_positions_detail) {
-            $entryPrice = [double]$pos.open_price
-            $currentPrice = [double]$pos.latest_price
-            $liqPrice = [double]$pos.liquidation_price
+            $market = $pos.market
+            $side = $pos.side.ToUpper()
+            $entryPrice = [math]::Round([double]$pos.open_price, 4)
+            $currentPrice = [math]::Round([double]$pos.latest_price, 4)
+            $liqPrice = [math]::Round([double]$pos.liquidation_price, 4)
+            $leverage = $pos.leverage
             
             $pnlPct = if ($pos.side -eq "long") {
                 (($currentPrice - $entryPrice) / $entryPrice) * 100
             } else {
                 (($entryPrice - $currentPrice) / $entryPrice) * 100
             }
+            $pnlPct = [math]::Round($pnlPct, 2)
             
             $pnlClass = if ($pnlPct -gt 0) { "positive" } else { "negative" }
             $sideClass = if ($pos.side -eq "long") { "long" } else { "short" }
             
             $html += @"
                     <tr>
-                        <td><strong>$($pos.market)</strong></td>
-                        <td><span class="badge $sideClass">$($pos.side.ToUpper())</span></td>
-                        <td>$$entryPrice</td>
-                        <td>$$currentPrice</td>
-                        <td class="$pnlClass">$([math]::Round($pnlPct, 2))%</td>
-                        <td>$($pos.leverage)x</td>
-                        <td>$$liqPrice</td>
+                        <td><strong>$market</strong></td>
+                        <td><span class="badge $sideClass">$side</span></td>
+                        <td>`$$entryPrice</td>
+                        <td>`$$currentPrice</td>
+                        <td class="$pnlClass">$pnlPct%</td>
+                        <td>$leverage`x</td>
+                        <td>`$$liqPrice</td>
                     </tr>
 "@
         }
@@ -468,28 +496,34 @@ function Generate-HTML {
     
     if ($Metrics.best_trade) {
         $bt = $Metrics.best_trade
+        $btEntry = [math]::Round([double]$bt.avg_entry_price, 4)
+        $btSettle = [math]::Round([double]$bt.settle_price, 4)
+        $btPnl = [math]::Round([double]$bt.realized_pnl, 2)
         $html += @"
                     <tr>
                         <td><strong style="color: #10b981;">🏆 MELHOR</strong></td>
                         <td><strong>$($bt.market)</strong></td>
                         <td><span class="badge $(if($bt.side -eq 'long'){'long'}else{'short'})">$($bt.side.ToUpper())</span></td>
-                        <td>$$($bt.entry_price)</td>
-                        <td>$$($bt.exit_price)</td>
-                        <td class="positive">+$$($bt.pnl)</td>
+                        <td>`$$btEntry</td>
+                        <td>`$$btSettle</td>
+                        <td class="positive">+`$$btPnl</td>
                     </tr>
 "@
     }
     
     if ($Metrics.worst_trade) {
         $wt = $Metrics.worst_trade
+        $wtEntry = [math]::Round([double]$wt.avg_entry_price, 4)
+        $wtSettle = [math]::Round([double]$wt.settle_price, 4)
+        $wtPnl = [math]::Round([double]$wt.realized_pnl, 2)
         $html += @"
                     <tr>
                         <td><strong style="color: #ef4444;">💔 PIOR</strong></td>
                         <td><strong>$($wt.market)</strong></td>
                         <td><span class="badge $(if($wt.side -eq 'long'){'long'}else{'short'})">$($wt.side.ToUpper())</span></td>
-                        <td>$$($wt.entry_price)</td>
-                        <td>$$($wt.exit_price)</td>
-                        <td class="negative">$$($wt.pnl)</td>
+                        <td>`$$wtEntry</td>
+                        <td>`$$wtSettle</td>
+                        <td class="negative">`$$wtPnl</td>
                     </tr>
 "@
     }
@@ -528,10 +562,10 @@ try {
     }
     
     Write-Host "[OK] Metricas coletadas" -ForegroundColor Green
-    Write-Host "  Posições abertas: $($metrics.open_positions)" -ForegroundColor Gray
+    Write-Host "  Posicoes abertas: $($metrics.open_positions)" -ForegroundColor Gray
     Write-Host "  Total trades: $($metrics.total_trades)" -ForegroundColor Gray
     Write-Host "  Win rate: $($metrics.win_rate)%" -ForegroundColor Gray
-    Write-Host "  PnL total: $$($metrics.total_pnl)" -ForegroundColor Gray
+    Write-Host "  PnL total: `$$($metrics.total_pnl)" -ForegroundColor Gray
     
     # 2. Gerar HTML
     Write-Host "`nGerando HTML..." -ForegroundColor Yellow
