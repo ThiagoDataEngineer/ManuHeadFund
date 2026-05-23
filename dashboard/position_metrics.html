@@ -1,0 +1,315 @@
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="refresh" content="300">
+    <title>Position Management Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+        
+        .header {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header .timestamp {
+            color: #666;
+            font-size: 0.9em;
+        }
+        
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .metric-card {
+            background: white;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            transition: transform 0.3s ease;
+        }
+        
+        .metric-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        
+        .metric-card .label {
+            font-size: 0.9em;
+            color: #666;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+        }
+        
+        .metric-card .value {
+            font-size: 2.5em;
+            font-weight: bold;
+            color: #667eea;
+        }
+        
+        .metric-card.positive .value {
+            color: #10b981;
+        }
+        
+        .metric-card.negative .value {
+            color: #ef4444;
+        }
+        
+        .section {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        
+        .section h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            font-size: 1.8em;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        
+        th {
+            background: #f9fafb;
+            color: #667eea;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.85em;
+            letter-spacing: 1px;
+        }
+        
+        tr:hover {
+            background: #f9fafb;
+        }
+        
+        .positive {
+            color: #10b981;
+            font-weight: bold;
+        }
+        
+        .negative {
+            color: #ef4444;
+            font-weight: bold;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        
+        .badge.long {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .badge.short {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .footer {
+            text-align: center;
+            color: white;
+            margin-top: 30px;
+            font-size: 0.9em;
+        }
+        
+        @media (max-width: 768px) {
+            .metrics-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .header h1 {
+                font-size: 1.8em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>ðŸ“Š Position Management Dashboard</h1>
+            <div class="timestamp">Ãšltima atualizaÃ§Ã£o: 2026-05-23 05:25:14</div>
+        </div>
+        
+        <div class="metrics-grid">
+            <div class="metric-card">
+                <div class="label">PosiÃ§Ãµes Abertas</div>
+                <div class="value">0</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="label">Total de Trades</div>
+                <div class="value">100</div>
+            </div>
+            
+            <div class="metric-card positive">
+                <div class="label">Win Rate</div>
+                <div class="value">0%</div>
+            </div>
+            
+            <div class="metric-card negative">
+                <div class="label">PnL Total</div>
+                <div class="value">(@{timestamp=2026-05-23 05:25:14; open_positions=0; total_trades=100; wins=0; losses=100; win_rate=0; total_pnl=0; avg_win=0; avg_loss=0; profit_factor=0; best_trade=; worst_trade=; top5_markets=System.Object[]; open_positions_detail=}.total_pnl)</div>
+            </div>
+            
+            <div class="metric-card positive">
+                <div class="label">Wins</div>
+                <div class="value">0</div>
+            </div>
+            
+            <div class="metric-card negative">
+                <div class="label">Losses</div>
+                <div class="value">100</div>
+            </div>
+            
+            <div class="metric-card positive">
+                <div class="label">Avg Win</div>
+                <div class="value">(@{timestamp=2026-05-23 05:25:14; open_positions=0; total_trades=100; wins=0; losses=100; win_rate=0; total_pnl=0; avg_win=0; avg_loss=0; profit_factor=0; best_trade=; worst_trade=; top5_markets=System.Object[]; open_positions_detail=}.avg_win)</div>
+            </div>
+            
+            <div class="metric-card negative">
+                <div class="label">Avg Loss</div>
+                <div class="value">(@{timestamp=2026-05-23 05:25:14; open_positions=0; total_trades=100; wins=0; losses=100; win_rate=0; total_pnl=0; avg_win=0; avg_loss=0; profit_factor=0; best_trade=; worst_trade=; top5_markets=System.Object[]; open_positions_detail=}.avg_loss)</div>
+            </div>
+            
+            <div class="metric-card">
+                <div class="label">Profit Factor</div>
+                <div class="value">0x</div>
+            </div>
+        </div>
+        
+        <div class="section">
+            <h2>ðŸ† Top 5 Markets</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Market</th>
+                        <th>Trades</th>
+                        <th>Wins</th>
+                        <th>Win Rate</th>
+                        <th>PnL</th>
+                    </tr>
+                </thead>
+                <tbody>                    <tr>
+                        <td><strong>TONUSDT</strong></td>
+                        <td>2</td>
+                        <td>0</td>
+                        <td>0%</td>
+                        <td class="negative">([math]::Round(System.Collections.DictionaryEntry.Value.pnl, 2))</td>
+                    </tr>                    <tr>
+                        <td><strong>LUNCUSDT</strong></td>
+                        <td>1</td>
+                        <td>0</td>
+                        <td>0%</td>
+                        <td class="negative">([math]::Round(System.Collections.DictionaryEntry.Value.pnl, 2))</td>
+                    </tr>                    <tr>
+                        <td><strong>SUIUSDT</strong></td>
+                        <td>2</td>
+                        <td>0</td>
+                        <td>0%</td>
+                        <td class="negative">([math]::Round(System.Collections.DictionaryEntry.Value.pnl, 2))</td>
+                    </tr>                    <tr>
+                        <td><strong>XRPUSDT</strong></td>
+                        <td>27</td>
+                        <td>0</td>
+                        <td>0%</td>
+                        <td class="negative">([math]::Round(System.Collections.DictionaryEntry.Value.pnl, 2))</td>
+                    </tr>                    <tr>
+                        <td><strong>ZECUSDT</strong></td>
+                        <td>1</td>
+                        <td>0</td>
+                        <td>0%</td>
+                        <td class="negative">([math]::Round(System.Collections.DictionaryEntry.Value.pnl, 2))</td>
+                    </tr>                </tbody>
+            </table>
+        </div>
+        
+        <div class="section">
+            <h2>ðŸ“ˆ PosiÃ§Ãµes Abertas</h2><p style='text-align: center; color: #666; padding: 40px;'>Nenhuma posiÃ§Ã£o aberta no momento</p>        </div>
+        
+        <div class="section">
+            <h2>ðŸŽ¯ Melhores e Piores Trades</h2>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Tipo</th>
+                        <th>Market</th>
+                        <th>Side</th>
+                        <th>Entry</th>
+                        <th>Exit</th>
+                        <th>PnL</th>
+                    </tr>
+                </thead>
+                <tbody>                    <tr>
+                        <td><strong style="color: #10b981;">ðŸ† MELHOR</strong></td>
+                        <td><strong>TONUSDT</strong></td>
+                        <td><span class="badge short">SHORT</span></td>
+                        <td>(@{position_id=393911121; market=TONUSDT; market_type=FUTURES; side=short; margin_mode=cross; open_interest=0; close_avbl=0; ath_position_amount=138; unrealized_pnl=0; realized_pnl=-3.04288245000000000126; avg_entry_price=2.32479782608695652173; cml_position_value=0; max_position_value=320.8221; created_at=1778593897791; updated_at=1778598180755; take_profit_price=0; stop_loss_price=0; take_profit_type=; stop_loss_type=; take_profit_list=System.Object[]; stop_loss_list=System.Object[]; settle_price=2.32479782608695652173; settle_value=0; leverage=3; margin_avbl=0; ath_margin_size=106.94069999; position_margin_rate=0; maintenance_margin_rate=0.01; maintenance_margin_value=0; liq_price=6.0409702857923794018; bkr_price=6.10137998865030319582; adl_level=0; finished_type=market}.entry_price)</td>
+                        <td>(@{position_id=393911121; market=TONUSDT; market_type=FUTURES; side=short; margin_mode=cross; open_interest=0; close_avbl=0; ath_position_amount=138; unrealized_pnl=0; realized_pnl=-3.04288245000000000126; avg_entry_price=2.32479782608695652173; cml_position_value=0; max_position_value=320.8221; created_at=1778593897791; updated_at=1778598180755; take_profit_price=0; stop_loss_price=0; take_profit_type=; stop_loss_type=; take_profit_list=System.Object[]; stop_loss_list=System.Object[]; settle_price=2.32479782608695652173; settle_value=0; leverage=3; margin_avbl=0; ath_margin_size=106.94069999; position_margin_rate=0; maintenance_margin_rate=0.01; maintenance_margin_value=0; liq_price=6.0409702857923794018; bkr_price=6.10137998865030319582; adl_level=0; finished_type=market}.exit_price)</td>
+                        <td class="positive">+(@{position_id=393911121; market=TONUSDT; market_type=FUTURES; side=short; margin_mode=cross; open_interest=0; close_avbl=0; ath_position_amount=138; unrealized_pnl=0; realized_pnl=-3.04288245000000000126; avg_entry_price=2.32479782608695652173; cml_position_value=0; max_position_value=320.8221; created_at=1778593897791; updated_at=1778598180755; take_profit_price=0; stop_loss_price=0; take_profit_type=; stop_loss_type=; take_profit_list=System.Object[]; stop_loss_list=System.Object[]; settle_price=2.32479782608695652173; settle_value=0; leverage=3; margin_avbl=0; ath_margin_size=106.94069999; position_margin_rate=0; maintenance_margin_rate=0.01; maintenance_margin_value=0; liq_price=6.0409702857923794018; bkr_price=6.10137998865030319582; adl_level=0; finished_type=market}.pnl)</td>
+                    </tr>                    <tr>
+                        <td><strong style="color: #ef4444;">ðŸ’” PIOR</strong></td>
+                        <td><strong>TONUSDT</strong></td>
+                        <td><span class="badge short">SHORT</span></td>
+                        <td>(@{position_id=393911121; market=TONUSDT; market_type=FUTURES; side=short; margin_mode=cross; open_interest=0; close_avbl=0; ath_position_amount=138; unrealized_pnl=0; realized_pnl=-3.04288245000000000126; avg_entry_price=2.32479782608695652173; cml_position_value=0; max_position_value=320.8221; created_at=1778593897791; updated_at=1778598180755; take_profit_price=0; stop_loss_price=0; take_profit_type=; stop_loss_type=; take_profit_list=System.Object[]; stop_loss_list=System.Object[]; settle_price=2.32479782608695652173; settle_value=0; leverage=3; margin_avbl=0; ath_margin_size=106.94069999; position_margin_rate=0; maintenance_margin_rate=0.01; maintenance_margin_value=0; liq_price=6.0409702857923794018; bkr_price=6.10137998865030319582; adl_level=0; finished_type=market}.entry_price)</td>
+                        <td>(@{position_id=393911121; market=TONUSDT; market_type=FUTURES; side=short; margin_mode=cross; open_interest=0; close_avbl=0; ath_position_amount=138; unrealized_pnl=0; realized_pnl=-3.04288245000000000126; avg_entry_price=2.32479782608695652173; cml_position_value=0; max_position_value=320.8221; created_at=1778593897791; updated_at=1778598180755; take_profit_price=0; stop_loss_price=0; take_profit_type=; stop_loss_type=; take_profit_list=System.Object[]; stop_loss_list=System.Object[]; settle_price=2.32479782608695652173; settle_value=0; leverage=3; margin_avbl=0; ath_margin_size=106.94069999; position_margin_rate=0; maintenance_margin_rate=0.01; maintenance_margin_value=0; liq_price=6.0409702857923794018; bkr_price=6.10137998865030319582; adl_level=0; finished_type=market}.exit_price)</td>
+                        <td class="negative">(@{position_id=393911121; market=TONUSDT; market_type=FUTURES; side=short; margin_mode=cross; open_interest=0; close_avbl=0; ath_position_amount=138; unrealized_pnl=0; realized_pnl=-3.04288245000000000126; avg_entry_price=2.32479782608695652173; cml_position_value=0; max_position_value=320.8221; created_at=1778593897791; updated_at=1778598180755; take_profit_price=0; stop_loss_price=0; take_profit_type=; stop_loss_type=; take_profit_list=System.Object[]; stop_loss_list=System.Object[]; settle_price=2.32479782608695652173; settle_value=0; leverage=3; margin_avbl=0; ath_margin_size=106.94069999; position_margin_rate=0; maintenance_margin_rate=0.01; maintenance_margin_value=0; liq_price=6.0409702857923794018; bkr_price=6.10137998865030319582; adl_level=0; finished_type=market}.pnl)</td>
+                    </tr>                </tbody>
+            </table>
+        </div>
+        
+        <div class="footer">
+            <p>ðŸ¤– Position Management Dashboard | Auto-refresh a cada 5 minutos</p>
+            <p>Criado com TDD rigoroso | 2026-05-23</p>
+        </div>
+    </div>
+</body>
+</html>

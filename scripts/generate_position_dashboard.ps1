@@ -527,7 +527,7 @@ try {
         exit 1
     }
     
-    Write-Host "✓ Métricas coletadas" -ForegroundColor Green
+    Write-Host "[OK] Metricas coletadas" -ForegroundColor Green
     Write-Host "  Posições abertas: $($metrics.open_positions)" -ForegroundColor Gray
     Write-Host "  Total trades: $($metrics.total_trades)" -ForegroundColor Gray
     Write-Host "  Win rate: $($metrics.win_rate)%" -ForegroundColor Gray
@@ -546,17 +546,17 @@ try {
     $outputPath = Join-Path $dashboardDir "position_metrics.html"
     $html | Out-File -FilePath $outputPath -Encoding UTF8 -Force
     
-    Write-Host "✓ Dashboard gerado: $outputPath" -ForegroundColor Green
+    Write-Host "[OK] Dashboard gerado: $outputPath" -ForegroundColor Green
     
     # 4. Abrir no navegador (opcional)
     if ($args -contains "-Open") {
         Start-Process $outputPath
-        Write-Host "✓ Dashboard aberto no navegador" -ForegroundColor Green
+        Write-Host "[OK] Dashboard aberto no navegador" -ForegroundColor Green
     }
     
     Write-Host "`n=== COMPLETO ===" -ForegroundColor Cyan
     
 } catch {
-    Write-Host "`n✗ ERRO: $_" -ForegroundColor Red
+    Write-Host "`nERRO: $_" -ForegroundColor Red
     exit 1
 }

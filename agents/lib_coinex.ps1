@@ -278,6 +278,34 @@ function CoinEx-GetPosition($market) {
     return $r.data
 }
 
+function CoinEx-GetPendingPositions {
+    param(
+        [Parameter(Mandatory=$false)]
+        [string]$Market = $null
+    )
+    
+    # Se market especificado, retorna apenas essa posicao
+    if ($Market) {
+        $pos = CoinEx-GetPosition -market $Market
+        if ($pos) { return @($pos) }
+        return @()
+    }
+    
+    # Caso contrario, busca todas as posicoes abertas
+    # API v2 nao tem endpoint para "todas as posicoes", entao usamos pending-position sem market
+    # Isso retorna array de todas as posicoes abertas
+    $r = CoinEx-Get "/v2/futures/pending-position?market_type=FUTURES"
+    if ($r.code -ne 0) { return @() }
+    
+    # API retorna array diretamente em $r.data
+    if ($r.data -is [array]) {
+        return $r.data
+    } elseif ($r.data) {
+        return @($r.data)
+    }
+    return @()
+}
+
 # Submete ordem em /v2/futures/order.
 # IMPORTANTE: quando $stopLoss ou $takeProfit nao-nulos/zero sao passados,
 # o body DEVE incluir stop_loss_type e/ou take_profit_type ("mark_price"),
