@@ -88,13 +88,13 @@ function Telegram-SendPositionOpened {
         [hashtable]$Position
     )
     
-    $sideEmoji = if ($Position.side -eq "long") { "📈" } else { "📉" }
+    $sideIcon = if ($Position.side -eq "long") { "LONG" } else { "SHORT" }
     
-    $message = "═══════════════════════`n"
-    $message += "$sideEmoji POSITION OPENED`n"
-    $message += "═══════════════════════`n`n"
+    $message = "==========================`n"
+    $message += ">> POSITION OPENED <<`n"
+    $message += "==========================`n`n"
     $message += "Market: $($Position.market)`n"
-    $message += "Side: $($Position.side.ToUpper())`n"
+    $message += "Side: $sideIcon`n"
     $message += "Entry: `$$($Position.entry_price)`n"
     $message += "Size: $($Position.size)`n"
     $message += "Leverage: $($Position.leverage)x`n`n"
@@ -115,12 +115,12 @@ function Telegram-SendPositionClosed {
         [hashtable]$Position
     )
     
-    $emoji = if ($Position.pnl -gt 0) { "✅" } else { "❌" }
+    $result = if ($Position.pnl -gt 0) { "WIN" } else { "LOSS" }
     $pnlSign = if ($Position.pnl -gt 0) { "+" } else { "" }
     
-    $message = "═══════════════════════`n"
-    $message += "$emoji POSITION CLOSED`n"
-    $message += "═══════════════════════`n`n"
+    $message = "==========================`n"
+    $message += ">> POSITION CLOSED [$result] <<`n"
+    $message += "==========================`n`n"
     $message += "Market: $($Position.market)`n"
     $message += "Side: $($Position.side.ToUpper())`n"
     $message += "Entry: `$$($Position.entry_price)`n"
@@ -142,15 +142,15 @@ function Telegram-SendTrailingActivated {
         [hashtable]$Position
     )
     
-    $message = "═══════════════════════`n"
-    $message += "🎯 TRAILING STOP ACTIVE`n"
-    $message += "═══════════════════════`n`n"
+    $message = "==========================`n"
+    $message += ">> TRAILING STOP ACTIVE <<`n"
+    $message += "==========================`n`n"
     $message += "Market: $($Position.market)`n"
     $message += "Entry: `$$($Position.entry_price)`n"
     $message += "Current: `$$($Position.current_price)`n"
     $message += "Profit: +$($Position.profit_pct)%`n`n"
     $message += "New Stop: `$$($Position.new_stop)`n"
-    $message += "Locked: +$($Position.locked_profit_pct)%"
+    $message += "Locked Profit: +$($Position.locked_profit_pct)%"
     
     Telegram-SendMessage -Message $message
 }
@@ -165,9 +165,9 @@ function Telegram-SendRiskAlert {
         [hashtable]$Alert
     )
     
-    $message = "═══════════════════════`n"
-    $message += "⚠️ RISK ALERT`n"
-    $message += "═══════════════════════`n`n"
+    $message = "==========================`n"
+    $message += ">> RISK ALERT <<`n"
+    $message += "==========================`n`n"
     $message += "Market: $($Alert.market)`n"
     $message += "Type: $($Alert.type)`n"
     $message += "Severity: $($Alert.severity)`n`n"
@@ -189,19 +189,19 @@ function Telegram-SendDailySummary {
         [hashtable]$Summary
     )
     
-    $emoji = if ($Summary.daily_pnl -gt 0) { "📈" } else { "📉" }
+    $trend = if ($Summary.daily_pnl -gt 0) { "UP" } else { "DOWN" }
     $pnlSign = if ($Summary.daily_pnl -gt 0) { "+" } else { "" }
     
-    $message = "═══════════════════════`n"
-    $message += "$emoji DAILY SUMMARY`n"
-    $message += "═══════════════════════`n`n"
+    $message = "==========================`n"
+    $message += ">> DAILY SUMMARY [$trend] <<`n"
+    $message += "==========================`n`n"
     $message += "Date: $(Get-Date -Format 'yyyy-MM-dd')`n`n"
     $message += "Trades: $($Summary.trades_count)`n"
     $message += "Wins: $($Summary.wins) | Losses: $($Summary.losses)`n"
     $message += "Win Rate: $($Summary.win_rate)%`n`n"
     $message += "Daily PnL: $pnlSign`$$($Summary.daily_pnl)`n"
     $message += "Total PnL: $pnlSign`$$($Summary.total_pnl)`n`n"
-    $message += "Open: $($Summary.open_positions)`n"
+    $message += "Open Positions: $($Summary.open_positions)`n"
     $message += "Capital: `$$($Summary.capital) USDT"
     
     Telegram-SendMessage -Message $message
@@ -217,19 +217,19 @@ function Telegram-SendDashboardSnapshot {
         $Metrics
     )
 
-    $pnlEmoji = if ($Metrics.total_pnl -gt 0) { "📈" } else { "📉" }
+    $pnlTrend = if ($Metrics.total_pnl -gt 0) { "UP" } else { "DOWN" }
     $pnlSign = if ($Metrics.total_pnl -gt 0) { "+" } else { "" }
-    $wrEmoji = if ($Metrics.win_rate -ge 50) { "✅" } else { "⚠️" }
+    $wrStatus = if ($Metrics.win_rate -ge 50) { "GOOD" } else { "LOW" }
 
-    $message = "═══════════════════════`n"
-    $message += "📊 DASHBOARD`n"
-    $message += "═══════════════════════`n`n"
-    $message += "Positions: $($Metrics.open_positions)`n"
-    $message += "P&L: $pnlSign`$$($Metrics.total_pnl) $pnlEmoji`n"
-    $message += "Win Rate: $($Metrics.win_rate)% $wrEmoji`n"
-    $message += "Capital: `$$($Metrics.capital)`n`n"
-    $message += "Sharpe: $($Metrics.sharpe_ratio)`n"
-    $message += "Max DD: $($Metrics.max_drawdown)%`n"
+    $message = "==========================`n"
+    $message += ">> DASHBOARD SNAPSHOT <<`n"
+    $message += "==========================`n`n"
+    $message += "Open Positions: $($Metrics.open_positions)`n"
+    $message += "Total P&L: $pnlSign`$$($Metrics.total_pnl) [$pnlTrend]`n"
+    $message += "Win Rate: $($Metrics.win_rate)% [$wrStatus]`n"
+    $message += "Capital: `$$($Metrics.capital) USDT`n`n"
+    $message += "Sharpe Ratio: $($Metrics.sharpe_ratio)`n"
+    $message += "Max Drawdown: $($Metrics.max_drawdown)%`n"
     $message += "Profit Factor: $($Metrics.profit_factor)"
 
     if ($Metrics.open_positions -gt 0) {
@@ -242,11 +242,11 @@ function Telegram-SendDashboardSnapshot {
         }
 
         foreach ($pos in $posArray) {
-            $sideEmoji = if ($pos.side -eq "long") { "📈" } else { "📉" }
+            $sideLabel = if ($pos.side -eq "long") { "LONG" } else { "SHORT" }
             $pnlPct = [math]::Round($pos.unrealized_pnl_pct, 2)
             $pnlPctSign = if ($pnlPct -gt 0) { "+" } else { "" }
 
-            $message += "`n$sideEmoji $($pos.market): $pnlPctSign$pnlPct%"
+            $message += "`n[$sideLabel] $($pos.market): $pnlPctSign$pnlPct%"
         }
     }
 
