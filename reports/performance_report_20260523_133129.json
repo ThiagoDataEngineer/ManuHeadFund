@@ -1,0 +1,230 @@
+﻿{
+    "success":  true,
+    "timestamp":  "2026-05-23 13:31:29",
+    "trades_analyzed":  100,
+    "total_pnl":  -612.72,
+    "wins":  49,
+    "losses":  51,
+    "win_rate":  49,
+    "sharpe_ratio":  -0.242,
+    "avg_return":  -6.13,
+    "std_dev":  25.3,
+    "max_drawdown_pct":  0,
+    "max_drawdown_usd":  637.61,
+    "max_win_streak":  6,
+    "max_loss_streak":  7,
+    "current_streak":  1,
+    "current_streak_type":  "win",
+    "by_market":  [
+                      {
+                          "market":  "BNBUSDT",
+                          "trades":  1,
+                          "wins":  1,
+                          "losses":  0,
+                          "win_rate":  100,
+                          "total_pnl":  8.59,
+                          "avg_pnl":  8.59
+                      },
+                      {
+                          "market":  "DUSKUSDT",
+                          "trades":  1,
+                          "wins":  1,
+                          "losses":  0,
+                          "win_rate":  100,
+                          "total_pnl":  0.92,
+                          "avg_pnl":  0.92
+                      },
+                      {
+                          "market":  "LUNCUSDT",
+                          "trades":  1,
+                          "wins":  1,
+                          "losses":  0,
+                          "win_rate":  100,
+                          "total_pnl":  0.35,
+                          "avg_pnl":  0.35
+                      },
+                      {
+                          "market":  "ZECUSDT",
+                          "trades":  1,
+                          "wins":  1,
+                          "losses":  0,
+                          "win_rate":  100,
+                          "total_pnl":  0.32,
+                          "avg_pnl":  0.32
+                      },
+                      {
+                          "market":  "SUIUSDT",
+                          "trades":  2,
+                          "wins":  0,
+                          "losses":  2,
+                          "win_rate":  0,
+                          "total_pnl":  -4.42,
+                          "avg_pnl":  -2.21
+                      },
+                      {
+                          "market":  "TONUSDT",
+                          "trades":  2,
+                          "wins":  0,
+                          "losses":  2,
+                          "win_rate":  0,
+                          "total_pnl":  -10.64,
+                          "avg_pnl":  -5.32
+                      },
+                      {
+                          "market":  "XRPUSDT",
+                          "trades":  27,
+                          "wins":  14,
+                          "losses":  13,
+                          "win_rate":  51.9,
+                          "total_pnl":  -149.74,
+                          "avg_pnl":  -5.55
+                      },
+                      {
+                          "market":  "BTCUSDT",
+                          "trades":  65,
+                          "wins":  31,
+                          "losses":  34,
+                          "win_rate":  47.7,
+                          "total_pnl":  -458.09,
+                          "avg_pnl":  -7.05
+                      }
+                  ],
+    "by_hour":  [
+                    {
+                        "hour":  15,
+                        "trades":  2,
+                        "wins":  2,
+                        "win_rate":  100,
+                        "total_pnl":  21.12,
+                        "avg_pnl":  10.56
+                    },
+                    {
+                        "hour":  4,
+                        "trades":  4,
+                        "wins":  3,
+                        "win_rate":  75,
+                        "total_pnl":  8.73,
+                        "avg_pnl":  2.18
+                    },
+                    {
+                        "hour":  14,
+                        "trades":  11,
+                        "wins":  8,
+                        "win_rate":  72.7,
+                        "total_pnl":  5.66,
+                        "avg_pnl":  0.51
+                    },
+                    {
+                        "hour":  0,
+                        "trades":  4,
+                        "wins":  3,
+                        "win_rate":  75,
+                        "total_pnl":  2.15,
+                        "avg_pnl":  0.54
+                    },
+                    {
+                        "hour":  21,
+                        "trades":  2,
+                        "wins":  0,
+                        "win_rate":  0,
+                        "total_pnl":  -1.48,
+                        "avg_pnl":  -0.74
+                    },
+                    {
+                        "hour":  13,
+                        "trades":  5,
+                        "wins":  3,
+                        "win_rate":  60,
+                        "total_pnl":  -2.73,
+                        "avg_pnl":  -0.55
+                    },
+                    {
+                        "hour":  11,
+                        "trades":  3,
+                        "wins":  0,
+                        "win_rate":  0,
+                        "total_pnl":  -4.32,
+                        "avg_pnl":  -1.44
+                    },
+                    {
+                        "hour":  6,
+                        "trades":  2,
+                        "wins":  1,
+                        "win_rate":  50,
+                        "total_pnl":  -5.81,
+                        "avg_pnl":  -2.9
+                    },
+                    {
+                        "hour":  12,
+                        "trades":  8,
+                        "wins":  5,
+                        "win_rate":  62.5,
+                        "total_pnl":  -6.4,
+                        "avg_pnl":  -0.8
+                    },
+                    {
+                        "hour":  18,
+                        "trades":  8,
+                        "wins":  3,
+                        "win_rate":  37.5,
+                        "total_pnl":  -17.94,
+                        "avg_pnl":  -2.24
+                    },
+                    {
+                        "hour":  3,
+                        "trades":  10,
+                        "wins":  6,
+                        "win_rate":  60,
+                        "total_pnl":  -29.94,
+                        "avg_pnl":  -2.99
+                    },
+                    {
+                        "hour":  1,
+                        "trades":  7,
+                        "wins":  3,
+                        "win_rate":  42.9,
+                        "total_pnl":  -35.74,
+                        "avg_pnl":  -5.11
+                    },
+                    {
+                        "hour":  17,
+                        "trades":  14,
+                        "wins":  6,
+                        "win_rate":  42.9,
+                        "total_pnl":  -40.14,
+                        "avg_pnl":  -2.87
+                    },
+                    {
+                        "hour":  2,
+                        "trades":  5,
+                        "wins":  2,
+                        "win_rate":  40,
+                        "total_pnl":  -42.59,
+                        "avg_pnl":  -8.52
+                    },
+                    {
+                        "hour":  20,
+                        "trades":  4,
+                        "wins":  1,
+                        "win_rate":  25,
+                        "total_pnl":  -44.26,
+                        "avg_pnl":  -11.06
+                    },
+                    {
+                        "hour":  19,
+                        "trades":  5,
+                        "wins":  1,
+                        "win_rate":  20,
+                        "total_pnl":  -137.1,
+                        "avg_pnl":  -27.42
+                    },
+                    {
+                        "hour":  16,
+                        "trades":  6,
+                        "wins":  2,
+                        "win_rate":  33.3,
+                        "total_pnl":  -281.94,
+                        "avg_pnl":  -46.99
+                    }
+                ]
+}

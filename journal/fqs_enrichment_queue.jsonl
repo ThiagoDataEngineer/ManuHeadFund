@@ -22,3 +22,4 @@
 {"queued_at":"2026-05-23T03:01:12.7963096-03:00","market":"BANUSDT","source":"scan_master_discovery"}
 {"queued_at":"2026-05-23T03:01:12.9245423-03:00","market":"ICPUSDT","source":"scan_master_discovery"}
 {"queued_at":"2026-05-23T03:01:12.9641901-03:00","market":"GALAUSDT","source":"scan_master_discovery"}
+{"queued_at":"2026-05-23T09:04:16.3555979-03:00","market":"MONUSDT","source":"gem_executor"}
