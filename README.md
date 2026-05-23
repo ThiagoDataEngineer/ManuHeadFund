@@ -1,125 +1,267 @@
-# ManuHeadFund
+# 🚀 ManuHeadFund - Professional Trading System
 
-Sistema multi-agente de análise e execução de trades crypto na CoinEx (Spot + Futures).
+Sistema de trading automatizado para CoinEx com dashboard profissional e alertas Telegram.
 
-> **Status:** LIVE mode ativo (2026-05-18). 7 markets Tier A LIVE. Cron diário 02h BRT.
-> **Stack:** PowerShell 5.1 + Python 3.12 + Claude API + Telegram Bot.
-> **Para começar:** [docs/HANDBOOK.md](docs/HANDBOOK.md) (humano) ou [docs/PROJECT_MAP.md](docs/PROJECT_MAP.md) (dev)
+![Trading Pipeline](https://github.com/SEU_USUARIO/Coinex_AI_USER_API/actions/workflows/trading-pipeline.yml/badge.svg)
 
 ---
 
-## Estrutura
+## ✨ Features
+
+### 📊 Dashboard Profissional
+- Design inspirado em Refinitiv Eikon e Bloomberg
+- Métricas em tempo real (P&L, Win Rate, Sharpe, Max DD)
+- Trailing stop indicator com animação
+- Charts interativos (Chart.js)
+- Auto-refresh a cada 15 minutos
+- **[Ver Dashboard Online →](https://SEU_USUARIO.github.io/Coinex_AI_USER_API/)**
+
+### 🤖 Risk Manager Automático
+- Monitora posições abertas
+- Trailing stop automático (lucro > 3%)
+- Alertas de liquidação próxima
+- Adiciona margem automaticamente
+- Executa a cada 15 minutos
+
+### 📱 Alertas Telegram
+- Trailing stop ativado
+- Posições abertas/fechadas
+- Alertas de risco
+- Resumo diário
+- Notificações em tempo real
+
+### ☁️ Cloud-Native
+- Roda no GitHub Actions (grátis)
+- Não precisa máquina ligada
+- Logs completos na nuvem
+- Deploy automático
+
+---
+
+## 🚀 Quick Start
+
+### 1. Clone o Repositório
+```bash
+git clone https://github.com/SEU_USUARIO/Coinex_AI_USER_API.git
+cd Coinex_AI_USER_API
+```
+
+### 2. Configure Secrets no GitHub
+**Settings** → **Secrets and variables** → **Actions**
 
 ```
-.
-├── README.md                       ← este arquivo (entry point)
-├── CLAUDE.md                       ← instruções persona p/ Claude Code
-├── .gitignore                      ← patterns protegidos
-├── PSScriptAnalyzerSettings.psd1   ← config PSScriptAnalyzer
-│
-├── agents/                         60 módulos: orquestrador, libs, agentes LLM
-├── backtest/                       131 módulos: simuladores, benchmarks, scanners
-├── scripts/                        scripts executáveis (cron, launchers, CLI tools)
-│   └── _legacy/                    dryruns arquivados
-├── tests/                          83 Pester (.Tests.ps1)
-├── backtest/tests/                 ~30 pytest
-├── knowledge/                      28 docs trading (TA, on-chain, mestres, refs)
-├── docs/                           docs do projeto (handbook, schemas, arquitetura)
-│   └── _legacy/                    docs antigos arquivados
-├── journal/                        outputs persistentes (JSON, JSONL, CSV)
-├── logs/                           logs rotativos
-└── memory/                         (deprecated; ver C:\Users\thiag\.claude\projects\...\memory\)
+COINEX_ACCESS_ID     = seu_access_id
+COINEX_SECRET_KEY    = seu_secret_key
+TELEGRAM_BOT_TOKEN   = seu_bot_token
+TELEGRAM_CHAT_ID     = seu_chat_id
 ```
 
----
+### 3. Ative GitHub Actions
+**Actions** → **Enable workflows**
 
-## Navegação rápida
+### 4. Pronto! 🎉
+Sistema roda automaticamente a cada 15 minutos.
 
-| Quero... | Vai em |
-|---|---|
-| **Visão executiva** (humano/empresa) | [docs/HANDBOOK.md](docs/HANDBOOK.md) — vendor map, KPIs, governance, emergency procedures |
-| **Mapa estrutural** (dev) | [docs/PROJECT_MAP.md](docs/PROJECT_MAP.md) — onde fica cada coisa |
-| **Arquitetura do pipeline** | [docs/ARCHITECTURE_TATICA.md](docs/ARCHITECTURE_TATICA.md) — codinomes militares, ASCII + Mermaid |
-| **Catálogo de agentes** | [docs/AGENTS.md](docs/AGENTS.md) — 50KB, com TOC |
-| **Filosofia do projeto** | [docs/BLUEPRINT.md](docs/BLUEPRINT.md) |
-| **Personas LLM** | [docs/PERSONAS.md](docs/PERSONAS.md) |
-| **Segurança + creds** | [docs/SECURITY.md](docs/SECURITY.md) |
-| **Persona p/ Claude Code** | [CLAUDE.md](CLAUDE.md) |
-| **Conhecimento trading** | [knowledge/](knowledge/) (28 docs) |
-| **Schemas + contratos** | [docs/PROMOTION_LADDER_SCHEMA.md](docs/PROMOTION_LADDER_SCHEMA.md), [docs/PARITY_CONTRACTS.md](docs/PARITY_CONTRACTS.md) |
+**[📖 Guia Completo de Setup →](SETUP_RAPIDO_GITHUB.md)**
 
 ---
 
-## Quick start
+## 📊 Dashboard
 
-### Rodar testes
+### Local
 ```powershell
-# Pester (PowerShell)
-Invoke-Pester -Script tests\
-
-# pytest (Python — rodar do dir backtest/)
-cd backtest
-$env:PYTHONIOENCODING="utf-8"; python -m pytest tests/
+.\scripts\generate_dashboard_elite.ps1
+Start-Process dashboard\index.html
 ```
 
-### Iniciar serviços (gem_loop + watchdog)
-```powershell
-.\scripts\start_services.ps1
+### Online (GitHub Pages)
 ```
-
-### Cron diário (Task Scheduler 02h BRT)
-- `scripts/promotion_weekly_cron.ps1` — orquestra todos os daily checks
-  - Halving Phase Check → Tier A Drawdown → Regime Change → Promotion Cycle → Weekly Discovery (Dom) → Living Whitelist
-
-### Bot Telegram interativo
-```powershell
-.\scripts\telegram_listener.ps1
-```
-Comandos: `/ask`, `/status`, `/markets`, `/scan`, `/halt`, `/resume`, `/idea`, `/ideas`, `/phase`
-
-### CLI tools standalone (root user)
-```powershell
-# Análise técnica IA (Claude/Groq/Gemini)
-.\scripts\mentor_agent_cli.ps1 -Market BTCUSDT -Capital 1000
-
-# Trailing stop LONG ATR-adaptativo
-.\scripts\trailing_long.ps1 -Market BTCUSDT -EntryPrice 65000 -ATRMultiplier 2.0
-
-# Snapshot universo CoinEx
-$env:PYTHONIOENCODING="utf-8"; python backtest\snapshot_all_coinex.py
+https://SEU_USUARIO.github.io/Coinex_AI_USER_API/
 ```
 
 ---
 
-## Estado vivo (onde olhar)
+## 🔔 Telegram
 
-- **Snapshot do projeto:** memory `project_status_now.md` em `~/.claude/projects/...`
-- **Whitelist atual:** `journal/per_asset_whitelist_*.json`
-- **Drawdown Tier A:** `journal/tier_a_drawdown_<DATE>.json`
-- **Halving phase:** `journal/halving_phase_state.json` (auto-atualizado)
-- **Trades executados:** `journal/trades.csv` + `journal/observations.csv`
-- **Pipeline promotion:** `journal/promotion_pipeline.jsonl`
-- **Custos LLM:** `journal/cost_tracker.jsonl`
+### Setup
+```powershell
+.\scripts\setup_telegram_quick.ps1 -Token "SEU_TOKEN" -ChatId "SEU_CHAT_ID"
+```
 
----
-
-## Regras de Ouro (de [CLAUDE.md](CLAUDE.md))
-
-1. Stop loss antes de qualquer entrada
-2. Risco máximo por trade: 1% do capital
-3. Risco/retorno mínimo: 1:5
-4. 80% de decisão baseada em dados históricos
-5. Mínimo 3 fatores de confluência
-6. Aguardar é uma posição
-7. Nunca inverter stop por emoção
+### Testar
+```powershell
+. .\agents\lib_telegram.ps1
+Telegram-SendMessage -Message "Teste"
+```
 
 ---
 
-## Marcos recentes
+## 🛠️ Estrutura
 
-- **2026-05-19** — Saneamento estrutural: root limpo (4 files), docs/ + scripts/ organizados, [SECURITY.md](docs/SECURITY.md) criado
-- **2026-05-19** — strict_v3 phase-aware operacional (+18% total R em 14y) [memory](C:/Users/thiag/.claude/projects/c--Users-thiag-Coinex-AI-USER-API/memory/project_strict_v3_phase_aware_done_2026_05_19.md)
-- **2026-05-19** — Refino regimes: 4 módulos TDD + breakthrough soft 5-15° trendline
-- **2026-05-18** — LIVE mode ativado, 7 markets Tier A
-- **2026-05-17** — Tier 2 (cross-asset matrix) entregue
-- **2026-05-15** — ARCHITECTURE_TATICA.md v1.0 (codinomes militares)
+```
+Coinex_AI_USER_API/
+├── .github/
+│   └── workflows/
+│       └── trading-pipeline.yml    # GitHub Actions
+├── agents/
+│   ├── lib_coinex.ps1              # API CoinEx
+│   ├── lib_telegram.ps1            # Telegram Bot
+│   └── lib_position_risk_manager.ps1
+├── scripts/
+│   ├── generate_dashboard_elite.ps1
+│   ├── position_risk_cron.ps1
+│   └── setup_telegram_quick.ps1
+├── dashboard/
+│   └── index.html                  # Dashboard gerado
+├── config/
+│   └── telegram.json               # Config Telegram
+└── README.md
+```
+
+---
+
+## 📈 Métricas
+
+### Dashboard
+- **Open Positions** - Posições abertas
+- **Total P&L** - Lucro/Prejuízo total
+- **Win Rate** - Taxa de acerto (%)
+- **Capital** - Capital disponível
+- **Sharpe Ratio** - Retorno ajustado ao risco
+- **Max Drawdown** - Maior perda (%)
+
+### Charts
+- **Win/Loss Distribution** - Distribuição de ganhos/perdas
+- **Risk Metrics** - Profit Factor, Sharpe, Max DD
+
+---
+
+## 🤖 Automação
+
+### GitHub Actions (A cada 15 min)
+- ✅ Risk Manager
+- ✅ Dashboard Generator
+- ✅ Health Check
+- ✅ Telegram Alerts
+
+### Cron Jobs Locais (Opcional)
+```powershell
+# Ver jobs
+Get-ScheduledTask | Where-Object {$_.TaskName -like "CoinEx*"}
+
+# Executar manualmente
+.\scripts\position_risk_cron.ps1
+```
+
+---
+
+## 📱 Alertas Telegram
+
+### Automáticos
+- 📈 Trailing stop ativado (lucro > 3%)
+- ⚠️ Liquidação próxima (< 5%)
+- 💰 Margem adicionada
+- 🔄 Risk Manager executado
+
+### Manuais
+- 🚀 Posição aberta
+- ✅ Posição fechada
+- 📊 Resumo diário
+
+---
+
+## 🔧 Configuração
+
+### CoinEx API
+1. [CoinEx](https://www.coinex.com/) → **API Management**
+2. Criar API Key
+3. Copiar Access ID e Secret Key
+4. Adicionar aos Secrets do GitHub
+
+### Telegram Bot
+1. Telegram → **@BotFather** → `/newbot`
+2. Copiar Bot Token
+3. Telegram → **@userinfobot** → Copiar Chat ID
+4. Adicionar aos Secrets do GitHub
+
+---
+
+## 💰 Custos
+
+### GitHub Actions (Grátis)
+- **2.000 minutos/mês** grátis
+- Workflow a cada 15min = ~2.880 min/mês
+- ✅ **Dentro do limite!**
+
+### Alternativas
+- **AWS Lambda** - Grátis até 1M requests/mês
+- **Google Cloud Functions** - Grátis até 2M invocations/mês
+- **Heroku** - $7/mês (dyno sempre ligado)
+- **VPS** - $5-10/mês (controle total)
+
+---
+
+## 📚 Documentação
+
+- [Setup Rápido GitHub](SETUP_RAPIDO_GITHUB.md)
+- [GitHub Actions Completo](GITHUB_ACTIONS_SETUP.md)
+- [Dashboard Profissional](DASHBOARD_PROFESSIONAL_REFINADO_2026_05_23.md)
+- [Telegram Configurado](TELEGRAM_CONFIGURADO_2026_05_23.md)
+
+---
+
+## 🐛 Troubleshooting
+
+### Workflow não roda
+- ✅ Verificar se Actions está habilitado
+- ✅ Verificar se secrets estão configurados
+- ✅ Ver logs em **Actions**
+
+### API CoinEx falha
+- ✅ Verificar Access ID e Secret Key
+- ✅ Verificar se IP está na whitelist
+
+### Telegram não envia
+- ✅ Verificar Bot Token e Chat ID
+- ✅ Enviar mensagem para o bot primeiro
+
+---
+
+## 🤝 Contribuindo
+
+Pull requests são bem-vindos! Para mudanças grandes, abra uma issue primeiro.
+
+---
+
+## 📄 Licença
+
+[MIT](LICENSE)
+
+---
+
+## 🎯 Roadmap
+
+- [x] Dashboard profissional
+- [x] Risk Manager automático
+- [x] Alertas Telegram
+- [x] GitHub Actions
+- [x] GitHub Pages
+- [ ] Backtesting integrado
+- [ ] Machine Learning para sinais
+- [ ] Multi-exchange support
+- [ ] Mobile app
+
+---
+
+## 📞 Suporte
+
+- **Issues:** [GitHub Issues](https://github.com/SEU_USUARIO/Coinex_AI_USER_API/issues)
+- **Telegram:** @SEU_USUARIO
+- **Email:** seu@email.com
+
+---
+
+**ManuHeadFund** - Professional Trading System  
+Made with ❤️ by [Seu Nome]
+
+![Dashboard Preview](https://via.placeholder.com/800x400?text=Dashboard+Preview)

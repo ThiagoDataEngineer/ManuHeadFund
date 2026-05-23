@@ -1,0 +1,23 @@
+﻿{
+    "local":  {
+                  "frequency":  "5min",
+                  "jobs":  [
+                               "risk-manager"
+                           ],
+                  "enabled":  true
+              },
+    "protection":  {
+                       "lock_timeout":  300,
+                       "anti_duplication":  true
+                   },
+    "configured_at":  "2026-05-23T15:19:50.5106763-03:00",
+    "mode":  "hybrid",
+    "github_actions":  {
+                           "frequency":  "15min",
+                           "jobs":  [
+                                        "dashboard-generator",
+                                        "health-check"
+                                    ],
+                           "enabled":  true
+                       }
+}

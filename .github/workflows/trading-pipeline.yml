@@ -1,0 +1,170 @@
+# GitHub Actions - ManuHeadFund Trading Pipeline
+# Roda na nuvem sem depender da máquina local
+
+name: Trading Pipeline
+
+on:
+  schedule:
+    # A cada 15 minutos (failover quando máquina desligada)
+    # Otimizado para limites gratuitos: ~2.880min/mês ✅
+    - cron: '*/15 * * * *'
+  
+  # Permite execução manual
+  workflow_dispatch:
+
+jobs:
+  risk-manager:
+    name: Position Risk Manager
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+      
+      - name: Setup PowerShell
+        shell: pwsh
+        run: |
+          Write-Host "PowerShell $($PSVersionTable.PSVersion) instalado"
+      
+      - name: Configurar credenciais
+        shell: pwsh
+        run: |
+          # Criar config a partir de secrets
+          $config = @{
+            coinex_access_id = "${{ secrets.COINEX_ACCESS_ID }}"
+            coinex_secret_key = "${{ secrets.COINEX_SECRET_KEY }}"
+            telegram_bot_token = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
+            telegram_chat_id = "${{ secrets.TELEGRAM_CHAT_ID }}"
+          }
+          
+          # Salvar config temporário
+          New-Item -ItemType Directory -Path "agents" -Force
+          $config | ConvertTo-Json | Out-File "agents/config.local.ps1" -Encoding UTF8
+      
+      - name: Executar Risk Manager
+        shell: pwsh
+        run: |
+          try {
+            . ./scripts/position_risk_cron.ps1
+            Write-Host "✓ Risk Manager executado com sucesso"
+          } catch {
+            Write-Host "✗ Erro: $_"
+            exit 1
+          }
+      
+      - name: Enviar alerta se falhar
+        if: failure()
+        shell: pwsh
+        run: |
+          $token = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
+          $chatId = "${{ secrets.TELEGRAM_CHAT_ID }}"
+          $message = "⚠️ *GitHub Actions Falhou*`n`nRisk Manager teve erro.`n`nVerifique os logs."
+          
+          $body = @{
+            chat_id = $chatId
+            text = $message
+            parse_mode = "Markdown"
+          } | ConvertTo-Json
+          
+          Invoke-RestMethod -Uri "https://api.telegram.org/bot$token/sendMessage" `
+            -Method Post -Body $body -ContentType "application/json"
+
+  dashboard-generator:
+    name: Dashboard Generator
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+      
+      - name: Setup PowerShell
+        shell: pwsh
+        run: |
+          Write-Host "PowerShell $($PSVersionTable.PSVersion) instalado"
+      
+      - name: Configurar credenciais
+        shell: pwsh
+        run: |
+          $config = @{
+            coinex_access_id = "${{ secrets.COINEX_ACCESS_ID }}"
+            coinex_secret_key = "${{ secrets.COINEX_SECRET_KEY }}"
+            telegram_bot_token = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
+            telegram_chat_id = "${{ secrets.TELEGRAM_CHAT_ID }}"
+          }
+          
+          New-Item -ItemType Directory -Path "agents" -Force
+          $config | ConvertTo-Json | Out-File "agents/config.local.ps1" -Encoding UTF8
+      
+      - name: Gerar Dashboard
+        shell: pwsh
+        run: |
+          try {
+            . ./scripts/generate_dashboard_elite.ps1
+            Write-Host "✓ Dashboard gerado com sucesso"
+          } catch {
+            Write-Host "✗ Erro: $_"
+            exit 1
+          }
+      
+      - name: Upload Dashboard como artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard
+          path: dashboard/index.html
+          retention-days: 7
+      
+      - name: Deploy para GitHub Pages (opcional)
+        if: success()
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./dashboard
+          publish_branch: gh-pages
+
+  health-check:
+    name: System Health Check
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+      
+      - name: Verificar API CoinEx
+        shell: pwsh
+        run: |
+          try {
+            $response = Invoke-RestMethod -Uri "https://api.coinex.com/v2/ping" -Method Get
+            Write-Host "✓ CoinEx API: OK"
+          } catch {
+            Write-Host "✗ CoinEx API: FALHOU"
+            exit 1
+          }
+      
+      - name: Verificar Telegram API
+        shell: pwsh
+        run: |
+          try {
+            $token = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
+            $response = Invoke-RestMethod -Uri "https://api.telegram.org/bot$token/getMe" -Method Get
+            Write-Host "✓ Telegram API: OK - Bot: $($response.result.username)"
+          } catch {
+            Write-Host "✗ Telegram API: FALHOU"
+            exit 1
+          }
+      
+      - name: Enviar status diário
+        if: github.event.schedule == '0 0 * * *'
+        shell: pwsh
+        run: |
+          $token = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
+          $chatId = "${{ secrets.TELEGRAM_CHAT_ID }}"
+          $message = "✅ *Sistema Operacional*`n`nGitHub Actions rodando normalmente.`n`nTodos os serviços OK."
+          
+          $body = @{
+            chat_id = $chatId
+            text = $message
+            parse_mode = "Markdown"
+          } | ConvertTo-Json
+          
+          Invoke-RestMethod -Uri "https://api.telegram.org/bot$token/sendMessage" `
+            -Method Post -Body $body -ContentType "application/json"

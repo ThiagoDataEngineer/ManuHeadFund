@@ -1,5 +1,5 @@
-# generate_position_dashboard.ps1 - Gera dashboard HTML de métricas
-# Rodar: .\scripts\generate_position_dashboard.ps1
+# generate_position_dashboard_v2.ps1 - Dashboard HTML com UTF-8 correto
+# Rodar: .\scripts\generate_position_dashboard_v2.ps1
 # Output: .\dashboard\position_metrics.html
 
 $ErrorActionPreference = "Stop"
@@ -10,20 +10,30 @@ Set-Location $PSScriptRoot\..
 . ".\agents\lib_coinex_position_management.ps1"
 
 # ============================================================================
-# Get-PositionMetrics - Coleta métricas de posições
+# Get-PositionMetrics - Coleta metricas de posicoes
 # ============================================================================
 
 function Get-PositionMetrics {
     try {
-        # 1. Posições abertas
+        # 1. Posicoes abertas
         $openPositions = CoinEx-GetPendingPositions
-        $openCount = if ($openPositions) { $openPositions.Count } else { 0 }
         
-        # 2. Histórico de posições (últimas 100)
+        # FIX: Contar corretamente (pode ser array ou objeto unico)
+        $openCount = if ($openPositions) {
+            if ($openPositions -is [array]) {
+                $openPositions.Count
+            } else {
+                1  # Objeto unico = 1 posicao
+            }
+        } else {
+            0
+        }
+        
+        # 2. Historico de posicoes (ultimas 100)
         $history = CoinEx-GetFinishedPositions -Limit 100
         $positions = if ($history.success) { $history.positions } else { @() }
         
-        # 3. Calcular métricas
+        # 3. Calcular metricas
         $wins = 0
         $losses = 0
         $totalPnl = 0
@@ -73,7 +83,7 @@ function Get-PositionMetrics {
             [math]::Round([math]::Abs($avgWin / $avgLoss), 2)
         } else { 0 }
         
-        # 4. Métricas por market
+        # 4. Metricas por market
         $marketStats = @{}
         foreach ($pos in $positions) {
             $market = $pos.market
@@ -113,7 +123,7 @@ function Get-PositionMetrics {
         }
     }
     catch {
-        Write-Host "Erro ao coletar métricas: $_" -ForegroundColor Red
+        Write-Host "Erro ao coletar metricas: $_" -ForegroundColor Red
         return $null
     }
 }
@@ -126,10 +136,9 @@ function Generate-HTML {
     param($Metrics)
     
     if (-not $Metrics) {
-        return "<html><body><h1>Erro ao carregar métricas</h1></body></html>"
+        return "<html><body><h1>Erro ao carregar metricas</h1></body></html>"
     }
     
-    # Pre-calcular valores para evitar problemas com here-strings
     $timestamp = $Metrics.timestamp
     $openPos = $Metrics.open_positions
     $totalTrades = $Metrics.total_trades
@@ -143,306 +152,105 @@ function Generate-HTML {
     
     $pnlClass = if ($totalPnl -gt 0) { "positive" } else { "negative" }
     
-    $html = @"
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="refresh" content="300">
-    <title>Position Management Dashboard</title>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        
-        body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            padding: 20px;
-            color: #333;
-        }
-        
-        .container {
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-        
-        .header {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            margin-bottom: 30px;
-            text-align: center;
-        }
-        
-        .header h1 {
-            color: #667eea;
-            font-size: 2.5em;
-            margin-bottom: 10px;
-        }
-        
-        .header .timestamp {
-            color: #666;
-            font-size: 0.9em;
-        }
-        
-        .metrics-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-bottom: 30px;
-        }
-        
-        .metric-card {
-            background: white;
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease;
-        }
-        
-        .metric-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
-        }
-        
-        .metric-card .label {
-            font-size: 0.9em;
-            color: #666;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 10px;
-        }
-        
-        .metric-card .value {
-            font-size: 2.5em;
-            font-weight: bold;
-            color: #667eea;
-        }
-        
-        .metric-card.positive .value {
-            color: #10b981;
-        }
-        
-        .metric-card.negative .value {
-            color: #ef4444;
-        }
-        
-        .section {
-            background: white;
-            padding: 30px;
-            border-radius: 15px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
-            margin-bottom: 30px;
-        }
-        
-        .section h2 {
-            color: #667eea;
-            margin-bottom: 20px;
-            font-size: 1.8em;
-            border-bottom: 3px solid #667eea;
-            padding-bottom: 10px;
-        }
-        
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        
-        th, td {
-            padding: 15px;
-            text-align: left;
-            border-bottom: 1px solid #e5e7eb;
-        }
-        
-        th {
-            background: #f9fafb;
-            color: #667eea;
-            font-weight: 600;
-            text-transform: uppercase;
-            font-size: 0.85em;
-            letter-spacing: 1px;
-        }
-        
-        tr:hover {
-            background: #f9fafb;
-        }
-        
-        .positive {
-            color: #10b981;
-            font-weight: bold;
-        }
-        
-        .negative {
-            color: #ef4444;
-            font-weight: bold;
-        }
-        
-        .badge {
-            display: inline-block;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.85em;
-            font-weight: 600;
-        }
-        
-        .badge.long {
-            background: #d1fae5;
-            color: #065f46;
-        }
-        
-        .badge.short {
-            background: #fee2e2;
-            color: #991b1b;
-        }
-        
-        .footer {
-            text-align: center;
-            color: white;
-            margin-top: 30px;
-            font-size: 0.9em;
-        }
-        
-        @media (max-width: 768px) {
-            .metrics-grid {
-                grid-template-columns: 1fr;
-            }
-            
-            .header h1 {
-                font-size: 1.8em;
-            }
-        }
-    </style>
-</head>
-<body>
-    <div class="container">
-        <div class="header">
-            <h1>📊 Position Management Dashboard</h1>
-            <div class="timestamp">Última atualização: $timestamp</div>
-        </div>
-        
-        <div class="metrics-grid">
-            <div class="metric-card">
-                <div class="label">Posições Abertas</div>
-                <div class="value">$openPos</div>
-            </div>
-            
-            <div class="metric-card">
-                <div class="label">Total de Trades</div>
-                <div class="value">$totalTrades</div>
-            </div>
-            
-            <div class="metric-card positive">
-                <div class="label">Win Rate</div>
-                <div class="value">$winRate%</div>
-            </div>
-            
-            <div class="metric-card $pnlClass">
-                <div class="label">PnL Total</div>
-                <div class="value">`$$totalPnl</div>
-            </div>
-            
-            <div class="metric-card positive">
-                <div class="label">Wins</div>
-                <div class="value">$wins</div>
-            </div>
-            
-            <div class="metric-card negative">
-                <div class="label">Losses</div>
-                <div class="value">$losses</div>
-            </div>
-            
-            <div class="metric-card positive">
-                <div class="label">Avg Win</div>
-                <div class="value">`$$avgWin</div>
-            </div>
-            
-            <div class="metric-card negative">
-                <div class="label">Avg Loss</div>
-                <div class="value">`$$avgLoss</div>
-            </div>
-            
-            <div class="metric-card">
-                <div class="label">Profit Factor</div>
-                <div class="value">$profitFactor`x</div>
-            </div>
-        </div>
-        
-        <div class="section">
-            <h2>🏆 Top 5 Markets</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Market</th>
-                        <th>Trades</th>
-                        <th>Wins</th>
-                        <th>Win Rate</th>
-                        <th>PnL</th>
-                    </tr>
-                </thead>
-                <tbody>
-"@
+    # Build HTML sections
+    $sb = [System.Text.StringBuilder]::new()
+    [void]$sb.AppendLine('<!DOCTYPE html>')
+    [void]$sb.AppendLine('<html lang="pt-BR">')
+    [void]$sb.AppendLine('<head>')
+    [void]$sb.AppendLine('    <meta charset="UTF-8">')
+    [void]$sb.AppendLine('    <meta name="viewport" content="width=device-width, initial-scale=1.0">')
+    [void]$sb.AppendLine('    <meta http-equiv="refresh" content="300">')
+    [void]$sb.AppendLine('    <title>Position Management Dashboard</title>')
+    [void]$sb.AppendLine('    <style>')
+    [void]$sb.AppendLine('        body { font-family: Arial, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 20px; }')
+    [void]$sb.AppendLine('        .container { max-width: 1400px; margin: 0 auto; }')
+    [void]$sb.AppendLine('        .header { background: white; padding: 30px; border-radius: 15px; margin-bottom: 30px; text-align: center; }')
+    [void]$sb.AppendLine('        .header h1 { color: #667eea; font-size: 2.5em; }')
+    [void]$sb.AppendLine('        .metrics-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 20px; margin-bottom: 30px; }')
+    [void]$sb.AppendLine('        .metric-card { background: white; padding: 25px; border-radius: 15px; }')
+    [void]$sb.AppendLine('        .metric-card .label { font-size: 0.9em; color: #666; text-transform: uppercase; }')
+    [void]$sb.AppendLine('        .metric-card .value { font-size: 2.5em; font-weight: bold; color: #667eea; }')
+    [void]$sb.AppendLine('        .metric-card.positive .value { color: #10b981; }')
+    [void]$sb.AppendLine('        .metric-card.negative .value { color: #ef4444; }')
+    [void]$sb.AppendLine('        .section { background: white; padding: 30px; border-radius: 15px; margin-bottom: 30px; }')
+    [void]$sb.AppendLine('        .section h2 { color: #667eea; margin-bottom: 20px; }')
+    [void]$sb.AppendLine('        table { width: 100%; border-collapse: collapse; }')
+    [void]$sb.AppendLine('        th, td { padding: 15px; text-align: left; border-bottom: 1px solid #e5e7eb; }')
+    [void]$sb.AppendLine('        th { background: #f9fafb; color: #667eea; font-weight: 600; }')
+    [void]$sb.AppendLine('        .positive { color: #10b981; font-weight: bold; }')
+    [void]$sb.AppendLine('        .negative { color: #ef4444; font-weight: bold; }')
+    [void]$sb.AppendLine('        .badge { display: inline-block; padding: 5px 12px; border-radius: 20px; font-size: 0.85em; font-weight: 600; }')
+    [void]$sb.AppendLine('        .badge.long { background: #d1fae5; color: #065f46; }')
+    [void]$sb.AppendLine('        .badge.short { background: #fee2e2; color: #991b1b; }')
+    [void]$sb.AppendLine('    </style>')
+    [void]$sb.AppendLine('</head>')
+    [void]$sb.AppendLine('<body>')
+    [void]$sb.AppendLine('    <div class="container">')
+    [void]$sb.AppendLine('        <div class="header">')
+    [void]$sb.AppendLine("            <h1>Position Management Dashboard</h1>")
+    [void]$sb.AppendLine("            <div>Ultima atualizacao: $timestamp</div>")
+    [void]$sb.AppendLine('        </div>')
     
-    foreach ($market in $Metrics.top5_markets) {
-        $marketName = $market.Key
-        $marketTrades = $market.Value.trades
-        $marketWins = $market.Value.wins
-        $marketPnl = [math]::Round($market.Value.pnl, 2)
-        
-        $winRate = if ($marketTrades -gt 0) {
-            [math]::Round(($marketWins / $marketTrades) * 100, 1)
-        } else { 0 }
-        
-        $pnlClass = if ($marketPnl -gt 0) { "positive" } else { "negative" }
-        
-        $html += @"
-                    <tr>
-                        <td><strong>$marketName</strong></td>
-                        <td>$marketTrades</td>
-                        <td>$marketWins</td>
-                        <td>$winRate%</td>
-                        <td class="$pnlClass">`$$marketPnl</td>
-                    </tr>
-"@
-    }
+    # Metrics grid
+    [void]$sb.AppendLine('        <div class="metrics-grid">')
+    [void]$sb.AppendLine('            <div class="metric-card">')
+    [void]$sb.AppendLine('                <div class="label">Posicoes Abertas</div>')
+    [void]$sb.AppendLine("                <div class='value'>$openPos</div>")
+    [void]$sb.AppendLine('            </div>')
+    [void]$sb.AppendLine('            <div class="metric-card">')
+    [void]$sb.AppendLine('                <div class="label">Total de Trades</div>')
+    [void]$sb.AppendLine("                <div class='value'>$totalTrades</div>")
+    [void]$sb.AppendLine('            </div>')
+    [void]$sb.AppendLine('            <div class="metric-card positive">')
+    [void]$sb.AppendLine('                <div class="label">Win Rate</div>')
+    [void]$sb.AppendLine("                <div class='value'>$winRate%</div>")
+    [void]$sb.AppendLine('            </div>')
+    [void]$sb.AppendLine("            <div class='metric-card $pnlClass'>")
+    [void]$sb.AppendLine('                <div class="label">PnL Total</div>')
+    [void]$sb.AppendLine("                <div class='value'>`$$totalPnl</div>")
+    [void]$sb.AppendLine('            </div>')
+    [void]$sb.AppendLine('        </div>')
     
-    $html += @"
-                </tbody>
-            </table>
-        </div>
-        
-        <div class="section">
-            <h2>📈 Posições Abertas</h2>
-"@
+    # Open positions section
+    [void]$sb.AppendLine('        <div class="section">')
+    [void]$sb.AppendLine('            <h2>Posicoes Abertas</h2>')
     
     if ($Metrics.open_positions -gt 0) {
-        $html += @"
-            <table>
-                <thead>
-                    <tr>
-                        <th>Market</th>
-                        <th>Side</th>
-                        <th>Entry</th>
-                        <th>Current</th>
-                        <th>PnL%</th>
-                        <th>Leverage</th>
-                        <th>Liquidation</th>
-                    </tr>
-                </thead>
-                <tbody>
-"@
+        [void]$sb.AppendLine('            <table>')
+        [void]$sb.AppendLine('                <thead>')
+        [void]$sb.AppendLine('                    <tr>')
+        [void]$sb.AppendLine('                        <th>Market</th>')
+        [void]$sb.AppendLine('                        <th>Side</th>')
+        [void]$sb.AppendLine('                        <th>Entry</th>')
+        [void]$sb.AppendLine('                        <th>Current</th>')
+        [void]$sb.AppendLine('                        <th>PnL%</th>')
+        [void]$sb.AppendLine('                        <th>Leverage</th>')
+        [void]$sb.AppendLine('                        <th>Liquidation</th>')
+        [void]$sb.AppendLine('                    </tr>')
+        [void]$sb.AppendLine('                </thead>')
+        [void]$sb.AppendLine('                <tbody>')
         
-        foreach ($pos in $Metrics.open_positions_detail) {
+        # FIX: Garantir que seja array para iteracao
+        $positionsArray = if ($Metrics.open_positions_detail -is [array]) {
+            $Metrics.open_positions_detail
+        } else {
+            @($Metrics.open_positions_detail)
+        }
+        
+        foreach ($pos in $positionsArray) {
             $market = $pos.market
             $side = $pos.side.ToUpper()
-            $entryPrice = [math]::Round([double]$pos.open_price, 4)
-            $currentPrice = [math]::Round([double]$pos.latest_price, 4)
-            $liqPrice = [math]::Round([double]$pos.liquidation_price, 4)
+            
+            # FIX: Usar avg_entry_price (nao open_price)
+            $entryPrice = [math]::Round([double]$pos.avg_entry_price, 4)
+            
+            # FIX: Buscar preco atual via ticker (nao latest_price)
+            $ticker = CoinEx-GetTickerFresh -market $market
+            $currentPrice = [math]::Round([double]$ticker.ticker.last, 4)
+            
+            # FIX: Usar liq_price (nao liquidation_price)
+            $liqPrice = [math]::Round([double]$pos.liq_price, 4)
+            
             $leverage = $pos.leverage
             
             $pnlPct = if ($pos.side -eq "long") {
@@ -455,177 +263,29 @@ function Generate-HTML {
             $pnlClass = if ($pnlPct -gt 0) { "positive" } else { "negative" }
             $sideClass = if ($pos.side -eq "long") { "long" } else { "short" }
             
-            $html += @"
-                    <tr>
-                        <td><strong>$market</strong></td>
-                        <td><span class="badge $sideClass">$side</span></td>
-                        <td>`$$entryPrice</td>
-                        <td>`$$currentPrice</td>
-                        <td class="$pnlClass">$pnlPct%</td>
-                        <td>$leverage`x</td>
-                        <td>`$$liqPrice</td>
-                    </tr>
-"@
+            [void]$sb.AppendLine('                    <tr>')
+            [void]$sb.AppendLine("                        <td><strong>$market</strong></td>")
+            [void]$sb.AppendLine("                        <td><span class='badge $sideClass'>$side</span></td>")
+            [void]$sb.AppendLine("                        <td>`$$entryPrice</td>")
+            [void]$sb.AppendLine("                        <td>`$$currentPrice</td>")
+            [void]$sb.AppendLine("                        <td class='$pnlClass'>$pnlPct%</td>")
+            [void]$sb.AppendLine("                        <td>$leverage`x</td>")
+            [void]$sb.AppendLine("                        <td>`$$liqPrice</td>")
+            [void]$sb.AppendLine('                    </tr>')
         }
         
-        $html += @"
-                </tbody>
-            </table>
-"@
+        [void]$sb.AppendLine('                </tbody>')
+        [void]$sb.AppendLine('            </table>')
     } else {
-        $html += "<p style='text-align: center; color: #666; padding: 40px;'>Nenhuma posição aberta no momento</p>"
+        [void]$sb.AppendLine('            <p style="text-align: center; color: #666; padding: 40px;">Nenhuma posicao aberta no momento</p>')
     }
     
-    $html += @"
-        </div>
-        
-        <div class="section">
-            <h2>🎯 Melhores e Piores Trades</h2>
-            <table>
-                <thead>
-                    <tr>
-                        <th>Tipo</th>
-                        <th>Market</th>
-                        <th>Side</th>
-                        <th>Entry</th>
-                        <th>Exit</th>
-                        <th>PnL</th>
-                    </tr>
-                </thead>
-                <tbody>
-"@
+    [void]$sb.AppendLine('        </div>')
+    [void]$sb.AppendLine('    </div>')
+    [void]$sb.AppendLine('</body>')
+    [void]$sb.AppendLine('</html>')
     
-    if ($Metrics.best_trade) {
-        $bt = $Metrics.best_trade
-        $btEntry = [math]::Round([double]$bt.avg_entry_price, 4)
-        $btSettle = [math]::Round([double]$bt.settle_price, 4)
-        $btPnl = [math]::Round([double]$bt.realized_pnl, 2)
-        $html += @"
-                    <tr>
-                        <td><strong style="color: #10b981;">🏆 MELHOR</strong></td>
-                        <td><strong>$($bt.market)</strong></td>
-                        <td><span class="badge $(if($bt.side -eq 'long'){'long'}else{'short'})">$($bt.side.ToUpper())</span></td>
-                        <td>`$$btEntry</td>
-                        <td>`$$btSettle</td>
-                        <td class="positive">+`$$btPnl</td>
-                    </tr>
-"@
-    }
-    
-    if ($Metrics.worst_trade) {
-        $wt = $Metrics.worst_trade
-        $wtEntry = [math]::Round([double]$wt.avg_entry_price, 4)
-        $wtSettle = [math]::Round([double]$wt.settle_price, 4)
-        $wtPnl = [math]::Round([double]$wt.realized_pnl, 2)
-        $html += @"
-                    <tr>
-                        <td><strong style="color: #ef4444;">💔 PIOR</strong></td>
-                        <td><strong>$($wt.market)</strong></td>
-                        <td><span class="badge $(if($wt.side -eq 'long'){'long'}else{'short'})">$($wt.side.ToUpper())</span></td>
-                        <td>`$$wtEntry</td>
-                        <td>`$$wtSettle</td>
-                        <td class="negative">`$$wtPnl</td>
-                    </tr>
-"@
-    }
-    
-    # Preparar dados para gráficos
-    $top5MarketsLabels = ($Metrics.top5_markets | ForEach-Object { "`"$($_.Key)`"" }) -join ","
-    $top5MarketsPnl = ($Metrics.top5_markets | ForEach-Object { [math]::Round($_.Value.pnl, 2) }) -join ","
-    
-    $html += @"
-                </tbody>
-            </table>
-        </div>
-        
-        <div class="section">
-            <h2>📊 Gráficos de Performance</h2>
-            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 30px; margin-top: 20px;">
-                <div>
-                    <h3 style="text-align: center; margin-bottom: 15px;">Win/Loss Distribution</h3>
-                    <canvas id="winLossChart"></canvas>
-                </div>
-                <div>
-                    <h3 style="text-align: center; margin-bottom: 15px;">Top 5 Markets PnL</h3>
-                    <canvas id="marketsPnlChart"></canvas>
-                </div>
-            </div>
-        </div>
-        
-        <div class="footer">
-            <p>🤖 Position Management Dashboard | Auto-refresh a cada 5 minutos</p>
-            <p>Criado com TDD rigoroso | 2026-05-23</p>
-        </div>
-    </div>
-    
-    <script>
-        // Win/Loss Pie Chart
-        const winLossCtx = document.getElementById('winLossChart').getContext('2d');
-        new Chart(winLossCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Wins', 'Losses'],
-                datasets: [{
-                    data: [$wins, $losses],
-                    backgroundColor: ['#10b981', '#ef4444'],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom'
-                    },
-                    title: {
-                        display: true,
-                        text: 'Win Rate: $winRate%'
-                    }
-                }
-            }
-        });
-        
-        // Markets PnL Bar Chart
-        const marketsPnlCtx = document.getElementById('marketsPnlChart').getContext('2d');
-        new Chart(marketsPnlCtx, {
-            type: 'bar',
-            data: {
-                labels: [$top5MarketsLabels],
-                datasets: [{
-                    label: 'PnL (USD)',
-                    data: [$top5MarketsPnl],
-                    backgroundColor: function(context) {
-                        const value = context.parsed.y;
-                        return value >= 0 ? '#10b981' : '#ef4444';
-                    },
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: {
-                        display: false
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            callback: function(value) {
-                                return '`$' + value;
-                            }
-                        }
-                    }
-                }
-            }
-        });
-    </script>
-</body>
-</html>
-"@
-    
-    return $html
+    return $sb.ToString()
 }
 
 # ============================================================================
@@ -633,14 +293,14 @@ function Generate-HTML {
 # ============================================================================
 
 try {
-    Write-Host "`n=== GERANDO DASHBOARD ===" -ForegroundColor Cyan
+    Write-Host "`n=== GERANDO DASHBOARD V2 ===" -ForegroundColor Cyan
     
-    # 1. Coletar métricas
-    Write-Host "Coletando métricas..." -ForegroundColor Yellow
+    # 1. Coletar metricas
+    Write-Host "Coletando metricas..." -ForegroundColor Yellow
     $metrics = Get-PositionMetrics
     
     if (-not $metrics) {
-        Write-Host "✗ Falha ao coletar métricas" -ForegroundColor Red
+        Write-Host "[X] Falha ao coletar metricas" -ForegroundColor Red
         exit 1
     }
     
@@ -654,22 +314,18 @@ try {
     Write-Host "`nGerando HTML..." -ForegroundColor Yellow
     $html = Generate-HTML -Metrics $metrics
     
-    # 3. Salvar arquivo
+    # 3. Salvar arquivo com UTF-8
     $dashboardDir = Join-Path $PSScriptRoot "..\dashboard"
     if (-not (Test-Path $dashboardDir)) {
         New-Item -ItemType Directory -Path $dashboardDir -Force | Out-Null
     }
     
     $outputPath = Join-Path $dashboardDir "position_metrics.html"
-    $html | Out-File -FilePath $outputPath -Encoding UTF8 -Force
+    
+    # Salvar com UTF-8 (sem BOM)
+    [System.IO.File]::WriteAllText($outputPath, $html, [System.Text.UTF8Encoding]::new($false))
     
     Write-Host "[OK] Dashboard gerado: $outputPath" -ForegroundColor Green
-    
-    # 4. Abrir no navegador (opcional)
-    if ($args -contains "-Open") {
-        Start-Process $outputPath
-        Write-Host "[OK] Dashboard aberto no navegador" -ForegroundColor Green
-    }
     
     Write-Host "`n=== COMPLETO ===" -ForegroundColor Cyan
     

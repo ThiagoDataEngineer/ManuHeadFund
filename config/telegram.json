@@ -1,0 +1,19 @@
+{
+  "enabled": true,
+  "bot_token": "8763265579:AAFPaVZjeS_rQSzs4xpzb9stMG5veP_Qo54",
+  "chat_id": "5592104053",
+  "alerts": {
+    "position_opened": true,
+    "position_closed": true,
+    "stop_loss_hit": true,
+    "take_profit_hit": true,
+    "trailing_activated": true,
+    "risk_alert": true,
+    "daily_summary": true
+  },
+  "quiet_hours": {
+    "enabled": false,
+    "start": "22:00",
+    "end": "08:00"
+  }
+}

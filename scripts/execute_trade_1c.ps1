@@ -17,7 +17,7 @@ try {
     $market = "BNBUSDT"
     $sizeUsd = 50
     $leverage = 3
-    $side = "long"
+    $side = "buy"  # CoinEx API usa "buy" para LONG, "sell" para SHORT
     
     Write-Host "Configuracao:" -ForegroundColor Yellow
     Write-Host "  Market: $market" -ForegroundColor White
@@ -97,20 +97,15 @@ try {
     if ($stopLoss) { Write-Host "  Stop Loss: `$$stopLoss" -ForegroundColor Red }
     if ($takeProfit) { Write-Host "  Take Profit: `$$takeProfit" -ForegroundColor Green }
     
-    $order = CoinEx-PlaceOrder `
-        -market $orderParams.market `
-        -side $orderParams.side `
-        -type $orderParams.type `
-        -amount $orderParams.amount `
-        -stopLoss $stopLoss `
-        -takeProfit $takeProfit
-    
-    if (-not $order -or $order.code -ne 0) {
-        $errorMsg = if ($order) { $order.message } else { "Resposta vazia da API" }
-        throw "Falha ao executar ordem: $errorMsg"
+    # CoinEx-PlaceOrder usa parametros POSICIONAIS, nao named
+    # Assinatura: ($market, $side, $type, $amount, $price=$null, $stopLoss=$null, $takeProfit=$null, [string]$StpMode = "ct")
+    $order = CoinEx-PlaceOrder $market $side "market" $amount $null $stopLoss $takeProfit
+
+    if (-not $order) {
+        throw "Falha ao executar ordem: Resposta vazia da API"
     }
-    
-    $orderId = $order.data.order_id
+
+    $orderId = $order.order_id
     
     Write-Host "ORDEM EXECUTADA COM SUCESSO!" -ForegroundColor Green
     Write-Host "  Order ID: $orderId" -ForegroundColor White

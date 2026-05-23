@@ -50,16 +50,24 @@ function Update-TrailingStop {
     
     try {
         # 1. Buscar posicao atual
-        $positions = CoinEx-GetPendingPositions -Market $Market
+        $allPositions = CoinEx-GetPendingPositions
+        $positions = $allPositions | Where-Object { $_.market -eq $Market }
         if (-not $positions -or $positions.Count -eq 0) {
-            Write-Host "  [TrailingStop] $Market: sem posicao aberta" -ForegroundColor DarkGray
+            Write-Host "  [TrailingStop] ${Market}: sem posicao aberta" -ForegroundColor DarkGray
             return [PSCustomObject]@{ success = $false; reason = "no_position" }
         }
         
         $pos = $positions[0]
         $side = $pos.side
-        $entryPrice = [double]$pos.open_price
-        $currentPrice = [double]$pos.latest_price
+        $entryPrice = [double]$pos.avg_entry_price
+        
+        # Buscar preco atual via ticker
+        $ticker = CoinEx-Get "/v2/futures/ticker?market=$Market"
+        if ($ticker.code -ne 0 -or -not $ticker.data) {
+            Write-Host "  [Function] ${Market}: falha ao buscar ticker" -ForegroundColor Yellow
+            return [PSCustomObject]@{ success = $false; reason = "ticker_error" }
+        }
+        $currentPrice = [double]$ticker.data.last
         $currentSL = if ($pos.stop_loss_price) { [double]$pos.stop_loss_price } else { 0 }
         
         # 2. Calcular lucro atual
@@ -71,14 +79,14 @@ function Update-TrailingStop {
         
         # 3. Verificar se atingiu lucro minimo
         if ($profitPct -lt $MinProfitPct) {
-            Write-Host "  [TrailingStop] $Market: lucro $([math]::Round($profitPct,2))% < minimo $MinProfitPct%" -ForegroundColor DarkGray
+            Write-Host "  [TrailingStop] ${Market}: lucro $([math]::Round($profitPct,2))% < minimo $MinProfitPct%" -ForegroundColor DarkGray
             return [PSCustomObject]@{ success = $false; reason = "profit_below_min"; profit_pct = $profitPct }
         }
         
         # 4. Calcular ATR (14 periodos, 1h)
         $candles = CoinEx-GetFuturesCandles -Market $Market -Period "1hour" -Limit 15
         if (-not $candles -or $candles.Count -lt 14) {
-            Write-Host "  [TrailingStop] $Market: dados insuficientes para ATR" -ForegroundColor Yellow
+            Write-Host "  [TrailingStop] ${Market}: dados insuficientes para ATR" -ForegroundColor Yellow
             return [PSCustomObject]@{ success = $false; reason = "insufficient_data" }
         }
         
@@ -88,11 +96,10 @@ function Update-TrailingStop {
             $low = [double]$candles[$i].low
             $prevClose = [double]$candles[$i-1].close
             
-            $tr = [math]::Max(
-                ($high - $low),
-                [math]::Abs($high - $prevClose),
-                [math]::Abs($low - $prevClose)
-            )
+            $tr1 = $high - $low
+            $tr2 = [math]::Abs($high - $prevClose)
+            $tr3 = [math]::Abs($low - $prevClose)
+            $tr = [math]::Max([math]::Max($tr1, $tr2), $tr3)
             $atrSum += $tr
         }
         $atr = $atrSum / 14
@@ -114,7 +121,7 @@ function Update-TrailingStop {
         }
         
         if (-not $shouldUpdate) {
-            Write-Host "  [TrailingStop] $Market: SL atual $currentSL ja e otimo (novo seria $([math]::Round($newSL,2)))" -ForegroundColor DarkGray
+            Write-Host "  [TrailingStop] ${Market}: SL atual $currentSL ja e otimo (novo seria $([math]::Round($newSL,2)))" -ForegroundColor DarkGray
             return [PSCustomObject]@{
                 success = $false
                 reason = "current_sl_better"
@@ -124,7 +131,7 @@ function Update-TrailingStop {
         }
         
         # 7. Atualizar stop loss
-        Write-Host "  [TrailingStop] $Market: atualizando SL $currentSL -> $([math]::Round($newSL,2)) (ATR=$([math]::Round($atr,2)) profit=$([math]::Round($profitPct,2))%)" -ForegroundColor Cyan
+        Write-Host "  [TrailingStop] ${Market}: atualizando SL $currentSL -> $([math]::Round($newSL,2)) (ATR=$([math]::Round($atr,2)) profit=$([math]::Round($profitPct,2))%)" -ForegroundColor Cyan
         
         if ($DryRun) {
             return [PSCustomObject]@{
@@ -151,7 +158,7 @@ function Update-TrailingStop {
         }
     }
     catch {
-        Write-Host "  [TrailingStop] ERRO $Market: $_" -ForegroundColor Red
+        Write-Host "  [TrailingStop] ERRO ${Market}: $_" -ForegroundColor Red
         return [PSCustomObject]@{
             success = $false
             error = $_.Exception.Message
@@ -204,7 +211,7 @@ function Adjust-LeverageByVolatility {
         # 1. Calcular ATR% (volatilidade normalizada)
         $candles = CoinEx-GetFuturesCandles -Market $Market -Period "1hour" -Limit 15
         if (-not $candles -or $candles.Count -lt 14) {
-            Write-Host "  [LeverageAdjust] $Market: dados insuficientes" -ForegroundColor Yellow
+            Write-Host "  [LeverageAdjust] ${Market}: dados insuficientes" -ForegroundColor Yellow
             return [PSCustomObject]@{ success = $false; reason = "insufficient_data" }
         }
         
@@ -216,11 +223,10 @@ function Adjust-LeverageByVolatility {
             $low = [double]$candles[$i].low
             $prevClose = [double]$candles[$i-1].close
             
-            $tr = [math]::Max(
-                ($high - $low),
-                [math]::Abs($high - $prevClose),
-                [math]::Abs($low - $prevClose)
-            )
+            $tr1 = $high - $low
+            $tr2 = [math]::Abs($high - $prevClose)
+            $tr3 = [math]::Abs($low - $prevClose)
+            $tr = [math]::Max([math]::Max($tr1, $tr2), $tr3)
             $atrSum += $tr
         }
         $atr = $atrSum / 14
@@ -240,17 +246,18 @@ function Adjust-LeverageByVolatility {
         }
         
         # 3. Buscar leverage atual
-        $positions = CoinEx-GetPendingPositions -Market $Market
+        $allPositions = CoinEx-GetPendingPositions
+        $positions = $allPositions | Where-Object { $_.market -eq $Market }
         $currentLeverage = if ($positions -and $positions.Count -gt 0) {
             [int]$positions[0].leverage
         } else {
-            Write-Host "  [LeverageAdjust] $Market: sem posicao aberta, usando leverage default" -ForegroundColor DarkGray
+            Write-Host "  [LeverageAdjust] ${Market}: sem posicao aberta, usando leverage default" -ForegroundColor DarkGray
             return [PSCustomObject]@{ success = $false; reason = "no_position" }
         }
         
         # 4. Verificar se precisa ajustar
         if ($currentLeverage -eq $targetLeverage) {
-            Write-Host "  [LeverageAdjust] $Market: leverage $currentLeverage ja e otimo (ATR%=$([math]::Round($atrPct,2))%)" -ForegroundColor DarkGray
+            Write-Host "  [LeverageAdjust] ${Market}: leverage $currentLeverage ja e otimo (ATR%=$([math]::Round($atrPct,2))%)" -ForegroundColor DarkGray
             return [PSCustomObject]@{
                 success = $false
                 reason = "leverage_already_optimal"
@@ -259,7 +266,7 @@ function Adjust-LeverageByVolatility {
             }
         }
         
-        Write-Host "  [LeverageAdjust] $Market: ajustando leverage $currentLeverage -> $targetLeverage (ATR%=$([math]::Round($atrPct,2))%)" -ForegroundColor Cyan
+        Write-Host "  [LeverageAdjust] ${Market}: ajustando leverage $currentLeverage -> $targetLeverage (ATR%=$([math]::Round($atrPct,2))%)" -ForegroundColor Cyan
         
         if ($DryRun) {
             return [PSCustomObject]@{
@@ -285,7 +292,7 @@ function Adjust-LeverageByVolatility {
         }
     }
     catch {
-        Write-Host "  [LeverageAdjust] ERRO $Market: $_" -ForegroundColor Red
+        Write-Host "  [LeverageAdjust] ERRO ${Market}: $_" -ForegroundColor Red
         return [PSCustomObject]@{
             success = $false
             error = $_.Exception.Message
@@ -335,17 +342,36 @@ function Protect-FromLiquidation {
     
     try {
         # 1. Buscar posicao
-        $positions = CoinEx-GetPendingPositions -Market $Market
+        $allPositions = CoinEx-GetPendingPositions
+        $positions = $allPositions | Where-Object { $_.market -eq $Market }
         if (-not $positions -or $positions.Count -eq 0) {
-            Write-Host "  [LiqProtect] $Market: sem posicao aberta" -ForegroundColor DarkGray
+            Write-Host "  [LiqProtect] ${Market}: sem posicao aberta" -ForegroundColor DarkGray
             return [PSCustomObject]@{ success = $false; reason = "no_position" }
         }
         
         $pos = $positions[0]
         $side = $pos.side
-        $currentPrice = [double]$pos.latest_price
-        $liqPrice = [double]$pos.liquidation_price
-        $margin = [double]$pos.margin
+        
+        # Buscar preco atual via ticker
+        $ticker = CoinEx-Get "/v2/futures/ticker?market=$Market"
+        if ($ticker.code -ne 0 -or -not $ticker.data) {
+            Write-Host "  [LiqProtect] ${Market}: falha ao buscar ticker" -ForegroundColor Yellow
+            return [PSCustomObject]@{ success = $false; reason = "ticker_error" }
+        }
+        $currentPrice = [double]$ticker.data.last
+        
+        $liqPrice = [double]$pos.liq_price
+        $margin = if ($pos.margin_avbl) { [double]$pos.margin_avbl } else { 0 }
+        
+        # Verificar se liq_price esta disponivel
+        if ($liqPrice -eq 0 -or [double]::IsNaN($liqPrice)) {
+            Write-Host "  [LiqProtect] ${Market}: liq_price nao disponivel (isolated margin ou cross margin)" -ForegroundColor DarkGray
+            return [PSCustomObject]@{
+                success = $false
+                reason = "liq_price_unavailable"
+                message = "Liquidation price not available from exchange"
+            }
+        }
         
         # 2. Calcular distancia ate liquidacao
         $distancePct = if ($side -eq "long") {
@@ -356,7 +382,7 @@ function Protect-FromLiquidation {
         
         # 3. Verificar se precisa proteger
         if ($distancePct -gt $ThresholdPct) {
-            Write-Host "  [LiqProtect] $Market: distancia $([math]::Round($distancePct,2))% > threshold $ThresholdPct% (seguro)" -ForegroundColor DarkGray
+            Write-Host "  [LiqProtect] ${Market}: distancia $([math]::Round($distancePct,2))% > threshold $ThresholdPct% (seguro)" -ForegroundColor DarkGray
             return [PSCustomObject]@{
                 success = $false
                 reason = "safe_distance"
@@ -365,7 +391,7 @@ function Protect-FromLiquidation {
             }
         }
         
-        Write-Host "  [LiqProtect] $Market: ALERTA! Distancia $([math]::Round($distancePct,2))% < $ThresholdPct% - adicionando margin" -ForegroundColor Yellow
+        Write-Host "  [LiqProtect] ${Market}: ALERTA! Distancia $([math]::Round($distancePct,2))% < $ThresholdPct% - adicionando margin" -ForegroundColor Yellow
         
         if ($DryRun) {
             return [PSCustomObject]@{
@@ -401,7 +427,7 @@ function Protect-FromLiquidation {
         }
     }
     catch {
-        Write-Host "  [LiqProtect] ERRO $Market: $_" -ForegroundColor Red
+        Write-Host "  [LiqProtect] ERRO ${Market}: $_" -ForegroundColor Red
         return [PSCustomObject]@{
             success = $false
             error = $_.Exception.Message
@@ -437,17 +463,18 @@ function Invoke-PositionRiskScan {
         Write-Host "`n=== POSITION RISK SCAN ===" -ForegroundColor Cyan
         
         # 1. Buscar todas as posicoes
-        $positions = CoinEx-GetPendingPositions
-        if (-not $positions -or $positions.Count -eq 0) {
+        $allPositions = @(CoinEx-GetPendingPositions)
+        if (-not $allPositions -or $allPositions.Count -eq 0) {
             Write-Host "  Nenhuma posicao aberta" -ForegroundColor DarkGray
             return [PSCustomObject]@{ success = $true; positions_scanned = 0 }
         }
         
-        Write-Host "  Posicoes abertas: $($positions.Count)" -ForegroundColor White
+        $posCount = $allPositions.Count
+        Write-Host "  Posicoes abertas: $posCount" -ForegroundColor White
         
         $results = @()
         
-        foreach ($pos in $positions) {
+        foreach ($pos in $allPositions) {
             $market = $pos.market
             Write-Host "`n  --- $market ---" -ForegroundColor Yellow
             
@@ -471,7 +498,7 @@ function Invoke-PositionRiskScan {
         Write-Host "`n=== SCAN COMPLETO ===" -ForegroundColor Cyan
         return [PSCustomObject]@{
             success = $true
-            positions_scanned = $positions.Count
+            positions_scanned = $allPositions.Count
             results = $results
         }
     }
