@@ -39,10 +39,10 @@ function Update-TrailingStop {
         [string]$Market,
         
         [Parameter(Mandatory=$false)]
-        [double]$AtrMultiplier = 2.0,
+        [double]$AtrMultiplier = 1.5,
         
         [Parameter(Mandatory=$false)]
-        [double]$MinProfitPct = 2.0,
+        [double]$MinProfitPct = 1.0,
         
         [Parameter(Mandatory=$false)]
         [switch]$DryRun

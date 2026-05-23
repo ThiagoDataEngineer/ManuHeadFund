@@ -151,6 +151,7 @@ function Generate-HTML {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="refresh" content="300">
     <title>Position Management Dashboard</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -528,9 +529,27 @@ function Generate-HTML {
 "@
     }
     
+    # Preparar dados para gráficos
+    $top5MarketsLabels = ($Metrics.top5_markets | ForEach-Object { "`"$($_.Key)`"" }) -join ","
+    $top5MarketsPnl = ($Metrics.top5_markets | ForEach-Object { [math]::Round($_.Value.pnl, 2) }) -join ","
+    
     $html += @"
                 </tbody>
             </table>
+        </div>
+        
+        <div class="section">
+            <h2>📊 Gráficos de Performance</h2>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 30px; margin-top: 20px;">
+                <div>
+                    <h3 style="text-align: center; margin-bottom: 15px;">Win/Loss Distribution</h3>
+                    <canvas id="winLossChart"></canvas>
+                </div>
+                <div>
+                    <h3 style="text-align: center; margin-bottom: 15px;">Top 5 Markets PnL</h3>
+                    <canvas id="marketsPnlChart"></canvas>
+                </div>
+            </div>
         </div>
         
         <div class="footer">
@@ -538,6 +557,70 @@ function Generate-HTML {
             <p>Criado com TDD rigoroso | 2026-05-23</p>
         </div>
     </div>
+    
+    <script>
+        // Win/Loss Pie Chart
+        const winLossCtx = document.getElementById('winLossChart').getContext('2d');
+        new Chart(winLossCtx, {
+            type: 'doughnut',
+            data: {
+                labels: ['Wins', 'Losses'],
+                datasets: [{
+                    data: [$wins, $losses],
+                    backgroundColor: ['#10b981', '#ef4444'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        position: 'bottom'
+                    },
+                    title: {
+                        display: true,
+                        text: 'Win Rate: $winRate%'
+                    }
+                }
+            }
+        });
+        
+        // Markets PnL Bar Chart
+        const marketsPnlCtx = document.getElementById('marketsPnlChart').getContext('2d');
+        new Chart(marketsPnlCtx, {
+            type: 'bar',
+            data: {
+                labels: [$top5MarketsLabels],
+                datasets: [{
+                    label: 'PnL (USD)',
+                    data: [$top5MarketsPnl],
+                    backgroundColor: function(context) {
+                        const value = context.parsed.y;
+                        return value >= 0 ? '#10b981' : '#ef4444';
+                    },
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: {
+                        display: false
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            callback: function(value) {
+                                return '`$' + value;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
 </body>
 </html>
 "@
