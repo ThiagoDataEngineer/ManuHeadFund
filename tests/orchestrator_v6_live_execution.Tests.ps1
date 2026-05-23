@@ -1,4 +1,4 @@
-# orchestrator_v6_live_execution.Tests.ps1 -- Pester 3.x
+﻿# orchestrator_v6_live_execution.Tests.ps1 -- Pester 3.x
 #
 # V6 PlaceOrder gap (2026-05-20): testa que Invoke-OrchestratorV6 corretamente
 # decide entre paper-only (B default) e live execution (A opt-in via flag).
@@ -9,7 +9,7 @@
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 # Stubs globais
-$global:CLAUDE_MODEL      = "claude-sonnet-4-6"
+$global:CLAUDE_MODEL      = "claude-sonnet-4"
 $global:CLAUDE_MAX_TOKENS = 4000
 $global:ANTHROPIC_API_KEY = "test-key"
 

@@ -1,0 +1,55 @@
+{
+  "timestamp": "2026-05-23T01:04:55.933963",
+  "rsi_fix_date": "2026-05-23",
+  "patterns_tested": 3,
+  "patterns_invalidated": 3,
+  "vol_climax": {
+    "before": {
+      "edge": 20.7,
+      "signals": 278,
+      "status": "PRODUÇÃO"
+    },
+    "after": {
+      "edge": -2.1326392607911617,
+      "signals": 27,
+      "status": "EDGE NEGATIVO"
+    },
+    "impact": "Edge +20.7pp era 100% artefato do RSI bug"
+  },
+  "short_t6": {
+    "before": {
+      "edge": 2.85,
+      "signals": 505,
+      "status": "PAPER"
+    },
+    "after": {
+      "edge": -15.803745743605045,
+      "signals": 13,
+      "status": "EDGE NEGATIVO"
+    },
+    "impact": "Edge +2.85% era 100% artefato do RSI bug"
+  },
+  "short_bear": {
+    "period": "Nov 2021 - Dec 2022",
+    "signals": 0,
+    "status": "PATTERN INVIÁVEL",
+    "impact": "SHORT buying climax é extremamente raro"
+  },
+  "roi_impact": {
+    "before": "+85% ROI/ano (FALSO)",
+    "after": "-2.6% ROI/ano (PERDA)",
+    "delta": "-87.6% ROI/ano"
+  },
+  "recommendations": {
+    "immediate": [
+      "Remove RSI confluence",
+      "Disable SHORT scanner",
+      "Update documentation"
+    ],
+    "focus": [
+      "Tori Proximity (relaxed)",
+      "Timeframe expansion",
+      "Universe expansion"
+    ]
+  }
+}

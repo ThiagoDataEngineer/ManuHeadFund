@@ -10,7 +10,7 @@
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 # Stubs minimos de config (orchestrator usa estes globais via config.ps1)
-$global:CLAUDE_MODEL      = "claude-sonnet-4-6"
+$global:CLAUDE_MODEL      = "claude-sonnet-4"
 $global:CLAUDE_MAX_TOKENS = 4000
 $global:CLAUDE_TEMP_TRADE = 0.3
 $global:ANTHROPIC_API_KEY = "test-key"

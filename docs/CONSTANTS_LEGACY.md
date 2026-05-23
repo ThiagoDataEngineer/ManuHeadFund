@@ -274,7 +274,7 @@ Fonte: `config.ps1`
 
 | Constante | Valor | Fonte |
 |-----------|-------|-------|
-| `CLAUDE_MODEL` | `claude-sonnet-4-6` | `config.ps1` |
+| `CLAUDE_MODEL` | `claude-sonnet-4` | `config.ps1` |
 | `CLAUDE_MAX_TOKENS` | **2048** | `config.ps1` |
 | `CLAUDE_TEMP_TRADE` | **0.3** (decisões) | `config.ps1` |
 | `CLAUDE_TEMP_STUDY` | **0.7** (exploração) | `config.ps1` |

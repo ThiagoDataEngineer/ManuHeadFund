@@ -101,6 +101,23 @@ function Invoke-ToriPostProcess {
     if (-not $Result -or -not $Result.trendline -or -not $Result.trendline.verdict) {
         return $Result
     }
+    
+    # FIX 2026-05-23: Fallback para estrutura nascente (2 touches)
+    # Problema: 60% dos gems bloqueados por exigir 3+ touches
+    # Solução: Se 2 touches + quality B/A + slope válido → permitir ENTER
+    $touches = 0
+    if ($Result.trendline.PSObject.Properties['touchpoints']) {
+        $touches = [int]$Result.trendline.touchpoints
+    }
+    $quality = if ($Result.trendline.quality) { "$($Result.trendline.quality)" } else { "NONE" }
+    
+    if ($Result.trendline.verdict -eq "WAIT" -and $touches -eq 2 -and $quality -in @("B", "A", "A+")) {
+        # Override: estrutura nascente válida
+        $Result.trendline.verdict = "ENTER"
+        $Result.trendline.reason = "estrutura_nascente_2_touches_quality_$quality"
+        Write-Host "  [ToriLayer] FALLBACK 2-TOUCH: WAIT → ENTER (2 touches quality=$quality)" -ForegroundColor Cyan
+    }
+    
     switch ($Result.trendline.verdict) {
         "SKIP" {
             $Result.qualidade_setup   = "C"

@@ -270,12 +270,22 @@ function Invoke-V6Cascade {
     # User audit: 35 Mentor calls/dia, 0 trades. Mentor era chamado em candidates ja
     # condenados a falhar gates downstream. Pre-skip economiza $0.30+/dia.
     # Casos: Triagem tier=D (scanner score floor, ruido puro) OR
-    #        Triagem tier=C + wlTier=skip (combinacao impossivel exec real).
+    #        Triagem tier=C + wlTier=skip (combinacao impossivel exec real) OR
+    #        Triagem tier=C + wlTier=observe (paper-only nao precisa Mentor).
+    # FIX 2026-05-23: adicionar tier=C+observe (economiza ~$0.15/dia adicional).
     $preMentorSkip = $false
     $preMentorReason = ""
     if ($triagemTier -eq "D") {
         $preMentorSkip = $true
         $preMentorReason = "PRE_MENTOR_SKIP: Triagem tier=D (ScannerScore floor, ruido puro)"
+    }
+    if ($triagemTier -eq "C" -and $wlTierStr -eq "observe") {
+        $preMentorSkip = $true
+        $preMentorReason = "PRE_MENTOR_SKIP: tier=C + observe (paper-only, Mentor desnecessario)"
+    }
+    if ($triagemTier -eq "C" -and $wlTierStr -eq "skip") {
+        $preMentorSkip = $true
+        $preMentorReason = "PRE_MENTOR_SKIP: tier=C + skip (combinacao impossivel)"
     }
     if ($preMentorSkip) {
         Write-Warning "[orchestrator_v6] $preMentorReason; SKIP mentor (poupanca LLM ~$0.006/call)"

@@ -1,0 +1,17 @@
+﻿{
+    "candles_count":  1000,
+    "frequency":  NaN,
+    "python_comparison":  {
+                              "python_years":  14.8,
+                              "python_signals":  1,
+                              "delta":  -1
+                          },
+    "years":  0,
+    "period":  "1day",
+    "timestamp":  "2026-05-23T02:08:48.0574346-03:00",
+    "signals":  [
+
+                ],
+    "market":  "BTCUSDT",
+    "signals_count":  0
+}

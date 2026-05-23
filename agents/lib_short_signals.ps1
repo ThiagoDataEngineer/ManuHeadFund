@@ -210,3 +210,77 @@ function Get-ShortSignalWss {
         side = "SHORT"
     }
 }
+
+
+# ── TDD Sprint 1: Regime-Specific Thresholds (2026-05-23) ───────────────────
+
+function Get-ShortThresholdsForRegime {
+    <#
+    .SYNOPSIS
+    Retorna thresholds otimizados por regime para SHORT patterns.
+
+    .DESCRIPTION
+    TDD Sprint 1 (2026-05-23): Otimização regime-specific para SHORT patterns.
+    Hipótese: Edge +2.85pp → +5-8pp em BEAR regimes com thresholds adaptativos.
+
+    Thresholds por regime:
+    - BEAR_STRONG: ClimaxMult=2.0, RSI>75 (aggressive shorts, high conviction)
+    - BEAR_WEAK: ClimaxMult=2.5, RSI>70 (default, moderate shorts)
+    - TRANSITION_DOWN: ClimaxMult=3.0, RSI>65 (conservative, early signals)
+    - Default (unknown/BULL): ClimaxMult=3.0, RSI>70 (conservative fallback)
+
+    .PARAMETER Regime
+    Regime string (BEAR_STRONG, BEAR_WEAK, TRANSITION_DOWN, etc).
+
+    .OUTPUTS
+    Hashtable @{ ClimaxMultiplier, RsiOverboughtMin }
+
+    .EXAMPLE
+    $thresholds = Get-ShortThresholdsForRegime -Regime "BEAR_STRONG"
+    $r = Detect-ShortSignal ... -ClimaxMultiplier $thresholds.ClimaxMultiplier `
+        -RsiOverboughtMin $thresholds.RsiOverboughtMin
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)]
+        [string] $Regime
+    )
+
+    switch ($Regime) {
+        "BEAR_STRONG" {
+            # Aggressive shorts: lower vol threshold, higher RSI filter
+            # Rationale: BEAR_STRONG = high conviction downtrend, capture more opportunities
+            # but filter false positives with stricter RSI (>75 = extreme overbought)
+            return @{
+                ClimaxMultiplier = 2.0
+                RsiOverboughtMin = 75.0
+            }
+        }
+        "BEAR_WEAK" {
+            # Moderate shorts: default thresholds (validated in T6 backtest)
+            # Rationale: BEAR_WEAK = moderate downtrend, balanced selectivity
+            return @{
+                ClimaxMultiplier = 2.5
+                RsiOverboughtMin = 70.0
+            }
+        }
+        "TRANSITION_DOWN" {
+            # Conservative shorts: higher vol threshold, lower RSI filter
+            # Rationale: TRANSITION_DOWN = early bear signal, be selective on vol
+            # but allow earlier entries with RSI>65 (overbought forming)
+            return @{
+                ClimaxMultiplier = 3.0
+                RsiOverboughtMin = 65.0
+            }
+        }
+        default {
+            # Conservative fallback: high vol threshold, moderate RSI
+            # Rationale: Unknown regime or BULL = avoid anti-trend shorts
+            return @{
+                ClimaxMultiplier = 3.0
+                RsiOverboughtMin = 70.0
+            }
+        }
+    }
+}
+

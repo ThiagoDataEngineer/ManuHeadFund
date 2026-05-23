@@ -116,7 +116,7 @@ Evite generic ("good trade"). Use noun+verb especifico.
 "@
     try {
         $r = Invoke-Claude -SystemPrompt $sysPrompt -UserContent $userPrompt `
-            -Model "claude-haiku-4-5-20251001" -MaxTokens 200 -Temperature 0.2 -Agent "reflector"
+            -Model "claude-haiku-4" -MaxTokens 200 -Temperature 0.2 -Agent "reflector"
         if ($r) { return $r.Trim() }
     } catch {}
     return "[llm_failed] $MentorVeredicto -> $($PnlPct)% in $($HoldingDays)d"

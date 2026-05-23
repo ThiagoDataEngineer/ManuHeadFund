@@ -810,3 +810,240 @@ function _MultiLadder-ResolvePrice {
         }
     }
 }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CoinEx-CancelOrder - Cancelar ordem SPOT ou FUTURES por order_id
+# TDD 2026-05-23: Implementado com testes em lib_coinex_cancel_order.Tests.ps1
+# Rate limit: 60 req/s SPOT, 40 req/s FUTURES
+# Idempotente: retry seguro (cancelar ordem ja cancelada retorna erro mas nao duplica)
+# ─────────────────────────────────────────────────────────────────────────────
+function CoinEx-CancelOrder {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)] [string] $Market,
+        [Parameter(Mandatory)] [string] $OrderId,
+        [string] $MarketType = "FUTURES"  # "SPOT" | "FUTURES"
+    )
+
+    # Validacao de MarketType
+    if ($MarketType -notin @("SPOT", "FUTURES")) {
+        throw "MarketType deve ser 'SPOT' ou 'FUTURES', recebido: $MarketType"
+    }
+
+    $endpoint = if ($MarketType -eq "SPOT") { "/v2/spot/cancel-order" } else { "/v2/futures/cancel-order" }
+    
+    $body = @{
+        market      = $Market
+        market_type = $MarketType
+        order_id    = $OrderId
+    }
+
+    try {
+        $r = CoinEx-Post $endpoint $body
+        
+        if ($r.code -eq 0) {
+            # Sucesso
+            return [PSCustomObject]@{
+                success      = $true
+                order_id     = if ($r.data -and $r.data.order_id) { $r.data.order_id } else { $OrderId }
+                status       = if ($r.data -and $r.data.status) { $r.data.status } else { "cancelled" }
+                market       = $Market
+                market_type  = $MarketType
+            }
+        } else {
+            # Erro da API (ordem nao existe, ja executada, etc)
+            return [PSCustomObject]@{
+                success       = $false
+                error_code    = $r.code
+                error_message = $r.message
+                order_id      = $OrderId
+                market        = $Market
+            }
+        }
+    } catch {
+        # Erro de rede ou outro
+        return [PSCustomObject]@{
+            success       = $false
+            error_code    = -1
+            error_message = $_.Exception.Message
+            order_id      = $OrderId
+            market        = $Market
+        }
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CoinEx-CancelOrderByClientId - Cancelar ordem FUTURES por client_id
+# TDD 2026-05-23: FUTURES only (SPOT nao tem endpoint equivalente)
+# Rate limit: 40 req/s
+# Util para cancelar ordem criada com New-OrderClientId sem saber order_id
+# ─────────────────────────────────────────────────────────────────────────────
+function CoinEx-CancelOrderByClientId {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)] [string] $Market,
+        [Parameter(Mandatory)] [string] $ClientId
+    )
+
+    $endpoint = "/v2/futures/cancel-order-by-client-id"
+    
+    $body = @{
+        market      = $Market
+        market_type = "FUTURES"
+        client_id   = $ClientId
+    }
+
+    try {
+        $r = CoinEx-Post $endpoint $body
+        
+        if ($r.code -eq 0) {
+            return [PSCustomObject]@{
+                success   = $true
+                client_id = $ClientId
+                order_id  = if ($r.data -and $r.data.order_id) { $r.data.order_id } else { $null }
+                status    = if ($r.data -and $r.data.status) { $r.data.status } else { "cancelled" }
+                market    = $Market
+            }
+        } else {
+            return [PSCustomObject]@{
+                success       = $false
+                error_code    = $r.code
+                error_message = $r.message
+                client_id     = $ClientId
+                market        = $Market
+            }
+        }
+    } catch {
+        return [PSCustomObject]@{
+            success       = $false
+            error_code    = -1
+            error_message = $_.Exception.Message
+            client_id     = $ClientId
+            market        = $Market
+        }
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CoinEx-CancelStopOrder - Cancelar stop order (ordem condicional)
+# TDD 2026-05-23: SPOT e FUTURES
+# Rate limit: 60 req/s SPOT, 40 req/s FUTURES
+# Stop orders sao ordens condicionais (trigger price) que ainda nao executaram
+# ─────────────────────────────────────────────────────────────────────────────
+function CoinEx-CancelStopOrder {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)] [string] $Market,
+        [Parameter(Mandatory)] [string] $StopId,
+        [string] $MarketType = "FUTURES"
+    )
+
+    if ($MarketType -notin @("SPOT", "FUTURES")) {
+        throw "MarketType deve ser 'SPOT' ou 'FUTURES', recebido: $MarketType"
+    }
+
+    $endpoint = if ($MarketType -eq "SPOT") { "/v2/spot/cancel-stop-order" } else { "/v2/futures/cancel-stop-order" }
+    
+    $body = @{
+        market      = $Market
+        market_type = $MarketType
+        stop_id     = $StopId
+    }
+
+    try {
+        $r = CoinEx-Post $endpoint $body
+        
+        if ($r.code -eq 0) {
+            return [PSCustomObject]@{
+                success     = $true
+                stop_id     = $StopId
+                status      = if ($r.data -and $r.data.status) { $r.data.status } else { "cancelled" }
+                market      = $Market
+                market_type = $MarketType
+            }
+        } else {
+            return [PSCustomObject]@{
+                success       = $false
+                error_code    = $r.code
+                error_message = $r.message
+                stop_id       = $StopId
+                market        = $Market
+            }
+        }
+    } catch {
+        return [PSCustomObject]@{
+            success       = $false
+            error_code    = -1
+            error_message = $_.Exception.Message
+            stop_id       = $StopId
+            market        = $Market
+        }
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# CoinEx-CancelAllOrders - Cancelar TODAS as ordens de um mercado
+# TDD 2026-05-23: SPOT e FUTURES
+# Rate limit: 40 req/s SPOT, 20 req/s FUTURES
+# CUIDADO: Cancela TODAS as ordens pendentes do mercado (nao apenas uma)
+# Util para emergencias ou cleanup
+# ─────────────────────────────────────────────────────────────────────────────
+function CoinEx-CancelAllOrders {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)] [string] $Market,
+        [string] $MarketType = "FUTURES"
+    )
+
+    if ($MarketType -notin @("SPOT", "FUTURES")) {
+        throw "MarketType deve ser 'SPOT' ou 'FUTURES', recebido: $MarketType"
+    }
+
+    $endpoint = if ($MarketType -eq "SPOT") { "/v2/spot/cancel-all-order" } else { "/v2/futures/cancel-all-order" }
+    
+    $body = @{
+        market      = $Market
+        market_type = $MarketType
+    }
+
+    try {
+        $r = CoinEx-Post $endpoint $body
+        
+        if ($r.code -eq 0) {
+            $cancelledCount = 0
+            $orders = @()
+            
+            if ($r.data) {
+                if ($r.data.PSObject.Properties['cancelled_count']) {
+                    $cancelledCount = [int]$r.data.cancelled_count
+                }
+                if ($r.data.PSObject.Properties['orders']) {
+                    $orders = @($r.data.orders)
+                }
+            }
+            
+            return [PSCustomObject]@{
+                success         = $true
+                cancelled_count = $cancelledCount
+                orders          = $orders
+                market          = $Market
+                market_type     = $MarketType
+            }
+        } else {
+            return [PSCustomObject]@{
+                success       = $false
+                error_code    = $r.code
+                error_message = $r.message
+                market        = $Market
+            }
+        }
+    } catch {
+        return [PSCustomObject]@{
+            success       = $false
+            error_code    = -1
+            error_message = $_.Exception.Message
+            market        = $Market
+        }
+    }
+}

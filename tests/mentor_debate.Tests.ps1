@@ -1,4 +1,4 @@
-# mentor_debate.Tests.ps1 -- Pester 3.x
+﻿# mentor_debate.Tests.ps1 -- Pester 3.x
 # Contrato: Invoke-MentorDebate(Market, TriagemResult, MesaResult, Setup, [KnowledgeContext])
 #   -> { decision="APROVAR"|"VETAR"; confianca=0-100; mentor_mensagem; knowledge_cited[] }
 # Stub: Invoke-ClaudeJson e Track-ClaudeUsage para zero IO real.
@@ -6,7 +6,7 @@
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 # Stubs de config minimos
-$global:CLAUDE_MODEL       = "claude-sonnet-4-6"
+$global:CLAUDE_MODEL       = "claude-sonnet-4"
 $global:CLAUDE_MAX_TOKENS  = 4000
 $global:CLAUDE_TEMP_TRADE  = 0.3
 $global:ANTHROPIC_API_KEY  = "test-key"

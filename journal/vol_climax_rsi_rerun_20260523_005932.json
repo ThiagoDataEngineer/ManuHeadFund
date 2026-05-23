@@ -1,0 +1,520 @@
+{
+  "timestamp": "2026-05-23T00:59:32.785942",
+  "period": "2017-08-17 00:00:00 to 2026-05-23 00:00:00",
+  "rsi_status": "FIXED 2026-05-23",
+  "original_result": "+20.7pp edge (com RSI bugado)",
+  "without_rsi": {
+    "signals": 27,
+    "edge_h20": -2.1326392607911617,
+    "win_rate_h20": 0.4444444444444444,
+    "signals_data": [
+      {
+        "date": "2018-01-16T00:00:00",
+        "entry_price": 10900.0,
+        "vol_ratio": 3.540290762163475,
+        "rsi": 35.74895042278757,
+        "rsi_confluence": false,
+        "h20_return": -36.330366972477066,
+        "hit_h20": false,
+        "h24_return": -20.331009174311927,
+        "hit_h24": false
+      },
+      {
+        "date": "2018-02-06T00:00:00",
+        "entry_price": 7652.14,
+        "vol_ratio": 2.910618012229667,
+        "rsi": 32.47785922676238,
+        "rsi_confluence": false,
+        "h20_return": 34.9165070163379,
+        "hit_h20": true,
+        "h24_return": 44.260298426322564,
+        "hit_h24": true
+      },
+      {
+        "date": "2018-11-14T00:00:00",
+        "entry_price": 5922.41,
+        "vol_ratio": 4.5716059661515684,
+        "rsi": 25.203710034660546,
+        "rsi_confluence": false,
+        "h20_return": -33.27648710575593,
+        "hit_h20": false,
+        "h24_return": -42.406385238441786,
+        "hit_h24": false
+      },
+      {
+        "date": "2018-11-15T00:00:00",
+        "entry_price": 5753.4,
+        "vol_ratio": 3.983802945088936,
+        "rsi": 21.7017180013719,
+        "rsi_confluence": false,
+        "h20_return": -34.476309660374724,
+        "hit_h20": false,
+        "h24_return": -38.377828762123265,
+        "hit_h24": false
+      },
+      {
+        "date": "2018-11-20T00:00:00",
+        "entry_price": 4558.86,
+        "vol_ratio": 5.853464780736319,
+        "rsi": 10.497797370369184,
+        "rsi_confluence": false,
+        "h20_return": -24.698718539283938,
+        "hit_h20": false,
+        "h24_return": -29.276836753047903,
+        "hit_h24": false
+      },
+      {
+        "date": "2018-11-25T00:00:00",
+        "entry_price": 4085.78,
+        "vol_ratio": 3.0092637863525393,
+        "rsi": 17.831519975599903,
+        "rsi_confluence": false,
+        "h20_return": -21.392732844157063,
+        "hit_h20": false,
+        "h24_return": -10.36668640993887,
+        "hit_h24": false
+      },
+      {
+        "date": "2019-09-24T00:00:00",
+        "entry_price": 8493.14,
+        "vol_ratio": 3.0517697555846723,
+        "rsi": 22.6841326377736,
+        "rsi_confluence": false,
+        "h20_return": -1.7065537598579408,
+        "hit_h20": false,
+        "h24_return": -6.430248412247994,
+        "hit_h24": false
+      },
+      {
+        "date": "2019-11-22T00:00:00",
+        "entry_price": 7268.23,
+        "vol_ratio": 3.2965661799638184,
+        "rsi": 24.961227852400725,
+        "rsi_confluence": false,
+        "h20_return": -0.9651593304009318,
+        "hit_h20": false,
+        "h24_return": -5.180215815955182,
+        "hit_h24": false
+      },
+      {
+        "date": "2019-11-25T00:00:00",
+        "entry_price": 7109.57,
+        "vol_ratio": 2.628645469353663,
+        "rsi": 28.19819137743869,
+        "rsi_confluence": false,
+        "h20_return": 0.12687124537771535,
+        "hit_h20": true,
+        "h24_return": 0.5728897809572235,
+        "hit_h24": true
+      },
+      {
+        "date": "2020-03-13T00:00:00",
+        "entry_price": 5578.6,
+        "vol_ratio": 5.69157970640804,
+        "rsi": 25.776891835356253,
+        "rsi_confluence": false,
+        "h20_return": 21.788441544473518,
+        "hit_h20": true,
+        "h24_return": 31.393181084859982,
+        "hit_h24": true
+      },
+      {
+        "date": "2021-05-19T00:00:00",
+        "entry_price": 36690.09,
+        "vol_ratio": 4.234869336092214,
+        "rsi": 22.588790936796514,
+        "rsi_confluence": false,
+        "h20_return": -9.01954724014032,
+        "hit_h20": false,
+        "h24_return": -3.117953649064355,
+        "hit_h24": false
+      },
+      {
+        "date": "2021-09-07T00:00:00",
+        "entry_price": 46863.73,
+        "vol_ratio": 2.664102250772936,
+        "rsi": 48.089540922622625,
+        "rsi_confluence": false,
+        "h20_return": -10.064030327931652,
+        "hit_h20": false,
+        "h24_return": 2.7267995953373694,
+        "hit_h24": true
+      },
+      {
+        "date": "2021-12-04T00:00:00",
+        "entry_price": 49152.47,
+        "vol_ratio": 2.5049633376090132,
+        "rsi": 31.47667853237577,
+        "rsi_confluence": false,
+        "h20_return": 3.3925660297437723,
+        "hit_h20": true,
+        "h24_return": -3.2729382673953173,
+        "hit_h24": false
+      },
+      {
+        "date": "2022-02-24T00:00:00",
+        "entry_price": 38327.21,
+        "vol_ratio": 2.9224909315424075,
+        "rsi": 42.383109223037266,
+        "rsi_confluence": false,
+        "h20_return": 7.271048427474895,
+        "hit_h20": true,
+        "h24_return": 7.657484069411788,
+        "hit_h24": true
+      },
+      {
+        "date": "2022-05-10T00:00:00",
+        "entry_price": 31017.1,
+        "vol_ratio": 2.8195974171589993,
+        "rsi": 28.723105331933425,
+        "rsi_confluence": false,
+        "h20_return": 2.31201498528232,
+        "hit_h20": true,
+        "h24_return": -4.245690280522678,
+        "hit_h24": false
+      },
+      {
+        "date": "2022-05-11T00:00:00",
+        "entry_price": 29103.94,
+        "vol_ratio": 3.188519340275348,
+        "rsi": 25.61058526164142,
+        "rsi_confluence": false,
+        "h20_return": 9.267130154886253,
+        "hit_h20": true,
+        "h24_return": 2.6116738833298934,
+        "hit_h24": true
+      },
+      {
+        "date": "2022-05-12T00:00:00",
+        "entry_price": 29029.75,
+        "vol_ratio": 2.8275064804014773,
+        "rsi": 25.49520856483781,
+        "rsi_confluence": false,
+        "h20_return": 2.6733953961022805,
+        "hit_h20": true,
+        "h24_return": 3.063960247676949,
+        "hit_h24": true
+      },
+      {
+        "date": "2022-11-08T00:00:00",
+        "entry_price": 18547.23,
+        "vol_ratio": 2.7287117230733675,
+        "rsi": 36.08937002564312,
+        "rsi_confluence": false,
+        "h20_return": -12.585814701171008,
+        "hit_h20": false,
+        "h24_return": -7.842087470743599,
+        "hit_h24": false
+      },
+      {
+        "date": "2023-08-17T00:00:00",
+        "entry_price": 26623.41,
+        "vol_ratio": 3.9191532786491488,
+        "rsi": 21.026679451486686,
+        "rsi_confluence": false,
+        "h20_return": -3.243235934089582,
+        "hit_h20": false,
+        "h24_return": -2.9365133917856476,
+        "hit_h24": false
+      },
+      {
+        "date": "2024-07-05T00:00:00",
+        "entry_price": 56628.79,
+        "vol_ratio": 3.3606620712571824,
+        "rsi": 28.0632875827354,
+        "rsi_confluence": false,
+        "h20_return": 16.19522507897484,
+        "hit_h20": true,
+        "h24_return": 17.934163876713598,
+        "hit_h24": true
+      },
+      {
+        "date": "2024-08-05T00:00:00",
+        "entry_price": 54018.81,
+        "vol_ratio": 5.781491453322184,
+        "rsi": 26.65844351941645,
+        "rsi_confluence": false,
+        "h20_return": 18.88451448671306,
+        "hit_h20": true,
+        "h24_return": 9.885815700123725,
+        "hit_h24": true
+      },
+      {
+        "date": "2025-02-25T00:00:00",
+        "entry_price": 88680.4,
+        "vol_ratio": 4.0468963169424645,
+        "rsi": 29.62984834945182,
+        "rsi_confluence": false,
+        "h20_return": -5.266518870009603,
+        "hit_h20": false,
+        "h24_return": -5.177705558387198,
+        "hit_h24": false
+      },
+      {
+        "date": "2025-02-28T00:00:00",
+        "entry_price": 84349.94,
+        "vol_ratio": 3.4614206796146725,
+        "rsi": 25.239559778130698,
+        "rsi_confluence": false,
+        "h20_return": -0.15002974513082393,
+        "hit_h20": false,
+        "h24_return": 3.732332234024115,
+        "hit_h24": true
+      },
+      {
+        "date": "2025-04-07T00:00:00",
+        "entry_price": 79163.24,
+        "vol_ratio": 3.8336161861293445,
+        "rsi": 38.37333113816177,
+        "rsi_confluence": false,
+        "h20_return": 18.425294366425625,
+        "hit_h20": true,
+        "h24_return": 21.88726737308882,
+        "hit_h24": true
+      },
+      {
+        "date": "2025-10-10T00:00:00",
+        "entry_price": 112774.5,
+        "vol_ratio": 4.175988416962479,
+        "rsi": 41.78353378502561,
+        "rsi_confluence": false,
+        "h20_return": -3.947363987426231,
+        "hit_h20": false,
+        "h24_return": -5.4901240972028305,
+        "hit_h24": false
+      },
+      {
+        "date": "2025-11-21T00:00:00",
+        "entry_price": 85129.43,
+        "vol_ratio": 2.5806628115733004,
+        "rsi": 23.12101703362731,
+        "rsi_confluence": false,
+        "h20_return": 8.673792365343,
+        "hit_h20": true,
+        "h24_return": 1.5301993681856074,
+        "hit_h24": true
+      },
+      {
+        "date": "2026-02-06T00:00:00",
+        "entry_price": 70580.26,
+        "vol_ratio": 3.6056601206052985,
+        "rsi": 32.59119761566183,
+        "rsi_confluence": false,
+        "h20_return": -4.385192120289727,
+        "hit_h20": false,
+        "h24_return": -2.4797301681801645,
+        "hit_h24": false
+      }
+    ]
+  },
+  "with_rsi_confluence": {
+    "signals": 18,
+    "edge_h20": -3.015217098447105,
+    "win_rate_h20": 0.4444444444444444,
+    "signals_data": [
+      {
+        "date": "2018-11-14T00:00:00",
+        "entry_price": 5922.41,
+        "vol_ratio": 4.5716059661515684,
+        "rsi": 25.203710034660546,
+        "rsi_confluence": true,
+        "h20_return": -33.27648710575593,
+        "hit_h20": false,
+        "h24_return": -42.406385238441786,
+        "hit_h24": false
+      },
+      {
+        "date": "2018-11-15T00:00:00",
+        "entry_price": 5753.4,
+        "vol_ratio": 3.983802945088936,
+        "rsi": 21.7017180013719,
+        "rsi_confluence": true,
+        "h20_return": -34.476309660374724,
+        "hit_h20": false,
+        "h24_return": -38.377828762123265,
+        "hit_h24": false
+      },
+      {
+        "date": "2018-11-20T00:00:00",
+        "entry_price": 4558.86,
+        "vol_ratio": 5.853464780736319,
+        "rsi": 10.497797370369184,
+        "rsi_confluence": true,
+        "h20_return": -24.698718539283938,
+        "hit_h20": false,
+        "h24_return": -29.276836753047903,
+        "hit_h24": false
+      },
+      {
+        "date": "2018-11-25T00:00:00",
+        "entry_price": 4085.78,
+        "vol_ratio": 3.0092637863525393,
+        "rsi": 17.831519975599903,
+        "rsi_confluence": true,
+        "h20_return": -21.392732844157063,
+        "hit_h20": false,
+        "h24_return": -10.36668640993887,
+        "hit_h24": false
+      },
+      {
+        "date": "2019-09-24T00:00:00",
+        "entry_price": 8493.14,
+        "vol_ratio": 3.0517697555846723,
+        "rsi": 22.6841326377736,
+        "rsi_confluence": true,
+        "h20_return": -1.7065537598579408,
+        "hit_h20": false,
+        "h24_return": -6.430248412247994,
+        "hit_h24": false
+      },
+      {
+        "date": "2019-11-22T00:00:00",
+        "entry_price": 7268.23,
+        "vol_ratio": 3.2965661799638184,
+        "rsi": 24.961227852400725,
+        "rsi_confluence": true,
+        "h20_return": -0.9651593304009318,
+        "hit_h20": false,
+        "h24_return": -5.180215815955182,
+        "hit_h24": false
+      },
+      {
+        "date": "2019-11-25T00:00:00",
+        "entry_price": 7109.57,
+        "vol_ratio": 2.628645469353663,
+        "rsi": 28.19819137743869,
+        "rsi_confluence": true,
+        "h20_return": 0.12687124537771535,
+        "hit_h20": true,
+        "h24_return": 0.5728897809572235,
+        "hit_h24": true
+      },
+      {
+        "date": "2020-03-13T00:00:00",
+        "entry_price": 5578.6,
+        "vol_ratio": 5.69157970640804,
+        "rsi": 25.776891835356253,
+        "rsi_confluence": true,
+        "h20_return": 21.788441544473518,
+        "hit_h20": true,
+        "h24_return": 31.393181084859982,
+        "hit_h24": true
+      },
+      {
+        "date": "2021-05-19T00:00:00",
+        "entry_price": 36690.09,
+        "vol_ratio": 4.234869336092214,
+        "rsi": 22.588790936796514,
+        "rsi_confluence": true,
+        "h20_return": -9.01954724014032,
+        "hit_h20": false,
+        "h24_return": -3.117953649064355,
+        "hit_h24": false
+      },
+      {
+        "date": "2022-05-10T00:00:00",
+        "entry_price": 31017.1,
+        "vol_ratio": 2.8195974171589993,
+        "rsi": 28.723105331933425,
+        "rsi_confluence": true,
+        "h20_return": 2.31201498528232,
+        "hit_h20": true,
+        "h24_return": -4.245690280522678,
+        "hit_h24": false
+      },
+      {
+        "date": "2022-05-11T00:00:00",
+        "entry_price": 29103.94,
+        "vol_ratio": 3.188519340275348,
+        "rsi": 25.61058526164142,
+        "rsi_confluence": true,
+        "h20_return": 9.267130154886253,
+        "hit_h20": true,
+        "h24_return": 2.6116738833298934,
+        "hit_h24": true
+      },
+      {
+        "date": "2022-05-12T00:00:00",
+        "entry_price": 29029.75,
+        "vol_ratio": 2.8275064804014773,
+        "rsi": 25.49520856483781,
+        "rsi_confluence": true,
+        "h20_return": 2.6733953961022805,
+        "hit_h20": true,
+        "h24_return": 3.063960247676949,
+        "hit_h24": true
+      },
+      {
+        "date": "2023-08-17T00:00:00",
+        "entry_price": 26623.41,
+        "vol_ratio": 3.9191532786491488,
+        "rsi": 21.026679451486686,
+        "rsi_confluence": true,
+        "h20_return": -3.243235934089582,
+        "hit_h20": false,
+        "h24_return": -2.9365133917856476,
+        "hit_h24": false
+      },
+      {
+        "date": "2024-07-05T00:00:00",
+        "entry_price": 56628.79,
+        "vol_ratio": 3.3606620712571824,
+        "rsi": 28.0632875827354,
+        "rsi_confluence": true,
+        "h20_return": 16.19522507897484,
+        "hit_h20": true,
+        "h24_return": 17.934163876713598,
+        "hit_h24": true
+      },
+      {
+        "date": "2024-08-05T00:00:00",
+        "entry_price": 54018.81,
+        "vol_ratio": 5.781491453322184,
+        "rsi": 26.65844351941645,
+        "rsi_confluence": true,
+        "h20_return": 18.88451448671306,
+        "hit_h20": true,
+        "h24_return": 9.885815700123725,
+        "hit_h24": true
+      },
+      {
+        "date": "2025-02-25T00:00:00",
+        "entry_price": 88680.4,
+        "vol_ratio": 4.0468963169424645,
+        "rsi": 29.62984834945182,
+        "rsi_confluence": true,
+        "h20_return": -5.266518870009603,
+        "hit_h20": false,
+        "h24_return": -5.177705558387198,
+        "hit_h24": false
+      },
+      {
+        "date": "2025-02-28T00:00:00",
+        "entry_price": 84349.94,
+        "vol_ratio": 3.4614206796146725,
+        "rsi": 25.239559778130698,
+        "rsi_confluence": true,
+        "h20_return": -0.15002974513082393,
+        "hit_h20": false,
+        "h24_return": 3.732332234024115,
+        "hit_h24": true
+      },
+      {
+        "date": "2025-11-21T00:00:00",
+        "entry_price": 85129.43,
+        "vol_ratio": 2.5806628115733004,
+        "rsi": 23.12101703362731,
+        "rsi_confluence": true,
+        "h20_return": 8.673792365343,
+        "hit_h20": true,
+        "h24_return": 1.5301993681856074,
+        "hit_h24": true
+      }
+    ]
+  },
+  "improvement": {
+    "edge_delta": -0.8825778376559432,
+    "signals_filtered": 9,
+    "filter_rate": 33.333333333333336
+  }
+}

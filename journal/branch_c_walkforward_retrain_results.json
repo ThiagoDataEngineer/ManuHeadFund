@@ -1,0 +1,84 @@
+{
+  "timestamp": "2026-05-22T23:41:04.728759",
+  "k_folds": 5,
+  "embargo_days": 14,
+  "n_valid_folds": 2,
+  "baseline_thresholds": {
+    "tier_s": 85,
+    "tier_a": 70,
+    "tier_b": 50
+  },
+  "fold_results": [
+    {
+      "fold_idx": 3,
+      "train_period": [
+        "2025-06-21",
+        "2025-12-08"
+      ],
+      "test_period": [
+        "2025-12-23",
+        "2026-01-31"
+      ],
+      "n_train": 90,
+      "n_test": 31,
+      "optimized_thresholds": {
+        "tier_s": 80,
+        "tier_a": 65,
+        "tier_b": 45
+      },
+      "train_lift_opt": 0.0,
+      "train_lift_baseline": 0.0,
+      "test_lift_opt": 0.0,
+      "test_lift_baseline": 0.0,
+      "test_ci_opt": [
+        0.0,
+        0.0
+      ],
+      "test_ci_baseline": [
+        0.0,
+        0.0
+      ],
+      "delta": 0.0
+    },
+    {
+      "fold_idx": 4,
+      "train_period": [
+        "2025-06-21",
+        "2025-12-23"
+      ],
+      "test_period": [
+        "2026-01-31",
+        "2026-05-18"
+      ],
+      "n_train": 94,
+      "n_test": 32,
+      "optimized_thresholds": {
+        "tier_s": 80,
+        "tier_a": 65,
+        "tier_b": 45
+      },
+      "train_lift_opt": 0.0,
+      "train_lift_baseline": 0.0,
+      "test_lift_opt": 0.0,
+      "test_lift_baseline": 0.0,
+      "test_ci_opt": [
+        0.0,
+        0.0
+      ],
+      "test_ci_baseline": [
+        0.0,
+        0.0
+      ],
+      "delta": 0.0
+    }
+  ],
+  "aggregate": {
+    "mean_test_lift_opt": 0.0,
+    "mean_test_lift_baseline": 0.0,
+    "mean_delta": 0.0,
+    "positive_delta_folds": 0,
+    "total_folds": 2
+  },
+  "verdict": "❌ RETRAIN DOES NOT HELP — edge não existe",
+  "recommendation": "Aceitar WSS como risk-control only, não auto-trade"
+}

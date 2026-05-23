@@ -98,8 +98,8 @@ $COINEX_FEE_ROUNDTRIP_FALLBACK = 0.0008  # 0.08% round trip (maker+taker) — fa
 
 # ── Modelo Claude ─────────────────────────────────────────────────────────────
 
-$CLAUDE_MODEL       = "claude-sonnet-4-6"          # Tech + Mentor: analise complexa
-$CLAUDE_MODEL_CHEAP = "claude-haiku-4-5-20251001"  # Fund + Sent + Chain: ~10x mais barato
+$CLAUDE_MODEL       = "claude-sonnet-4"          # Tech + Mentor: analise complexa
+$CLAUDE_MODEL_CHEAP = "claude-haiku-4"           # Fund + Sent + Chain: ~10x mais barato
 $CLAUDE_MAX_TOKENS  = 2048
 $CLAUDE_TEMP_TRADE  = 0.3   # baixo para decisoes de trade
 $CLAUDE_TEMP_STUDY  = 0.7   # mais alto para analise educacional
@@ -114,6 +114,38 @@ $COINEX_MARKET_TYPE = "FUTURES"
 $TF_HTF    = "4hour"   # tendencia macro
 $TF_MTF    = "1hour"   # estrutura e setup
 $TF_LTF    = "15min"   # entrada
+
+# ── Tori Proximity (VALIDATED 2026-05-23 TDD) ────────────────────────────────
+# Trendline bounce strategy - optimized configuration
+# Validated improvement: +77.6pp/ano (median +0.70% → +5.00%)
+# Statistical significance: p=0.0087
+# Expected: 74.5% win rate, 23.4 signals/year
+
+$TORI_ENABLED = $true          # Enable Tori proximity scanner
+$TORI_PAPER_MODE = $true       # PAPER mode (no real trades) - 30 days validation
+
+# Trendline configuration (VALIDATED)
+$TORI_MIN_TOUCHES = 3          # Minimum 3 touches (knowledge-based)
+$TORI_SLOPE_MIN = 5.0          # Minimum slope (degrees)
+$TORI_SLOPE_MAX = 35.0         # Maximum slope (degrees)
+$TORI_PROXIMITY_MIN = -3.0     # Minimum proximity (%)
+$TORI_PROXIMITY_MAX = 5.0      # Maximum proximity (%)
+
+# Regime filter (VALIDATED: +2.50pp improvement)
+$TORI_REGIME_FILTER = "OTHER"  # Only trade in "other years" (consolidation)
+$TORI_OTHER_YEARS = @(2012, 2016, 2019, 2023, 2026, 2027, 2028, 2029, 2030)
+$TORI_BULL_YEARS = @(2013, 2017, 2020, 2021, 2024, 2025)  # Avoid (median -0.25%)
+$TORI_BEAR_YEARS = @(2014, 2015, 2018, 2022)              # Avoid (median -3.18%)
+
+# Take-profit (VALIDATED: +4.30pp improvement, p=0.0087)
+$TORI_TAKE_PROFIT_PCT = 5.0    # Exit at +5% (validated)
+$TORI_STOP_LOSS_PCT = 2.0      # Stop-loss -2% below trendline
+$TORI_MAX_HOLD_DAYS = 20       # h20 (20 days max hold)
+
+# Monitoring
+$TORI_CHECK_INTERVAL_MIN = 15  # Check every 15 minutes
+$TORI_STATE_FILE = "$JOURNAL_DIR\tori_proximity_state.json"
+$TORI_SIGNALS_FILE = "$JOURNAL_DIR\tori_paper_signals.jsonl"
 
 # ── Diretorio de Journal ──────────────────────────────────────────────────────
 

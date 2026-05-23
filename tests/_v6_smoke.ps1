@@ -1,4 +1,4 @@
-# _v6_smoke.ps1 -- smoke test end-to-end V6 com mocks A+B
+﻿# _v6_smoke.ps1 -- smoke test end-to-end V6 com mocks A+B
 # Valida que orchestrator_v6 + lib_esquadrao_mocks + mentor_debate trabalham juntos
 # sem chamar Claude/CoinEx reais.
 
@@ -6,7 +6,7 @@ $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $agents = Join-Path $here "..\agents"
 
 # Stubs config + IO
-$global:CLAUDE_MODEL      = "claude-sonnet-4-6"
+$global:CLAUDE_MODEL      = "claude-sonnet-4"
 $global:CLAUDE_MAX_TOKENS = 4000
 $global:CLAUDE_TEMP_TRADE = 0.3
 $global:ANTHROPIC_API_KEY = "test-key"

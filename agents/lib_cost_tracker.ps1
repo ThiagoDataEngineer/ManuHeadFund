@@ -1,24 +1,20 @@
-﻿# lib_cost_tracker.ps1 — Tracking de custos Claude API
+# lib_cost_tracker.ps1 � Tracking de custos Claude API
 # Persiste cada chamada em journal/claude_usage.csv para analise posterior.
-# Zero dependencia externa — apenas escrita CSV.
+# Zero dependencia externa � apenas escrita CSV.
 
 $COST_USAGE_FILE = "$PSScriptRoot\..\journal\claude_usage.csv"
 
-# Tabela de precos Anthropic (USD por 1M tokens) — Maio 2026
+# Tabela de precos Anthropic (USD por 1M tokens) � Maio 2026
 # Atualizar se Anthropic mudar pricing
 $CLAUDE_PRICING = @{
-    "claude-sonnet-4-6"        = @{ input=3.00;  output=15.00 }
-    "claude-sonnet-4-5"        = @{ input=3.00;  output=15.00 }
-    "claude-sonnet-4-7"        = @{ input=3.00;  output=15.00 }
-    "claude-opus-4-7"          = @{ input=15.00; output=75.00 }
-    "claude-haiku-4-5-20251001"= @{ input=0.80;  output=4.00  }
-    "claude-haiku-4-5"         = @{ input=0.80;  output=4.00  }
-    "claude-haiku-3-5"         = @{ input=0.80;  output=4.00  }
+    "claude-sonnet-4"        = @{ input=3.00;  output=15.00 }
+    "claude-opus-4"          = @{ input=15.00; output=75.00 }
+    "claude-haiku-4"         = @{ input=0.80;  output=4.00  }
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Get-ClaudeCost — calcula custo USD a partir de tokens + modelo
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# Get-ClaudeCost � calcula custo USD a partir de tokens + modelo
+# -----------------------------------------------------------------------------
 function Get-ClaudeCost {
     param(
         [string]$Model,
@@ -36,9 +32,9 @@ function Get-ClaudeCost {
     return [math]::Round($costIn + $costOut, 6)
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Track-ClaudeUsage — registra uma chamada Claude no CSV
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# Track-ClaudeUsage � registra uma chamada Claude no CSV
+# -----------------------------------------------------------------------------
 function Track-ClaudeUsage {
     param(
         [string]$Model,
@@ -71,10 +67,10 @@ function Track-ClaudeUsage {
     }
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Get-CostSummary — agrega custos por periodo
+# -----------------------------------------------------------------------------
+# Get-CostSummary � agrega custos por periodo
 # Retorna objeto com today, week, month, total + breakdown por agente
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 function Get-CostSummary {
     if (-not (Test-Path $COST_USAGE_FILE)) {
         return [PSCustomObject]@{
@@ -129,9 +125,9 @@ function Get-CostSummary {
     }
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Format-TgCostReport — relatorio formatado para Telegram (HTML)
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# Format-TgCostReport � relatorio formatado para Telegram (HTML)
+# -----------------------------------------------------------------------------
 function Format-TgCostReport {
     $s = Get-CostSummary
     $sep = "- - - - - - - - - - - - - - - - - -"
@@ -161,9 +157,9 @@ $sep
 "@
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Test-CostThresholdExceeded — verifica se custo em janela excedeu threshold
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# Test-CostThresholdExceeded � verifica se custo em janela excedeu threshold
+# -----------------------------------------------------------------------------
 function Test-CostThresholdExceeded {
     [CmdletBinding()]
     param(
@@ -203,10 +199,10 @@ function Test-CostThresholdExceeded {
     }
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Test-CostAlarmThreshold — valida limites de custo (per-trade e daily)
+# -----------------------------------------------------------------------------
+# Test-CostAlarmThreshold � valida limites de custo (per-trade e daily)
 # Retorna @{alarm_triggered, reason, current_metrics, suggested_action}
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 function Test-CostAlarmThreshold {
     [CmdletBinding()]
     param(
@@ -320,9 +316,9 @@ function Test-CostAlarmThreshold {
     }
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Get-DailyCostByAgent — agrega custos das ultimas 24h por agente
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# Get-DailyCostByAgent � agrega custos das ultimas 24h por agente
+# -----------------------------------------------------------------------------
 function Get-DailyCostByAgent {
     [CmdletBinding()]
     param(
@@ -412,9 +408,9 @@ function Get-DailyCostByAgent {
     }
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Send-CostAlarmTelegram — envia alerta via Telegram se ativado
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
+# Send-CostAlarmTelegram � envia alerta via Telegram se ativado
+# -----------------------------------------------------------------------------
 function Send-CostAlarmTelegram {
     [CmdletBinding()]
     param(

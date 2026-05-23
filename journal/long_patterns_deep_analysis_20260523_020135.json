@@ -1,0 +1,31 @@
+{
+  "timestamp": "2026-05-23T02:01:35.262911",
+  "period": "2011-08-18 00:00:00 to 2026-05-23 00:00:00",
+  "years": 14.76249144421629,
+  "patterns": {
+    "tori": {
+      "signals": 1,
+      "edge": 23.24574677543859,
+      "win_rate": 100.0
+    },
+    "vol_climax": {
+      "signals": 18,
+      "edge": 3.631865159718437,
+      "win_rate": 61.111111111111114
+    },
+    "combined": {
+      "signals": 0,
+      "edge": 0,
+      "win_rate": 0
+    }
+  },
+  "best_pattern": "tori",
+  "signals_data": {
+    "tori": [
+      {
+        "date": "2020-03-29T00:00:00.000000",
+        "entry_price": 5881.42,
+        "proximity": -1.9611723289113303,
+        "slope": 29.329619152253937,
+        "rsi": 39.035369636846234,
+        "vol_dry": 

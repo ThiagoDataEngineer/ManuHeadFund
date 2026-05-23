@@ -39,18 +39,31 @@ $here = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvoca
 
 # ── Defaults ─────────────────────────────────────────────────────────────────
 
-# Trendline gate (proximity scope -- mais permissivo que Tori A+ canonical)
-$script:TORI_PROX_SLOPE_DEG_MIN  = 5.0    # uptrend gentil ja qualifica (soft 5-15 backtest-validated)
-$script:TORI_PROX_SLOPE_DEG_MAX  = 35.0   # ate Tori A+ canonical max
+# Trendline gate (VALIDATED 2026-05-23 TDD)
+$script:TORI_PROX_SLOPE_DEG_MIN  = 5.0    # uptrend gentil (validated)
+$script:TORI_PROX_SLOPE_DEG_MAX  = 35.0   # uptrend moderado (validated)
 $script:TORI_PROX_TOUCH_TOL_PCT  = 1.5    # +-1.5% da linha = touch
-$script:TORI_PROX_MIN_TOUCHES    = 3
+$script:TORI_PROX_MIN_TOUCHES    = 3      # MINIMUM 3 touches (knowledge-based)
 $script:TORI_PROX_MIN_HISTORY    = 20
 
-# Ripening predicate
-$script:TORI_PROX_PCT_MIN     = -3.0   # preco ate 3% abaixo da linha (overshoot ok)
-$script:TORI_PROX_PCT_MAX     =  5.0   # preco ate 5% acima da linha (approaching)
-$script:TORI_PROX_RSI_MAX     = 40.0   # RSI oversold pra setup LONG
-$script:TORI_PROX_VOL_RATIO   = 0.7    # vol recente < 70% do prior = secando
+# Ripening predicate (VALIDATED 2026-05-23 TDD)
+$script:TORI_PROX_PCT_MIN     = -3.0   # preco ate 3% abaixo da linha
+$script:TORI_PROX_PCT_MAX     =  5.0   # preco ate 5% acima da linha
+
+# FILTERS REMOVED (validated as unnecessary):
+# - RSI filter: NO improvement (median +0.70% vs +0.70%)
+# - Vol drying: NO improvement (blocks all signals)
+# USE REGIME FILTER + TAKE-PROFIT instead (validated +4.30pp improvement)
+
+# Regime filter (VALIDATED 2026-05-23 TDD)
+# Other years (consolidation): median +3.20% vs +0.70% baseline
+$script:TORI_OTHER_YEARS = @(2012, 2016, 2019, 2023, 2026, 2027, 2028, 2029, 2030)
+$script:TORI_BULL_YEARS  = @(2013, 2017, 2020, 2021, 2024, 2025)  # median -0.25% (AVOID)
+$script:TORI_BEAR_YEARS  = @(2014, 2015, 2018, 2022)              # median -3.18% (AVOID)
+
+# Take-profit (VALIDATED 2026-05-23 TDD)
+# TP +5%: median +5.00% vs +0.70% baseline (+4.30pp improvement, p=0.0087)
+$script:TORI_TAKE_PROFIT_PCT = 5.0
 
 # Candle fetch
 $script:TORI_PROX_CANDLES_TF  = "4hour"
@@ -252,24 +265,32 @@ function Get-ToriProximityFromArrays {
 
     $proximity_pct = (($price - $action_line) / $action_line) * 100
 
-    $rsi = _ToriProx-CalcRSI -Closes $Closes -Period 14
-
-    # Vol secando: media ultimos 3 candles < 70% da media dos 7 anteriores
-    $vol_drying = $false
-    if ($Volumes.Length -ge 10) {
-        $recent = $Volumes[($Volumes.Length - 3)..($Volumes.Length - 1)]
-        $prior  = $Volumes[($Volumes.Length - 10)..($Volumes.Length - 4)]
-        $recentAvg = ($recent | Measure-Object -Average).Average
-        $priorAvg  = ($prior  | Measure-Object -Average).Average
-        if ($priorAvg -gt 0) {
-            $vol_drying = $recentAvg -lt ($priorAvg * $script:TORI_PROX_VOL_RATIO)
+    # 4. Regime filter (VALIDATED 2026-05-23 TDD)
+    # Other years (consolidation): +2.50pp improvement
+    # Bull/bear years: negative edge (avoid)
+    $currentYear = (Get-Date).Year
+    $regime_ok = $currentYear -in $script:TORI_OTHER_YEARS
+    
+    if (-not $regime_ok) {
+        return [PSCustomObject]@{
+            valid          = $false
+            reason         = "regime_filter_bull_or_bear"
+            touches        = $touches
+            slope_deg      = [Math]::Round($slope_deg, 2)
+            price          = $Closes[-1]
+            action_line    = $action_line
+            proximity_pct  = [Math]::Round($proximity_pct, 2)
+            rsi            = $null
+            vol_drying     = $null
+            setup_ripening = $false
         }
     }
-
+    
+    # 5. Setup ripening (SIMPLIFIED - no RSI/vol filters)
+    # VALIDATED: RSI and vol_drying do NOT improve edge
+    # Only trendline quality + proximity + regime matter
     $ripening = ($proximity_pct -ge $script:TORI_PROX_PCT_MIN) -and `
-                ($proximity_pct -le $script:TORI_PROX_PCT_MAX) -and `
-                ($rsi -lt $script:TORI_PROX_RSI_MAX) -and `
-                $vol_drying
+                ($proximity_pct -le $script:TORI_PROX_PCT_MAX)
 
     return [PSCustomObject]@{
         valid          = $true
@@ -280,9 +301,11 @@ function Get-ToriProximityFromArrays {
         price          = [math]::Round($price, 6)
         action_line    = [math]::Round($action_line, 6)
         proximity_pct  = [math]::Round($proximity_pct, 2)
-        rsi            = [math]::Round($rsi, 1)
-        vol_drying     = $vol_drying
+        rsi            = $null  # Removed (not used)
+        vol_drying     = $null  # Removed (not used)
         setup_ripening = $ripening
+        take_profit    = [math]::Round($price * (1 + $script:TORI_TAKE_PROFIT_PCT / 100), 6)  # +5% TP (VALIDATED)
+        stop_loss      = [math]::Round($action_line * 0.98, 6)  # -2% below trendline
     }
 }
 

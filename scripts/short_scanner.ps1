@@ -49,7 +49,23 @@ if ($wlFiles) {
 }
 $markets = @($markets | Select-Object -Unique)
 
-Log "=== SHORT Scanner (universe=$($markets.Count) markets) ==="
+# TDD Sprint 1 (2026-05-23): Regime-specific thresholds
+# Detect current regime for adaptive thresholds
+$currentRegime = "BEAR_WEAK"  # Default fallback
+if (Get-Command Get-CurrentRegime -ErrorAction SilentlyContinue) {
+    try {
+        $regimeResult = Get-CurrentRegime
+        if ($regimeResult -and $regimeResult.regime) {
+            $currentRegime = $regimeResult.regime
+        }
+    } catch {}
+}
+
+# Get regime-specific thresholds
+$thresholds = Get-ShortThresholdsForRegime -Regime $currentRegime
+
+Log "=== SHORT Scanner (universe=$($markets.Count) markets, regime=$currentRegime) ==="
+Log "  Thresholds: ClimaxMult=$($thresholds.ClimaxMultiplier) RSI>$($thresholds.RsiOverboughtMin)"
 if ($markets.Count -eq 0) {
     Log "  No SHORT-tier markets in whitelist. Exit."
     exit 0
@@ -139,7 +155,7 @@ foreach ($mkt in $markets) {
         $closes = @($candles | ForEach-Object { $_.close })
 
         $r = Detect-ShortSignal -Volumes $vols -Highs $highs -Lows $lows -Closes $closes `
-            -ClimaxMultiplier 2.5 -RsiOverboughtMin 70
+            -ClimaxMultiplier $thresholds.ClimaxMultiplier -RsiOverboughtMin $thresholds.RsiOverboughtMin
         if (-not $r.detected) { continue }
 
         $detected++

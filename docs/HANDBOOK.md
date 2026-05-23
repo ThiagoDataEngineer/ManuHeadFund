@@ -97,7 +97,7 @@ flowchart TB
 
 #### 💰 Anthropic Claude API (custos crescentes)
 - **Uso:** análise final dos trades pelo GENERAL (persona Livermore + Tudor Jones)
-- **Modelo:** `claude-sonnet-4-6` (default), `claude-opus-4-7` (para análises críticas)
+- **Modelo:** `claude-sonnet-4` (default), `claude-opus-4` (para análises críticas)
 - **Spending limit:** configurar via console Anthropic (recomendado $50/mês max)
 - **Custo unitário:** ~$0.005/trade analisado
 - **Bypass se falhar:** sistema continua com aprovação humana via Telegram (degrade gracioso)

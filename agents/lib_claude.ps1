@@ -1,4 +1,4 @@
-﻿# lib_claude.ps1 — Claude API caller
+# lib_claude.ps1 � Claude API caller
 # Dot-source: . "$PSScriptRoot\lib_claude.ps1"
 # Requer: $ANTHROPIC_API_KEY no ambiente ou config.ps1
 
@@ -13,7 +13,7 @@ function Invoke-Claude {
     )
 
     # 2026-05-16: trocado de $ANTHROPIC_API_KEY (script-scope) para $env: (process-scope).
-    # Bug: inside Start-Job runspace (Mesa drones), script vars não sobrevivem ao fork,
+    # Bug: inside Start-Job runspace (Mesa drones), script vars n�o sobrevivem ao fork,
     # mas env vars sim. Era inconsistente com $env:GROQ_API_KEY/$env:GEMINI_API_KEY.
     $apiKey = if ($env:ANTHROPIC_API_KEY) { $env:ANTHROPIC_API_KEY } else { $ANTHROPIC_API_KEY }
     if (-not $apiKey) { throw "ANTHROPIC_API_KEY nao configurada. Ver agents/config.ps1" }
@@ -53,7 +53,7 @@ function Invoke-Claude {
         $json     = [System.Text.Encoding]::UTF8.GetString($wr.RawContentStream.ToArray())
         $response = $json | ConvertFrom-Json
 
-        # Tracking de custo (best-effort — nunca quebra a chamada)
+        # Tracking de custo (best-effort � nunca quebra a chamada)
         try {
             if (Get-Command -Name "Track-ClaudeUsage" -ErrorAction SilentlyContinue) {
                 $inTok  = [int]$response.usage.input_tokens
@@ -70,11 +70,11 @@ function Invoke-Claude {
     }
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Invoke-Groq — wrapper Groq (OpenAI-compatible API)
+# -----------------------------------------------------------------------------
+# Invoke-Groq � wrapper Groq (OpenAI-compatible API)
 # Free tier: 14.400 req/dia. Llama 3.3 70B versatile.
 # Tracking: registrado com cost = $0 (free tier)
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 function Invoke-Groq {
     param(
         [string]$SystemPrompt,
@@ -119,7 +119,7 @@ function Invoke-Groq {
         $json     = [System.Text.Encoding]::UTF8.GetString($wr.RawContentStream.ToArray())
         $response = $json | ConvertFrom-Json
 
-        # Tracking ($0 — Groq free tier; ainda logamos tokens para auditoria)
+        # Tracking ($0 � Groq free tier; ainda logamos tokens para auditoria)
         try {
             if (Get-Command -Name "Track-ClaudeUsage" -ErrorAction SilentlyContinue) {
                 $inTok  = [int]$response.usage.prompt_tokens
@@ -165,11 +165,11 @@ function Invoke-GroqJson {
     }
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Invoke-Gemini — wrapper Google Gemini API (v1beta)
+# -----------------------------------------------------------------------------
+# Invoke-Gemini � wrapper Google Gemini API (v1beta)
 # Free tier: 1500 req/dia 2.0 Flash, 50/dia 2.0 Pro. Latencia baixa, JSON-friendly.
 # Tracking: cost = $0 (free tier); pago $0.075/M in $0.30/M out
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 function Invoke-Gemini {
     param(
         [string]$SystemPrompt,
@@ -191,7 +191,7 @@ function Invoke-Gemini {
 
     $start = Get-Date
     try {
-        # B28c fix 2026-05-21: TimeoutSec 15s pra Gemini (fallback 1 — pode ser um pouco mais lento que Groq).
+        # B28c fix 2026-05-21: TimeoutSec 15s pra Gemini (fallback 1 � pode ser um pouco mais lento que Groq).
         $wr = Invoke-WebRequest -Uri $url -Method POST `
             -Headers @{ "Content-Type" = "application/json" } `
             -Body ([System.Text.Encoding]::UTF8.GetBytes($body)) `
@@ -240,13 +240,13 @@ function Invoke-GeminiJson {
     }
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Invoke-MesaDroneCascade — Mesa drone com fallback Gemini -> Groq -> Haiku
+# -----------------------------------------------------------------------------
+# Invoke-MesaDroneCascade � Mesa drone com fallback Gemini -> Groq -> Haiku
 # Mesa precisa 21 calls/cycle (3 drones x top-7). Groq sozinho estoura 30 RPM
 # free tier (429s); Gemini 15 RPM mas estavel; Haiku $0.005/call como ultimo
 # recurso. Mesa CAOS sistemico do 2026-05-16 era Groq 429/400 sem fallback.
 # Retorna texto ou $null se TUDO falhar.
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 function Invoke-MesaDroneCascade {
     # 2026-05-16 v2: Groq primary (30 RPM suporta 3 drones em paralelo via Start-Job).
     # Gemini 15 RPM nao cabe Mesa (3 drones x 7 mercados burst). Gemini fallback ok.
@@ -271,7 +271,7 @@ function Invoke-MesaDroneCascade {
     if ($HaikuPrimary -and $env:ANTHROPIC_API_KEY) {
         try {
             return Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model "claude-haiku-4-5" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+                -Model "claude-haiku-4" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
             Write-Host "  [$Agent] Haiku primary falhou, fallback Groq: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
@@ -294,11 +294,11 @@ function Invoke-MesaDroneCascade {
             Write-Host "  [$Agent] Gemini falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
-    # 3. Claude Haiku (fallback final, pago $0.005/call) — pula se ja tentou no inicio (HaikuPrimary)
+    # 3. Claude Haiku (fallback final, pago $0.005/call) � pula se ja tentou no inicio (HaikuPrimary)
     if (-not $HaikuPrimary -and $env:ANTHROPIC_API_KEY) {
         try {
             return Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model "claude-haiku-4-5" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+                -Model "claude-haiku-4" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
             Write-Warning "  [$Agent] Haiku final falhou: $($_.Exception.Message)"
         }
@@ -306,12 +306,12 @@ function Invoke-MesaDroneCascade {
     return $null
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Invoke-MentorCascade — Mentor com Anthropic primary, Groq+Gemini fallbacks
-# Ordem: Sonnet -> Groq -> Gemini. Mentor é decisão final, qualidade matters
+# -----------------------------------------------------------------------------
+# Invoke-MentorCascade � Mentor com Anthropic primary, Groq+Gemini fallbacks
+# Ordem: Sonnet -> Groq -> Gemini. Mentor � decis�o final, qualidade matters
 # mais que custo. Mas se Anthropic down, ainda tem 2 fallbacks gratuitos.
 # Retorna texto ou $null se tudo falhar.
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 function Invoke-MentorCascade {
     param(
         [string]$SystemPrompt,
@@ -361,7 +361,7 @@ function Invoke-MentorCascade {
     if ($env:ANTHROPIC_API_KEY) {
         try {
             $r = Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model "claude-haiku-4-5" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+                -Model "claude-haiku-4" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
             $script:LAST_CASCADE_PROVIDER = "anthropic_haiku"
             return $r
         } catch {
@@ -371,12 +371,12 @@ function Invoke-MentorCascade {
     return $null
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Invoke-TriagemCascade — Triagem (drone batedor) com Gemini -> Groq -> Haiku.
+# -----------------------------------------------------------------------------
+# Invoke-TriagemCascade � Triagem (drone batedor) com Gemini -> Groq -> Haiku.
 # 2026-05-20 PM: cobertura completa. Antes era Gemini->Groq sem Anthropic.
-# Triagem é classificação simples (Tier A/B/C/D), Haiku é suficiente como
+# Triagem � classifica��o simples (Tier A/B/C/D), Haiku � suficiente como
 # rede de seguranca pra caso ambos free tier estourem.
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 function Invoke-TriagemCascade {
     param(
         [string]$SystemPrompt,
@@ -405,7 +405,7 @@ function Invoke-TriagemCascade {
     if ($env:ANTHROPIC_API_KEY) {
         try {
             return Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model "claude-haiku-4-5" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+                -Model "claude-haiku-4" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
             Write-Warning "  [$Agent] Haiku final falhou: $($_.Exception.Message)"
         }
@@ -413,11 +413,11 @@ function Invoke-TriagemCascade {
     return $null
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Invoke-AgentLLM — roteamento provider por agente
+# -----------------------------------------------------------------------------
+# Invoke-AgentLLM � roteamento provider por agente
 # Le $env:AGENT_<NAME>_PROVIDER (groq|anthropic) ou usa default
 # Default: 'anthropic'. Fallback automatico: groq -> anthropic em caso de erro
-# ─────────────────────────────────────────────────────────────────────────────
+# -----------------------------------------------------------------------------
 function Invoke-AgentLLM {
     param(
         [string]$SystemPrompt,
@@ -447,8 +447,8 @@ function Invoke-AgentLLM {
         -Model $AnthropicModel -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
 }
 
-# Invoke-TechCascadeJson — 2026-05-21 R3 fix: tech agent deixa de usar Sonnet ($0.027/call).
-# Cascade Groq→Gemini→Haiku JSON-aware. Tech eh decisao tatica (sinal/forca/stop),
+# Invoke-TechCascadeJson � 2026-05-21 R3 fix: tech agent deixa de usar Sonnet ($0.027/call).
+# Cascade Groq?Gemini?Haiku JSON-aware. Tech eh decisao tatica (sinal/forca/stop),
 # nao precisa Sonnet reasoning. Empiric: 10 tech calls/dia a $0.027 = $0.27 desperdicio.
 # Esperado pos-fix: <$0.01/call medio.
 function Invoke-TechCascadeJson {
@@ -492,7 +492,7 @@ function Invoke-TechCascadeJson {
         if ($env:ANTHROPIC_API_KEY) {
             try {
                 $raw = Invoke-Claude -SystemPrompt $sysWithJson -UserContent $UserContent `
-                    -Model "claude-haiku-4-5" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+                    -Model "claude-haiku-4" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
                 $parsed = _ParseJsonResponse $raw
                 if ($parsed) { return $parsed }
             } catch { Write-Warning "  [$Agent] Haiku falhou: $($_.Exception.Message)" }

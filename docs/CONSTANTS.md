@@ -160,8 +160,8 @@
 |---|---|---|
 | `$COINEX_BASE_URL` | https://api.coinex.com | config.ps1:88 |
 | `$COINEX_MARKET_TYPE` | FUTURES | config.ps1:89 |
-| `$CLAUDE_MODEL` | claude-sonnet-4-6 | config.ps1:80 |
-| `$CLAUDE_MODEL_CHEAP` | claude-haiku-4-5-20251001 | config.ps1:81 |
+| `$CLAUDE_MODEL` | claude-sonnet-4 | config.ps1:80 |
+| `$CLAUDE_MODEL_CHEAP` | claude-haiku-4 | config.ps1:81 |
 | `$JOURNAL_DIR` | `..\journal` | config.ps1:99 |
 | `$JOURNAL_FILE` | `..\journal\trades.csv` | config.ps1:100 |
 | `$LOG_DIR` | `..\logs` | config.ps1:101 |

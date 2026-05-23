@@ -1,5 +1,5 @@
-# cost_tracker_alarm.Tests.ps1 — TDD strict: hard-stop alarm para custos
-# 8 tests: validar limites per-trade e daily, métricas
+﻿# cost_tracker_alarm.Tests.ps1 â€” TDD strict: hard-stop alarm para custos
+# 8 tests: validar limites per-trade e daily, mÃ©tricas
 # UTF-8 BOM, Pester 3.x
 
 Describe "Cost Tracker Alarm" {
@@ -23,7 +23,7 @@ Describe "Cost Tracker Alarm" {
     Context "Test-CostAlarmThreshold" {
         It "retorna alarm_triggered=false quando custos < limites" {
             $ts = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
-            "$ts,mesa,claude-haiku-4-5,1000,500,0.0050,100" |
+            "$ts,mesa,claude-haiku-4,1000,500,0.0050,100" |
                 Add-Content -Path $testCostFile -Encoding utf8
 
             $result = Test-CostAlarmThreshold -MaxCostPerTradeUsd 0.10 -MaxDailyCostUsd 5.00 -CostFile $testCostFile
@@ -57,7 +57,7 @@ Describe "Cost Tracker Alarm" {
             $ts = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
             "$ts,mesa,claude-sonnet-4-5,100000,50000,0.5000,1000" |
                 Add-Content -Path $testCostFile -Encoding utf8
-            "$ts,mentor,claude-opus-4-7,50000,30000,0.7500,2000" |
+            "$ts,mentor,claude-opus-4,50000,30000,0.7500,2000" |
                 Add-Content -Path $testCostFile -Encoding utf8
 
             $result = Test-CostAlarmThreshold -MaxCostPerTradeUsd 1.0 -MaxDailyCostUsd 5.00 -CostFile $testCostFile

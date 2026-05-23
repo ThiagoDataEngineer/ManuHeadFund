@@ -1,0 +1,201 @@
+{
+  "timestamp": "2026-05-23T00:57:35.496545",
+  "period": "2023-08-28 00:00:00 to 2026-05-23 00:00:00",
+  "rsi_status": "FIXED 2026-05-23",
+  "original_result": "+20.7pp edge (com RSI bugado)",
+  "without_rsi": {
+    "signals": 10,
+    "edge_h20": 2.1877441577120496,
+    "win_rate_h20": 0.4,
+    "signals_data": [
+      {
+        "date": "2024-06-24T00:00:00",
+        "entry_price": 60328.31,
+        "vol_ratio": 3.870050359717996,
+        "rsi": 25.766622932802818,
+        "rsi_confluence": false,
+        "h20_return": 0.768047372784031,
+        "hit_h20": true,
+        "h24_return": 6.058266840228089,
+        "hit_h24": true
+      },
+      {
+        "date": "2024-07-05T00:00:00",
+        "entry_price": 56651.74,
+        "vol_ratio": 4.56976541743575,
+        "rsi": 28.076165721675125,
+        "rsi_confluence": false,
+        "h20_return": 16.118163360913552,
+        "hit_h20": true,
+        "h24_return": 17.92820485301953,
+        "hit_h24": true
+      },
+      {
+        "date": "2024-08-05T00:00:00",
+        "entry_price": 53983.36,
+        "vol_ratio": 6.700335895073299,
+        "rsi": 26.51552930029827,
+        "rsi_confluence": false,
+        "h20_return": 19.01817523029319,
+        "hit_h20": true,
+        "h24_return": 9.9760741087624,
+        "hit_h24": true
+      },
+      {
+        "date": "2025-02-03T00:00:00",
+        "entry_price": 101300.01,
+        "vol_ratio": 2.7068183908958936,
+        "rsi": 50.75834381512742,
+        "rsi_confluence": false,
+        "h20_return": -4.963987663969618,
+        "hit_h20": false,
+        "h24_return": -16.357708158172937,
+        "hit_h24": false
+      },
+      {
+        "date": "2025-02-25T00:00:00",
+        "entry_price": 88723.56,
+        "vol_ratio": 3.444391352683047,
+        "rsi": 29.71441394537692,
+        "rsi_confluence": false,
+        "h20_return": -5.311035760963604,
+        "hit_h20": false,
+        "h24_return": -5.22009035705961,
+        "hit_h24": false
+      },
+      {
+        "date": "2025-02-28T00:00:00",
+        "entry_price": 84359.86,
+        "vol_ratio": 2.7881613175938464,
+        "rsi": 25.36616073889398,
+        "rsi_confluence": false,
+        "h20_return": -0.18889315368708035,
+        "hit_h20": false,
+        "h24_return": 3.68608956913869,
+        "hit_h24": true
+      },
+      {
+        "date": "2025-04-07T00:00:00",
+        "entry_price": 79145.76,
+        "vol_ratio": 3.004305137021787,
+        "rsi": 38.32639349478489,
+        "rsi_confluence": false,
+        "h20_return": 18.443022089875708,
+        "hit_h20": true,
+        "h24_return": 21.91373233386098,
+        "hit_h24": true
+      },
+      {
+        "date": "2025-10-10T00:00:00",
+        "entry_price": 112799.0,
+        "vol_ratio": 3.7482835440837876,
+        "rsi": 41.85204708610863,
+        "rsi_confluence": false,
+        "h20_return": -3.9707798828003793,
+        "hit_h20": false,
+        "h24_return": -5.510687151481839,
+        "hit_h24": false
+      },
+      {
+        "date": "2026-01-31T00:00:00",
+        "entry_price": 78746.0,
+        "vol_ratio": 2.5079909082966516,
+        "rsi": 25.179552669687027,
+        "rsi_confluence": false,
+        "h20_return": -13.62608894420034,
+        "hit_h20": false,
+        "h24_return": -18.67015467452315,
+        "hit_h24": false
+      },
+      {
+        "date": "2026-02-06T00:00:00",
+        "entry_price": 70580.0,
+        "vol_ratio": 2.8125000788595824,
+        "rsi": 32.565916084207316,
+        "rsi_confluence": false,
+        "h20_return": -4.409181071124965,
+        "hit_h20": false,
+        "h24_return": -2.521960895437801,
+        "hit_h24": false
+      }
+    ]
+  },
+  "with_rsi_confluence": {
+    "signals": 6,
+    "edge_h20": 2.7963946841899587,
+    "win_rate_h20": 0.5,
+    "signals_data": [
+      {
+        "date": "2024-06-24T00:00:00",
+        "entry_price": 60328.31,
+        "vol_ratio": 3.870050359717996,
+        "rsi": 25.766622932802818,
+        "rsi_confluence": true,
+        "h20_return": 0.768047372784031,
+        "hit_h20": true,
+        "h24_return": 6.058266840228089,
+        "hit_h24": true
+      },
+      {
+        "date": "2024-07-05T00:00:00",
+        "entry_price": 56651.74,
+        "vol_ratio": 4.56976541743575,
+        "rsi": 28.076165721675125,
+        "rsi_confluence": true,
+        "h20_return": 16.118163360913552,
+        "hit_h20": true,
+        "h24_return": 17.92820485301953,
+        "hit_h24": true
+      },
+      {
+        "date": "2024-08-05T00:00:00",
+        "entry_price": 53983.36,
+        "vol_ratio": 6.700335895073299,
+        "rsi": 26.51552930029827,
+        "rsi_confluence": true,
+        "h20_return": 19.01817523029319,
+        "hit_h20": true,
+        "h24_return": 9.9760741087624,
+        "hit_h24": true
+      },
+      {
+        "date": "2025-02-25T00:00:00",
+        "entry_price": 88723.56,
+        "vol_ratio": 3.444391352683047,
+        "rsi": 29.71441394537692,
+        "rsi_confluence": true,
+        "h20_return": -5.311035760963604,
+        "hit_h20": false,
+        "h24_return": -5.22009035705961,
+        "hit_h24": false
+      },
+      {
+        "date": "2025-02-28T00:00:00",
+        "entry_price": 84359.86,
+        "vol_ratio": 2.7881613175938464,
+        "rsi": 25.36616073889398,
+        "rsi_confluence": true,
+        "h20_return": -0.18889315368708035,
+        "hit_h20": false,
+        "h24_return": 3.68608956913869,
+        "hit_h24": true
+      },
+      {
+        "date": "2026-01-31T00:00:00",
+        "entry_price": 78746.0,
+        "vol_ratio": 2.5079909082966516,
+        "rsi": 25.179552669687027,
+        "rsi_confluence": true,
+        "h20_return": -13.62608894420034,
+        "hit_h20": false,
+        "h24_return": -18.67015467452315,
+        "hit_h24": false
+      }
+    ]
+  },
+  "improvement": {
+    "edge_delta": 0.6086505264779092,
+    "signals_filtered": 4,
+    "filter_rate": 40.0
+  }
+}

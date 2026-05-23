@@ -37,7 +37,7 @@ $payload = @{
 try {
     $t0 = Get-Date
     $r = Invoke-Claude -SystemPrompt $payload.sys -UserContent $payload.usr `
-        -Model "claude-haiku-4-5" -MaxTokens 10 -Temperature 0 -Agent "warmup"
+        -Model "claude-haiku-4" -MaxTokens 10 -Temperature 0 -Agent "warmup"
     $dt = [math]::Round(((Get-Date) - $t0).TotalSeconds, 1)
     Log "  [Haiku]  ${dt}s -> $($r.SubString(0, [Math]::Min(20, $r.Length)))"
 } catch {

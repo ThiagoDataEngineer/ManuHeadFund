@@ -280,7 +280,7 @@ function Invoke-MentorAPI($systemPrompt, $userMessage, $resolved) {
             # Anthropic Claude (standby, pago) — UTF-8 explicito
             $headers = @{ "x-api-key"=$key; "anthropic-version"="2023-06-01"; "content-type"="application/json; charset=utf-8" }
             $bodyObj = @{
-                model       = "claude-sonnet-4-6"
+                model       = "claude-sonnet-4"
                 max_tokens  = 2048
                 temperature = 0.3
                 system      = $systemPrompt

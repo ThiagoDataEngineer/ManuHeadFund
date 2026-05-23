@@ -1,4 +1,4 @@
-# lib_claude_cascade.Tests.ps1
+﻿# lib_claude_cascade.Tests.ps1
 # TDD strict para Invoke-MesaDroneCascade / Invoke-MentorCascade / Invoke-TriagemCascade.
 # UTF-8 BOM. Pester 3.x. PS 5.1.
 
@@ -83,7 +83,7 @@ Describe "Cascade routing - Mentor Anthropic->Groq->Gemini" {
 
     # 2026-05-20 PM cobertura completa: Mentor agora tem 4o fallback Haiku
     # (Anthropic Sonnet 503 + Groq 429 + Gemini fail era VETO safety; agora Haiku salva)
-    It "Anthropic Sonnet + Groq + Gemini falham: fallback Haiku (model claude-haiku-4-5)" {
+    It "Anthropic Sonnet + Groq + Gemini falham: fallback Haiku (model claude-haiku-4)" {
         $script:lastModelClaude = $null
         Mock Invoke-Claude {
             param($Model)
@@ -124,7 +124,7 @@ Describe "Cascade routing - Mentor Anthropic->Groq->Gemini" {
         } -ModuleName $null
         Mock Invoke-Groq   { return "from-groq" } -ModuleName $null
         $script:LAST_CASCADE_PROVIDER = $null
-        $null = Invoke-MentorCascade -SystemPrompt "s" -UserContent "u" -AnthropicModel "claude-sonnet-4-6"
+        $null = Invoke-MentorCascade -SystemPrompt "s" -UserContent "u" -AnthropicModel "claude-sonnet-4"
         $script:LAST_CASCADE_PROVIDER | Should Be "groq_llama70b"
     }
 

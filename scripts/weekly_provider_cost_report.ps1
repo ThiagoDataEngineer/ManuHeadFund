@@ -15,8 +15,8 @@ Set-Location $projectRoot
 
 # Pricing por 1K tokens (Anthropic 2026 pricing)
 $pricing = @{
-    "claude-sonnet-4-6"  = @{ in = 0.018; out = 0.075 }
-    "claude-haiku-4-5"   = @{ in = 0.00025; out = 0.00125 }
+    "claude-sonnet-4"  = @{ in = 0.018; out = 0.075 }
+    "claude-haiku-4"   = @{ in = 0.00025; out = 0.00125 }
     "groq:*"             = @{ in = 0.0; out = 0.0 }     # free tier
     "gemini-2.0-flash"   = @{ in = 0.0; out = 0.0 }     # free tier
 }

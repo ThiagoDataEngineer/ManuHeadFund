@@ -211,7 +211,7 @@ val mentorSystemPrompt = """
 """
 
 val request = CreateMessageRequest(
-  model = "claude-sonnet-4-6",
+  model = "claude-sonnet-4",
   maxTokens = 2048,
   system = Some(mentorSystemPrompt),
   messages = List(

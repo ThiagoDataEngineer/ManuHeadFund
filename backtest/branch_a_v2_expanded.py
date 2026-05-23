@@ -105,6 +105,27 @@ def main():
             print(f"  {name:<28} {len(ho_s):>6} {effective_n(ho_s):>7} {sr:>6.1f}% {br:>6.1f}% {lift:>+5.1f}pp {ci_str:>18}")
 
     print(f"\nTotal time: {time.time()-t0:.1f}s")
+    
+    # Save results for Branch C
+    import json
+    from pathlib import Path
+    from datetime import datetime
+    
+    output = {
+        "timestamp": datetime.now().isoformat(),
+        "n_markets": len(md),
+        "n_total_events": len(all_e),
+        "n_sig_events": len(sig),
+        "n_tier_s_events": len(tier_s_sig),
+        "all_sig_events": scored,  # All scored sig events with WSS
+        "execution_time_seconds": time.time() - t0
+    }
+    
+    output_file = Path(__file__).parent.parent / "journal" / "branch_a_v2_expanded_results.json"
+    with open(output_file, "w", encoding="utf-8") as f:
+        json.dump(output, f, indent=2, ensure_ascii=False)
+    
+    print(f"\n💾 Results saved: {output_file.name}")
 
 
 if __name__ == "__main__":

@@ -18,3 +18,7 @@
 {"queued_at":"2026-05-22T16:45:50.0148918-03:00","market":"TRUMPUSDT","source":"scan_master_discovery"}
 {"queued_at":"2026-05-22T16:45:50.0338867-03:00","market":"PEPEUSDT","source":"scan_master_discovery"}
 {"queued_at":"2026-05-22T23:00:23.1020554-03:00","market":"UNIUSDT","source":"scan_master_discovery"}
+{"queued_at":"2026-05-23T03:01:12.7333774-03:00","market":"MYXUSDT","source":"scan_master_discovery"}
+{"queued_at":"2026-05-23T03:01:12.7963096-03:00","market":"BANUSDT","source":"scan_master_discovery"}
+{"queued_at":"2026-05-23T03:01:12.9245423-03:00","market":"ICPUSDT","source":"scan_master_discovery"}
+{"queued_at":"2026-05-23T03:01:12.9641901-03:00","market":"GALAUSDT","source":"scan_master_discovery"}

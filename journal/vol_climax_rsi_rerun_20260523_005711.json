@@ -1,0 +1,12 @@
+{
+  "timestamp": "2026-05-23T00:57:11.621809",
+  "period": "2023-08-28 00:00:00 to 2026-05-23 00:00:00",
+  "rsi_status": "FIXED 2026-05-23",
+  "original_result": "+20.7pp edge (com RSI bugado)",
+  "without_rsi": {
+    "signals": 10,
+    "edge_h20": 2.1877441577120496,
+    "win_rate_h20": 0.4,
+    "signals_data": [
+      {
+        "date": 

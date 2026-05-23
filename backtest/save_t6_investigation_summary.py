@@ -1,0 +1,76 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Save T6 investigation summary to journal"""
+
+import json
+from pathlib import Path
+from datetime import datetime
+
+results = {
+    'timestamp': datetime.now().isoformat(),
+    'investigation': 'T6_COMPLETE',
+    'status': 'DONE',
+    'experiments': {
+        't6_replication': {
+            'method': 'signal_generator',
+            'period': '2018+2022',
+            'signals': 321,
+            'edge_h20': 1.23,
+            'win_rate': 44.2,
+            'verdict': 'WORKS (edge positivo)'
+        },
+        'vol_climax_rsi': {
+            'method': 'buying_climax_4AND',
+            'period': '2011-2026',
+            'signals_without_rsi': 31,
+            'signals_with_rsi': 20,
+            'edge_without_rsi': -1.89,
+            'edge_with_rsi': -2.06,
+            'improvement': -0.17,
+            'verdict': 'RSI confluence WORSE'
+        },
+        'short_t6_buying_climax': {
+            'method': 'buying_climax_4AND',
+            'period': '2011-2026',
+            'signals': 19,
+            'edge_h20': -14.77,
+            'win_rate': 15.8,
+            'verdict': 'DOESNT WORK (edge negativo)'
+        },
+        'short_bear2022': {
+            'method': 'buying_climax_4AND',
+            'period': '2021-2022',
+            'signals': 0,
+            'verdict': 'ZERO signals (extremely rare)'
+        }
+    },
+    'conclusions': {
+        'rsi_bug_impact': 'MASSIVE (100% artifact)',
+        'signal_generator': 'WORKS (+1.23% edge)',
+        'buying_climax': 'DOESNT WORK (-14.77% edge)',
+        'rsi_confluence': 'NO IMPROVEMENT (-0.17pp)',
+        'data_fetcher': 'ROBUST (3973 candles, 2011-2026)'
+    },
+    'recommendations': {
+        'immediate': 'Validate signal_generator in full period (14.8y)',
+        'short_term': 'Re-validate vol climax WITHOUT RSI',
+        'medium_term': 'Deploy signal_generator if validated'
+    },
+    'next_action': 'USER_DECISION_REQUIRED',
+    'options': [
+        'A: Validate signal_generator (14.8y)',
+        'B: Re-validate vol climax (no RSI)',
+        'C: Focus on LONG patterns',
+        'D: A + B sequential'
+    ]
+}
+
+output_dir = Path(__file__).parent.parent / "journal"
+output_dir.mkdir(exist_ok=True)
+timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+output_file = output_dir / f"t6_investigation_complete_{timestamp}.json"
+
+with open(output_file, 'w') as f:
+    json.dump(results, f, indent=2)
+
+print(f"Results saved: {output_file}")

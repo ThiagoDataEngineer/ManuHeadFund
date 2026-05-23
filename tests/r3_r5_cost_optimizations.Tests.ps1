@@ -1,4 +1,4 @@
-# r3_r5_cost_optimizations.Tests.ps1 -- 2026-05-21 cost optimization lockdown.
+﻿# r3_r5_cost_optimizations.Tests.ps1 -- 2026-05-21 cost optimization lockdown.
 # Pester 3.x. Anti-regression de R3 (tech cascade) + R5 (pre-mentor skip).
 
 $script:cost_here = Split-Path -Parent $MyInvocation.MyCommand.Path
@@ -7,7 +7,7 @@ $script:cost_root = Split-Path -Parent $cost_here
 
 Describe "R3 - Tech agent usa cascade Groq-primary" {
 
-    It "lib_claude.ps1 expõe Invoke-TechCascadeJson" {
+    It "lib_claude.ps1 expÃµe Invoke-TechCascadeJson" {
         $src = Get-Content (Join-Path $cost_root "agents\lib_claude.ps1") -Raw -Encoding UTF8
         $src | Should Match 'function Invoke-TechCascadeJson'
     }
@@ -39,7 +39,7 @@ Describe "R3 - Tech agent usa cascade Groq-primary" {
         $src = Get-Content (Join-Path $cost_root "agents\lib_claude.ps1") -Raw -Encoding UTF8
         $func = [regex]::Match($src, 'function Invoke-TechCascadeJson[\s\S]+?(?=function\s+Invoke-)').Value
         $func | Should Not Match 'claude-sonnet'
-        $func | Should Match 'claude-haiku-4-5'
+        $func | Should Match 'claude-haiku-4'
     }
 }
 

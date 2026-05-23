@@ -35,6 +35,12 @@ if (-not (Get-Command Get-ToriTrendlineSignal -ErrorAction SilentlyContinue)) {
 $__fqsQueuePath = Join-Path $PSScriptRoot "lib_fqs_enrichment_queue.ps1"
 if (Test-Path $__fqsQueuePath) { . $__fqsQueuePath }
 
+# 2026-05-23: Position Management - trailing stops automaticos + risk management
+$__posManagementPath = Join-Path $PSScriptRoot "lib_coinex_position_management.ps1"
+if (Test-Path $__posManagementPath) { . $__posManagementPath }
+$__riskManagerPath = Join-Path $PSScriptRoot "lib_position_risk_manager.ps1"
+if (Test-Path $__riskManagerPath) { . $__riskManagerPath }
+
 # ─────────────────────────────────────────────────────────────────────────────
 # CoinEx-HasFuturesMarket
 # Verifica se o par existe no mercado de futuros da CoinEx
@@ -635,6 +641,30 @@ function Invoke-GemExecute {
     $execObj = [PSCustomObject]@{ market=$mkt; market_type=$mktType; order_id=$order.order_id; price=$avg_price; qty=$filled_qty; stop=$stop_price; target=$tgt_price }
     Send-TelegramAlert -Message (Format-TgGemExecuted -ExecResult $execObj -Gem $Gem) | Out-Null
 
+    # ── 2026-05-23: TRAILING STOP AUTOMATICO (Position Management) ────────────
+    # Ativa trailing stop ATR-based automaticamente apos GEM executado com sucesso.
+    # Parametros: ATR 2x, ativa apos 2% lucro minimo (protege capital + deixa correr).
+    # Executa em background (nao bloqueia retorno) e loga resultado.
+    if ($hasFutures -and (Get-Command Update-TrailingStop -ErrorAction SilentlyContinue)) {
+        try {
+            Write-Host "  [TRAILING STOP] Agendando ativacao automatica em 60s..." -ForegroundColor DarkCyan
+            # Agendar trailing stop para 60s depois (tempo para posicao aparecer na API)
+            $trailingJob = Start-Job -ScriptBlock {
+                param($Market, $ScriptRoot)
+                Start-Sleep -Seconds 60
+                . "$ScriptRoot\lib_coinex.ps1"
+                . "$ScriptRoot\lib_coinex_position_management.ps1"
+                . "$ScriptRoot\lib_position_risk_manager.ps1"
+                $result = Update-TrailingStop -Market $Market -AtrMultiplier 2.0 -MinProfitPct 2.0
+                return $result
+            } -ArgumentList $mkt, $PSScriptRoot
+            
+            Write-Host "  [TRAILING STOP] Job ID: $($trailingJob.Id) (rodando em background)" -ForegroundColor DarkGray
+        } catch {
+            Write-Host "  [TRAILING STOP WARN] Falha ao agendar: $_" -ForegroundColor Yellow
+        }
+    }
+
     Write-Host "=== ENTRADA REGISTRADA ===" -ForegroundColor Cyan
     return [PSCustomObject]@{
         market      = $mkt
@@ -646,6 +676,7 @@ function Invoke-GemExecute {
         target      = $tgt_price
         sizing_usd  = $usd_size
         dry_run     = $false
+        trailing_stop_job_id = if ($trailingJob) { $trailingJob.Id } else { $null }
     }
 }
 

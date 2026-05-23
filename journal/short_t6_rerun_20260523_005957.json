@@ -1,0 +1,212 @@
+{
+  "timestamp": "2026-05-23T00:59:57.511712",
+  "period": "2017-08-17 00:00:00 to 2026-05-23 00:00:00",
+  "years": 8.763860369609857,
+  "rsi_status": "FIXED 2026-05-23",
+  "original_t6": {
+    "edge": 2.85,
+    "signals": 505,
+    "note": "Original T6 result (com RSI bugado)"
+  },
+  "baseline_rerun": {
+    "signals": 13,
+    "edge_h20": -15.803745743605045,
+    "win_rate_h20": 0.15384615384615385,
+    "signals_data": [
+      {
+        "date": "2017-11-29T00:00:00",
+        "entry_price": 9687.88,
+        "vol_ratio": 3.759026280718036,
+        "rsi": 74.7928496990491,
+        "climax_mult": 2.5,
+        "rsi_min": 70,
+        "h20_return": -78.5240940226345,
+        "hit_h20": false,
+        "h24_return": -37.28493746825932,
+        "hit_h24": false
+      },
+      {
+        "date": "2017-12-08T00:00:00",
+        "entry_price": 15880.0,
+        "vol_ratio": 3.2102426058344324,
+        "rsi": 85.51956573508149,
+        "climax_mult": 2.5,
+        "rsi_min": 70,
+        "h20_return": 10.692002518891684,
+        "hit_h20": true,
+        "h24_return": 15.74307304785894,
+        "hit_h24": true
+      },
+      {
+        "date": "2019-04-03T00:00:00",
+        "entry_price": 4932.6,
+        "vol_ratio": 3.914439836800278,
+        "rsi": 88.11628871591522,
+        "climax_mult": 2.5,
+        "rsi_min": 70,
+        "h20_return": -11.36743299679682,
+        "hit_h20": false,
+        "h24_return": -7.361026639094985,
+        "hit_h24": false
+      },
+      {
+        "date": "2019-05-12T00:00:00",
+        "entry_price": 6967.31,
+        "vol_ratio": 2.6122597477342375,
+        "rsi": 83.29339276896832,
+        "climax_mult": 2.5,
+        "rsi_min": 70,
+        "h20_return": -22.630828827768525,
+        "hit_h20": false,
+        "h24_return": -11.614094966349992,
+        "hit_h24": false
+      },
+      {
+        "date": "2019-06-22T00:00:00",
+        "entry_price": 10729.5,
+        "vol_ratio": 2.5662109437887097,
+        "rsi": 78.75520171080456,
+        "climax_mult": 2.5,
+        "rsi_min": 70,
+        "h20_return": -9.578451931590468,
+        "hit_h20": false,
+        "h24_return": 12.02208863413952,
+        "hit_h24": true
+      },
+      {
+        "date": "2019-06-26T00:00:00",
+        "entry_price": 13093.8,
+        "vol_ratio": 3.537856920680641,
+        "rsi": 88.05704416892378,
+        "climax_mult": 2.5,
+        "rsi_min": 70,
+        "h20_return": 27.907941162993165,
+        "hit_h20": true,
+        "h24_return": 17.97469031144511,
+        "hit_h24": true
+      },
+      {
+        "date": "2020-04-30T00:00:00",
+        "entry_price": 8620.0,
+        "vol_ratio": 2.769289778920621,
+        "rsi": 70.7891693552697,
+        "climax_mult": 2.5,
+        "rsi_min": 70,
+        "h20_return": -10.341415313225061,
+        "hit_h20": false,
+        "h24_return": -1.1640371229698392,
+        "hit_h24": false
+      },
+      {
+        "date": "2020-10-21T00:00:00",
+        "entry_price": 12780.96,
+        "vol_ratio": 2.747441694185482,
+        "rsi": 79.57174976110407,
+        "climax_mult": 2.5,
+        "rsi_min": 70,
+        "h20_return": -19.687488263792392,
+        "hit_h20": false,
+        "h24_return": -25.737425044754087,
+        "hit_h24": false
+      },
+      {
+        "date": "2020-12-17T00:00:00",
+        "entry_price": 22797.16,
+        "vol_ratio": 2.6792352757807385,
+        "rsi": 75.95799299772168,
+        "climax_mult": 2.5,
+        "rsi_min": 70,
+        "h20_return": -61.289213217786774,
+        "hit_h20": false,
+        "h24_return": -67.3454939123996,
+        "hit_h24": false
+      },
+      {
+        "date": "2023-06-21T00:00:00",
+        "entry_price": 29993.89,
+        "vol_ratio": 2.6232642737184966,
+        "rsi": 70.57436349504962,
+        "climax_mult": 2.5,
+        "rsi_min": 70,
+        "h20_return": -2.094459905000649,
+        "hit_h20": false,
+        "h24_return": -0.9856340741397698,
+        "hit_h24": false
+      },
+      {
+        "date": "2023-10-23T00:00:00",
+        "entry_price": 33069.99,
+        "vol_ratio": 3.016435531733164,
+        "rsi": 85.3181880925044,
+        "climax_mult": 2.5,
+        "rsi_min": 70,
+        "h20_return": -12.077838547879814,
+        "hit_h20": false,
+        "h24_return": -9.354463064548868,
+        "hit_h24": false
+      },
+      {
+        "date": "2023-10-24T00:00:00",
+        "entry_price": 33922.73,
+        "vol_ratio": 3.3673088344170496,
+        "rsi": 86.96293121974868,
+        "climax_mult": 2.5,
+        "rsi_min": 70,
+        "h20_return": -7.488194493780415,
+        "hit_h20": false,
+        "h24_return": -7.933294283803205,
+        "hit_h24": false
+      },
+      {
+        "date": "2024-11-12T00:00:00",
+        "entry_price": 87952.01,
+        "vol_ratio": 2.694924149390393,
+        "rsi": 82.15361569177828,
+        "climax_mult": 2.5,
+        "rsi_min": 70,
+        "h20_return": -8.969220828494995,
+        "hit_h20": false,
+        "h24_return": -13.403707317206285,
+        "hit_h24": false
+      }
+    ]
+  },
+  "adaptive": {
+    "signals": 2,
+    "edge_h20": -44.43275466792978,
+    "win_rate_h20": 0.0,
+    "signals_data": [
+      {
+        "date": "2017-11-29T00:00:00",
+        "regime": "BULL_WEAK",
+        "entry_price": 9687.88,
+        "vol_ratio": 3.759026280718036,
+        "rsi": 74.7928496990491,
+        "climax_mult": 3.5,
+        "rsi_min": 70,
+        "h20_return": -78.5240940226345,
+        "hit_h20": false,
+        "h24_return": -37.28493746825932,
+        "hit_h24": false
+      },
+      {
+        "date": "2020-04-30T00:00:00",
+        "regime": "BEAR_WEAK",
+        "entry_price": 8620.0,
+        "vol_ratio": 2.769289778920621,
+        "rsi": 70.7891693552697,
+        "climax_mult": 2.5,
+        "rsi_min": 70,
+        "h20_return": -10.341415313225061,
+        "hit_h20": false,
+        "h24_return": -1.1640371229698392,
+        "hit_h24": false
+      }
+    ]
+  },
+  "comparison": {
+    "edge_delta_vs_original": -18.653745743605047,
+    "edge_delta_adaptive": -28.629008924324733,
+    "signals_delta_vs_original": -492
+  }
+}
