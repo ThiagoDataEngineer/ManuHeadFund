@@ -1,0 +1,178 @@
+{
+  "by_regime": [
+    {
+      "regime": "INSUFFICIENT_DATA",
+      "days_total": 492,
+      "days_pct": 3.7840332256575913,
+      "long_metrics": {
+        "trades": 232,
+        "exp": 2.316830639711453,
+        "pf": 14.056385788245676
+      },
+      "short_metrics": {
+        "trades": 164,
+        "exp": 0.6831018828684741,
+        "pf": 2.154935142169379
+      },
+      "best_direction": "BOTH",
+      "edge_strength": "STRONG"
+    },
+    {
+      "regime": "BULL_WEAK",
+      "days_total": 3527,
+      "days_pct": 27.1265959083218,
+      "long_metrics": {
+        "trades": 1466,
+        "exp": 0.040470865592107906,
+        "pf": 1.0601057920785326
+      },
+      "short_metrics": {
+        "trades": 384,
+        "exp": -0.3449578368537423,
+        "pf": 0.5585609354469732
+      },
+      "best_direction": "AVOID",
+      "edge_strength": "NONE"
+    },
+    {
+      "regime": "BULL_STRONG",
+      "days_total": 10,
+      "days_pct": 0.07691124442393478,
+      "long_metrics": {
+        "trades": 8,
+        "exp": -0.7970991013714226,
+        "pf": 0.08902959843265988
+      },
+      "short_metrics": {
+        "trades": 0,
+        "exp": 0.0,
+        "pf": 0.0
+      },
+      "best_direction": "AVOID",
+      "edge_strength": "NONE"
+    },
+    {
+      "regime": "SIDEWAYS",
+      "days_total": 3276,
+      "days_pct": 25.196123673281036,
+      "long_metrics": {
+        "trades": 588,
+        "exp": -0.13089891507915952,
+        "pf": 0.8135303665247103
+      },
+      "short_metrics": {
+        "trades": 576,
+        "exp": 0.34343226558512713,
+        "pf": 1.5389457019255293
+      },
+      "best_direction": "SHORT",
+      "edge_strength": "MEDIUM"
+    },
+    {
+      "regime": "TRANSITION_DOWN",
+      "days_total": 1300,
+      "days_pct": 9.99846177511152,
+      "long_metrics": {
+        "trades": 79,
+        "exp": -0.3918255165503864,
+        "pf": 0.491703599235635
+      },
+      "short_metrics": {
+        "trades": 379,
+        "exp": 0.2991953021972438,
+        "pf": 1.529818850500724
+      },
+      "best_direction": "AVOID",
+      "edge_strength": "NONE"
+    },
+    {
+      "regime": "BEAR_WEAK",
+      "days_total": 3148,
+      "days_pct": 24.211659744654668,
+      "long_metrics": {
+        "trades": 439,
+        "exp": 0.031244297350413217,
+        "pf": 1.0445423284753104
+      },
+      "short_metrics": {
+        "trades": 1525,
+        "exp": -0.09969886999096163,
+        "pf": 0.8441945688653609
+      },
+      "best_direction": "AVOID",
+      "edge_strength": "NONE"
+    },
+    {
+      "regime": "TRANSITION_UP",
+      "days_total": 1208,
+      "days_pct": 9.29087832641132,
+      "long_metrics": {
+        "trades": 395,
+        "exp": -0.3323750833018007,
+        "pf": 0.5322135357698029
+      },
+      "short_metrics": {
+        "trades": 76,
+        "exp": 0.8105523527800579,
+        "pf": 2.6015952295504987
+      },
+      "best_direction": "SHORT",
+      "edge_strength": "STRONG"
+    },
+    {
+      "regime": "BEAR_STRONG",
+      "days_total": 41,
+      "days_pct": 0.31533610213813257,
+      "long_metrics": {
+        "trades": 0,
+        "exp": 0.0,
+        "pf": 0.0
+      },
+      "short_metrics": {
+        "trades": 34,
+        "exp": -0.9837114217884464,
+        "pf": 0.0
+      },
+      "best_direction": "AVOID",
+      "edge_strength": "NONE"
+    }
+  ],
+  "go_criterion": {
+    "rule": ">= 3 regimes com edge MEDIUM+ (exp >= +0.30R)",
+    "regimes_with_edge": 3,
+    "regimes_total": 8,
+    "passed": true
+  },
+  "meta": {
+    "generated_at": "2026-05-14",
+    "data_sources": [
+      {
+        "market": "BTCUSDT",
+        "period": "1hour",
+        "start": "2024-11-01",
+        "end": "2025-05-01",
+        "trades": 2043,
+        "bars": 4310
+      },
+      {
+        "market": "BTCUSDT",
+        "period": "1hour",
+        "start": "2025-05-01",
+        "end": "2025-11-01",
+        "trades": 2381,
+        "bars": 4382
+      },
+      {
+        "market": "ETHUSDT",
+        "period": "1hour",
+        "start": "2024-11-01",
+        "end": "2025-05-01",
+        "trades": 1921,
+        "bars": 4310
+      }
+    ],
+    "total_trades": 6345,
+    "total_bars": 13002,
+    "note": "Periodo disponivel: BTC Nov/24-Nov/25 + ETH Nov/24-Mai/25 (~18 meses corridos). Plano original previa 11y; aguardando ingest Bitstamp."
+  }
+}

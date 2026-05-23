@@ -1,0 +1,76 @@
+{
+  "timestamp": "2026-05-16T19:37:59Z",
+  "asset": "BTC",
+  "methodology": "pct_returns_daily + triple_barrier_path_dependent + CoinEx_fees",
+  "simulation": {
+    "stop_atr": "1.0 * ATR(14)",
+    "target_atr": "5.0 * ATR(14)",
+    "max_bars": 168,
+    "fee_pct": 0.0005,
+    "slippage_pct": 0.0005
+  },
+  "dataset": {
+    "n_trades": 2055,
+    "n_days": 323,
+    "n_returns": 322,
+    "period": "2014-01-20 → 2025-04-21",
+    "final_equity": 0.000406,
+    "mean_r": -0.3587,
+    "win_rate_pct": 13.97,
+    "exit_reasons": {
+      "stop_hit": 1757,
+      "target_hit": 282,
+      "timeout": 16
+    },
+    "risk_pct": 0.01,
+    "annualizer": "sqrt(365)=19.105"
+  },
+  "metrics": {
+    "sharpe": -2.469791,
+    "psr": 0.025495,
+    "dsr": 0.000633
+  },
+  "decision": "FAIL",
+  "reasons": [
+    "DSR 0.0006 < 0.95",
+    "PSR 0.0255 < 0.95",
+    "Sharpe -2.4698 <= 0"
+  ],
+  "sensitivity": [
+    {
+      "n_trials": 20,
+      "sharpe": -2.469791,
+      "psr": 0.025495,
+      "dsr": 0.001291,
+      "decision": "FAIL"
+    },
+    {
+      "n_trials": 50,
+      "sharpe": -2.469791,
+      "psr": 0.025495,
+      "dsr": 0.000633,
+      "decision": "FAIL"
+    },
+    {
+      "n_trials": 100,
+      "sharpe": -2.469791,
+      "psr": 0.025495,
+      "dsr": 0.000382,
+      "decision": "FAIL"
+    },
+    {
+      "n_trials": 200,
+      "sharpe": -2.469791,
+      "psr": 0.025495,
+      "dsr": 0.000235,
+      "decision": "FAIL"
+    },
+    {
+      "n_trials": 500,
+      "sharpe": -2.469791,
+      "psr": 0.025495,
+      "dsr": 0.000128,
+      "decision": "FAIL"
+    }
+  ]
+}

@@ -1,0 +1,597 @@
+[
+  {
+    "label": "stop1.0_target5.0_default",
+    "stop_atr": 1.0,
+    "target_atr": 5.0,
+    "analysis": {
+      "verdict": "DISTRIBUTED ✅",
+      "concentration_flags": [],
+      "gini_pnl": 0.3516,
+      "top_1pct": {
+        "valid": true,
+        "n_total": 3312,
+        "n_top": 33,
+        "top_n_pct": 0.01,
+        "total_log_return": 6.387996,
+        "total_equity_x": 594.663796,
+        "top_log_contribution": 1.603601,
+        "top_pct_of_total_log": 25.1,
+        "top_winners_only_log": 1.603601,
+        "top_pct_of_winners_only": 4.63
+      },
+      "top_5pct": {
+        "valid": true,
+        "n_total": 3312,
+        "n_top": 165,
+        "top_n_pct": 0.05,
+        "total_log_return": 6.387996,
+        "total_equity_x": 594.663796,
+        "top_log_contribution": 7.999777,
+        "top_pct_of_total_log": 125.23,
+        "top_winners_only_log": 7.999777,
+        "top_pct_of_winners_only": 23.07
+      },
+      "top_10pct": {
+        "valid": true,
+        "n_total": 3312,
+        "n_top": 331,
+        "top_n_pct": 0.1,
+        "total_log_return": 6.387996,
+        "total_equity_x": 594.663796,
+        "top_log_contribution": 16.011595,
+        "top_pct_of_total_log": 250.65,
+        "top_winners_only_log": 16.011595,
+        "top_pct_of_winners_only": 46.18
+      },
+      "annual_breakdown": [
+        {
+          "year": "2017",
+          "n_trades": 456,
+          "log_return": 1.648404,
+          "equity_x": 5.198679,
+          "pct_of_total": 25.8
+        },
+        {
+          "year": "2018",
+          "n_trades": 546,
+          "log_return": 1.50129,
+          "equity_x": 4.487475,
+          "pct_of_total": 23.5
+        },
+        {
+          "year": "2019",
+          "n_trades": 226,
+          "log_return": -1.448235,
+          "equity_x": 0.234985,
+          "pct_of_total": -22.67
+        },
+        {
+          "year": "2020",
+          "n_trades": 306,
+          "log_return": 0.665029,
+          "equity_x": 1.944547,
+          "pct_of_total": 10.41
+        },
+        {
+          "year": "2021",
+          "n_trades": 765,
+          "log_return": 3.258394,
+          "equity_x": 26.007723,
+          "pct_of_total": 51.01
+        },
+        {
+          "year": "2022",
+          "n_trades": 145,
+          "log_return": -0.430079,
+          "equity_x": 0.650458,
+          "pct_of_total": -6.73
+        },
+        {
+          "year": "2023",
+          "n_trades": 175,
+          "log_return": -0.019745,
+          "equity_x": 0.980449,
+          "pct_of_total": -0.31
+        },
+        {
+          "year": "2024",
+          "n_trades": 384,
+          "log_return": 3.270974,
+          "equity_x": 26.336984,
+          "pct_of_total": 51.21
+        },
+        {
+          "year": "2025",
+          "n_trades": 232,
+          "log_return": -1.693742,
+          "equity_x": 0.18383,
+          "pct_of_total": -26.51
+        },
+        {
+          "year": "2026",
+          "n_trades": 77,
+          "log_return": -0.364293,
+          "equity_x": 0.694687,
+          "pct_of_total": -5.7
+        }
+      ],
+      "max_year_pct": 51.21
+    }
+  },
+  {
+    "label": "stop1.5_target3.0",
+    "stop_atr": 1.5,
+    "target_atr": 3.0,
+    "analysis": {
+      "verdict": "DISTRIBUTED ✅",
+      "concentration_flags": [],
+      "gini_pnl": 0.1683,
+      "top_1pct": {
+        "valid": true,
+        "n_total": 3312,
+        "n_top": 33,
+        "top_n_pct": 0.01,
+        "total_log_return": 6.237784,
+        "total_equity_x": 511.723031,
+        "top_log_contribution": 0.971442,
+        "top_pct_of_total_log": 15.57,
+        "top_winners_only_log": 0.971442,
+        "top_pct_of_winners_only": 2.58
+      },
+      "top_5pct": {
+        "valid": true,
+        "n_total": 3312,
+        "n_top": 165,
+        "top_n_pct": 0.05,
+        "total_log_return": 6.237784,
+        "total_equity_x": 511.723031,
+        "top_log_contribution": 4.847462,
+        "top_pct_of_total_log": 77.71,
+        "top_winners_only_log": 4.847462,
+        "top_pct_of_winners_only": 12.9
+      },
+      "top_10pct": {
+        "valid": true,
+        "n_total": 3312,
+        "n_top": 331,
+        "top_n_pct": 0.1,
+        "total_log_return": 6.237784,
+        "total_equity_x": 511.723031,
+        "top_log_contribution": 9.710039,
+        "top_pct_of_total_log": 155.66,
+        "top_winners_only_log": 9.710039,
+        "top_pct_of_winners_only": 25.84
+      },
+      "annual_breakdown": [
+        {
+          "year": "2017",
+          "n_trades": 456,
+          "log_return": 1.12227,
+          "equity_x": 3.071821,
+          "pct_of_total": 17.99
+        },
+        {
+          "year": "2018",
+          "n_trades": 546,
+          "log_return": 1.240101,
+          "equity_x": 3.455964,
+          "pct_of_total": 19.88
+        },
+        {
+          "year": "2019",
+          "n_trades": 226,
+          "log_return": -0.971171,
+          "equity_x": 0.378639,
+          "pct_of_total": -15.57
+        },
+        {
+          "year": "2020",
+          "n_trades": 306,
+          "log_return": 0.718206,
+          "equity_x": 2.050752,
+          "pct_of_total": 11.51
+        },
+        {
+          "year": "2021",
+          "n_trades": 765,
+          "log_return": 2.793976,
+          "equity_x": 16.345876,
+          "pct_of_total": 44.79
+        },
+        {
+          "year": "2022",
+          "n_trades": 145,
+          "log_return": 0.032379,
+          "equity_x": 1.032909,
+          "pct_of_total": 0.52
+        },
+        {
+          "year": "2023",
+          "n_trades": 175,
+          "log_return": 0.213884,
+          "equity_x": 1.238479,
+          "pct_of_total": 3.43
+        },
+        {
+          "year": "2024",
+          "n_trades": 384,
+          "log_return": 2.678946,
+          "equity_x": 14.569729,
+          "pct_of_total": 42.95
+        },
+        {
+          "year": "2025",
+          "n_trades": 232,
+          "log_return": -0.932771,
+          "equity_x": 0.393462,
+          "pct_of_total": -14.95
+        },
+        {
+          "year": "2026",
+          "n_trades": 77,
+          "log_return": -0.658037,
+          "equity_x": 0.517867,
+          "pct_of_total": -10.55
+        }
+      ],
+      "max_year_pct": 44.79
+    }
+  },
+  {
+    "label": "stop1.5_target5.0",
+    "stop_atr": 1.5,
+    "target_atr": 5.0,
+    "analysis": {
+      "verdict": "DISTRIBUTED ✅",
+      "concentration_flags": [],
+      "gini_pnl": 0.2874,
+      "top_1pct": {
+        "valid": true,
+        "n_total": 3312,
+        "n_top": 33,
+        "top_n_pct": 0.01,
+        "total_log_return": 10.700351,
+        "total_equity_x": 44371.433336,
+        "top_log_contribution": 1.606153,
+        "top_pct_of_total_log": 15.01,
+        "top_winners_only_log": 1.606153,
+        "top_pct_of_winners_only": 3.44
+      },
+      "top_5pct": {
+        "valid": true,
+        "n_total": 3312,
+        "n_top": 165,
+        "top_n_pct": 0.05,
+        "total_log_return": 10.700351,
+        "total_equity_x": 44371.433336,
+        "top_log_contribution": 8.020433,
+        "top_pct_of_total_log": 74.95,
+        "top_winners_only_log": 8.020433,
+        "top_pct_of_winners_only": 17.16
+      },
+      "top_10pct": {
+        "valid": true,
+        "n_total": 3312,
+        "n_top": 331,
+        "top_n_pct": 0.1,
+        "total_log_return": 10.700351,
+        "total_equity_x": 44371.433336,
+        "top_log_contribution": 16.071585,
+        "top_pct_of_total_log": 150.2,
+        "top_winners_only_log": 16.071585,
+        "top_pct_of_winners_only": 34.38
+      },
+      "annual_breakdown": [
+        {
+          "year": "2017",
+          "n_trades": 456,
+          "log_return": 3.492202,
+          "equity_x": 32.858218,
+          "pct_of_total": 32.64
+        },
+        {
+          "year": "2018",
+          "n_trades": 546,
+          "log_return": 2.045445,
+          "equity_x": 7.732598,
+          "pct_of_total": 19.12
+        },
+        {
+          "year": "2019",
+          "n_trades": 226,
+          "log_return": -2.11835,
+          "equity_x": 0.12023,
+          "pct_of_total": -19.8
+        },
+        {
+          "year": "2020",
+          "n_trades": 306,
+          "log_return": 1.076017,
+          "equity_x": 2.932973,
+          "pct_of_total": 10.06
+        },
+        {
+          "year": "2021",
+          "n_trades": 765,
+          "log_return": 4.503815,
+          "equity_x": 90.361188,
+          "pct_of_total": 42.09
+        },
+        {
+          "year": "2022",
+          "n_trades": 145,
+          "log_return": -0.885651,
+          "equity_x": 0.412446,
+          "pct_of_total": -8.28
+        },
+        {
+          "year": "2023",
+          "n_trades": 175,
+          "log_return": 0.705516,
+          "equity_x": 2.024891,
+          "pct_of_total": 6.59
+        },
+        {
+          "year": "2024",
+          "n_trades": 384,
+          "log_return": 4.612475,
+          "equity_x": 100.733184,
+          "pct_of_total": 43.11
+        },
+        {
+          "year": "2025",
+          "n_trades": 232,
+          "log_return": -2.278908,
+          "equity_x": 0.102396,
+          "pct_of_total": -21.3
+        },
+        {
+          "year": "2026",
+          "n_trades": 77,
+          "log_return": -0.452209,
+          "equity_x": 0.636221,
+          "pct_of_total": -4.23
+        }
+      ],
+      "max_year_pct": 43.11
+    }
+  },
+  {
+    "label": "stop2.0_target3.0",
+    "stop_atr": 2.0,
+    "target_atr": 3.0,
+    "analysis": {
+      "verdict": "DISTRIBUTED ✅",
+      "concentration_flags": [],
+      "gini_pnl": 0.1073,
+      "top_1pct": {
+        "valid": true,
+        "n_total": 3312,
+        "n_top": 33,
+        "top_n_pct": 0.01,
+        "total_log_return": 7.823813,
+        "total_equity_x": 2499.418206,
+        "top_log_contribution": 0.972553,
+        "top_pct_of_total_log": 12.43,
+        "top_winners_only_log": 0.972553,
+        "top_pct_of_winners_only": 2.21
+      },
+      "top_5pct": {
+        "valid": true,
+        "n_total": 3312,
+        "n_top": 165,
+        "top_n_pct": 0.05,
+        "total_log_return": 7.823813,
+        "total_equity_x": 2499.418206,
+        "top_log_contribution": 4.856295,
+        "top_pct_of_total_log": 62.07,
+        "top_winners_only_log": 4.856295,
+        "top_pct_of_winners_only": 11.02
+      },
+      "top_10pct": {
+        "valid": true,
+        "n_total": 3312,
+        "n_top": 331,
+        "top_n_pct": 0.1,
+        "total_log_return": 7.823813,
+        "total_equity_x": 2499.418206,
+        "top_log_contribution": 9.732592,
+        "top_pct_of_total_log": 124.4,
+        "top_winners_only_log": 9.732592,
+        "top_pct_of_winners_only": 22.08
+      },
+      "annual_breakdown": [
+        {
+          "year": "2017",
+          "n_trades": 456,
+          "log_return": 2.345945,
+          "equity_x": 10.44314,
+          "pct_of_total": 29.98
+        },
+        {
+          "year": "2018",
+          "n_trades": 546,
+          "log_return": 1.44433,
+          "equity_x": 4.23901,
+          "pct_of_total": 18.46
+        },
+        {
+          "year": "2019",
+          "n_trades": 226,
+          "log_return": -1.309297,
+          "equity_x": 0.27001,
+          "pct_of_total": -16.73
+        },
+        {
+          "year": "2020",
+          "n_trades": 306,
+          "log_return": 1.238135,
+          "equity_x": 3.449174,
+          "pct_of_total": 15.83
+        },
+        {
+          "year": "2021",
+          "n_trades": 765,
+          "log_return": 3.13527,
+          "equity_x": 22.994847,
+          "pct_of_total": 40.07
+        },
+        {
+          "year": "2022",
+          "n_trades": 145,
+          "log_return": -0.316763,
+          "equity_x": 0.728503,
+          "pct_of_total": -4.05
+        },
+        {
+          "year": "2023",
+          "n_trades": 175,
+          "log_return": 0.402363,
+          "equity_x": 1.495354,
+          "pct_of_total": 5.14
+        },
+        {
+          "year": "2024",
+          "n_trades": 384,
+          "log_return": 2.868911,
+          "equity_x": 17.617829,
+          "pct_of_total": 36.67
+        },
+        {
+          "year": "2025",
+          "n_trades": 232,
+          "log_return": -1.135754,
+          "equity_x": 0.32118,
+          "pct_of_total": -14.52
+        },
+        {
+          "year": "2026",
+          "n_trades": 77,
+          "log_return": -0.849327,
+          "equity_x": 0.427703,
+          "pct_of_total": -10.86
+        }
+      ],
+      "max_year_pct": 40.07
+    }
+  },
+  {
+    "label": "stop2.0_target5.0_best",
+    "stop_atr": 2.0,
+    "target_atr": 5.0,
+    "analysis": {
+      "verdict": "DISTRIBUTED ✅",
+      "concentration_flags": [],
+      "gini_pnl": 0.2369,
+      "top_1pct": {
+        "valid": true,
+        "n_total": 3312,
+        "n_top": 33,
+        "top_n_pct": 0.01,
+        "total_log_return": 13.31414,
+        "total_equity_x": 605699.965207,
+        "top_log_contribution": 1.607229,
+        "top_pct_of_total_log": 12.07,
+        "top_winners_only_log": 1.607229,
+        "top_pct_of_winners_only": 2.87
+      },
+      "top_5pct": {
+        "valid": true,
+        "n_total": 3312,
+        "n_top": 165,
+        "top_n_pct": 0.05,
+        "total_log_return": 13.31414,
+        "total_equity_x": 605699.965207,
+        "top_log_contribution": 8.029588,
+        "top_pct_of_total_log": 60.31,
+        "top_winners_only_log": 8.029588,
+        "top_pct_of_winners_only": 14.33
+      },
+      "top_10pct": {
+        "valid": true,
+        "n_total": 3312,
+        "n_top": 331,
+        "top_n_pct": 0.1,
+        "total_log_return": 13.31414,
+        "total_equity_x": 605699.965207,
+        "top_log_contribution": 16.096689,
+        "top_pct_of_total_log": 120.9,
+        "top_winners_only_log": 16.096689,
+        "top_pct_of_winners_only": 28.72
+      },
+      "annual_breakdown": [
+        {
+          "year": "2017",
+          "n_trades": 456,
+          "log_return": 5.499824,
+          "equity_x": 244.648749,
+          "pct_of_total": 41.31
+        },
+        {
+          "year": "2018",
+          "n_trades": 546,
+          "log_return": 2.043127,
+          "equity_x": 7.714697,
+          "pct_of_total": 15.35
+        },
+        {
+          "year": "2019",
+          "n_trades": 226,
+          "log_return": -2.306456,
+          "equity_x": 0.099614,
+          "pct_of_total": -17.32
+        },
+        {
+          "year": "2020",
+          "n_trades": 306,
+          "log_return": 2.035516,
+          "equity_x": 7.656203,
+          "pct_of_total": 15.29
+        },
+        {
+          "year": "2021",
+          "n_trades": 765,
+          "log_return": 4.585218,
+          "equity_x": 98.024525,
+          "pct_of_total": 34.44
+        },
+        {
+          "year": "2022",
+          "n_trades": 145,
+          "log_return": -1.348846,
+          "equity_x": 0.25954,
+          "pct_of_total": -10.13
+        },
+        {
+          "year": "2023",
+          "n_trades": 175,
+          "log_return": 0.969003,
+          "equity_x": 2.635317,
+          "pct_of_total": 7.28
+        },
+        {
+          "year": "2024",
+          "n_trades": 384,
+          "log_return": 5.177428,
+          "equity_x": 177.226387,
+          "pct_of_total": 38.89
+        },
+        {
+          "year": "2025",
+          "n_trades": 232,
+          "log_return": -2.730498,
+          "equity_x": 0.065187,
+          "pct_of_total": -20.51
+        },
+        {
+          "year": "2026",
+          "n_trades": 77,
+          "log_return": -0.610176,
+          "equity_x": 0.543255,
+          "pct_of_total": -4.58
+        }
+      ],
+      "max_year_pct": 41.31
+    }
+  }
+]

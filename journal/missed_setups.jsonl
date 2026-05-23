@@ -1,0 +1,2 @@
+﻿{"ts_skip":"2026-05-22T01:49:59.3285965Z","market":"PEAQUSDT","tori_reason":"Trendline timing MISSED 16.8% above action_line","proximity_snap":null,"snapshot_present":false}
+{"ts_skip":"2026-05-22T01:49:59.4742455Z","market":"BCHUSDT","tori_reason":"preco ja se distanciou da line ascendente em 12%","proximity_snap":{"side":"SHORT","proximity_pct":1.66,"action_line":371.374889,"slope_deg":-16.7,"rsi":44.3,"vol_drying":true,"setup_ripening":false},"snapshot_present":true}

@@ -1,0 +1,74 @@
+{
+  "timestamp": "2026-05-16T16:36:46Z",
+  "methodology": "pct_returns_daily_bailey_lopez_de_prado_2014",
+  "dataset": {
+    "n_trades": 1073,
+    "n_days": 292,
+    "n_returns": 291,
+    "period": "2014-01-11 → 2025-04-12",
+    "final_equity": 2.953582,
+    "risk_pct": 0.01,
+    "annualizer": "sqrt(365)=19.105"
+  },
+  "params": {
+    "n_trials": 50,
+    "sample_variance_sharpes": 0.5,
+    "dsr_threshold": 0.95,
+    "psr_threshold": 0.95
+  },
+  "metrics": {
+    "sharpe": 1.603074,
+    "psr": 0.949959,
+    "dsr": 0.497334
+  },
+  "decision": "FAIL",
+  "reasons": [
+    "DSR 0.4973 < 0.95",
+    "PSR 0.9500 < 0.95"
+  ],
+  "sensitivity": [
+    {
+      "n_trials": 20,
+      "sharpe": 1.603074,
+      "psr": 0.949959,
+      "dsr": 0.604787,
+      "decision": "FAIL"
+    },
+    {
+      "n_trials": 50,
+      "sharpe": 1.603074,
+      "psr": 0.949959,
+      "dsr": 0.497334,
+      "decision": "FAIL"
+    },
+    {
+      "n_trials": 100,
+      "sharpe": 1.603074,
+      "psr": 0.949959,
+      "dsr": 0.424207,
+      "decision": "FAIL"
+    },
+    {
+      "n_trials": 200,
+      "sharpe": 1.603074,
+      "psr": 0.949959,
+      "dsr": 0.358846,
+      "decision": "FAIL"
+    },
+    {
+      "n_trials": 500,
+      "sharpe": 1.603074,
+      "psr": 0.949959,
+      "dsr": 0.284432,
+      "decision": "FAIL"
+    }
+  ],
+  "r_multiples_baseline": {
+    "dsr": 1.0,
+    "psr": 1.0,
+    "sharpe": 2.18519,
+    "n_trials": 50,
+    "annualizer_note": "sqrt(365*8) hourly R-mult",
+    "decision": "PASS"
+  }
+}

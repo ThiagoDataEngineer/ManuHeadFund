@@ -1,0 +1,41 @@
+{
+  "timestamp": "2026-05-18T02:09:45Z",
+  "pairs": [
+    {
+      "pair": "btcusd",
+      "label": "BTC",
+      "cached": false,
+      "n_candles": 5381,
+      "first": "2011-08-18T00:00:00+00:00",
+      "last": "2026-05-15T00:00:00+00:00",
+      "path": "btcusd_bitstamp_1day.json"
+    },
+    {
+      "pair": "xrpusd",
+      "label": "XRP",
+      "cached": false,
+      "n_candles": 3436,
+      "first": "2016-12-16T00:00:00+00:00",
+      "last": "2026-05-15T00:00:00+00:00",
+      "path": "xrpusd_bitstamp_1day.json"
+    },
+    {
+      "pair": "ethusd",
+      "label": "ETH",
+      "cached": false,
+      "n_candles": 3193,
+      "first": "2017-08-16T00:00:00+00:00",
+      "last": "2026-05-15T00:00:00+00:00",
+      "path": "ethusd_bitstamp_1day.json"
+    },
+    {
+      "pair": "ltcusd",
+      "label": "LTC",
+      "cached": false,
+      "n_candles": 3254,
+      "first": "2017-06-16T00:00:00+00:00",
+      "last": "2026-05-15T00:00:00+00:00",
+      "path": "ltcusd_bitstamp_1day.json"
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+{
+  "timestamp": "2026-05-15T20:59:32Z",
+  "params": {
+    "sample_variance_sharpes": 0.5,
+    "dsr_threshold": 0.95,
+    "psr_threshold": 0.95,
+    "annualizer": "sqrt(365*8)=54.037"
+  },
+  "sensitivity_table": [
+    {
+      "n_trials": 20,
+      "dsr": 1.0,
+      "psr": 1.0,
+      "sharpe_btc": 2.18519,
+      "ergodicity": 0.00085747,
+      "decision": "PASS"
+    },
+    {
+      "n_trials": 50,
+      "dsr": 1.0,
+      "psr": 1.0,
+      "sharpe_btc": 2.18519,
+      "ergodicity": 0.00085747,
+      "decision": "PASS"
+    },
+    {
+      "n_trials": 100,
+      "dsr": 1.0,
+      "psr": 1.0,
+      "sharpe_btc": 2.18519,
+      "ergodicity": 0.00085747,
+      "decision": "PASS"
+    },
+    {
+      "n_trials": 200,
+      "dsr": 1.0,
+      "psr": 1.0,
+      "sharpe_btc": 2.18519,
+      "ergodicity": 0.00085747,
+      "decision": "PASS"
+    },
+    {
+      "n_trials": 500,
+      "dsr": 1.0,
+      "psr": 1.0,
+      "sharpe_btc": 2.18519,
+      "ergodicity": 0.00085747,
+      "decision": "PASS"
+    }
+  ],
+  "first_n_trials_dsr_fails": null,
+  "note": "first_n_trials_dsr_fails=None significa DSR >= 0.95 em todos os n testados"
+}

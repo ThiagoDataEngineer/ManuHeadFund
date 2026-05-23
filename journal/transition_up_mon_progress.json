@@ -1,0 +1,14 @@
+﻿{
+    "timestamp_utc":  "2026-05-14T19:55:05.8117902Z",
+    "since_date":  "2022-12-31T21:00:00.0000000-03:00",
+    "trades_source":  "C:\\Users\\thiag\\Coinex_AI_USER_API\\scripts\\..\\journal\\transition_up_trades_dump.json",
+    "report":  {
+                   "count":  30,
+                   "target":  30,
+                   "missing":  0,
+                   "exp":  0.6509,
+                   "pf":  2.2204,
+                   "wr":  46.67,
+                   "status":  "VIABLE"
+               }
+}

@@ -1,0 +1,42 @@
+{
+    "recorded_at":  "2026-05-19T15:22:44Z",
+    "day":  "20260519",
+    "start_equity_usd":  2762.93,
+    "baseline_reset_at": "2026-05-19T18:45:00Z",
+    "baseline_reset_reason": "deposito_externo_real_user_NAO_FOI_GANHO_DE_TRADING_baseline_total_consolidado",
+    "tracking_scope": "total_coinex_spot_plus_futures",
+    "history": [
+        {
+            "ts": "2026-05-19T15:22:44Z",
+            "scope": "futures_only",
+            "baseline_usd": 1118.29,
+            "note": "primeiro registro do dia (futures apenas)"
+        },
+        {
+            "ts": "2026-05-19T18:30:00Z",
+            "scope": "futures_only",
+            "baseline_usd": 1518.29,
+            "note": "rebalance_interno_spot_para_futures (NAO foi deposito; capital total inalterado)"
+        },
+        {
+            "ts": "2026-05-19T18:35:00Z",
+            "scope": "total_coinex_consolidado",
+            "baseline_usd": 2207.94,
+            "futures": 1518.29,
+            "spot": 689.65,
+            "note": "decisao_user: tracking passou a ser TOTAL (futures+spot) para test pool ~$2200"
+        },
+        {
+            "ts": "2026-05-19T18:45:00Z",
+            "scope": "total_coinex_consolidado",
+            "baseline_usd": 2762.93,
+            "futures": 1962.93,
+            "spot": 800.00,
+            "note": "DEPOSITO EXTERNO REAL +$555 (NAO foi ganho de trading)"
+        }
+    ],
+    "futures_at_reset": 1962.93,
+    "spot_at_reset": 800.00,
+    "total_capital_at_reset": 2762.93,
+    "external_deposit_today_usd": 554.99
+}

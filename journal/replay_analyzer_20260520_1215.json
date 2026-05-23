@@ -1,0 +1,330 @@
+﻿{
+    "summary":  {
+                    "improved":  12,
+                    "needs_attention":  0,
+                    "consistent":  28,
+                    "total":  40
+                },
+    "analyzed":  [
+                     {
+                         "timestamp":  "2026-05-20T14:33:41Z",
+                         "market":  "BUSDT",
+                         "decision":  "VETAR",
+                         "provider":  "anthropic_sonnet",
+                         "class":  "consistent",
+                         "notes":  ""
+                     },
+                     {
+                         "timestamp":  "2026-05-20T14:33:37Z",
+                         "market":  "RONUSDT",
+                         "decision":  "VETAR",
+                         "provider":  "anthropic_sonnet",
+                         "class":  "consistent",
+                         "notes":  ""
+                     },
+                     {
+                         "timestamp":  "2026-05-20T14:33:20Z",
+                         "market":  "ZECUSDT",
+                         "decision":  "VETAR",
+                         "provider":  "anthropic_sonnet",
+                         "class":  "consistent",
+                         "notes":  ""
+                     },
+                     {
+                         "timestamp":  "2026-05-20T14:33:19Z",
+                         "market":  "LITUSDT",
+                         "decision":  "VETAR",
+                         "provider":  "anthropic_sonnet",
+                         "class":  "consistent",
+                         "notes":  ""
+                     },
+                     {
+                         "timestamp":  "2026-05-20T14:33:12Z",
+                         "market":  "DASHUSDT",
+                         "decision":  "VETAR",
+                         "provider":  "none",
+                         "class":  "consistent",
+                         "notes":  ""
+                     },
+                     {
+                         "timestamp":  "2026-05-20T14:33:10Z",
+                         "market":  "VVVUSDT",
+                         "decision":  "VETAR",
+                         "provider":  "anthropic_sonnet",
+                         "class":  "consistent",
+                         "notes":  ""
+                     },
+                     {
+                         "timestamp":  "2026-05-20T14:09:21Z",
+                         "market":  "CHZUSDT",
+                         "decision":  "VETAR",
+                         "provider":  "anthropic_sonnet",
+                         "class":  "consistent",
+                         "notes":  ""
+                     },
+                     {
+                         "timestamp":  "2026-05-20T14:09:07Z",
+                         "market":  "XCHUSDT",
+                         "decision":  "VETAR",
+                         "provider":  "anthropic_sonnet",
+                         "class":  "consistent",
+                         "notes":  ""
+                     },
+                     {
+                         "timestamp":  "2026-05-20T14:09:04Z",
+                         "market":  "DYDXUSDT",
+                         "decision":  "VETAR",
+                         "provider":  "anthropic_sonnet",
+                         "class":  "consistent",
+                         "notes":  ""
+                     },
+                     {
+                         "timestamp":  "2026-05-20T14:08:58Z",
+                         "market":  "RONUSDT",
+                         "decision":  "VETAR",
+                         "provider":  "anthropic_sonnet",
+                         "class":  "consistent",
+                         "notes":  ""
+                     },
+                     {
+                         "timestamp":  "2026-05-20T14:08:44Z",
+                         "market":  "LITUSDT",
+                         "decision":  "APROVAR",
+                         "provider":  "anthropic_sonnet",
+                         "class":  "consistent",
+                         "notes":  ""
+                     },
+                     {
+                         "timestamp":  "2026-05-20T14:08:38Z",
+                         "market":  "VVVUSDT",
+                         "decision":  "VETAR",
+                         "provider":  "anthropic_sonnet",
+                         "class":  "consistent",
+                         "notes":  ""
+                     },
+                     {
+                         "timestamp":  "2026-05-20T14:08:36Z",
+                         "market":  "DASHUSDT",
+                         "decision":  "APROVAR",
+                         "provider":  "anthropic_sonnet",
+                         "class":  "consistent",
+                         "notes":  ""
+                     },
+                     {
+                         "timestamp":  "2026-05-20T13:41:54Z",
+                         "market":  "BUSDT",
+                         "decision":  "VETAR",
+                         "provider":  null,
+                         "class":  "consistent",
+                         "notes":  ""
+                     },
+                     {
+                         "timestamp":  "2026-05-20T13:41:47Z",
+                         "market":  "XCHUSDT",
+                         "decision":  "VETAR",
+                         "provider":  null,
+                         "class":  "consistent",
+                         "notes":  ""
+                     },
+                     {
+                         "timestamp":  "2026-05-20T13:41:46Z",
+                         "market":  "RONUSDT",
+                         "decision":  "VETAR",
+                         "provider":  null,
+                         "class":  "consistent",
+                         "notes":  ""
+                     },
+                     {
+                         "timestamp":  "2026-05-20T13:41:32Z",
+                         "market":  "DASHUSDT",
+                         "decision":  "APROVAR",
+                         "provider":  null,
+                         "class":  "consistent",
+                         "notes":  ""
+                     },
+                     {
+                         "timestamp":  "2026-05-20T13:41:25Z",
+                         "market":  "VVVUSDT",
+                         "decision":  "VETAR",
+                         "provider":  null,
+                         "class":  "consistent",
+                         "notes":  ""
+                     },
+                     {
+                         "timestamp":  "2026-05-20T13:41:25Z",
+                         "market":  "LITUSDT",
+                         "decision":  "APROVAR",
+                         "provider":  null,
+                         "class":  "consistent",
+                         "notes":  ""
+                     },
+                     {
+                         "timestamp":  "2026-05-20T12:00:53Z",
+                         "market":  "DYDXUSDT",
+                         "decision":  "VETAR",
+                         "provider":  null,
+                         "class":  "consistent",
+                         "notes":  ""
+                     },
+                     {
+                         "timestamp":  "2026-05-20T12:00:28Z",
+                         "market":  "BUSDT",
+                         "decision":  "VETAR",
+                         "provider":  null,
+                         "class":  "improved",
+                         "notes":  "Era hallucination tipo A (Mesa pulou). Prompt atual usa NAO_APLICAVEL. | Era hallucination tipo B (knowledge empty). Prompt atual skip header se vazio."
+                     },
+                     {
+                         "timestamp":  "2026-05-20T12:00:24Z",
+                         "market":  "DASHUSDT",
+                         "decision":  "VETAR",
+                         "provider":  null,
+                         "class":  "improved",
+                         "notes":  "Era hallucination tipo A (Mesa pulou). Prompt atual usa NAO_APLICAVEL."
+                     },
+                     {
+                         "timestamp":  "2026-05-20T12:00:21Z",
+                         "market":  "LITUSDT",
+                         "decision":  "VETAR",
+                         "provider":  null,
+                         "class":  "improved",
+                         "notes":  "Era hallucination tipo A (Mesa pulou). Prompt atual usa NAO_APLICAVEL."
+                     },
+                     {
+                         "timestamp":  "2026-05-20T12:00:15Z",
+                         "market":  "VVVUSDT",
+                         "decision":  "VETAR",
+                         "provider":  null,
+                         "class":  "improved",
+                         "notes":  "Era hallucination tipo A (Mesa pulou). Prompt atual usa NAO_APLICAVEL. | Era hallucination tipo B (knowledge empty). Prompt atual skip header se vazio."
+                     },
+                     {
+                         "timestamp":  "2026-05-20T12:00:13Z",
+                         "market":  "XCHUSDT",
+                         "decision":  "VETAR",
+                         "provider":  null,
+                         "class":  "improved",
+                         "notes":  "Era hallucination tipo A (Mesa pulou). Prompt atual usa NAO_APLICAVEL. | Era hallucination tipo B (knowledge empty). Prompt atual skip header se vazio."
+                     },
+                     {
+                         "timestamp":  "2026-05-20T02:55:39Z",
+                         "market":  "KITEUSDT",
+                         "decision":  "VETAR",
+                         "provider":  null,
+                         "class":  "improved",
+                         "notes":  "Era hallucination tipo B (knowledge empty). Prompt atual skip header se vazio."
+                     },
+                     {
+                         "timestamp":  "2026-05-20T02:55:31Z",
+                         "market":  "RONUSDT",
+                         "decision":  "VETAR",
+                         "provider":  null,
+                         "class":  "consistent",
+                         "notes":  ""
+                     },
+                     {
+                         "timestamp":  "2026-05-20T02:55:23Z",
+                         "market":  "LUNCUSDT",
+                         "decision":  "VETAR",
+                         "provider":  null,
+                         "class":  "consistent",
+                         "notes":  ""
+                     },
+                     {
+                         "timestamp":  "2026-05-20T02:55:17Z",
+                         "market":  "VVVUSDT",
+                         "decision":  "APROVAR",
+                         "provider":  null,
+                         "class":  "consistent",
+                         "notes":  ""
+                     },
+                     {
+                         "timestamp":  "2026-05-20T02:55:07Z",
+                         "market":  "RIVERUSDT",
+                         "decision":  "VETAR",
+                         "provider":  null,
+                         "class":  "consistent",
+                         "notes":  ""
+                     },
+                     {
+                         "timestamp":  "2026-05-20T02:55:04Z",
+                         "market":  "XCHUSDT",
+                         "decision":  "VETAR",
+                         "provider":  null,
+                         "class":  "improved",
+                         "notes":  "Era hallucination tipo A (Mesa pulou). Prompt atual usa NAO_APLICAVEL. | Era hallucination tipo B (knowledge empty). Prompt atual skip header se vazio."
+                     },
+                     {
+                         "timestamp":  "2026-05-19T19:05:58Z",
+                         "market":  "HYPEUSDT",
+                         "decision":  "APROVAR",
+                         "provider":  null,
+                         "class":  "consistent",
+                         "notes":  ""
+                     },
+                     {
+                         "timestamp":  "2026-05-19T19:05:48Z",
+                         "market":  "NEARUSDT",
+                         "decision":  "VETAR",
+                         "provider":  null,
+                         "class":  "consistent",
+                         "notes":  ""
+                     },
+                     {
+                         "timestamp":  "2026-05-19T19:04:39Z",
+                         "market":  "XCHUSDT",
+                         "decision":  "VETAR",
+                         "provider":  null,
+                         "class":  "improved",
+                         "notes":  "Era hallucination tipo A (Mesa pulou). Prompt atual usa NAO_APLICAVEL. | Era hallucination tipo B (knowledge empty). Prompt atual skip header se vazio."
+                     },
+                     {
+                         "timestamp":  "2026-05-19T19:04:39Z",
+                         "market":  "VVVUSDT",
+                         "decision":  "VETAR",
+                         "provider":  null,
+                         "class":  "improved",
+                         "notes":  "Era hallucination tipo A (Mesa pulou). Prompt atual usa NAO_APLICAVEL. | Era hallucination tipo B (knowledge empty). Prompt atual skip header se vazio."
+                     },
+                     {
+                         "timestamp":  "2026-05-19T18:24:28Z",
+                         "market":  "XCHUSDT",
+                         "decision":  "VETAR",
+                         "provider":  null,
+                         "class":  "improved",
+                         "notes":  "Era hallucination tipo A (Mesa pulou). Prompt atual usa NAO_APLICAVEL. | Era hallucination tipo B (knowledge empty). Prompt atual skip header se vazio."
+                     },
+                     {
+                         "timestamp":  "2026-05-19T18:24:12Z",
+                         "market":  "VVVUSDT",
+                         "decision":  "VETAR",
+                         "provider":  null,
+                         "class":  "improved",
+                         "notes":  "Era hallucination tipo A (Mesa pulou). Prompt atual usa NAO_APLICAVEL. | Era hallucination tipo B (knowledge empty). Prompt atual skip header se vazio."
+                     },
+                     {
+                         "timestamp":  "2026-05-19T18:24:11Z",
+                         "market":  "RIVERUSDT",
+                         "decision":  "VETAR",
+                         "provider":  null,
+                         "class":  "improved",
+                         "notes":  "Era hallucination tipo A (Mesa pulou). Prompt atual usa NAO_APLICAVEL. | Era hallucination tipo B (knowledge empty). Prompt atual skip header se vazio."
+                     },
+                     {
+                         "timestamp":  "2026-05-19T17:15:58Z",
+                         "market":  "INJUSDT",
+                         "decision":  "VETAR",
+                         "provider":  null,
+                         "class":  "consistent",
+                         "notes":  ""
+                     },
+                     {
+                         "timestamp":  "2026-05-19T17:15:02Z",
+                         "market":  "ONDOUSDT",
+                         "decision":  "VETAR",
+                         "provider":  null,
+                         "class":  "consistent",
+                         "notes":  ""
+                     }
+                 ]
+}

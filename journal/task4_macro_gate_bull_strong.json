@@ -1,0 +1,265 @@
+{
+  "timestamp": "2026-05-14T17:39:43.137620+00:00",
+  "best_thresholds_macro": {
+    "dxy_max": 120.0,
+    "m2_yoy_min": 6.0
+  },
+  "exp_train_baseline": 0.6134,
+  "exp_train_filtered": 0.6306,
+  "exp_holdout_baseline": 0.1473,
+  "exp_holdout_filtered": 0.0,
+  "train_improvement": 0.0172,
+  "train_holdout_gap": 0.6306,
+  "trades_excluded_by_year": {
+    "train": {
+      "2014": {
+        "total": 103,
+        "excluded": 31,
+        "kept": 72
+      },
+      "2015": {
+        "total": 99,
+        "excluded": 99,
+        "kept": 0
+      },
+      "2016": {
+        "total": 366,
+        "excluded": 31,
+        "kept": 335
+      },
+      "2017": {
+        "total": 365,
+        "excluded": 246,
+        "kept": 119
+      },
+      "2018": {
+        "total": 68,
+        "excluded": 68,
+        "kept": 0
+      },
+      "2019": {
+        "total": 156,
+        "excluded": 156,
+        "kept": 0
+      },
+      "2020": {
+        "total": 240,
+        "excluded": 23,
+        "kept": 217
+      },
+      "2021": {
+        "total": 227,
+        "excluded": 0,
+        "kept": 227
+      }
+    },
+    "holdout": {
+      "2023": {
+        "total": 255,
+        "excluded": 255,
+        "kept": 0
+      },
+      "2024": {
+        "total": 271,
+        "excluded": 271,
+        "kept": 0
+      },
+      "2025": {
+        "total": 237,
+        "excluded": 237,
+        "kept": 0
+      }
+    }
+  },
+  "decision": "FAIL_NO_IMPROVEMENT",
+  "decision_reason": "Sem melhora suficiente: train_improvement=0.017R (<0.10) ou holdout 0.000R (<0.30).",
+  "honest_note": "Trades proxy gerados via classificador BULL_STRONG simples sobre BTC daily Bitstamp (SMA200/SMA50 + slope) + forward 7d return / 2-ATR como R. NAO sao trades reais do signal_generator V2. Util pra testar metodologia do gate macro; estimativas absolutas podem divergir de trades reais. FRED DTWEXBGS = Nominal Broad Dollar Index.",
+  "n_trades": {
+    "train_total": 1624,
+    "train_kept": 970,
+    "holdout_total": 763,
+    "holdout_kept": 0
+  },
+  "all_grid_results": [
+    {
+      "dxy_max": 100.0,
+      "m2_yoy_min": -5.0,
+      "exp": -1.3479,
+      "n": 103
+    },
+    {
+      "dxy_max": 100.0,
+      "m2_yoy_min": 0.0,
+      "exp": -1.3479,
+      "n": 103
+    },
+    {
+      "dxy_max": 100.0,
+      "m2_yoy_min": 3.0,
+      "exp": -1.3479,
+      "n": 103
+    },
+    {
+      "dxy_max": 100.0,
+      "m2_yoy_min": 6.0,
+      "exp": -1.8489,
+      "n": 72
+    },
+    {
+      "dxy_max": 100.0,
+      "m2_yoy_min": 9.0,
+      "exp": 0.0,
+      "n": 0
+    },
+    {
+      "dxy_max": 105.0,
+      "m2_yoy_min": -5.0,
+      "exp": -1.3479,
+      "n": 103
+    },
+    {
+      "dxy_max": 105.0,
+      "m2_yoy_min": 0.0,
+      "exp": -1.3479,
+      "n": 103
+    },
+    {
+      "dxy_max": 105.0,
+      "m2_yoy_min": 3.0,
+      "exp": -1.3479,
+      "n": 103
+    },
+    {
+      "dxy_max": 105.0,
+      "m2_yoy_min": 6.0,
+      "exp": -1.8489,
+      "n": 72
+    },
+    {
+      "dxy_max": 105.0,
+      "m2_yoy_min": 9.0,
+      "exp": 0.0,
+      "n": 0
+    },
+    {
+      "dxy_max": 110.0,
+      "m2_yoy_min": -5.0,
+      "exp": -0.7843,
+      "n": 263
+    },
+    {
+      "dxy_max": 110.0,
+      "m2_yoy_min": 0.0,
+      "exp": -0.7843,
+      "n": 263
+    },
+    {
+      "dxy_max": 110.0,
+      "m2_yoy_min": 3.0,
+      "exp": -0.7843,
+      "n": 263
+    },
+    {
+      "dxy_max": 110.0,
+      "m2_yoy_min": 6.0,
+      "exp": -1.2934,
+      "n": 87
+    },
+    {
+      "dxy_max": 110.0,
+      "m2_yoy_min": 9.0,
+      "exp": 0.0,
+      "n": 0
+    },
+    {
+      "dxy_max": 115.0,
+      "m2_yoy_min": -5.0,
+      "exp": 0.6147,
+      "n": 1106
+    },
+    {
+      "dxy_max": 115.0,
+      "m2_yoy_min": 0.0,
+      "exp": 0.6147,
+      "n": 1106
+    },
+    {
+      "dxy_max": 115.0,
+      "m2_yoy_min": 3.0,
+      "exp": 0.6147,
+      "n": 1106
+    },
+    {
+      "dxy_max": 115.0,
+      "m2_yoy_min": 6.0,
+      "exp": 0.6294,
+      "n": 614
+    },
+    {
+      "dxy_max": 115.0,
+      "m2_yoy_min": 9.0,
+      "exp": 0.6088,
+      "n": 248
+    },
+    {
+      "dxy_max": 120.0,
+      "m2_yoy_min": -5.0,
+      "exp": 0.6177,
+      "n": 1601
+    },
+    {
+      "dxy_max": 120.0,
+      "m2_yoy_min": 0.0,
+      "exp": 0.6177,
+      "n": 1601
+    },
+    {
+      "dxy_max": 120.0,
+      "m2_yoy_min": 3.0,
+      "exp": 0.6177,
+      "n": 1601
+    },
+    {
+      "dxy_max": 120.0,
+      "m2_yoy_min": 6.0,
+      "exp": 0.6306,
+      "n": 970
+    },
+    {
+      "dxy_max": 120.0,
+      "m2_yoy_min": 9.0,
+      "exp": 0.5812,
+      "n": 435
+    },
+    {
+      "dxy_max": 130.0,
+      "m2_yoy_min": -5.0,
+      "exp": 0.6134,
+      "n": 1624
+    },
+    {
+      "dxy_max": 130.0,
+      "m2_yoy_min": 0.0,
+      "exp": 0.6134,
+      "n": 1624
+    },
+    {
+      "dxy_max": 130.0,
+      "m2_yoy_min": 3.0,
+      "exp": 0.6134,
+      "n": 1624
+    },
+    {
+      "dxy_max": 130.0,
+      "m2_yoy_min": 6.0,
+      "exp": 0.6233,
+      "n": 993
+    },
+    {
+      "dxy_max": 130.0,
+      "m2_yoy_min": 9.0,
+      "exp": 0.5678,
+      "n": 458
+    }
+  ]
+}

@@ -1,0 +1,52 @@
+{
+  "timestamp": "2026-05-14T13:04:35.669791+00:00",
+  "config": "baseline_v2_short_only",
+  "periods": [
+    {
+      "period_id": "bear_2018",
+      "market": "BTCUSDT",
+      "start": "2018-01-01",
+      "end": "2018-12-31",
+      "trades": 29,
+      "skipped_equity_stop": 42,
+      "metrics": {
+        "trades": 29,
+        "win_rate": 0.3448275862068966,
+        "expectancy_r": -0.17365970278303008,
+        "profit_factor": 0.6807916337992529,
+        "max_dd_r": 10.329432096416085,
+        "sharpe": -0.1558106703740376,
+        "sortino": -0.19600353748483362,
+        "final_equity_r": -5.0361313807078725,
+        "dd_ratio": 2.051
+      },
+      "verdict": "SHORT_INSUFICIENTE"
+    },
+    {
+      "period_id": "bear_2022",
+      "market": "BTCUSDT",
+      "start": "2022-01-01",
+      "end": "2022-12-31",
+      "trades": 31,
+      "skipped_equity_stop": 35,
+      "metrics": {
+        "trades": 31,
+        "win_rate": 0.4516129032258064,
+        "expectancy_r": 0.5562669306382526,
+        "profit_factor": 2.1033739606719473,
+        "max_dd_r": 10.95534353527438,
+        "sharpe": 0.30359312202224326,
+        "sortino": 0.5877783335742938,
+        "final_equity_r": 17.244274849785832,
+        "dd_ratio": 0.635
+      },
+      "verdict": "SHORT_PROMISSOR"
+    }
+  ],
+  "go_criterion": {
+    "rule": "expectancy >= +0.5R em ambos bears + dd_ratio < 0.5",
+    "passed": false,
+    "explanation": "Criterio falha em: bear_2018, bear_2022. SHORT nao demonstra edge robusto."
+  },
+  "implication": "Manter sistema LONG-only. SHORT segue inviavel mesmo em regime ideal."
+}

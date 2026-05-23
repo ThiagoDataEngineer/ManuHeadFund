@@ -1,0 +1,42 @@
+[1/3] fetching all CoinEx tickers...
+      1534 markets total
+
+[2/3] 67 markets USDT vol>$50,000; analisando top 67 em paralelo...
+
+[3/3] done 2.4s | 67 analisados
+
+═══ BULL_STRONG (3) — preço alto + momentum forte ═══
+  ZECUSDT        $   564.0700 24h= +7.50% vol=$   9.1M SMA200= +49.1% M20= +61.0%
+  HYPEUSDT       $    48.2600 24h= +5.30% vol=$   1.6M SMA200= +42.1% M20= +21.6%
+  TONUSDT        $     2.0117 24h= +0.43% vol=$   2.3M SMA200= +29.0% M20= +50.7%
+
+═══ TOP PUMP 24h (11 com ≥5%) ═══
+  RONUSDT        $     0.1182 24h=+34.78% vol=$   0.1M SMA200= -12.9% M20= +24.4% [TRANSITION]
+  ZECUSDT        $   564.0700 24h= +7.50% vol=$   9.1M SMA200= +49.1% M20= +61.0% [BULL_STRONG]
+  NEARUSDT       $     1.6207 24h= +7.18% vol=$   0.6M SMA200=  +6.7% M20= +25.0% [BULL_WEAK]
+  STORJUSDT      $     0.1198 24h= +7.06% vol=$   0.1M SMA200=  +0.2% M20= +25.0% [BULL_WEAK]
+  ONDOUSDT       $     0.3702 24h= +7.03% vol=$   0.1M SMA200=  +2.6% M20= +41.2% [BULL_WEAK]
+  ALGOUSDT       $     0.1144 24h= +6.87% vol=$   0.1M SMA200=  -1.9% M20=  +3.9% [SIDEWAYS]
+  DYDXUSDT       $     0.1422 24h= +6.68% vol=$   0.3M SMA200= -11.9% M20=  -6.1% [BEAR_WEAK]
+  INJUSDT        $     4.9364 24h= +6.35% vol=$   0.5M SMA200= +13.9% M20= +44.0% [BULL_WEAK]
+  HYPEUSDT       $    48.2600 24h= +5.30% vol=$   1.6M SMA200= +42.1% M20= +21.6% [BULL_STRONG]
+  WLDUSDT        $     0.2449 24h= +3.95% vol=$   0.1M SMA200= -45.2% M20=  +0.7% [TRANSITION]
+
+═══ BEAR_STRONG (3) — colapso estrutural ═══
+  TRUMPUSDT      $     2.0498 24h= -0.79% vol=$   0.1M SMA200= -52.5% M20= -14.0%
+  BCHUSDT        $   381.6700 24h= +0.88% vol=$   2.3M SMA200= -25.7% M20= -13.4%
+  APEUSDT        $     0.1418 24h= -0.91% vol=$   0.1M SMA200= -20.6% M20= -11.0%
+
+═══ TOP DUMP 24h (1 com ≤-5%) ═══
+  BILLUSDT       $     0.1178 24h=-26.50% vol=$   0.1M SMA200=      ? M20=      ? [NO_HIST]
+
+═══ Sample distribution ═══
+  BULL_STRONG    3
+  BULL_WEAK     10
+  SIDEWAYS       5
+  TRANSITION    26
+  BEAR_WEAK     19
+  BEAR_STRONG    3
+  NO_HIST        1
+
+[total] tickers=1534 usdt_liquid=67 analisados=67 elapsed=2.4s

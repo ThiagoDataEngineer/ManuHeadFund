@@ -1,0 +1,88 @@
+{
+  "timestamp": "2026-05-18T14:43:06Z",
+  "asset": "BTCUSD-BITSTAMP",
+  "timeframe": "1day",
+  "params": {
+    "stop_atr": 3.0,
+    "target_atr": 1.5,
+    "max_bars": 14,
+    "fee_pct": 0.0005,
+    "slippage_pct": 0.0005
+  },
+  "rules_results": {
+    "rule_a_sma200_break": {
+      "valid": true,
+      "n_trades": 341,
+      "n_days": 341,
+      "sharpe": 0.9214,
+      "psr": 0.8074,
+      "dsr": 0.2583,
+      "mean_r": 0.0713,
+      "win_rate_pct": 58.06,
+      "final_equity": 1.215527,
+      "decision": "FAIL",
+      "wf_verdict": "ROBUST ✅",
+      "wf_mean_sharpe": 1.2548,
+      "wf_positive": 3,
+      "wf_total": 5
+    },
+    "rule_b_rally_failure": {
+      "valid": true,
+      "n_trades": 143,
+      "n_days": 143,
+      "sharpe": -1.994,
+      "psr": 0.098,
+      "dsr": 0.0097,
+      "mean_r": -0.1596,
+      "win_rate_pct": 49.65,
+      "final_equity": 0.782579,
+      "decision": "FAIL",
+      "wf_verdict": "OVERFIT/FRAGILE ⚠️",
+      "wf_mean_sharpe": -3.6733,
+      "wf_positive": 0,
+      "wf_total": 5
+    },
+    "rule_c_late_cycle_mining": {
+      "valid": true,
+      "n_trades": 59,
+      "n_days": 59,
+      "sharpe": -4.6664,
+      "psr": 0.0241,
+      "dsr": 0.0039,
+      "mean_r": -0.3781,
+      "win_rate_pct": 40.68,
+      "final_equity": 0.794177,
+      "decision": "FAIL",
+      "wf_verdict": "ROBUST ✅",
+      "wf_mean_sharpe": null,
+      "wf_positive": 0,
+      "wf_total": 5
+    },
+    "rule_d_consecutive_weakness": {
+      "valid": true,
+      "n_trades": 116,
+      "n_days": 116,
+      "sharpe": 1.0294,
+      "psr": 0.7128,
+      "dsr": 0.3758,
+      "mean_r": 0.0878,
+      "win_rate_pct": 50.86,
+      "final_equity": 1.089315,
+      "decision": "FAIL",
+      "wf_verdict": "ROBUST ✅",
+      "wf_mean_sharpe": null,
+      "wf_positive": 0,
+      "wf_total": 5
+    }
+  },
+  "pbo_cross_rule": {
+    "valid": true,
+    "pbo": 0.1,
+    "n_combinations": 20,
+    "n_configs": 4,
+    "n_periods": 6,
+    "mean_lambda": 0.5205,
+    "verdict": "ROBUST (PBO<0.2)"
+  },
+  "promoted_to_live": []
+}

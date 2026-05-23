@@ -1,0 +1,57 @@
+{
+  "t3_beta_cap": [
+    {
+      "band": "beta<=1.0",
+      "n": 19,
+      "ev_net": 7.06,
+      "hit_pct": 63.2
+    },
+    {
+      "band": "1.0<beta<=1.2",
+      "n": 11,
+      "ev_net": 10.93,
+      "hit_pct": 90.9
+    },
+    {
+      "band": "1.2<beta<=1.4",
+      "n": 21,
+      "ev_net": 6.55,
+      "hit_pct": 57.1
+    },
+    {
+      "band": "1.4<beta<=1.6",
+      "n": 6,
+      "ev_net": 15.51,
+      "hit_pct": 83.3
+    }
+  ],
+  "t4_mesa": [
+    {
+      "mesa": "FORTE_3",
+      "n": 42,
+      "abortar": 41,
+      "paper": 1,
+      "executar": 0,
+      "pass_pct": 2.4
+    },
+    {
+      "mesa": "MEDIO_2",
+      "n": 47,
+      "abortar": 46,
+      "paper": 1,
+      "executar": 0,
+      "pass_pct": 2.1
+    }
+  ],
+  "t5_blacklist": {
+    "n": 62,
+    "ev_net": -0.76,
+    "hit_pct": 37.1
+  },
+  "t6_short": {
+    "n": 505,
+    "days": 270,
+    "ev_net": 2.85,
+    "hit_pct": 60.0
+  }
+}

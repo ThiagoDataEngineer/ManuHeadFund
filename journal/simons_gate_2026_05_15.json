@@ -1,0 +1,35 @@
+{
+  "timestamp": "2026-05-15T00:00:00Z",
+  "dataset": {
+    "source": "transition_up_trades_dump.json",
+    "n_trades": 1073,
+    "period": "2014-01-11 -> 2025-04-12",
+    "regime": "TRANSITION_UP+LONG (whitelist V2 OBSERVATION cell)"
+  },
+  "metrics": {
+    "dsr": 1.0,
+    "psr": 1.0,
+    "sharpe_btc": 1.3967494868247607,
+    "ergodicity": 0.0008574660500808744
+  },
+  "thresholds": {
+    "dsr": 0.95,
+    "psr": 0.95,
+    "sharpe_btc": 0.0,
+    "ergodicity": 0.0
+  },
+  "decision": "PASS",
+  "reasons": [],
+  "baseline_v2_stats": {
+    "n_trades": 3483,
+    "exp_r": 0.6093,
+    "pf": 2.015,
+    "max_dd": 114.24,
+    "wr": 38.42,
+    "sharpe_annual": 4.172,
+    "total_r": 2122.23,
+    "span_years": 14,
+    "trades_per_year": 248.8
+  },
+  "btc_proxy_note": "BTC HODL sintetizado N(mu=0.0001, sigma=0.012) seed=42 - aproximacao; refinar com OHLC real"
+}

@@ -1,0 +1,433 @@
+{
+  "timestamp_utc": "2026-05-15T04:01:11.745657+00:00",
+  "days_ago": 30,
+  "results": [
+    {
+      "symbol": "UB",
+      "bar_ts": "2026-04-15T04:00:00+00:00",
+      "regime_8state": "BULL_WEAK",
+      "signal": "NEUTRO",
+      "direction": "NEUTRO",
+      "score": 53.0,
+      "is_actionable": false,
+      "entry_price": 0.025009,
+      "stop_loss": 0.023998,
+      "take_profit": 0.030065,
+      "rr_ratio": 5.0,
+      "verdict": "NO_ENTRY",
+      "outcome": {
+        "status": "N/A",
+        "bars_held": 0,
+        "exit_price": 0.0,
+        "result_r": 0.0
+      },
+      "side": "gainer"
+    },
+    {
+      "symbol": "TROLL",
+      "bar_ts": "2026-04-15T04:00:00+00:00",
+      "regime_8state": "BULL_STRONG",
+      "signal": "NEUTRO",
+      "direction": "NEUTRO",
+      "score": 60.0,
+      "is_actionable": false,
+      "entry_price": 0.0,
+      "stop_loss": 0.0,
+      "take_profit": 0.0,
+      "rr_ratio": 1.0,
+      "verdict": "NO_ENTRY",
+      "outcome": {
+        "status": "N/A",
+        "bars_held": 0,
+        "exit_price": 0.0,
+        "result_r": 0.0
+      },
+      "side": "gainer"
+    },
+    {
+      "symbol": "B",
+      "bar_ts": "2026-04-15T04:00:00+00:00",
+      "regime_8state": "CAPITULATION",
+      "signal": "NEUTRO",
+      "direction": "NEUTRO",
+      "score": 60.0,
+      "is_actionable": false,
+      "entry_price": 0.11426,
+      "stop_loss": 0.122203,
+      "take_profit": 0.074543,
+      "rr_ratio": 5.0,
+      "verdict": "NO_ENTRY",
+      "outcome": {
+        "status": "N/A",
+        "bars_held": 0,
+        "exit_price": 0.0,
+        "result_r": 0.0
+      },
+      "side": "gainer"
+    },
+    {
+      "symbol": "SKYAI",
+      "bar_ts": "2026-04-15T04:00:00+00:00",
+      "regime_8state": "BULL_WEAK",
+      "signal": "NEUTRO",
+      "direction": "NEUTRO",
+      "score": 53.0,
+      "is_actionable": false,
+      "entry_price": 0.117164,
+      "stop_loss": 0.122619,
+      "take_profit": 0.089887,
+      "rr_ratio": 5.0,
+      "verdict": "NO_ENTRY",
+      "outcome": {
+        "status": "N/A",
+        "bars_held": 0,
+        "exit_price": 0.0,
+        "result_r": 0.0
+      },
+      "side": "gainer"
+    },
+    {
+      "symbol": "H",
+      "bar_ts": "2026-04-15T04:00:00+00:00",
+      "regime_8state": "BULL_STRONG",
+      "signal": "NEUTRO",
+      "direction": "NEUTRO",
+      "score": 48.0,
+      "is_actionable": false,
+      "entry_price": 0.098787,
+      "stop_loss": 0.095245,
+      "take_profit": 0.116495,
+      "rr_ratio": 5.0,
+      "verdict": "NO_ENTRY",
+      "outcome": {
+        "status": "N/A",
+        "bars_held": 0,
+        "exit_price": 0.0,
+        "result_r": 0.0
+      },
+      "side": "gainer"
+    },
+    {
+      "symbol": "Q",
+      "bar_ts": "2026-04-15T04:00:00+00:00",
+      "regime_8state": "TRANSITION_UP",
+      "signal": "NEUTRO",
+      "direction": "NEUTRO",
+      "score": 63.0,
+      "is_actionable": false,
+      "entry_price": 0.009527,
+      "stop_loss": 0.008925,
+      "take_profit": 0.012536,
+      "rr_ratio": 5.0,
+      "verdict": "NO_ENTRY",
+      "outcome": {
+        "status": "N/A",
+        "bars_held": 0,
+        "exit_price": 0.0,
+        "result_r": 0.0
+      },
+      "side": "gainer"
+    },
+    {
+      "symbol": "GWEI",
+      "bar_ts": "2026-04-15T04:00:00+00:00",
+      "regime_8state": "BULL_WEAK",
+      "signal": "NEUTRO",
+      "direction": "NEUTRO",
+      "score": 33.0,
+      "is_actionable": false,
+      "entry_price": 0.066744,
+      "stop_loss": 0.064389,
+      "take_profit": 0.078518,
+      "rr_ratio": 5.0,
+      "verdict": "NO_ENTRY",
+      "outcome": {
+        "status": "N/A",
+        "bars_held": 0,
+        "exit_price": 0.0,
+        "result_r": 0.0
+      },
+      "side": "gainer"
+    },
+    {
+      "symbol": "BIO",
+      "bar_ts": "2026-04-15T04:00:00+00:00",
+      "regime_8state": "BULL_STRONG",
+      "signal": "NEUTRO",
+      "direction": "NEUTRO",
+      "score": 53.0,
+      "is_actionable": false,
+      "entry_price": 0.020352,
+      "stop_loss": 0.019291,
+      "take_profit": 0.025659,
+      "rr_ratio": 5.0,
+      "verdict": "NO_ENTRY",
+      "outcome": {
+        "status": "N/A",
+        "bars_held": 0,
+        "exit_price": 0.0,
+        "result_r": 0.0
+      },
+      "side": "gainer"
+    },
+    {
+      "symbol": "OSMO",
+      "bar_ts": "2026-04-15T04:00:00+00:00",
+      "regime_8state": "SIDEWAYS",
+      "signal": "NEUTRO",
+      "direction": "NEUTRO",
+      "score": 53.0,
+      "is_actionable": false,
+      "entry_price": 0.030666,
+      "stop_loss": 0.030414,
+      "take_profit": 0.031928,
+      "rr_ratio": 5.01,
+      "verdict": "NO_ENTRY",
+      "outcome": {
+        "status": "N/A",
+        "bars_held": 0,
+        "exit_price": 0.0,
+        "result_r": 0.0
+      },
+      "side": "gainer"
+    },
+    {
+      "symbol": "PIEVERSE",
+      "bar_ts": "2026-04-15T04:00:00+00:00",
+      "regime_8state": "BEAR_WEAK",
+      "signal": "COMPRA",
+      "direction": "LONG",
+      "score": 80.0,
+      "is_actionable": true,
+      "entry_price": 0.445251,
+      "stop_loss": 0.431641,
+      "take_profit": 0.513299,
+      "rr_ratio": 5.0,
+      "verdict": "WOULD_HAVE_ENTERED",
+      "outcome": {
+        "status": "STOP_HIT",
+        "bars_held": 6,
+        "exit_price": 0.431641,
+        "result_r": -1.0
+      },
+      "side": "gainer"
+    },
+    {
+      "symbol": "XPL",
+      "bar_ts": "2026-04-15T04:00:00+00:00",
+      "regime_8state": "BULL_WEAK",
+      "signal": "NEUTRO",
+      "direction": "NEUTRO",
+      "score": 53.0,
+      "is_actionable": false,
+      "entry_price": 0.1329,
+      "stop_loss": 0.137014,
+      "take_profit": 0.112329,
+      "rr_ratio": 5.0,
+      "verdict": "NO_ENTRY",
+      "outcome": {
+        "status": "N/A",
+        "bars_held": 0,
+        "exit_price": 0.0,
+        "result_r": 0.0
+      },
+      "side": "loser"
+    },
+    {
+      "symbol": "ZRO",
+      "bar_ts": "2026-04-15T04:00:00+00:00",
+      "regime_8state": "TRANSITION_DOWN",
+      "signal": "NEUTRO",
+      "direction": "NEUTRO",
+      "score": 38.0,
+      "is_actionable": false,
+      "entry_price": 1.9457,
+      "stop_loss": 1.990657,
+      "take_profit": 1.720914,
+      "rr_ratio": 5.0,
+      "verdict": "NO_ENTRY",
+      "outcome": {
+        "status": "N/A",
+        "bars_held": 0,
+        "exit_price": 0.0,
+        "result_r": 0.0
+      },
+      "side": "loser"
+    },
+    {
+      "symbol": "ENJ",
+      "bar_ts": "2026-04-15T04:00:00+00:00",
+      "regime_8state": "BULL_STRONG",
+      "signal": "COMPRA",
+      "direction": "LONG",
+      "score": 80.0,
+      "is_actionable": true,
+      "entry_price": 0.066743,
+      "stop_loss": 0.053634,
+      "take_profit": 0.132287,
+      "rr_ratio": 5.0,
+      "verdict": "WOULD_HAVE_ENTERED",
+      "outcome": {
+        "status": "STOP_HIT",
+        "bars_held": 84,
+        "exit_price": 0.053634,
+        "result_r": -1.0
+      },
+      "side": "loser"
+    },
+    {
+      "symbol": "SIREN",
+      "bar_ts": "2026-04-15T04:00:00+00:00",
+      "regime_8state": "TRANSITION_UP",
+      "signal": "NEUTRO",
+      "direction": "NEUTRO",
+      "score": 60.0,
+      "is_actionable": false,
+      "entry_price": 0.732409,
+      "stop_loss": 0.805009,
+      "take_profit": 0.369411,
+      "rr_ratio": 5.0,
+      "verdict": "NO_ENTRY",
+      "outcome": {
+        "status": "N/A",
+        "bars_held": 0,
+        "exit_price": 0.0,
+        "result_r": 0.0
+      },
+      "side": "loser"
+    },
+    {
+      "symbol": "TRUMP",
+      "bar_ts": "2026-04-15T04:00:00+00:00",
+      "regime_8state": "SIDEWAYS",
+      "signal": "NEUTRO",
+      "direction": "NEUTRO",
+      "score": 33.0,
+      "is_actionable": false,
+      "entry_price": 2.8083,
+      "stop_loss": 2.859043,
+      "take_profit": 2.554586,
+      "rr_ratio": 5.0,
+      "verdict": "NO_ENTRY",
+      "outcome": {
+        "status": "N/A",
+        "bars_held": 0,
+        "exit_price": 0.0,
+        "result_r": 0.0
+      },
+      "side": "loser"
+    },
+    {
+      "symbol": "MON",
+      "bar_ts": "2026-04-15T04:00:00+00:00",
+      "regime_8state": "BULL_WEAK",
+      "signal": "NEUTRO",
+      "direction": "NEUTRO",
+      "score": 53.0,
+      "is_actionable": false,
+      "entry_price": 0.034704,
+      "stop_loss": 0.036071,
+      "take_profit": 0.027869,
+      "rr_ratio": 5.0,
+      "verdict": "NO_ENTRY",
+      "outcome": {
+        "status": "N/A",
+        "bars_held": 0,
+        "exit_price": 0.0,
+        "result_r": 0.0
+      },
+      "side": "loser"
+    },
+    {
+      "symbol": "RIVER",
+      "bar_ts": "2026-04-15T04:00:00+00:00",
+      "regime_8state": "BEAR_WEAK",
+      "signal": "NEUTRO",
+      "direction": "NEUTRO",
+      "score": 53.0,
+      "is_actionable": false,
+      "entry_price": 9.2797,
+      "stop_loss": 8.571971,
+      "take_profit": 12.818343,
+      "rr_ratio": 5.0,
+      "verdict": "NO_ENTRY",
+      "outcome": {
+        "status": "N/A",
+        "bars_held": 0,
+        "exit_price": 0.0,
+        "result_r": 0.0
+      },
+      "side": "loser"
+    },
+    {
+      "symbol": "WLFI",
+      "bar_ts": "2026-04-15T04:00:00+00:00",
+      "regime_8state": "BEAR_WEAK",
+      "signal": "NEUTRO",
+      "direction": "NEUTRO",
+      "score": 43.0,
+      "is_actionable": false,
+      "entry_price": 0.080589,
+      "stop_loss": 0.082251,
+      "take_profit": 0.07228,
+      "rr_ratio": 5.0,
+      "verdict": "NO_ENTRY",
+      "outcome": {
+        "status": "N/A",
+        "bars_held": 0,
+        "exit_price": 0.0,
+        "result_r": 0.0
+      },
+      "side": "loser"
+    },
+    {
+      "symbol": "WLD",
+      "bar_ts": "2026-04-15T04:00:00+00:00",
+      "regime_8state": "BULL_WEAK",
+      "signal": "VENDA",
+      "direction": "SHORT",
+      "score": 80.0,
+      "is_actionable": true,
+      "entry_price": 0.3018,
+      "stop_loss": 0.310471,
+      "take_profit": 0.258443,
+      "rr_ratio": 5.0,
+      "verdict": "WOULD_HAVE_ENTERED",
+      "outcome": {
+        "status": "STOP_HIT",
+        "bars_held": 22,
+        "exit_price": 0.310471,
+        "result_r": -1.0
+      },
+      "side": "loser"
+    },
+    {
+      "symbol": "NFT",
+      "bar_ts": "2026-04-15T04:00:00+00:00",
+      "regime_8state": "SIDEWAYS",
+      "signal": "NEUTRO",
+      "direction": "NEUTRO",
+      "score": 48.0,
+      "is_actionable": false,
+      "entry_price": 0.0,
+      "stop_loss": 0.0,
+      "take_profit": 0.0,
+      "rr_ratio": 1.0,
+      "verdict": "NO_ENTRY",
+      "outcome": {
+        "status": "N/A",
+        "bars_held": 0,
+        "exit_price": 0.0,
+        "result_r": 0.0
+      },
+      "side": "loser"
+    }
+  ],
+  "summary": {
+    "total_scanned": 20,
+    "would_have_entered": 3,
+    "target_hits": 0,
+    "stop_hits": 3,
+    "still_open": 0
+  }
+}

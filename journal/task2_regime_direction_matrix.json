@@ -1,0 +1,283 @@
+{
+  "matrix": [
+    {
+      "regime": "BULL_STRONG",
+      "days_total_14y": 631,
+      "days_pct": 23.63,
+      "long": {
+        "trades": 2648,
+        "exp": 0.358047,
+        "pf": 1.5966,
+        "wr": 37.0091
+      },
+      "short": {
+        "trades": 0,
+        "exp": 0.0,
+        "pf": 0.0,
+        "wr": 0.0
+      },
+      "best_direction": "LONG",
+      "edge_strength": "MEDIUM",
+      "confidence": "HIGH",
+      "years_appeared": [
+        2014,
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ]
+    },
+    {
+      "regime": "BULL_WEAK",
+      "days_total_14y": 863,
+      "days_pct": 32.32,
+      "long": {
+        "trades": 2750,
+        "exp": 0.411302,
+        "pf": 1.6184,
+        "wr": 32.4727
+      },
+      "short": {
+        "trades": 2818,
+        "exp": -0.108575,
+        "pf": 0.8389,
+        "wr": 27.6437
+      },
+      "best_direction": "LONG",
+      "edge_strength": "MEDIUM",
+      "confidence": "HIGH",
+      "years_appeared": [
+        2014,
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ]
+    },
+    {
+      "regime": "TRANSITION_UP",
+      "days_total_14y": 301,
+      "days_pct": 11.27,
+      "long": {
+        "trades": 1073,
+        "exp": 0.11631,
+        "pf": 1.1873,
+        "wr": 34.11
+      },
+      "short": {
+        "trades": 27,
+        "exp": -0.130604,
+        "pf": 0.7846,
+        "wr": 37.037
+      },
+      "best_direction": "AVOID",
+      "edge_strength": "WEAK",
+      "confidence": "HIGH",
+      "years_appeared": [
+        2014,
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ]
+    },
+    {
+      "regime": "TRANSITION_DOWN",
+      "days_total_14y": 304,
+      "days_pct": 11.39,
+      "long": {
+        "trades": 4,
+        "exp": -0.10025,
+        "pf": 0.599,
+        "wr": 75.0
+      },
+      "short": {
+        "trades": 1184,
+        "exp": 0.15062,
+        "pf": 1.2719,
+        "wr": 37.3311
+      },
+      "best_direction": "AVOID",
+      "edge_strength": "WEAK",
+      "confidence": "HIGH",
+      "years_appeared": [
+        2014,
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ]
+    },
+    {
+      "regime": "SIDEWAYS",
+      "days_total_14y": 0,
+      "days_pct": 0.0,
+      "long": {
+        "trades": 0,
+        "exp": 0.0,
+        "pf": 0.0,
+        "wr": 0.0
+      },
+      "short": {
+        "trades": 0,
+        "exp": 0.0,
+        "pf": 0.0,
+        "wr": 0.0
+      },
+      "best_direction": "AVOID",
+      "edge_strength": "WEAK",
+      "confidence": "LOW",
+      "years_appeared": []
+    },
+    {
+      "regime": "BEAR_WEAK",
+      "days_total_14y": 717,
+      "days_pct": 26.85,
+      "long": {
+        "trades": 2594,
+        "exp": -0.092643,
+        "pf": 0.8601,
+        "wr": 30.1079
+      },
+      "short": {
+        "trades": 2004,
+        "exp": 0.079511,
+        "pf": 1.1148,
+        "wr": 28.2934
+      },
+      "best_direction": "AVOID",
+      "edge_strength": "WEAK",
+      "confidence": "HIGH",
+      "years_appeared": [
+        2014,
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ]
+    },
+    {
+      "regime": "BEAR_STRONG",
+      "days_total_14y": 647,
+      "days_pct": 24.23,
+      "long": {
+        "trades": 0,
+        "exp": 0.0,
+        "pf": 0.0,
+        "wr": 0.0
+      },
+      "short": {
+        "trades": 3499,
+        "exp": 0.061638,
+        "pf": 1.093,
+        "wr": 29.3512
+      },
+      "best_direction": "AVOID",
+      "edge_strength": "WEAK",
+      "confidence": "HIGH",
+      "years_appeared": [
+        2014,
+        2015,
+        2016,
+        2017,
+        2018,
+        2019,
+        2020,
+        2021,
+        2022,
+        2023,
+        2024,
+        2025
+      ]
+    },
+    {
+      "regime": "CAPITULATION",
+      "days_total_14y": 16,
+      "days_pct": 0.6,
+      "long": {
+        "trades": 0,
+        "exp": 0.0,
+        "pf": 0.0,
+        "wr": 0.0
+      },
+      "short": {
+        "trades": 65,
+        "exp": -0.734423,
+        "pf": 0.1698,
+        "wr": 9.2308
+      },
+      "best_direction": "AVOID",
+      "edge_strength": "WEAK",
+      "confidence": "MEDIUM",
+      "years_appeared": [
+        2014,
+        2015,
+        2017,
+        2018,
+        2020,
+        2021,
+        2022
+      ]
+    }
+  ],
+  "operational_summary": {
+    "regimes_long_only": [
+      "BULL_STRONG",
+      "BULL_WEAK"
+    ],
+    "regimes_short_only": [],
+    "regimes_both": [],
+    "regimes_avoid": [
+      "TRANSITION_UP",
+      "TRANSITION_DOWN",
+      "SIDEWAYS",
+      "BEAR_WEAK",
+      "BEAR_STRONG",
+      "CAPITULATION"
+    ],
+    "total_tradeable_pct_of_time": 55.95
+  },
+  "go_criterion": {
+    "rule": ">= 4 regimes com edge MEDIUM+ AND confidence != LOW",
+    "passed": false,
+    "qualifying_regimes": [
+      "BULL_STRONG",
+      "BULL_WEAK"
+    ]
+  }
+}

@@ -1,0 +1,16 @@
+[1/3] fetching all CoinEx tickers...
+      1534 markets total
+
+[2/3] 67 markets USDT vol>$50,000; analisando top 67 em paralelo...
+
+[3/3] done 3.9s | 67 analisados
+
+Traceback (most recent call last):
+  File "C:\Users\thiag\Coinex_AI_USER_API\backtest\snapshot_all_coinex.py", line 128, in <module>
+    main()
+  File "C:\Users\thiag\Coinex_AI_USER_API\backtest\snapshot_all_coinex.py", line 102, in main
+    print(f"\u2550\u2550\u2550 BULL_STRONG ({len(bull_strong)}) — preço alto + momentum forte \u2550\u2550\u2550")
+  File "C:\Programas\Python\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode characters in position 0-2: character maps to <undefined>

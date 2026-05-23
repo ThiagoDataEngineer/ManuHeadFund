@@ -1,0 +1,84 @@
+# ============================================================
+# SEGURANCA — credenciais e secrets (NUNCA commitar)
+# Ver SECURITY.md pra detalhes
+# ============================================================
+
+# Internal docs com info sensivel (foram pra docs/ em 2026-05-19)
+docs/BLUEPRINT.md
+docs/CREDENTIALS.md
+docs/AGENTS.md
+docs/PERSONAS.md
+docs/API_CAPABILITIES.md
+docs/GIT_CREDENTIALS.md
+
+# Env files
+.env
+.env.local
+.env.*
+*.env
+
+# Secrets / config local com keys
+secrets/
+credentials/
+agents/config.local.ps1
+*.secret
+*.key
+*.pem
+
+# Tokens, API keys em arquivos comuns
+**/api_keys.json
+**/api_keys.txt
+**/tokens.json
+
+# ============================================================
+# Build / cache
+# ============================================================
+target/
+*.class
+*.jar
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# ============================================================
+# IDE
+# ============================================================
+.vscode/settings.json
+.idea/
+
+# ============================================================
+# OS
+# ============================================================
+.DS_Store
+Thumbs.db
+
+# ============================================================
+# Logs (regenerados, podem conter info sensivel em traceback)
+# ============================================================
+*.log
+logs/
+journal/promotion_cron.log
+pester_baseline.log
+
+# ============================================================
+# Outputs voluminosos (regenerados via backtest)
+# ============================================================
+journal/candles_coinex/*.json
+journal/entries_coinex/*.json
+backtest/btcusd_bitstamp_*.json
+backtest/ethusd_bitstamp_*.json
+backtest/ltcusd_bitstamp_*.json
+backtest/xrpusd_bitstamp_*.json
+
+# ============================================================
+# Telegram state (pode conter chat_id, message history)
+# ============================================================
+journal/tg_listener_state.json
+journal/idea_triggers.jsonl
+
+# ============================================================
+# Estado de fase + drawdown (operacional, nao versionar)
+# ============================================================
+journal/halving_phase_state.json
+journal/regime_state.json
+journal/tier_a_drawdown_*.json

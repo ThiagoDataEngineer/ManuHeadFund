@@ -1,0 +1,116 @@
+{
+  "timestamp": "2026-05-16T03:29:20Z",
+  "asset": "XRPUSD",
+  "wave": "Wave 1 XRP cross-asset validation",
+  "whitelist": "v2 strict_v2 (NÃO retreinada)",
+  "dataset": {
+    "n_candles_total": 76964,
+    "n_trades_raw": 3304,
+    "n_trades_aligned": 3300,
+    "n_trades_dropped": 4,
+    "alignment_rate_pct": 99.88,
+    "source": "bitstamp_api_v2",
+    "period_candle": "1hour",
+    "annualizer": "sqrt(365*8)=54.037"
+  },
+  "params": {
+    "n_trials_primary": 50,
+    "sample_variance_sharpes": 0.5,
+    "dsr_threshold": 0.95,
+    "psr_threshold": 0.95
+  },
+  "metrics": {
+    "dsr": 1.0,
+    "psr": 1.0,
+    "sharpe_usdt": 41.597968,
+    "sharpe_xrp_in_btc": null,
+    "ergodicity": 0.01911533
+  },
+  "decision": "PASS",
+  "fail_type": null,
+  "reasons": [],
+  "regime_distribution": {
+    "TRANSITION_UP": 943,
+    "BULL_STRONG": 2361
+  },
+  "trades_per_window": {
+    "pre_sec": 1517,
+    "during_sec": 976,
+    "post_sec": 811
+  },
+  "sec_windows": [
+    {
+      "window": "pre_sec_2017-2020",
+      "n_trades": 1517,
+      "n_aligned": 1514,
+      "n_dropped": 3,
+      "status": "computed",
+      "dsr": 1.0,
+      "psr": 1.0,
+      "sharpe_usdt": 38.008377,
+      "ergodicity": 0.01858714,
+      "decision": "PASS",
+      "reasons": []
+    },
+    {
+      "window": "during_sec_2020-2023",
+      "n_trades": 976,
+      "n_aligned": 975,
+      "n_dropped": 1,
+      "status": "computed",
+      "dsr": 1.0,
+      "psr": 1.0,
+      "sharpe_usdt": 41.994799,
+      "ergodicity": 0.01842386,
+      "decision": "PASS",
+      "reasons": []
+    },
+    {
+      "window": "post_sec_2023-2026",
+      "n_trades": 811,
+      "n_aligned": 811,
+      "n_dropped": 0,
+      "status": "computed",
+      "dsr": 1.0,
+      "psr": 1.0,
+      "sharpe_usdt": 48.825532,
+      "ergodicity": 0.02093381,
+      "decision": "PASS",
+      "reasons": []
+    }
+  ],
+  "sensitivity": [
+    {
+      "n_trials": 50,
+      "dsr": 1.0,
+      "psr": 1.0,
+      "decision": "PASS"
+    },
+    {
+      "n_trials": 100,
+      "dsr": 1.0,
+      "psr": 1.0,
+      "decision": "PASS"
+    },
+    {
+      "n_trials": 200,
+      "dsr": 1.0,
+      "psr": 1.0,
+      "decision": "PASS"
+    },
+    {
+      "n_trials": 500,
+      "dsr": 1.0,
+      "psr": 1.0,
+      "decision": "PASS"
+    }
+  ],
+  "btc_baseline": {
+    "dsr": 1.0,
+    "psr": 1.0,
+    "sharpe_btc": 2.18519,
+    "ergodicity": 0.00085747,
+    "n_trades": 1073,
+    "decision": "PASS"
+  }
+}

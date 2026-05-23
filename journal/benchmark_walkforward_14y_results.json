@@ -1,0 +1,277 @@
+{
+  "timestamp": "2026-05-14T13:07:36Z",
+  "start": "2014-01-01",
+  "end": "2025-12-31",
+  "n_windows": 22,
+  "windows": [
+    {
+      "id": "w00",
+      "period": "2014-01-01 -> 2015-01-01",
+      "period_start": "2014-01-01",
+      "period_end": "2015-01-01",
+      "trades": 74,
+      "exp": 0.6622,
+      "pf": 2.4848,
+      "max_dd_r": 6.0,
+      "regime_dominant": "bull"
+    },
+    {
+      "id": "w01",
+      "period": "2014-07-01 -> 2015-07-01",
+      "period_start": "2014-07-01",
+      "period_end": "2015-07-01",
+      "trades": 65,
+      "exp": 0.0,
+      "pf": 1.0,
+      "max_dd_r": 9.0,
+      "regime_dominant": "sideways"
+    },
+    {
+      "id": "w02",
+      "period": "2015-01-01 -> 2016-01-01",
+      "period_start": "2015-01-01",
+      "period_end": "2016-01-01",
+      "trades": 43,
+      "exp": 0.4651,
+      "pf": 1.9091,
+      "max_dd_r": 7.0,
+      "regime_dominant": "bull"
+    },
+    {
+      "id": "w03",
+      "period": "2015-07-01 -> 2016-07-01",
+      "period_start": "2015-07-01",
+      "period_end": "2016-07-01",
+      "trades": 62,
+      "exp": -0.1129,
+      "pf": 0.825,
+      "max_dd_r": 10.0,
+      "regime_dominant": "bear"
+    },
+    {
+      "id": "w04",
+      "period": "2016-01-01 -> 2017-01-01",
+      "period_start": "2016-01-01",
+      "period_end": "2017-01-01",
+      "trades": 70,
+      "exp": 0.5,
+      "pf": 2.0,
+      "max_dd_r": 5.0,
+      "regime_dominant": "bull"
+    },
+    {
+      "id": "w05",
+      "period": "2016-07-01 -> 2017-07-01",
+      "period_start": "2016-07-01",
+      "period_end": "2017-07-01",
+      "trades": 66,
+      "exp": 0.3258,
+      "pf": 1.6935,
+      "max_dd_r": 5.0,
+      "regime_dominant": "sideways"
+    },
+    {
+      "id": "w06",
+      "period": "2017-01-01 -> 2018-01-01",
+      "period_start": "2017-01-01",
+      "period_end": "2018-01-01",
+      "trades": 45,
+      "exp": 0.3333,
+      "pf": 1.6,
+      "max_dd_r": 7.0,
+      "regime_dominant": "bull"
+    },
+    {
+      "id": "w07",
+      "period": "2017-07-01 -> 2018-07-01",
+      "period_start": "2017-07-01",
+      "period_end": "2018-07-01",
+      "trades": 46,
+      "exp": -0.0761,
+      "pf": 0.8793,
+      "max_dd_r": 11.0,
+      "regime_dominant": "bear"
+    },
+    {
+      "id": "w08",
+      "period": "2018-01-01 -> 2019-01-01",
+      "period_start": "2018-01-01",
+      "period_end": "2019-01-01",
+      "trades": 69,
+      "exp": 0.7391,
+      "pf": 2.7586,
+      "max_dd_r": 4.0,
+      "regime_dominant": "bull"
+    },
+    {
+      "id": "w09",
+      "period": "2018-07-01 -> 2019-07-01",
+      "period_start": "2018-07-01",
+      "period_end": "2019-07-01",
+      "trades": 70,
+      "exp": 0.3929,
+      "pf": 1.8871,
+      "max_dd_r": 5.5,
+      "regime_dominant": "sideways"
+    },
+    {
+      "id": "w10",
+      "period": "2019-01-01 -> 2020-01-01",
+      "period_start": "2019-01-01",
+      "period_end": "2020-01-01",
+      "trades": 74,
+      "exp": 0.8649,
+      "pf": 3.2857,
+      "max_dd_r": 3.0,
+      "regime_dominant": "bull"
+    },
+    {
+      "id": "w11",
+      "period": "2019-07-01 -> 2020-07-01",
+      "period_start": "2019-07-01",
+      "period_end": "2020-07-01",
+      "trades": 55,
+      "exp": -0.0909,
+      "pf": 0.8571,
+      "max_dd_r": 14.5,
+      "regime_dominant": "bear"
+    },
+    {
+      "id": "w12",
+      "period": "2020-01-01 -> 2021-01-01",
+      "period_start": "2020-01-01",
+      "period_end": "2021-01-01",
+      "trades": 66,
+      "exp": 0.7273,
+      "pf": 2.7143,
+      "max_dd_r": 3.0,
+      "regime_dominant": "bull"
+    },
+    {
+      "id": "w13",
+      "period": "2020-07-01 -> 2021-07-01",
+      "period_start": "2020-07-01",
+      "period_end": "2021-07-01",
+      "trades": 79,
+      "exp": 0.1076,
+      "pf": 1.1932,
+      "max_dd_r": 12.0,
+      "regime_dominant": "sideways"
+    },
+    {
+      "id": "w14",
+      "period": "2021-01-01 -> 2022-01-01",
+      "period_start": "2021-01-01",
+      "period_end": "2022-01-01",
+      "trades": 65,
+      "exp": 0.8,
+      "pf": 3.0,
+      "max_dd_r": 4.0,
+      "regime_dominant": "bull"
+    },
+    {
+      "id": "w15",
+      "period": "2021-07-01 -> 2022-07-01",
+      "period_start": "2021-07-01",
+      "period_end": "2022-07-01",
+      "trades": 43,
+      "exp": -0.0698,
+      "pf": 0.8889,
+      "max_dd_r": 12.5,
+      "regime_dominant": "sideways"
+    },
+    {
+      "id": "w16",
+      "period": "2022-01-01 -> 2023-01-01",
+      "period_start": "2022-01-01",
+      "period_end": "2023-01-01",
+      "trades": 69,
+      "exp": 1.0,
+      "pf": 4.0,
+      "max_dd_r": 3.0,
+      "regime_dominant": "bull"
+    },
+    {
+      "id": "w17",
+      "period": "2022-07-01 -> 2023-07-01",
+      "period_start": "2022-07-01",
+      "period_end": "2023-07-01",
+      "trades": 40,
+      "exp": 0.5,
+      "pf": 2.25,
+      "max_dd_r": 3.5,
+      "regime_dominant": "sideways"
+    },
+    {
+      "id": "w18",
+      "period": "2023-01-01 -> 2024-01-01",
+      "period_start": "2023-01-01",
+      "period_end": "2024-01-01",
+      "trades": 44,
+      "exp": 0.5,
+      "pf": 2.0,
+      "max_dd_r": 5.0,
+      "regime_dominant": "bull"
+    },
+    {
+      "id": "w19",
+      "period": "2023-07-01 -> 2024-07-01",
+      "period_start": "2023-07-01",
+      "period_end": "2024-07-01",
+      "trades": 73,
+      "exp": 0.2329,
+      "pf": 1.4595,
+      "max_dd_r": 5.5,
+      "regime_dominant": "sideways"
+    },
+    {
+      "id": "w20",
+      "period": "2024-01-01 -> 2025-01-01",
+      "period_start": "2024-01-01",
+      "period_end": "2025-01-01",
+      "trades": 55,
+      "exp": 0.6909,
+      "pf": 2.5833,
+      "max_dd_r": 3.0,
+      "regime_dominant": "bull"
+    },
+    {
+      "id": "w21",
+      "period": "2024-07-01 -> 2025-07-01",
+      "period_start": "2024-07-01",
+      "period_end": "2025-07-01",
+      "trades": 52,
+      "exp": 0.5385,
+      "pf": 2.4,
+      "max_dd_r": 5.5,
+      "regime_dominant": "sideways"
+    }
+  ],
+  "consistency": {
+    "expectancy_mean": 0.4105,
+    "expectancy_std": 0.3301,
+    "ergodicity_score": 0.6119,
+    "positive_windows_pct": 77.27,
+    "max_losing_streak_windows": 1
+  },
+  "worst_window": {
+    "id": "w03",
+    "period": "2015-07-01 -> 2016-07-01",
+    "exp": -0.1129,
+    "context": "regime=bear; period=2015-07-01 -> 2016-07-01"
+  },
+  "go_criterion": {
+    "rule": "positive_windows_pct >= 60.0% AND max_losing_streak <= 4 AND ergodicity_score >= 0.4",
+    "passed": true,
+    "actual": {
+      "positive_windows_pct": 77.27,
+      "max_losing_streak_windows": 1,
+      "ergodicity_score": 0.6119
+    }
+  },
+  "go_live_criterion": {
+    "rule": "WF positive>=60.0% & streak<=4 & ergodicity>=0.4",
+    "passed": true,
+    "explanation": "77.27% windows positivas; streak max negativo 1; ergodicity 0.6119."
+  }
+}

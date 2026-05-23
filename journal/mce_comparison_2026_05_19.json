@@ -1,0 +1,115 @@
+{
+  "timestamp": "2026-05-19T03:48:21.727042+00:00",
+  "results": [
+    {
+      "market": "CFGUSDT",
+      "comparison": {
+        "before": {
+          "n": 170,
+          "sharpe": 8.479,
+          "psr": 1.0,
+          "final_eq": 2.802,
+          "win_pct": 49.4
+        },
+        "after_filter": {
+          "n": 49,
+          "sharpe": 10.954,
+          "psr": 1.0,
+          "final_eq": 1.407,
+          "win_pct": 46.9
+        },
+        "filtered_out_count": 121,
+        "kept_count": 49,
+        "threshold": 0.5
+      }
+    },
+    {
+      "market": "ZECUSDT",
+      "comparison": {
+        "before": {
+          "n": 250,
+          "sharpe": 5.371,
+          "psr": 1.0,
+          "final_eq": 4.045,
+          "win_pct": 58.0
+        },
+        "after_filter": {
+          "n": 182,
+          "sharpe": 6.549,
+          "psr": 1.0,
+          "final_eq": 3.617,
+          "win_pct": 58.2
+        },
+        "filtered_out_count": 68,
+        "kept_count": 182,
+        "threshold": 0.5
+      }
+    },
+    {
+      "market": "BTCUSDT",
+      "comparison": {
+        "before": {
+          "n": 124,
+          "sharpe": 2.864,
+          "psr": 0.942,
+          "final_eq": 1.33,
+          "win_pct": 54.0
+        },
+        "after_filter": {
+          "n": 91,
+          "sharpe": 5.151,
+          "psr": 0.988,
+          "final_eq": 1.49,
+          "win_pct": 63.7
+        },
+        "filtered_out_count": 33,
+        "kept_count": 91,
+        "threshold": 0.5
+      }
+    },
+    {
+      "market": "PENDLEUSDT",
+      "comparison": {
+        "before": {
+          "n": 513,
+          "sharpe": 8.747,
+          "psr": 1.0,
+          "final_eq": 86.948,
+          "win_pct": 56.9
+        },
+        "after_filter": {
+          "n": 147,
+          "sharpe": 5.557,
+          "psr": 1.0,
+          "final_eq": 2.26,
+          "win_pct": 52.4
+        },
+        "filtered_out_count": 366,
+        "kept_count": 147,
+        "threshold": 0.5
+      }
+    },
+    {
+      "market": "INJUSDT",
+      "comparison": {
+        "before": {
+          "n": 357,
+          "sharpe": 3.884,
+          "psr": 1.0,
+          "final_eq": 3.21,
+          "win_pct": 52.1
+        },
+        "after_filter": {
+          "n": 107,
+          "sharpe": -1.441,
+          "psr": 0.217,
+          "final_eq": 0.877,
+          "win_pct": 39.3
+        },
+        "filtered_out_count": 250,
+        "kept_count": 107,
+        "threshold": 0.5
+      }
+    }
+  ]
+}

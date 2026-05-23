@@ -1,0 +1,604 @@
+{
+  "dataset": {
+    "market": "BTCUSD",
+    "period": "1hour",
+    "start": "2014-01-01",
+    "end": "2025-05-01",
+    "train_end": 2022,
+    "holdout_start": 2023,
+    "n_transition_up_long_train": 843,
+    "n_transition_up_long_holdout": 230
+  },
+  "dimensions": {
+    "adx": {
+      "dimension": "adx",
+      "train_buckets": {
+        "15-20": {
+          "trades": 79,
+          "exp": 0.281896,
+          "pf": 1.4009,
+          "wr": 27.8481
+        },
+        "20-25": {
+          "trades": 200,
+          "exp": -0.130683,
+          "pf": 0.7996,
+          "wr": 31.0
+        },
+        ">25": {
+          "trades": 543,
+          "exp": 0.18972,
+          "pf": 1.3174,
+          "wr": 36.2799
+        },
+        "<15": {
+          "trades": 21,
+          "exp": 0.467938,
+          "pf": 1.8237,
+          "wr": 42.8571
+        }
+      },
+      "holdout_buckets": {
+        ">25": {
+          "trades": 183,
+          "exp": 0.052334,
+          "pf": 1.0801,
+          "wr": 32.2404
+        },
+        "20-25": {
+          "trades": 35,
+          "exp": 0.125629,
+          "pf": 1.223,
+          "wr": 31.4286
+        },
+        "15-20": {
+          "trades": 12,
+          "exp": 0.154058,
+          "pf": 1.4059,
+          "wr": 50.0
+        }
+      },
+      "best_subsetup": {
+        "bucket": "15-20",
+        "exp": 0.281896,
+        "trades": 79,
+        "pf": 1.4009,
+        "wr": 27.8481
+      },
+      "holdout_validation": {
+        "bucket": "15-20",
+        "trades": 12,
+        "exp": 0.154058,
+        "pf": 1.4059,
+        "wr": 50.0
+      },
+      "decision": "NO_EDGE",
+      "honest_note": "Nenhum sub-setup atinge train>=0.4R E holdout>=0.3R. Best train: '15-20' +0.282R; holdout: +0.154R (n=12). TRANSITION_UP não tem nicho generalizável nesta dimensão."
+    },
+    "rsi": {
+      "dimension": "rsi",
+      "train_buckets": {
+        ">60": {
+          "trades": 699,
+          "exp": 0.154011,
+          "pf": 1.2512,
+          "wr": 34.7639
+        },
+        "40-60": {
+          "trades": 144,
+          "exp": 0.009196,
+          "pf": 1.0141,
+          "wr": 32.6389
+        }
+      },
+      "holdout_buckets": {
+        ">60": {
+          "trades": 176,
+          "exp": 0.012721,
+          "pf": 1.0195,
+          "wr": 29.5455
+        },
+        "40-60": {
+          "trades": 54,
+          "exp": 0.251556,
+          "pf": 1.4639,
+          "wr": 44.4444
+        }
+      },
+      "best_subsetup": {
+        "bucket": ">60",
+        "exp": 0.154011,
+        "trades": 699,
+        "pf": 1.2512,
+        "wr": 34.7639
+      },
+      "holdout_validation": {
+        "bucket": ">60",
+        "trades": 176,
+        "exp": 0.012721,
+        "pf": 1.0195,
+        "wr": 29.5455
+      },
+      "decision": "NO_EDGE",
+      "honest_note": "Nenhum sub-setup atinge train>=0.4R E holdout>=0.3R. Best train: '>60' +0.154R; holdout: +0.013R (n=176). TRANSITION_UP não tem nicho generalizável nesta dimensão."
+    },
+    "hour": {
+      "dimension": "hour",
+      "train_buckets": {
+        "h22": {
+          "trades": 26,
+          "exp": -0.252458,
+          "pf": 0.6312,
+          "wr": 26.9231
+        },
+        "h23": {
+          "trades": 26,
+          "exp": -0.15315,
+          "pf": 0.7544,
+          "wr": 34.6154
+        },
+        "h05": {
+          "trades": 35,
+          "exp": 0.25732,
+          "pf": 1.4491,
+          "wr": 40.0
+        },
+        "h06": {
+          "trades": 34,
+          "exp": 0.260471,
+          "pf": 1.4214,
+          "wr": 35.2941
+        },
+        "h08": {
+          "trades": 31,
+          "exp": 0.686477,
+          "pf": 2.307,
+          "wr": 45.1613
+        },
+        "h11": {
+          "trades": 48,
+          "exp": 0.103642,
+          "pf": 1.1646,
+          "wr": 35.4167
+        },
+        "h13": {
+          "trades": 57,
+          "exp": 0.205156,
+          "pf": 1.3299,
+          "wr": 35.0877
+        },
+        "h14": {
+          "trades": 49,
+          "exp": 0.361441,
+          "pf": 1.6137,
+          "wr": 36.7347
+        },
+        "h15": {
+          "trades": 36,
+          "exp": 0.060647,
+          "pf": 1.0983,
+          "wr": 36.1111
+        },
+        "h07": {
+          "trades": 28,
+          "exp": 0.109536,
+          "pf": 1.1581,
+          "wr": 28.5714
+        },
+        "h03": {
+          "trades": 23,
+          "exp": 0.133065,
+          "pf": 1.2015,
+          "wr": 30.4348
+        },
+        "h09": {
+          "trades": 46,
+          "exp": 0.376065,
+          "pf": 1.5863,
+          "wr": 32.6087
+        },
+        "h10": {
+          "trades": 45,
+          "exp": 0.348053,
+          "pf": 1.6087,
+          "wr": 40.0
+        },
+        "h12": {
+          "trades": 49,
+          "exp": 0.360859,
+          "pf": 1.6239,
+          "wr": 38.7755
+        },
+        "h16": {
+          "trades": 37,
+          "exp": -0.029946,
+          "pf": 0.9541,
+          "wr": 32.4324
+        },
+        "h17": {
+          "trades": 42,
+          "exp": 0.027838,
+          "pf": 1.0455,
+          "wr": 35.7143
+        },
+        "h02": {
+          "trades": 24,
+          "exp": -0.126225,
+          "pf": 0.8279,
+          "wr": 25.0
+        },
+        "h19": {
+          "trades": 32,
+          "exp": -0.227128,
+          "pf": 0.6464,
+          "wr": 31.25
+        },
+        "h21": {
+          "trades": 37,
+          "exp": -0.14047,
+          "pf": 0.7792,
+          "wr": 32.4324
+        },
+        "h00": {
+          "trades": 24,
+          "exp": -0.033946,
+          "pf": 0.94,
+          "wr": 33.3333
+        },
+        "h01": {
+          "trades": 26,
+          "exp": 0.195592,
+          "pf": 1.317,
+          "wr": 34.6154
+        },
+        "h18": {
+          "trades": 32,
+          "exp": -0.21955,
+          "pf": 0.683,
+          "wr": 28.125
+        },
+        "h04": {
+          "trades": 24,
+          "exp": 0.081375,
+          "pf": 1.1465,
+          "wr": 29.1667
+        },
+        "h20": {
+          "trades": 32,
+          "exp": 0.102581,
+          "pf": 1.1679,
+          "wr": 34.375
+        }
+      },
+      "holdout_buckets": {
+        "h17": {
+          "trades": 17,
+          "exp": 0.072271,
+          "pf": 1.1189,
+          "wr": 29.4118
+        },
+        "h18": {
+          "trades": 15,
+          "exp": -0.241907,
+          "pf": 0.6141,
+          "wr": 26.6667
+        },
+        "h19": {
+          "trades": 11,
+          "exp": -0.044336,
+          "pf": 0.9223,
+          "wr": 36.3636
+        },
+        "h21": {
+          "trades": 14,
+          "exp": -0.352736,
+          "pf": 0.5511,
+          "wr": 21.4286
+        },
+        "h02": {
+          "trades": 7,
+          "exp": 0.5829,
+          "pf": 2.0201,
+          "wr": 42.8571
+        },
+        "h03": {
+          "trades": 5,
+          "exp": 0.9056,
+          "pf": 2.5093,
+          "wr": 40.0
+        },
+        "h04": {
+          "trades": 5,
+          "exp": 0.42918,
+          "pf": 1.7153,
+          "wr": 40.0
+        },
+        "h05": {
+          "trades": 5,
+          "exp": 0.43378,
+          "pf": 1.723,
+          "wr": 40.0
+        },
+        "h09": {
+          "trades": 8,
+          "exp": 1.809362,
+          "pf": 4.6187,
+          "wr": 50.0
+        },
+        "h12": {
+          "trades": 13,
+          "exp": 0.238769,
+          "pf": 1.4336,
+          "wr": 38.4615
+        },
+        "h13": {
+          "trades": 10,
+          "exp": 0.36441,
+          "pf": 1.7288,
+          "wr": 50.0
+        },
+        "h15": {
+          "trades": 14,
+          "exp": -0.011029,
+          "pf": 0.983,
+          "wr": 28.5714
+        },
+        "h16": {
+          "trades": 17,
+          "exp": -0.028865,
+          "pf": 0.9562,
+          "wr": 23.5294
+        },
+        "h20": {
+          "trades": 10,
+          "exp": 0.12898,
+          "pf": 1.1843,
+          "wr": 30.0
+        },
+        "h11": {
+          "trades": 12,
+          "exp": 0.006617,
+          "pf": 1.0132,
+          "wr": 50.0
+        },
+        "h22": {
+          "trades": 9,
+          "exp": -0.308744,
+          "pf": 0.603,
+          "wr": 22.2222
+        },
+        "h23": {
+          "trades": 7,
+          "exp": -0.243586,
+          "pf": 0.659,
+          "wr": 28.5714
+        },
+        "h00": {
+          "trades": 7,
+          "exp": -0.377671,
+          "pf": 0.4713,
+          "wr": 28.5714
+        },
+        "h01": {
+          "trades": 5,
+          "exp": 0.16598,
+          "pf": 1.415,
+          "wr": 60.0
+        },
+        "h06": {
+          "trades": 7,
+          "exp": 0.097329,
+          "pf": 1.1363,
+          "wr": 28.5714
+        },
+        "h07": {
+          "trades": 6,
+          "exp": -0.13425,
+          "pf": 0.7986,
+          "wr": 33.3333
+        },
+        "h08": {
+          "trades": 5,
+          "exp": -0.66986,
+          "pf": 0.1627,
+          "wr": 20.0
+        },
+        "h10": {
+          "trades": 8,
+          "exp": 0.014487,
+          "pf": 1.0285,
+          "wr": 37.5
+        },
+        "h14": {
+          "trades": 13,
+          "exp": -0.120469,
+          "pf": 0.812,
+          "wr": 23.0769
+        }
+      },
+      "best_subsetup": {
+        "bucket": "h08",
+        "exp": 0.686477,
+        "trades": 31,
+        "pf": 2.307,
+        "wr": 45.1613
+      },
+      "holdout_validation": {
+        "bucket": "h08",
+        "trades": 5,
+        "exp": -0.66986,
+        "pf": 0.1627,
+        "wr": 20.0
+      },
+      "decision": "NO_EDGE",
+      "honest_note": "Nenhum sub-setup atinge train>=0.4R E holdout>=0.3R. Best train: 'h08' +0.686R; holdout: -0.670R (n=5). TRANSITION_UP não tem nicho generalizável nesta dimensão."
+    },
+    "dow": {
+      "dimension": "dow",
+      "train_buckets": {
+        "Sat": {
+          "trades": 135,
+          "exp": -0.505543,
+          "pf": 0.3066,
+          "wr": 20.0
+        },
+        "Sun": {
+          "trades": 67,
+          "exp": -0.384497,
+          "pf": 0.5247,
+          "wr": 17.9104
+        },
+        "Wed": {
+          "trades": 126,
+          "exp": -0.163548,
+          "pf": 0.7735,
+          "wr": 27.7778
+        },
+        "Mon": {
+          "trades": 170,
+          "exp": 1.084924,
+          "pf": 3.5541,
+          "wr": 57.0588
+        },
+        "Fri": {
+          "trades": 157,
+          "exp": 0.058759,
+          "pf": 1.1036,
+          "wr": 33.121
+        },
+        "Tue": {
+          "trades": 61,
+          "exp": -0.225367,
+          "pf": 0.7024,
+          "wr": 21.3115
+        },
+        "Thu": {
+          "trades": 127,
+          "exp": 0.343934,
+          "pf": 1.6118,
+          "wr": 42.5197
+        }
+      },
+      "holdout_buckets": {
+        "Wed": {
+          "trades": 73,
+          "exp": 0.26156,
+          "pf": 1.4434,
+          "wr": 39.726
+        },
+        "Thu": {
+          "trades": 55,
+          "exp": -0.187455,
+          "pf": 0.7365,
+          "wr": 27.2727
+        },
+        "Sun": {
+          "trades": 6,
+          "exp": 1.5577,
+          "pf": 4.1154,
+          "wr": 50.0
+        },
+        "Mon": {
+          "trades": 25,
+          "exp": 0.981088,
+          "pf": 3.2297,
+          "wr": 56.0
+        },
+        "Fri": {
+          "trades": 33,
+          "exp": -0.316236,
+          "pf": 0.3329,
+          "wr": 27.2727
+        },
+        "Sat": {
+          "trades": 7,
+          "exp": -0.698943,
+          "pf": 0.1846,
+          "wr": 14.2857
+        },
+        "Tue": {
+          "trades": 31,
+          "exp": -0.371161,
+          "pf": 0.5575,
+          "wr": 16.129
+        }
+      },
+      "best_subsetup": {
+        "bucket": "Mon",
+        "exp": 1.084924,
+        "trades": 170,
+        "pf": 3.5541,
+        "wr": 57.0588
+      },
+      "holdout_validation": {
+        "bucket": "Mon",
+        "trades": 25,
+        "exp": 0.981088,
+        "pf": 3.2297,
+        "wr": 56.0
+      },
+      "decision": "NEEDS_MORE_DATA",
+      "honest_note": "Sub-setup 'Mon' passa no train (+1.085R) mas holdout tem amostra insuficiente (n=25<30). Aguardar mais dados para validar."
+    },
+    "volume": {
+      "dimension": "volume",
+      "train_buckets": {
+        ">1.2": {
+          "trades": 549,
+          "exp": 0.174698,
+          "pf": 1.2793,
+          "wr": 34.2441
+        },
+        "<0.8": {
+          "trades": 206,
+          "exp": 0.161398,
+          "pf": 1.28,
+          "wr": 37.3786
+        },
+        "0.8-1.2": {
+          "trades": 88,
+          "exp": -0.229313,
+          "pf": 0.6657,
+          "wr": 28.4091
+        }
+      },
+      "holdout_buckets": {
+        ">1.2": {
+          "trades": 145,
+          "exp": 0.100734,
+          "pf": 1.1533,
+          "wr": 29.6552
+        },
+        "0.8-1.2": {
+          "trades": 10,
+          "exp": 0.4064,
+          "pf": 1.8128,
+          "wr": 50.0
+        },
+        "<0.8": {
+          "trades": 75,
+          "exp": -0.037968,
+          "pf": 0.9347,
+          "wr": 37.3333
+        }
+      },
+      "best_subsetup": {
+        "bucket": ">1.2",
+        "exp": 0.174698,
+        "trades": 549,
+        "pf": 1.2793,
+        "wr": 34.2441
+      },
+      "holdout_validation": {
+        "bucket": ">1.2",
+        "trades": 145,
+        "exp": 0.100734,
+        "pf": 1.1533,
+        "wr": 29.6552
+      },
+      "decision": "NO_EDGE",
+      "honest_note": "Nenhum sub-setup atinge train>=0.4R E holdout>=0.3R. Best train: '>1.2' +0.175R; holdout: +0.101R (n=145). TRANSITION_UP não tem nicho generalizável nesta dimensão."
+    }
+  },
+  "overall_decision": "NEEDS_MORE_DATA"
+}

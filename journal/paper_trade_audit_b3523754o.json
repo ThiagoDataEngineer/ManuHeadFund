@@ -1,0 +1,70 @@
+{
+  "timestamp": "2026-05-15T05:33:44.342501+00:00",
+  "log_path": "C:/Users/thiag/AppData/Local/Temp/claude/c--Users-thiag-Coinex-AI-USER-API/4bae7014-4ca9-426b-bfe6-068d90f3d64f/tasks/b3523754o.output",
+  "total_signals": 3,
+  "total_executed": 0,
+  "breakdown_by_regime_direction": {
+    "BULL_WEAK|UNKNOWN": {
+      "total": 3,
+      "executed": 0,
+      "aborted": 3,
+      "other": 0
+    }
+  },
+  "transition_up_mon_long_count": {
+    "count_total": 0,
+    "count_executed": 0,
+    "since_date": "2023-01-01",
+    "expected_target": 30,
+    "gap_to_30": 30
+  },
+  "top_5_abort_reasons": [
+    {
+      "reason": "Setup apresenta sinais de reversao bullish em um mercado bearish",
+      "count": 1
+    },
+    {
+      "reason": "Setup com macro bullish, mas em altcoin de baixo score",
+      "count": 1
+    },
+    {
+      "reason": "Setup apresenta sinais de reversão bullish em um mercado de baixa, com divergência RSI bullish e preço abaixo da Realized Price.",
+      "count": 1
+    }
+  ],
+  "regime_data_gaps": [
+    {
+      "regime": "UP_MON",
+      "reason": "not_observed_in_log"
+    },
+    {
+      "regime": "UP_WK",
+      "reason": "not_observed_in_log"
+    },
+    {
+      "regime": "UP_DAY",
+      "reason": "not_observed_in_log"
+    },
+    {
+      "regime": "NEUTRAL",
+      "reason": "not_observed_in_log"
+    },
+    {
+      "regime": "DOWN_DAY",
+      "reason": "not_observed_in_log"
+    },
+    {
+      "regime": "DOWN_WK",
+      "reason": "not_observed_in_log"
+    },
+    {
+      "regime": "DOWN_MON",
+      "reason": "not_observed_in_log"
+    },
+    {
+      "regime": "RANGE",
+      "reason": "not_observed_in_log"
+    }
+  ],
+  "honest_note": "Log bbnclvt9g (DryRun 14/05/2026, 5h+ ininterrupto) NAO emite regime/direction nos TRADE entries -- todos os signals viram UNKNOWN|UNKNOWN. Decisoes V6 vieram com score/sinal vazios (ABORTAR generalizado). Para validar UP_MON LONG transitions, signal_generator/orchestrator precisam log estruturado com regime+direction antes do paper trade go-live."
+}

@@ -1,0 +1,623 @@
+{
+  "timestamp": "2026-05-18T00:55:50Z",
+  "asset": "XRP",
+  "whitelist": "v3_long_short",
+  "n_entries": {
+    "long": 3312,
+    "short": 22342,
+    "total": 25654
+  },
+  "short_regimes": {
+    "TRANSITION_DOWN": 5221,
+    "BEAR_STRONG": 1041,
+    "CAPITULATION": 16080
+  },
+  "results": [
+    {
+      "label": "default_1_5",
+      "stop_atr": 1.0,
+      "target_atr": 5.0,
+      "metrics": {
+        "valid": true,
+        "n_trades": 25654,
+        "n_long": 3312,
+        "n_short": 22342,
+        "n_days": 1735,
+        "sharpe": 0.7366,
+        "psr": 0.9534,
+        "dsr": 0.0233,
+        "mean_r": -0.1172,
+        "win_rate_pct": 18.92,
+        "final_equity": 0.0,
+        "decision": "FAIL"
+      },
+      "walk_forward": {
+        "verdict": "ROBUST ✅",
+        "flags": [],
+        "k_folds": 5,
+        "embargo_days": 7,
+        "in_sample": {
+          "valid": true,
+          "n_trades": 25654,
+          "n_days": 1735,
+          "sharpe": 0.7366,
+          "psr": 0.9534,
+          "dsr": 0.0233,
+          "mean_r": -0.1172,
+          "win_rate_pct": 18.92,
+          "final_equity": 0.0
+        },
+        "oos_summary": {
+          "n_folds_valid": 5,
+          "mean_test_sharpe": 0.6967,
+          "min_test_sharpe": -0.281,
+          "max_test_sharpe": 1.5978,
+          "mean_test_dsr": 0.2338,
+          "positive_sharpe_folds": 4,
+          "total_folds": 5
+        },
+        "fold_results": [
+          {
+            "fold_idx": 0,
+            "test_period": [
+              "2017-08-10",
+              "2021-03-17"
+            ],
+            "n_train": 20505,
+            "n_test": 5130,
+            "train_metrics": {
+              "valid": true,
+              "n_trades": 20505,
+              "n_days": 1185,
+              "sharpe": 0.5093,
+              "psr": 0.8274,
+              "dsr": 0.0207,
+              "mean_r": -0.1533,
+              "win_rate_pct": 18.59,
+              "final_equity": 0.0
+            },
+            "test_metrics": {
+              "valid": true,
+              "n_trades": 5130,
+              "n_days": 548,
+              "sharpe": 1.5978,
+              "psr": 0.9857,
+              "dsr": 0.4936,
+              "mean_r": 0.0306,
+              "win_rate_pct": 20.33,
+              "final_equity": 1.206809
+            }
+          },
+          {
+            "fold_idx": 1,
+            "test_period": [
+              "2021-03-17",
+              "2022-09-29"
+            ],
+            "n_train": 20371,
+            "n_test": 5130,
+            "train_metrics": {
+              "valid": true,
+              "n_trades": 20371,
+              "n_days": 1402,
+              "sharpe": 0.952,
+              "psr": 0.9761,
+              "dsr": 0.0858,
+              "mean_r": -0.1009,
+              "win_rate_pct": 19.46,
+              "final_equity": 0.0
+            },
+            "test_metrics": {
+              "valid": true,
+              "n_trades": 5130,
+              "n_days": 323,
+              "sharpe": -0.281,
+              "psr": 0.3974,
+              "dsr": 0.0401,
+              "mean_r": -0.1789,
+              "win_rate_pct": 16.9,
+              "final_equity": 3e-05
+            }
+          },
+          {
+            "fold_idx": 2,
+            "test_period": [
+              "2022-09-29",
+              "2023-05-28"
+            ],
+            "n_train": 20333,
+            "n_test": 5130,
+            "train_metrics": {
+              "valid": true,
+              "n_trades": 20333,
+              "n_days": 1499,
+              "sharpe": 0.7725,
+              "psr": 0.9497,
+              "dsr": 0.0376,
+              "mean_r": -0.105,
+              "win_rate_pct": 19.08,
+              "final_equity": 0.0
+            },
+            "test_metrics": {
+              "valid": true,
+              "n_trades": 5130,
+              "n_days": 228,
+              "sharpe": 0.9455,
+              "psr": 0.7825,
+              "dsr": 0.2917,
+              "mean_r": -0.1373,
+              "win_rate_pct": 18.83,
+              "final_equity": 0.000226
+            }
+          },
+          {
+            "fold_idx": 3,
+            "test_period": [
+              "2023-05-28",
+              "2024-06-12"
+            ],
+            "n_train": 20190,
+            "n_test": 5130,
+            "train_metrics": {
+              "valid": true,
+              "n_trades": 20190,
+              "n_days": 1448,
+              "sharpe": 0.8035,
+              "psr": 0.9539,
+              "dsr": 0.0456,
+              "mean_r": -0.1057,
+              "win_rate_pct": 18.7,
+              "final_equity": 0.0
+            },
+            "test_metrics": {
+              "valid": true,
+              "n_trades": 5130,
+              "n_days": 275,
+              "sharpe": 0.4245,
+              "psr": 0.6462,
+              "dsr": 0.1476,
+              "mean_r": -0.1604,
+              "win_rate_pct": 19.75,
+              "final_equity": 6.6e-05
+            }
+          },
+          {
+            "fold_idx": 4,
+            "test_period": [
+              "2024-06-12",
+              "2026-05-16"
+            ],
+            "n_train": 20354,
+            "n_test": 5134,
+            "train_metrics": {
+              "valid": true,
+              "n_trades": 20354,
+              "n_days": 1364,
+              "sharpe": 0.7088,
+              "psr": 0.9231,
+              "dsr": 0.0349,
+              "mean_r": -0.1132,
+              "win_rate_pct": 18.89,
+              "final_equity": 0.0
+            },
+            "test_metrics": {
+              "valid": true,
+              "n_trades": 5134,
+              "n_days": 365,
+              "sharpe": 0.7966,
+              "psr": 0.7992,
+              "dsr": 0.1959,
+              "mean_r": -0.14,
+              "win_rate_pct": 18.82,
+              "final_equity": 0.000192
+            }
+          }
+        ]
+      }
+    },
+    {
+      "label": "best_grid_2_5",
+      "stop_atr": 2.0,
+      "target_atr": 5.0,
+      "metrics": {
+        "valid": true,
+        "n_trades": 25654,
+        "n_long": 3312,
+        "n_short": 22342,
+        "n_days": 1735,
+        "sharpe": 3.4485,
+        "psr": 1.0,
+        "dsr": 1.0,
+        "mean_r": 0.0622,
+        "win_rate_pct": 32.14,
+        "final_equity": 22.208779,
+        "decision": "PASS"
+      },
+      "walk_forward": {
+        "verdict": "ROBUST ✅",
+        "flags": [],
+        "k_folds": 5,
+        "embargo_days": 7,
+        "in_sample": {
+          "valid": true,
+          "n_trades": 25654,
+          "n_days": 1735,
+          "sharpe": 3.4485,
+          "psr": 1.0,
+          "dsr": 1.0,
+          "mean_r": 0.0622,
+          "win_rate_pct": 32.14,
+          "final_equity": 22.208779
+        },
+        "oos_summary": {
+          "n_folds_valid": 5,
+          "mean_test_sharpe": 3.5949,
+          "min_test_sharpe": 2.4022,
+          "max_test_sharpe": 4.6206,
+          "mean_test_dsr": 0.9517,
+          "positive_sharpe_folds": 5,
+          "total_folds": 5
+        },
+        "fold_results": [
+          {
+            "fold_idx": 0,
+            "test_period": [
+              "2017-08-10",
+              "2021-03-17"
+            ],
+            "n_train": 20505,
+            "n_test": 5130,
+            "train_metrics": {
+              "valid": true,
+              "n_trades": 20505,
+              "n_days": 1185,
+              "sharpe": 3.579,
+              "psr": 1.0,
+              "dsr": 1.0,
+              "mean_r": 0.0151,
+              "win_rate_pct": 31.44,
+              "final_equity": 0.000804
+            },
+            "test_metrics": {
+              "valid": true,
+              "n_trades": 5130,
+              "n_days": 548,
+              "sharpe": 3.4633,
+              "psr": 1.0,
+              "dsr": 0.9972,
+              "mean_r": 0.2581,
+              "win_rate_pct": 35.09,
+              "final_equity": 40828.746881
+            }
+          },
+          {
+            "fold_idx": 1,
+            "test_period": [
+              "2021-03-17",
+              "2022-09-29"
+            ],
+            "n_train": 20371,
+            "n_test": 5130,
+            "train_metrics": {
+              "valid": true,
+              "n_trades": 20371,
+              "n_days": 1402,
+              "sharpe": 3.7128,
+              "psr": 1.0,
+              "dsr": 1.0,
+              "mean_r": 0.1182,
+              "win_rate_pct": 33.01,
+              "final_equity": 897528.671891
+            },
+            "test_metrics": {
+              "valid": true,
+              "n_trades": 5130,
+              "n_days": 323,
+              "sharpe": 2.4022,
+              "psr": 0.9947,
+              "dsr": 0.8002,
+              "mean_r": -0.1474,
+              "win_rate_pct": 28.97,
+              "final_equity": 4.7e-05
+            }
+          },
+          {
+            "fold_idx": 2,
+            "test_period": [
+              "2022-09-29",
+              "2023-05-28"
+            ],
+            "n_train": 20333,
+            "n_test": 5130,
+            "train_metrics": {
+              "valid": true,
+              "n_trades": 20333,
+              "n_days": 1499,
+              "sharpe": 3.2946,
+              "psr": 1.0,
+              "dsr": 1.0,
+              "mean_r": 0.0674,
+              "win_rate_pct": 32.34,
+              "final_equity": 34.265888
+            },
+            "test_metrics": {
+              "valid": true,
+              "n_trades": 5130,
+              "n_days": 228,
+              "sharpe": 4.6206,
+              "psr": 1.0,
+              "dsr": 0.9976,
+              "mean_r": 0.0871,
+              "win_rate_pct": 32.07,
+              "final_equity": 6.386704
+            }
+          },
+          {
+            "fold_idx": 3,
+            "test_period": [
+              "2023-05-28",
+              "2024-06-12"
+            ],
+            "n_train": 20190,
+            "n_test": 5130,
+            "train_metrics": {
+              "valid": true,
+              "n_trades": 20190,
+              "n_days": 1448,
+              "sharpe": 3.2597,
+              "psr": 1.0,
+              "dsr": 1.0,
+              "mean_r": 0.0511,
+              "win_rate_pct": 31.79,
+              "final_equity": 1.303026
+            },
+            "test_metrics": {
+              "valid": true,
+              "n_trades": 5130,
+              "n_days": 275,
+              "sharpe": 4.3444,
+              "psr": 1.0,
+              "dsr": 0.9975,
+              "mean_r": 0.1143,
+              "win_rate_pct": 33.51,
+              "final_equity": 25.091089
+            }
+          },
+          {
+            "fold_idx": 4,
+            "test_period": [
+              "2024-06-12",
+              "2026-05-16"
+            ],
+            "n_train": 20354,
+            "n_test": 5134,
+            "train_metrics": {
+              "valid": true,
+              "n_trades": 20354,
+              "n_days": 1364,
+              "sharpe": 3.5233,
+              "psr": 1.0,
+              "dsr": 1.0,
+              "mean_r": 0.0766,
+              "win_rate_pct": 32.37,
+              "final_equity": 218.964503
+            },
+            "test_metrics": {
+              "valid": true,
+              "n_trades": 5134,
+              "n_days": 365,
+              "sharpe": 3.144,
+              "psr": 0.9999,
+              "dsr": 0.966,
+              "mean_r": -0.0013,
+              "win_rate_pct": 31.09,
+              "final_equity": 0.072479
+            }
+          }
+        ]
+      }
+    },
+    {
+      "label": "balanced_1.5_3",
+      "stop_atr": 1.5,
+      "target_atr": 3.0,
+      "metrics": {
+        "valid": true,
+        "n_trades": 25654,
+        "n_long": 3312,
+        "n_short": 22342,
+        "n_days": 1735,
+        "sharpe": 1.6313,
+        "psr": 0.9999,
+        "dsr": 0.5198,
+        "mean_r": -0.0278,
+        "win_rate_pct": 36.23,
+        "final_equity": 2e-06,
+        "decision": "FAIL"
+      },
+      "walk_forward": {
+        "verdict": "ROBUST ✅",
+        "flags": [],
+        "k_folds": 5,
+        "embargo_days": 7,
+        "in_sample": {
+          "valid": true,
+          "n_trades": 25654,
+          "n_days": 1735,
+          "sharpe": 1.6313,
+          "psr": 0.9999,
+          "dsr": 0.5198,
+          "mean_r": -0.0278,
+          "win_rate_pct": 36.23,
+          "final_equity": 2e-06
+        },
+        "oos_summary": {
+          "n_folds_valid": 5,
+          "mean_test_sharpe": 1.6948,
+          "min_test_sharpe": 0.2705,
+          "max_test_sharpe": 2.776,
+          "mean_test_dsr": 0.5372,
+          "positive_sharpe_folds": 5,
+          "total_folds": 5
+        },
+        "fold_results": [
+          {
+            "fold_idx": 0,
+            "test_period": [
+              "2017-08-10",
+              "2021-03-17"
+            ],
+            "n_train": 20505,
+            "n_test": 5130,
+            "train_metrics": {
+              "valid": true,
+              "n_trades": 20505,
+              "n_days": 1185,
+              "sharpe": 1.6182,
+              "psr": 0.9988,
+              "dsr": 0.5065,
+              "mean_r": -0.0482,
+              "win_rate_pct": 36.07,
+              "final_equity": 0.0
+            },
+            "test_metrics": {
+              "valid": true,
+              "n_trades": 5130,
+              "n_days": 548,
+              "sharpe": 1.9051,
+              "psr": 0.9933,
+              "dsr": 0.6494,
+              "mean_r": 0.0575,
+              "win_rate_pct": 36.96,
+              "final_equity": 5.831677
+            }
+          },
+          {
+            "fold_idx": 1,
+            "test_period": [
+              "2021-03-17",
+              "2022-09-29"
+            ],
+            "n_train": 20371,
+            "n_test": 5130,
+            "train_metrics": {
+              "valid": true,
+              "n_trades": 20371,
+              "n_days": 1402,
+              "sharpe": 1.9277,
+              "psr": 1.0,
+              "dsr": 0.7454,
+              "mean_r": 0.001,
+              "win_rate_pct": 37.14,
+              "final_equity": 0.010741
+            },
+            "test_metrics": {
+              "valid": true,
+              "n_trades": 5130,
+              "n_days": 323,
+              "sharpe": 0.2705,
+              "psr": 0.6009,
+              "dsr": 0.1028,
+              "mean_r": -0.1487,
+              "win_rate_pct": 32.51,
+              "final_equity": 0.000157
+            }
+          },
+          {
+            "fold_idx": 2,
+            "test_period": [
+              "2022-09-29",
+              "2023-05-28"
+            ],
+            "n_train": 20333,
+            "n_test": 5130,
+            "train_metrics": {
+              "valid": true,
+              "n_trades": 20333,
+              "n_days": 1499,
+              "sharpe": 1.4857,
+              "psr": 0.9992,
+              "dsr": 0.3965,
+              "mean_r": -0.0303,
+              "win_rate_pct": 36.12,
+              "final_equity": 2e-05
+            },
+            "test_metrics": {
+              "valid": true,
+              "n_trades": 5130,
+              "n_days": 228,
+              "sharpe": 2.776,
+              "psr": 0.9901,
+              "dsr": 0.8361,
+              "mean_r": 0.0135,
+              "win_rate_pct": 37.41,
+              "final_equity": 0.603491
+            }
+          },
+          {
+            "fold_idx": 3,
+            "test_period": [
+              "2023-05-28",
+              "2024-06-12"
+            ],
+            "n_train": 20190,
+            "n_test": 5130,
+            "train_metrics": {
+              "valid": true,
+              "n_trades": 20190,
+              "n_days": 1448,
+              "sharpe": 1.5901,
+              "psr": 0.9996,
+              "dsr": 0.4837,
+              "mean_r": -0.0249,
+              "win_rate_pct": 35.91,
+              "final_equity": 6.4e-05
+            },
+            "test_metrics": {
+              "valid": true,
+              "n_trades": 5130,
+              "n_days": 275,
+              "sharpe": 2.0439,
+              "psr": 0.9674,
+              "dsr": 0.6524,
+              "mean_r": -0.0214,
+              "win_rate_pct": 37.84,
+              "final_equity": 0.100849
+            }
+          },
+          {
+            "fold_idx": 4,
+            "test_period": [
+              "2024-06-12",
+              "2026-05-16"
+            ],
+            "n_train": 20354,
+            "n_test": 5134,
+            "train_metrics": {
+              "valid": true,
+              "n_trades": 20354,
+              "n_days": 1364,
+              "sharpe": 1.6644,
+              "psr": 0.9996,
+              "dsr": 0.5442,
+              "mean_r": -0.0254,
+              "win_rate_pct": 36.14,
+              "final_equity": 5.2e-05
+            },
+            "test_metrics": {
+              "valid": true,
+              "n_trades": 5134,
+              "n_days": 365,
+              "sharpe": 1.4784,
+              "psr": 0.9397,
+              "dsr": 0.4452,
+              "mean_r": -0.0401,
+              "win_rate_pct": 36.44,
+              "final_equity": 0.039037
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

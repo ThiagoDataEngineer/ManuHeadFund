@@ -1,0 +1,98 @@
+{
+  "metricas_por_ano": {
+    "2023": {
+      "BULL_STRONG": {
+        "trades": 296,
+        "exp": 0.6134432432432432,
+        "pf": 2.065799529257083,
+        "wr": 40.2027027027027,
+        "delta_vs_train": {
+          "delta_exp": 0.25980287305815064,
+          "delta_pf": 0.4793264369201897,
+          "degraded": false
+        }
+      },
+      "BULL_WEAK": {
+        "trades": 503,
+        "exp": -0.07331431411530814,
+        "pf": 0.8972227045318932,
+        "wr": 24.055666003976143,
+        "delta_vs_train": {
+          "delta_exp": -0.2941640867392281,
+          "delta_pf": -0.4403628937963635,
+          "degraded": true
+        }
+      }
+    },
+    "2024": {
+      "BULL_STRONG": {
+        "trades": 301,
+        "exp": 0.3197225913621263,
+        "pf": 1.574791627470831,
+        "wr": 38.53820598006645,
+        "delta_vs_train": {
+          "delta_exp": -0.03391777882296626,
+          "delta_pf": -0.011681464866062585,
+          "degraded": true
+        }
+      },
+      "BULL_WEAK": {
+        "trades": 474,
+        "exp": 0.0540126582278481,
+        "pf": 1.0791425084484212,
+        "wr": 30.590717299578056,
+        "delta_vs_train": {
+          "delta_exp": -0.16683711439607185,
+          "delta_pf": -0.25844308987983555,
+          "degraded": true
+        }
+      }
+    },
+    "2025": {
+      "BULL_STRONG": {
+        "trades": 170,
+        "exp": 0.23087764705882355,
+        "pf": 1.3386602585950274,
+        "wr": 30.58823529411765,
+        "delta_vs_train": {
+          "delta_exp": -0.12276272312626899,
+          "delta_pf": -0.24781283374186613,
+          "degraded": true
+        }
+      },
+      "BULL_WEAK": {
+        "trades": 356,
+        "exp": -0.3668008426966292,
+        "pf": 0.5512021515169742,
+        "wr": 14.887640449438203,
+        "delta_vs_train": {
+          "delta_exp": -0.5876506153205492,
+          "delta_pf": -0.7863834468112826,
+          "degraded": true
+        }
+      }
+    }
+  },
+  "ano_pior": 2025,
+  "razao": "Ano 2025: exp=-0.174R, pf=0.78, wr=20.0%, n=526. Pior degradacao agregada entre os anos do holdout.",
+  "padrao_trades_perdedores": "n=421 perdas, avg_r=-0.966R. Regimes: {'BULL_STRONG': 118, 'BULL_WEAK': 303}. Stops: 398/421 (95%), timeouts: 23/421 (5%). Top horas de entrada (UTC): [14, 19, 13]. Faixa de entry_price: 83306-125481, mediana 102809.",
+  "diagnostico": "MIXED",
+  "train_baseline_aggregate": {
+    "BULL_STRONG": {
+      "trades": 1999,
+      "exp": 0.35364037018509253,
+      "pf": 1.5864730923368935,
+      "wr": 36.96848424212106
+    },
+    "BULL_WEAK": {
+      "trades": 4398,
+      "exp": 0.22084977262391994,
+      "pf": 1.3375855983282567,
+      "wr": 31.582537517053204
+    }
+  },
+  "diagnostico_por_regime": {
+    "BULL_STRONG": "MILD_REGIME_ARTIFACT",
+    "BULL_WEAK": "STRUCTURAL_BREAK"
+  }
+}

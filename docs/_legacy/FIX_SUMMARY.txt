@@ -1,0 +1,114 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                                                                            ║
+║                        GEM_LOOP - FIX SUMMARY                             ║
+║                         2026-05-18 01:41:00 BRT                           ║
+║                                                                            ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+┌─ ISSUE RESOLVIDO ─────────────────────────────────────────────────────────┐
+│                                                                             │
+│  [WARN] Invoke-GemScan nao disponivel; pulando cycle                      │
+│                                                                             │
+│  Root Cause:                                                               │
+│    • Erros de sourcing silenciados (2>&1 | Out-Null)                      │
+│    • Verificação tardia (dentro de cada cycle)                            │
+│    • Ordem de sourcing não respeitava dependências                        │
+│    • Multiple instances competindo (race condition)                       │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─ SOLUÇÃO IMPLEMENTADA ────────────────────────────────────────────────────┐
+│                                                                             │
+│  ✓ Early Validation         → Invoke-GemScan verificada na startup        │
+│  ✓ Explicit Error Handling  → Try/catch com logs detalhados               │
+│  ✓ Ordered Sourcing         → config → core → guards → gem agents         │
+│  ✓ Debug Info               → Log mostra cada etapa carregada              │
+│  ✓ Idempotent Lock          → Garante 1 única instância                   │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─ ARQUIVOS MODIFICADOS ────────────────────────────────────────────────────┐
+│                                                                             │
+│  scripts/gem_loop.ps1 (lines 59-102)                                       │
+│    OLD: . config.ps1 2>&1 | Out-Null                                       │
+│    NEW: try { . config.ps1 -ErrorAction Stop } catch { exit 1 }            │
+│                                                                             │
+│    OLD: if (-not (Get-Command Invoke-GemScan)) { return }                  │
+│    NEW: if (-not (Get-Command Invoke-GemScan)) { exit 1 }                  │
+│                                                                             │
+│  scripts/gem_loop.ps1 (line 107 DEBUG)                                     │
+│    NEW: Write-GemLog "DEBUG" "Libs loaded: Invoke-GemScan=..."             │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─ NOVOS SCRIPTS ───────────────────────────────────────────────────────────┐
+│                                                                             │
+│  start_services.ps1              Safe startup wrapper + validation          │
+│  start_services.bat              Batch wrapper                             │
+│  test_gem_loop_load.ps1          Isolated sourcing test                    │
+│  GEM_LOOP_GUIDE.md               Complete operational guide                │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─ COMO INICIAR ────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  [RECOMENDADO] PowerShell                                                   │
+│    cd C:\Users\thiag\Coinex_AI_USER_API                                     │
+│    .\start_services.ps1                                                     │
+│                                                                             │
+│  [ALTERNATIVO] CMD                                                          │
+│    cd C:\Users\thiag\Coinex_AI_USER_API                                     │
+│    start_services.bat                                                       │
+│                                                                             │
+│  [MANUAL] Direct                                                            │
+│    powershell -NoProfile -ExecutionPolicy Bypass ^                         │
+│      -File ".\scripts\gem_loop.ps1" -Force                                 │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─ VALIDAÇÃO ───────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  ✓ Sourcing test passed (Invoke-GemScan available)                         │
+│  ✓ Idempotent lock tested (single instance guarantee)                      │
+│  ✓ Error handling validated (exit on critical failure)                     │
+│  ✓ Log output format verified                                              │
+│                                                                             │
+│  LOG LOCATION:                                                              │
+│    C:\Users\thiag\Coinex_AI_USER_API\journal\gem_loop.log                  │
+│                                                                             │
+│  EXPECTED FIRST LOG ENTRIES:                                                │
+│    [INFO] GemLoop iniciado. Interval=60min | Mode=LIVE | PID=XXXX          │
+│    [DEBUG] Libs loaded: Invoke-GemScan=Invoke-GemScan                      │
+│    [CYCLE] Iniciando GemScan (mode=LIVE)                                   │
+│                                                                             │
+│  NEVER SHOULD SEE:                                                          │
+│    [WARN] Invoke-GemScan nao disponivel; pulando cycle                     │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─ PRÓXIMOS PASSOS ─────────────────────────────────────────────────────────┐
+│                                                                             │
+│  1. Rodar start_services.ps1                                                │
+│  2. Verificar gem_loop.log tem "GemLoop iniciado"                           │
+│  3. Deixar rodando por 24h                                                  │
+│  4. Monitorar: zero "[WARN] nao disponivel"                                │
+│  5. Validar trades: journal/gem_trades.csv                                 │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+┌─ STATUS FINAL ────────────────────────────────────────────────────────────┐
+│                                                                             │
+│  🟢 SISTEMA PRONTO PARA PRODUÇÃO                                           │
+│                                                                             │
+│  gem_loop.ps1      ✓ Fix implementado e validado                           │
+│  Idempotent lock   ✓ Testa 1 única instância                               │
+│  Sourcing order    ✓ config → core → guards → gem                          │
+│  Error logging     ✓ Detalhado e acionável                                │
+│  Monitor guides    ✓ Documentado em GEM_LOOP_GUIDE.md                      │
+│                                                                             │
+└─────────────────────────────────────────────────────────────────────────────┘
+
+Implementado: 2026-05-18 01:40 BRT
+Review: 2026-05-19 (após 24h operação)
+
+Contact: Thiago @ Coinex_AI_USER_API

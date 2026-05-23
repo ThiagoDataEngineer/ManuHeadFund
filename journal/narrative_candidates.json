@@ -1,0 +1,31 @@
+{
+  "as_of": "2026-05-19",
+  "description": "Markets pra testar via weekly_discovery por razao narrativa (nao quant). Auto-removidos quando passam matrix e entram whitelist. User edita manualmente ou news tracker popula.",
+  "markets": [
+    "MORPHOUSDT",
+    "MAPLEUSDT",
+    "TONUSDT",
+    "NEARUSDT",
+    "HYPEUSDT",
+    "DYDXUSDT",
+    "ONDOUSDT",
+    "ALGOUSDT",
+    "STORJUSDT",
+    "COMPUSDT",
+    "SOLUSDT",
+    "ATOMUSDT",
+    "DOGEUSDT",
+    "CHZUSDT",
+    "AAVEUSDT",
+    "FILUSDT",
+    "KASUSDT",
+    "DASHUSDT",
+    "LUNCUSDT"
+  ],
+  "notes": "Lista 2026-05-19 (PM, 17:10 BRT) -- expansao TOTAL com 8 AAA+ maduros do retrospective analysis. ATOM/DOGE/CHZ/LUNC com Sharpe60 retrospectivo >=2.0 e beta NEG/zero. AAVE/FIL/KAS preenchem defi/depin/l1 gaps. DASH = alternativa privacy a ZEC. Cobertura setorial completa: l1 (TON/NEAR/SOL/ATOM/ALGO/KAS), defi (DYDX/COMP/AAVE/MAPLE), depin (STORJ/FIL), perp_dex (HYPE), rwa (ONDO/MORPHO), meme (DOGE/LUNC), fan_token (CHZ), privacy (DASH).",
+  "history": {
+    "2026-05-18": ["MORPHOUSDT", "SKYUSDT", "MAPLEUSDT"],
+    "2026-05-19": ["+TONUSDT","+NEARUSDT","+HYPEUSDT","+DYDXUSDT","+ONDOUSDT","+ALGOUSDT","+STORJUSDT","+COMPUSDT","+SOLUSDT","-SKYUSDT (graduou TIER_B)"],
+    "2026-05-19_pm": ["+ATOMUSDT","+DOGEUSDT","+CHZUSDT","+AAVEUSDT","+FILUSDT","+KASUSDT","+DASHUSDT","+LUNCUSDT (8 AAA+ maduros do retrospective; cobertura setor completa)"]
+  }
+}

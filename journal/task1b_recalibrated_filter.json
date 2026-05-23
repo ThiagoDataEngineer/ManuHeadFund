@@ -1,0 +1,174 @@
+{
+  "timestamp": "2026-05-14T14:58:57.665518+00:00",
+  "best_thresholds": {
+    "ath_dd_severe_weight": 30,
+    "ath_dd_severe_threshold": -30.0,
+    "danger_threshold": 70,
+    "warning_threshold": 30,
+    "semantic_ratio": 0.8
+  },
+  "f1_train": 0.6025,
+  "f1_holdout": 0.1687,
+  "positive_years_pct": 66.7,
+  "decision": "FAIL_OVERFIT",
+  "decision_reason": "Gap F1 train-holdout 0.434 > 0.15",
+  "train_breakdown": {
+    "2014": {
+      "label": "SAFE",
+      "danger_pct": 0.9342465753424658,
+      "n_days": 365,
+      "f1": 0.0
+    },
+    "2015": {
+      "label": "SAFE",
+      "danger_pct": 0.5589041095890411,
+      "n_days": 365,
+      "f1": 0.0
+    },
+    "2016": {
+      "label": "SAFE",
+      "danger_pct": 0.0273224043715847,
+      "n_days": 366,
+      "f1": 0.0
+    },
+    "2017": {
+      "label": "SAFE",
+      "danger_pct": 0.005479452054794521,
+      "n_days": 365,
+      "f1": 0.0
+    },
+    "2018": {
+      "label": "DANGER",
+      "danger_pct": 0.9616438356164384,
+      "n_days": 365,
+      "f1": 0.9804469273743017
+    },
+    "2019": {
+      "label": "SAFE",
+      "danger_pct": 0.5232876712328767,
+      "n_days": 365,
+      "f1": 0.0
+    },
+    "2020": {
+      "label": "SAFE",
+      "danger_pct": 0.1994535519125683,
+      "n_days": 366,
+      "f1": 0.0
+    },
+    "2021": {
+      "label": "DANGER",
+      "danger_pct": 0.3041095890410959,
+      "n_days": 365,
+      "f1": 0.4663865546218488
+    },
+    "2022": {
+      "label": "DANGER",
+      "danger_pct": 0.9972602739726028,
+      "n_days": 365,
+      "f1": 0.9986282578875172
+    }
+  },
+  "holdout_breakdown": {
+    "2023": {
+      "label": "SAFE",
+      "danger_pct": 0.0410958904109589,
+      "n_days": 365,
+      "f1": 0.0
+    },
+    "2024": {
+      "label": "SAFE",
+      "danger_pct": 0.0,
+      "n_days": 366,
+      "f1": 0.0
+    },
+    "2025": {
+      "label": "DANGER",
+      "danger_pct": 0.0958904109589041,
+      "n_days": 365,
+      "f1": 0.175
+    }
+  },
+  "top10_train_configs": [
+    {
+      "ath_dd_severe_weight": 30,
+      "ath_dd_severe_threshold": -30.0,
+      "danger_threshold": 70,
+      "warning_threshold": 30,
+      "semantic_ratio": 0.8,
+      "f1": 0.6025
+    },
+    {
+      "ath_dd_severe_weight": 30,
+      "ath_dd_severe_threshold": -30.0,
+      "danger_threshold": 70,
+      "warning_threshold": 35,
+      "semantic_ratio": 0.8,
+      "f1": 0.6025
+    },
+    {
+      "ath_dd_severe_weight": 30,
+      "ath_dd_severe_threshold": -30.0,
+      "danger_threshold": 70,
+      "warning_threshold": 40,
+      "semantic_ratio": 0.8,
+      "f1": 0.6025
+    },
+    {
+      "ath_dd_severe_weight": 30,
+      "ath_dd_severe_threshold": -30.0,
+      "danger_threshold": 70,
+      "warning_threshold": 30,
+      "semantic_ratio": 0.85,
+      "f1": 0.602
+    },
+    {
+      "ath_dd_severe_weight": 30,
+      "ath_dd_severe_threshold": -30.0,
+      "danger_threshold": 70,
+      "warning_threshold": 30,
+      "semantic_ratio": 0.9,
+      "f1": 0.602
+    },
+    {
+      "ath_dd_severe_weight": 30,
+      "ath_dd_severe_threshold": -30.0,
+      "danger_threshold": 70,
+      "warning_threshold": 35,
+      "semantic_ratio": 0.85,
+      "f1": 0.602
+    },
+    {
+      "ath_dd_severe_weight": 30,
+      "ath_dd_severe_threshold": -30.0,
+      "danger_threshold": 70,
+      "warning_threshold": 35,
+      "semantic_ratio": 0.9,
+      "f1": 0.602
+    },
+    {
+      "ath_dd_severe_weight": 30,
+      "ath_dd_severe_threshold": -30.0,
+      "danger_threshold": 70,
+      "warning_threshold": 40,
+      "semantic_ratio": 0.85,
+      "f1": 0.602
+    },
+    {
+      "ath_dd_severe_weight": 30,
+      "ath_dd_severe_threshold": -30.0,
+      "danger_threshold": 70,
+      "warning_threshold": 40,
+      "semantic_ratio": 0.9,
+      "f1": 0.602
+    },
+    {
+      "ath_dd_severe_weight": 30,
+      "ath_dd_severe_threshold": -25.0,
+      "danger_threshold": 70,
+      "warning_threshold": 30,
+      "semantic_ratio": 0.8,
+      "f1": 0.6017
+    }
+  ],
+  "grid_size": 324
+}

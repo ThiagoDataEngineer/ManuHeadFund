@@ -1,0 +1,12 @@
+﻿{
+    "scan_master":  {
+                        "failures":  0,
+                        "last_failure":  null,
+                        "killed":  false
+                    },
+    "gem_loop":  {
+                     "failures":  0,
+                     "last_failure":  null,
+                     "killed":  false
+                 }
+}

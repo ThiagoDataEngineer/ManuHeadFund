@@ -1,0 +1,467 @@
+﻿{
+    "as_of":  "2026-05-20T19:47:26Z",
+    "total_trials":  90,
+    "by_gate":  {
+                    "obs_to_c":  82,
+                    "funding":  1,
+                    "phase_boundary":  1,
+                    "min_volume":  1,
+                    "concentration":  1,
+                    "sector":  1,
+                    "beta_concentration":  1,
+                    "cooldown":  1,
+                    "daily_loss":  1
+                },
+    "history":  [
+                    {
+                        "ts":  "2026-05-18T17:50:25Z",
+                        "gate":  "obs_to_c",
+                        "market":  "PENDLEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-18T17:50:26Z",
+                        "gate":  "obs_to_c",
+                        "market":  "TONUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-18T17:50:27Z",
+                        "gate":  "obs_to_c",
+                        "market":  "HYPEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-18T17:59:19Z",
+                        "gate":  "obs_to_c",
+                        "market":  "PENDLEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-18T17:59:22Z",
+                        "gate":  "obs_to_c",
+                        "market":  "TONUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-18T17:59:24Z",
+                        "gate":  "obs_to_c",
+                        "market":  "HYPEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-18T18:14:41Z",
+                        "gate":  "obs_to_c",
+                        "market":  "PENDLEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-18T18:14:42Z",
+                        "gate":  "obs_to_c",
+                        "market":  "TONUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-18T18:14:43Z",
+                        "gate":  "obs_to_c",
+                        "market":  "HYPEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-18T18:33:19Z",
+                        "gate":  "obs_to_c",
+                        "market":  "PENDLEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-18T18:33:20Z",
+                        "gate":  "obs_to_c",
+                        "market":  "TONUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-18T18:33:21Z",
+                        "gate":  "obs_to_c",
+                        "market":  "HYPEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-18T19:33:30Z",
+                        "gate":  "obs_to_c",
+                        "market":  "PENDLEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-18T19:33:31Z",
+                        "gate":  "obs_to_c",
+                        "market":  "TONUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-18T19:33:32Z",
+                        "gate":  "obs_to_c",
+                        "market":  "HYPEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T02:16:45Z",
+                        "gate":  "obs_to_c",
+                        "market":  "ZECUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T02:17:05Z",
+                        "gate":  "obs_to_c",
+                        "market":  "HYPEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T02:17:14Z",
+                        "gate":  "obs_to_c",
+                        "market":  "CFGUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T02:17:21Z",
+                        "gate":  "obs_to_c",
+                        "market":  "TONUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T02:17:38Z",
+                        "gate":  "obs_to_c",
+                        "market":  "INJUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T02:17:40Z",
+                        "gate":  "obs_to_c",
+                        "market":  "PENDLEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T05:22:23Z",
+                        "gate":  "obs_to_c",
+                        "market":  "ZECUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T05:22:24Z",
+                        "gate":  "obs_to_c",
+                        "market":  "HYPEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T05:22:37Z",
+                        "gate":  "obs_to_c",
+                        "market":  "CFGUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T05:22:39Z",
+                        "gate":  "obs_to_c",
+                        "market":  "TONUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T05:22:40Z",
+                        "gate":  "obs_to_c",
+                        "market":  "INJUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T05:22:41Z",
+                        "gate":  "obs_to_c",
+                        "market":  "PENDLEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T05:24:33Z",
+                        "gate":  "obs_to_c",
+                        "market":  "ZECUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T05:24:34Z",
+                        "gate":  "obs_to_c",
+                        "market":  "HYPEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T05:24:35Z",
+                        "gate":  "obs_to_c",
+                        "market":  "CFGUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T05:24:36Z",
+                        "gate":  "obs_to_c",
+                        "market":  "TONUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T05:24:37Z",
+                        "gate":  "obs_to_c",
+                        "market":  "INJUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T05:24:38Z",
+                        "gate":  "obs_to_c",
+                        "market":  "PENDLEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T16:36:30Z",
+                        "gate":  "obs_to_c",
+                        "market":  "ZECUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T16:36:31Z",
+                        "gate":  "obs_to_c",
+                        "market":  "HYPEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T16:36:31Z",
+                        "gate":  "obs_to_c",
+                        "market":  "CFGUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T16:36:32Z",
+                        "gate":  "obs_to_c",
+                        "market":  "TONUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T16:36:34Z",
+                        "gate":  "obs_to_c",
+                        "market":  "RENDERUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T16:36:35Z",
+                        "gate":  "obs_to_c",
+                        "market":  "INJUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T16:36:36Z",
+                        "gate":  "obs_to_c",
+                        "market":  "PENDLEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T16:38:36Z",
+                        "gate":  "obs_to_c",
+                        "market":  "ZECUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T16:38:37Z",
+                        "gate":  "obs_to_c",
+                        "market":  "HYPEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T16:38:38Z",
+                        "gate":  "obs_to_c",
+                        "market":  "CFGUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T16:38:42Z",
+                        "gate":  "obs_to_c",
+                        "market":  "TONUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T16:38:46Z",
+                        "gate":  "obs_to_c",
+                        "market":  "RENDERUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T16:38:50Z",
+                        "gate":  "obs_to_c",
+                        "market":  "INJUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T16:38:55Z",
+                        "gate":  "obs_to_c",
+                        "market":  "PENDLEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T20:57:30Z",
+                        "gate":  "obs_to_c",
+                        "market":  "ZECUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T20:57:32Z",
+                        "gate":  "obs_to_c",
+                        "market":  "HYPEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T20:57:33Z",
+                        "gate":  "obs_to_c",
+                        "market":  "CFGUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T20:57:34Z",
+                        "gate":  "obs_to_c",
+                        "market":  "TONUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T20:57:35Z",
+                        "gate":  "obs_to_c",
+                        "market":  "RENDERUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T20:57:37Z",
+                        "gate":  "obs_to_c",
+                        "market":  "INJUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-19T20:57:39Z",
+                        "gate":  "obs_to_c",
+                        "market":  "PENDLEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T04:31:21Z",
+                        "gate":  "obs_to_c",
+                        "market":  "ZECUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T04:31:22Z",
+                        "gate":  "obs_to_c",
+                        "market":  "HYPEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T04:31:22Z",
+                        "gate":  "obs_to_c",
+                        "market":  "CFGUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T04:31:24Z",
+                        "gate":  "obs_to_c",
+                        "market":  "TONUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T04:31:25Z",
+                        "gate":  "obs_to_c",
+                        "market":  "RENDERUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T04:31:26Z",
+                        "gate":  "obs_to_c",
+                        "market":  "INJUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T04:31:27Z",
+                        "gate":  "obs_to_c",
+                        "market":  "PENDLEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T05:00:03Z",
+                        "gate":  "obs_to_c",
+                        "market":  "ZECUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T05:00:04Z",
+                        "gate":  "obs_to_c",
+                        "market":  "HYPEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T05:00:05Z",
+                        "gate":  "obs_to_c",
+                        "market":  "CFGUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T05:00:06Z",
+                        "gate":  "obs_to_c",
+                        "market":  "TONUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T05:00:08Z",
+                        "gate":  "obs_to_c",
+                        "market":  "RENDERUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T05:00:09Z",
+                        "gate":  "obs_to_c",
+                        "market":  "INJUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T05:00:11Z",
+                        "gate":  "obs_to_c",
+                        "market":  "PENDLEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T13:35:38Z",
+                        "gate":  "obs_to_c",
+                        "market":  "ZECUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T13:35:39Z",
+                        "gate":  "obs_to_c",
+                        "market":  "HYPEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T13:35:40Z",
+                        "gate":  "obs_to_c",
+                        "market":  "CFGUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T13:35:41Z",
+                        "gate":  "obs_to_c",
+                        "market":  "TONUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T13:35:44Z",
+                        "gate":  "obs_to_c",
+                        "market":  "RENDERUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T13:35:45Z",
+                        "gate":  "obs_to_c",
+                        "market":  "INJUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T13:35:46Z",
+                        "gate":  "obs_to_c",
+                        "market":  "PENDLEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T19:46:17Z",
+                        "gate":  "obs_to_c",
+                        "market":  "ZECUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T19:46:19Z",
+                        "gate":  "obs_to_c",
+                        "market":  "HYPEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T19:46:20Z",
+                        "gate":  "obs_to_c",
+                        "market":  "CFGUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T19:46:21Z",
+                        "gate":  "obs_to_c",
+                        "market":  "TONUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T19:46:24Z",
+                        "gate":  "obs_to_c",
+                        "market":  "RENDERUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T19:46:26Z",
+                        "gate":  "obs_to_c",
+                        "market":  "INJUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T19:46:28Z",
+                        "gate":  "obs_to_c",
+                        "market":  "PENDLEUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T19:47:26Z",
+                        "gate":  "funding",
+                        "market":  "BTCUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T19:47:26Z",
+                        "gate":  "phase_boundary",
+                        "market":  "BTCUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T19:47:26Z",
+                        "gate":  "min_volume",
+                        "market":  "BTCUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T19:47:26Z",
+                        "gate":  "concentration",
+                        "market":  "BTCUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T19:47:26Z",
+                        "gate":  "sector",
+                        "market":  "BTCUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T19:47:26Z",
+                        "gate":  "beta_concentration",
+                        "market":  "BTCUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T19:47:26Z",
+                        "gate":  "cooldown",
+                        "market":  "BTCUSDT"
+                    },
+                    {
+                        "ts":  "2026-05-20T19:47:26Z",
+                        "gate":  "daily_loss",
+                        "market":  "BTCUSDT"
+                    }
+                ]
+}

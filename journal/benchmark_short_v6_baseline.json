@@ -1,0 +1,74 @@
+{
+  "timestamp": "2026-05-19T15:02:00.191619+00:00",
+  "config": "v6_short_btc",
+  "periods": [
+    {
+      "period_id": "bear_2018",
+      "market": "BTCUSDT",
+      "start": "2018-01-01",
+      "end": "2018-12-31",
+      "trades": 19,
+      "skipped_equity_stop": 0,
+      "metrics": {
+        "trades": 19,
+        "win_rate": 0.42105263157894735,
+        "expectancy_r": 0.21876315147194697,
+        "profit_factor": 1.487594289550124,
+        "max_dd_r": 5.862988743994905,
+        "sharpe": 0.12030475521958696,
+        "sortino": 0.254593670246378,
+        "final_equity_r": 4.156499877966993,
+        "dd_ratio": 1.411
+      },
+      "verdict": "SHORT_INSUFICIENTE",
+      "v6_filters": {
+        "TRANSITION_DOWN": 0,
+        "SIDEWAYS": 0,
+        "BEAR_WEAK": 9,
+        "BEAR_STRONG": 5,
+        "CAPITULATION": 6,
+        "REJECTED": 89
+      }
+    },
+    {
+      "period_id": "bear_2022",
+      "market": "BTCUSDT",
+      "start": "2022-01-01",
+      "end": "2022-12-31",
+      "trades": 16,
+      "skipped_equity_stop": 0,
+      "metrics": {
+        "trades": 16,
+        "win_rate": 0.25,
+        "expectancy_r": -0.5798853614562491,
+        "profit_factor": 0.1712246908996171,
+        "max_dd_r": 11.167459970047737,
+        "sharpe": -0.8409342321225091,
+        "sortino": -0.6046260288635132,
+        "final_equity_r": -9.278165783299986,
+        "dd_ratio": 1.204
+      },
+      "verdict": "SHORT_INSUFICIENTE",
+      "v6_filters": {
+        "TRANSITION_DOWN": 0,
+        "SIDEWAYS": 0,
+        "BEAR_WEAK": 5,
+        "BEAR_STRONG": 6,
+        "CAPITULATION": 20,
+        "REJECTED": 91
+      }
+    }
+  ],
+  "go_criterion": {
+    "rule": "expectancy >= +0.40R + PF >= 1.5 + DD <= 12R em ambos bears",
+    "passed": false,
+    "explanation": "Criterio falha em: bear_2018, bear_2022. V6 nao resolve insuficiencia estrutural."
+  },
+  "implication": "HOLD: SHORT segue inviavel. Revisitar quando houver dataset altcoin com mais liquides.",
+  "v6_changelog": {
+    "regime_8state_filter": "BEAR_WEAK/BEAR_STRONG/CAPITULATION/TRANSITION_DOWN/SIDEWAYS apenas",
+    "tori_trendline_gate": "proxy: breakdown de min(5d) OU rejeicao de max(5d)",
+    "equity_stop_v6": "pause window 5 bars apos -10R hit (24h reset)",
+    "funding_peak": "unavailable BTC 2018-2022, placeholder inserido"
+  }
+}
