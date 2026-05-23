@@ -29,26 +29,40 @@ jobs:
       - name: Configurar credenciais
         shell: pwsh
         run: |
-          # Criar config a partir de secrets
-          $config = @{
-            coinex_access_id = "${{ secrets.COINEX_ACCESS_ID }}"
-            coinex_secret_key = "${{ secrets.COINEX_SECRET_KEY }}"
-            telegram_bot_token = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
-            telegram_chat_id = "${{ secrets.TELEGRAM_CHAT_ID }}"
-          }
+          # Criar config.local.ps1 no formato correto
+          $configContent = @"
+# config.local.ps1 - GitHub Actions
+`$env:COINEX_ACCESS_ID = "${{ secrets.COINEX_ACCESS_ID }}"
+`$env:COINEX_SECRET_KEY = "${{ secrets.COINEX_SECRET_KEY }}"
+`$env:TELEGRAM_BOT_TOKEN = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
+`$env:TELEGRAM_CHAT_ID = "${{ secrets.TELEGRAM_CHAT_ID }}"
+"@
           
-          # Salvar config temporário
-          New-Item -ItemType Directory -Path "agents" -Force
-          $config | ConvertTo-Json | Out-File "agents/config.local.ps1" -Encoding UTF8
+          # Salvar config
+          New-Item -ItemType Directory -Path "agents" -Force | Out-Null
+          $configContent | Out-File "agents/config.local.ps1" -Encoding UTF8 -Force
+          
+          Write-Host "Config criado com sucesso"
       
       - name: Executar Risk Manager
         shell: pwsh
         run: |
           try {
-            . ./scripts/position_risk_cron.ps1
+            Write-Host "Iniciando Risk Manager..."
+            
+            # Verificar se config existe
+            if (-not (Test-Path "agents/config.local.ps1")) {
+              throw "Config não encontrado"
+            }
+            
+            # Executar script
+            & ./scripts/position_risk_cron.ps1
+            
             Write-Host "✓ Risk Manager executado com sucesso"
           } catch {
-            Write-Host "✗ Erro: $_"
+            $errorMsg = "Erro: $_`nStack: $($_.ScriptStackTrace)"
+            Write-Host $errorMsg
+            $errorMsg | Out-File "error.log" -Encoding UTF8
             exit 1
           }
       
@@ -56,18 +70,32 @@ jobs:
         if: failure()
         shell: pwsh
         run: |
-          $token = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
-          $chatId = "${{ secrets.TELEGRAM_CHAT_ID }}"
-          $message = "⚠️ *GitHub Actions Falhou*`n`nRisk Manager teve erro.`n`nVerifique os logs."
-          
-          $body = @{
-            chat_id = $chatId
-            text = $message
-            parse_mode = "Markdown"
-          } | ConvertTo-Json
-          
-          Invoke-RestMethod -Uri "https://api.telegram.org/bot$token/sendMessage" `
-            -Method Post -Body $body -ContentType "application/json"
+          try {
+            $token = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
+            $chatId = "${{ secrets.TELEGRAM_CHAT_ID }}"
+            
+            # Obter logs do erro
+            $errorLog = Get-Content "error.log" -ErrorAction SilentlyContinue
+            $errorMsg = if ($errorLog) { $errorLog -join "`n" } else { "Erro desconhecido" }
+            
+            $message = "==========================`n"
+            $message += ">> GITHUB ACTIONS ERRO <<`n"
+            $message += "==========================`n`n"
+            $message += "Job: Risk Manager`n"
+            $message += "Status: FALHOU`n`n"
+            $message += "Erro: $($errorMsg.Substring(0, [Math]::Min(200, $errorMsg.Length)))`n`n"
+            $message += "Verifique: https://github.com/ThiagoDataEngineer/ManuHeadFund/actions"
+            
+            $body = @{
+              chat_id = $chatId
+              text = $message
+            } | ConvertTo-Json
+            
+            Invoke-RestMethod -Uri "https://api.telegram.org/bot$token/sendMessage" `
+              -Method Post -Body $body -ContentType "application/json" | Out-Null
+          } catch {
+            Write-Host "Falha ao enviar alerta: $_"
+          }
 
   dashboard-generator:
     name: Dashboard Generator
@@ -85,24 +113,39 @@ jobs:
       - name: Configurar credenciais
         shell: pwsh
         run: |
-          $config = @{
-            coinex_access_id = "${{ secrets.COINEX_ACCESS_ID }}"
-            coinex_secret_key = "${{ secrets.COINEX_SECRET_KEY }}"
-            telegram_bot_token = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
-            telegram_chat_id = "${{ secrets.TELEGRAM_CHAT_ID }}"
-          }
+          # Criar config.local.ps1 no formato correto
+          $configContent = @"
+# config.local.ps1 - GitHub Actions
+`$env:COINEX_ACCESS_ID = "${{ secrets.COINEX_ACCESS_ID }}"
+`$env:COINEX_SECRET_KEY = "${{ secrets.COINEX_SECRET_KEY }}"
+`$env:TELEGRAM_BOT_TOKEN = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
+`$env:TELEGRAM_CHAT_ID = "${{ secrets.TELEGRAM_CHAT_ID }}"
+"@
           
-          New-Item -ItemType Directory -Path "agents" -Force
-          $config | ConvertTo-Json | Out-File "agents/config.local.ps1" -Encoding UTF8
+          # Salvar config
+          New-Item -ItemType Directory -Path "agents" -Force | Out-Null
+          $configContent | Out-File "agents/config.local.ps1" -Encoding UTF8 -Force
+          
+          Write-Host "Config criado com sucesso"
       
       - name: Gerar Dashboard
         shell: pwsh
         run: |
           try {
-            . ./scripts/generate_dashboard_elite.ps1
+            Write-Host "Gerando Dashboard..."
+            
+            # Verificar se config existe
+            if (-not (Test-Path "agents/config.local.ps1")) {
+              throw "Config não encontrado"
+            }
+            
+            # Executar script
+            & ./scripts/generate_dashboard_elite.ps1
+            
             Write-Host "✓ Dashboard gerado com sucesso"
           } catch {
             Write-Host "✗ Erro: $_"
+            Write-Host "Stack: $($_.ScriptStackTrace)"
             exit 1
           }
       
