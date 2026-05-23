@@ -1,27 +1,11 @@
 ﻿# lib_telegram.ps1 - Telegram Bot Integration
-# Envia alertas para Telegram quando eventos importantes ocorrem
+# Mensagens limpas e profissionais
 
 # ============================================================================
 # Telegram-SendMessage - Envia mensagem para Telegram
 # ============================================================================
 
 function Telegram-SendMessage {
-    <#
-    .SYNOPSIS
-        Envia mensagem para Telegram via Bot API
-    
-    .PARAMETER Message
-        Mensagem a ser enviada (suporta Markdown)
-    
-    .PARAMETER BotToken
-        Token do bot (opcional, usa config se nao fornecido)
-    
-    .PARAMETER ChatId
-        Chat ID (opcional, usa config se nao fornecido)
-    
-    .EXAMPLE
-        Telegram-SendMessage -Message "Position opened: BNBUSDT LONG"
-    #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
@@ -35,7 +19,6 @@ function Telegram-SendMessage {
     )
     
     try {
-        # Carregar config se nao fornecido
         if (-not $BotToken -or -not $ChatId) {
             $configPath = Join-Path $PSScriptRoot "..\config\telegram.json"
             
@@ -47,7 +30,6 @@ function Telegram-SendMessage {
             }
         }
         
-        # Validar config
         if (-not $BotToken -or -not $ChatId) {
             Write-Host "[TELEGRAM] Config nao encontrado, pulando envio" -ForegroundColor Yellow
             return [PSCustomObject]@{
@@ -64,7 +46,6 @@ function Telegram-SendMessage {
             }
         }
         
-        # Enviar mensagem
         $url = "https://api.telegram.org/bot$BotToken/sendMessage"
         
         $body = @{
@@ -98,7 +79,7 @@ function Telegram-SendMessage {
 }
 
 # ============================================================================
-# Telegram-SendPositionOpened - Alerta de posicao aberta
+# Telegram-SendPositionOpened
 # ============================================================================
 
 function Telegram-SendPositionOpened {
@@ -109,26 +90,23 @@ function Telegram-SendPositionOpened {
     
     $sideEmoji = if ($Position.side -eq "long") { "📈" } else { "📉" }
     
-    $message = @"
-$sideEmoji Position Opened
-
-Market: $($Position.market)
-Side: $($Position.side.ToUpper())
-Entry: `$$($Position.entry_price)
-Size: $($Position.size)
-Leverage: $($Position.leverage)x
-
-Stop Loss: `$$($Position.stop_loss) ($($Position.stop_loss_pct)%)
-Take Profit: `$$($Position.take_profit) ($($Position.take_profit_pct)%)
-
-Capital: `$$($Position.capital) USDT
-"@
+    $message = "━━━━━━━━━━━━━━━━━━━━━━`n"
+    $message += "$sideEmoji POSITION OPENED`n"
+    $message += "━━━━━━━━━━━━━━━━━━━━━━`n`n"
+    $message += "Market: $($Position.market)`n"
+    $message += "Side: $($Position.side.ToUpper())`n"
+    $message += "Entry: `$$($Position.entry_price)`n"
+    $message += "Size: $($Position.size)`n"
+    $message += "Leverage: $($Position.leverage)x`n`n"
+    $message += "Stop Loss: `$$($Position.stop_loss)`n"
+    $message += "Take Profit: `$$($Position.take_profit)`n`n"
+    $message += "Capital: `$$($Position.capital) USDT"
     
     Telegram-SendMessage -Message $message
 }
 
 # ============================================================================
-# Telegram-SendPositionClosed - Alerta de posicao fechada
+# Telegram-SendPositionClosed
 # ============================================================================
 
 function Telegram-SendPositionClosed {
@@ -140,24 +118,22 @@ function Telegram-SendPositionClosed {
     $emoji = if ($Position.pnl -gt 0) { "✅" } else { "❌" }
     $pnlSign = if ($Position.pnl -gt 0) { "+" } else { "" }
     
-    $message = @"
-$emoji Position Closed
-
-Market: $($Position.market)
-Side: $($Position.side.ToUpper())
-Entry: `$$($Position.entry_price)
-Exit: `$$($Position.exit_price)
-
-PnL: $pnlSign`$$($Position.pnl) ($pnlSign$($Position.pnl_pct)%)
-Duration: $($Position.duration)
-Reason: $($Position.close_reason)
-"@
+    $message = "━━━━━━━━━━━━━━━━━━━━━━`n"
+    $message += "$emoji POSITION CLOSED`n"
+    $message += "━━━━━━━━━━━━━━━━━━━━━━`n`n"
+    $message += "Market: $($Position.market)`n"
+    $message += "Side: $($Position.side.ToUpper())`n"
+    $message += "Entry: `$$($Position.entry_price)`n"
+    $message += "Exit: `$$($Position.exit_price)`n`n"
+    $message += "PnL: $pnlSign`$$($Position.pnl) ($pnlSign$($Position.pnl_pct)%)`n"
+    $message += "Duration: $($Position.duration)`n"
+    $message += "Reason: $($Position.close_reason)"
     
     Telegram-SendMessage -Message $message
 }
 
 # ============================================================================
-# Telegram-SendTrailingActivated - Alerta de trailing stop ativado
+# Telegram-SendTrailingActivated
 # ============================================================================
 
 function Telegram-SendTrailingActivated {
@@ -166,23 +142,21 @@ function Telegram-SendTrailingActivated {
         [hashtable]$Position
     )
     
-    $message = @"
-🎯 Trailing Stop Active
-
-Market: $($Position.market)
-Entry: `$$($Position.entry_price)
-Current: `$$($Position.current_price)
-Profit: +$($Position.profit_pct)%
-
-New Stop: `$$($Position.new_stop)
-Locked: +$($Position.locked_profit_pct)%
-"@
+    $message = "━━━━━━━━━━━━━━━━━━━━━━`n"
+    $message += "🎯 TRAILING STOP ACTIVE`n"
+    $message += "━━━━━━━━━━━━━━━━━━━━━━`n`n"
+    $message += "Market: $($Position.market)`n"
+    $message += "Entry: `$$($Position.entry_price)`n"
+    $message += "Current: `$$($Position.current_price)`n"
+    $message += "Profit: +$($Position.profit_pct)%`n`n"
+    $message += "New Stop: `$$($Position.new_stop)`n"
+    $message += "Locked: +$($Position.locked_profit_pct)%"
     
     Telegram-SendMessage -Message $message
 }
 
 # ============================================================================
-# Telegram-SendRiskAlert - Alerta de risco
+# Telegram-SendRiskAlert
 # ============================================================================
 
 function Telegram-SendRiskAlert {
@@ -191,27 +165,22 @@ function Telegram-SendRiskAlert {
         [hashtable]$Alert
     )
     
-    $message = @"
-⚠️ Risk Alert
-
-Market: $($Alert.market)
-Alert Type: $($Alert.type)
-Severity: $($Alert.severity)
-
-Details: $($Alert.details)
-
-Current Price: `$$($Alert.current_price)
-Liquidation: `$$($Alert.liq_price)
-Distance: $($Alert.distance_pct)%
-
-Action Required: $($Alert.action)
-"@
+    $message = "━━━━━━━━━━━━━━━━━━━━━━`n"
+    $message += "⚠️ RISK ALERT`n"
+    $message += "━━━━━━━━━━━━━━━━━━━━━━`n`n"
+    $message += "Market: $($Alert.market)`n"
+    $message += "Type: $($Alert.type)`n"
+    $message += "Severity: $($Alert.severity)`n`n"
+    $message += "Current: `$$($Alert.current_price)`n"
+    $message += "Liquidation: `$$($Alert.liq_price)`n"
+    $message += "Distance: $($Alert.distance_pct)%`n`n"
+    $message += "Action: $($Alert.action)"
     
     Telegram-SendMessage -Message $message
 }
 
 # ============================================================================
-# Telegram-SendDailySummary - Resumo diario
+# Telegram-SendDailySummary
 # ============================================================================
 
 function Telegram-SendDailySummary {
@@ -223,30 +192,23 @@ function Telegram-SendDailySummary {
     $emoji = if ($Summary.daily_pnl -gt 0) { "📈" } else { "📉" }
     $pnlSign = if ($Summary.daily_pnl -gt 0) { "+" } else { "" }
     
-    $message = @"
-$emoji Daily Summary
-
-Date: $(Get-Date -Format "yyyy-MM-dd")
-
-Trades Today: $($Summary.trades_count)
-Wins: $($Summary.wins) | Losses: $($Summary.losses)
-Win Rate: $($Summary.win_rate)%
-
-Daily PnL: $pnlSign`$$($Summary.daily_pnl) ($pnlSign$($Summary.daily_pnl_pct)%)
-Total PnL: $pnlSign`$$($Summary.total_pnl)
-
-Open Positions: $($Summary.open_positions)
-Capital: `$$($Summary.capital) USDT
-
-Best Trade: +`$$($Summary.best_trade)
-Worst Trade: -`$$($Summary.worst_trade)
-"@
+    $message = "━━━━━━━━━━━━━━━━━━━━━━`n"
+    $message += "$emoji DAILY SUMMARY`n"
+    $message += "━━━━━━━━━━━━━━━━━━━━━━`n`n"
+    $message += "Date: $(Get-Date -Format 'yyyy-MM-dd')`n`n"
+    $message += "Trades: $($Summary.trades_count)`n"
+    $message += "Wins: $($Summary.wins) | Losses: $($Summary.losses)`n"
+    $message += "Win Rate: $($Summary.win_rate)%`n`n"
+    $message += "Daily PnL: $pnlSign`$$($Summary.daily_pnl)`n"
+    $message += "Total PnL: $pnlSign`$$($Summary.total_pnl)`n`n"
+    $message += "Open: $($Summary.open_positions)`n"
+    $message += "Capital: `$$($Summary.capital) USDT"
     
     Telegram-SendMessage -Message $message
 }
 
 # ============================================================================
-# Telegram-SendDashboardSnapshot - Envia snapshot do dashboard
+# Telegram-SendDashboardSnapshot
 # ============================================================================
 
 function Telegram-SendDashboardSnapshot {
@@ -257,25 +219,21 @@ function Telegram-SendDashboardSnapshot {
 
     $pnlEmoji = if ($Metrics.total_pnl -gt 0) { "📈" } else { "📉" }
     $pnlSign = if ($Metrics.total_pnl -gt 0) { "+" } else { "" }
-
     $wrEmoji = if ($Metrics.win_rate -ge 50) { "✅" } else { "⚠️" }
-    $sharpeEmoji = if ($Metrics.sharpe_ratio -gt 1) { "🎯" } else { "📊" }
 
-    $message = @"
-📊 Dashboard Snapshot
-
-Positions: $($Metrics.open_positions)
-Total P&L: $pnlSign`$$($Metrics.total_pnl) $pnlEmoji
-Win Rate: $($Metrics.win_rate)% $wrEmoji
-Capital: `$$($Metrics.capital)
-
-Sharpe Ratio: $($Metrics.sharpe_ratio) $sharpeEmoji
-Max Drawdown: $($Metrics.max_drawdown)%
-Profit Factor: $($Metrics.profit_factor)
-"@
+    $message = "━━━━━━━━━━━━━━━━━━━━━━`n"
+    $message += "📊 DASHBOARD`n"
+    $message += "━━━━━━━━━━━━━━━━━━━━━━`n`n"
+    $message += "Positions: $($Metrics.open_positions)`n"
+    $message += "P&L: $pnlSign`$$($Metrics.total_pnl) $pnlEmoji`n"
+    $message += "Win Rate: $($Metrics.win_rate)% $wrEmoji`n"
+    $message += "Capital: `$$($Metrics.capital)`n`n"
+    $message += "Sharpe: $($Metrics.sharpe_ratio)`n"
+    $message += "Max DD: $($Metrics.max_drawdown)%`n"
+    $message += "Profit Factor: $($Metrics.profit_factor)"
 
     if ($Metrics.open_positions -gt 0) {
-        $message += "`n`nOpen Positions:"
+        $message += "`n`n--- Open Positions ---"
 
         $posArray = if ($Metrics.open_positions_detail -is [array]) {
             $Metrics.open_positions_detail
@@ -288,20 +246,9 @@ Profit Factor: $($Metrics.profit_factor)
             $pnlPct = [math]::Round($pos.unrealized_pnl_pct, 2)
             $pnlPctSign = if ($pnlPct -gt 0) { "+" } else { "" }
 
-            $message += "`n  $sideEmoji $($pos.market): $pnlPctSign$pnlPct%"
+            $message += "`n$sideEmoji $($pos.market): $pnlPctSign$pnlPct%"
         }
     }
 
     Telegram-SendMessage -Message $message
 }
-
-# ============================================================================
-# Funcoes exportadas
-# ============================================================================
-# Telegram-SendMessage
-# Telegram-SendPositionOpened
-# Telegram-SendPositionClosed
-# Telegram-SendTrailingActivated
-# Telegram-SendRiskAlert
-# Telegram-SendDailySummary
-# Telegram-SendDashboardSnapshot
