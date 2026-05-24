@@ -23,7 +23,9 @@
     "recovered_2021_ath": true,
     "listing_years": 8,
     "notes": "Hard cap 21M, halving 4y, store of value canonico. recovered_2021_ath=True manual override (CoinGecko reports ATH all-time $108K 2025, mas BTC sobreviveu bear 2022 e recuperou $69K-2021 -> $77K-2026 = match semantic da dimensao FQS).",
-    "recovered_2021_ath_source": "manual_override_semantic_match_2021_bear_2022_recovered"
+    "recovered_2021_ath_source": "manual_override_semantic_match_2021_bear_2022_recovered",
+    "current_price_usd": 76742,
+    "ath_all_time_usd": 126080
   },
   "ETHUSDT": {
     "age_years": 11,
@@ -35,7 +37,9 @@
     "concentration_insider_pct": 0.15,
     "recovered_2021_ath": false,
     "listing_years": 8,
-    "notes": "EIP-1559 burn ativo (deflacionario net). Smart contract platform #1. ATH 2021 nao recuperado mas burn justifica supply discipline."
+    "notes": "EIP-1559 burn ativo (deflacionario net). Smart contract platform #1. ATH 2021 nao recuperado mas burn justifica supply discipline.",
+    "current_price_usd": 2116.56,
+    "ath_all_time_usd": 4946.05
   },
   "INJUSDT": {
     "age_years": 5,
@@ -45,7 +49,9 @@
     "concentration_top10": 0.4,
     "recovered_2021_ath": false,
     "listing_years": 4,
-    "notes": "Hard cap 100M, weekly burn, interop DeFi Cosmos SDK. QUALITY."
+    "notes": "Hard cap 100M, weekly burn, interop DeFi Cosmos SDK. QUALITY.",
+    "current_price_usd": 5.27,
+    "ath_all_time_usd": 52.62
   },
   "ZECUSDT": {
     "age_years": 10,
@@ -55,7 +61,9 @@
     "concentration_top10": 0.3,
     "recovered_2021_ath": false,
     "listing_years": 8,
-    "notes": "Hard cap 21M, privacy proven. Nunca recuperou ATH 2017. QUALITY mas amplifier."
+    "notes": "Hard cap 21M, privacy proven. Nunca recuperou ATH 2017. QUALITY mas amplifier.",
+    "current_price_usd": 636.39,
+    "ath_all_time_usd": 3191.93
   },
   "RENDERUSDT": {
     "age_years": 3,
@@ -65,7 +73,9 @@
     "concentration_top10": 0.55,
     "recovered_2021_ath": false,
     "listing_years": 3,
-    "notes": "Hard cap 644M, GPU rendering DePIN. Migrou Polygon->Solana 2024. QUALITY borderline."
+    "notes": "Hard cap 644M, GPU rendering DePIN. Migrou Polygon->Solana 2024. QUALITY borderline.",
+    "current_price_usd": 1.98,
+    "ath_all_time_usd": 13.53
   },
   "CFGUSDT": {
     "age_years": 4,
@@ -75,7 +85,9 @@
     "concentration_top10": 0.5,
     "recovered_2021_ath": false,
     "listing_years": 3,
-    "notes": "Centrifuge RWA bridge. Supply nao capped, sem burn ativo. SPECULATIVE."
+    "notes": "Centrifuge RWA bridge. Supply nao capped, sem burn ativo. SPECULATIVE.",
+    "current_price_usd": 0.289869,
+    "ath_all_time_usd": 2.19
   },
   "PENDLEUSDT": {
     "age_years": 4,
@@ -85,7 +97,9 @@
     "concentration_top10": 0.45,
     "recovered_2021_ath": false,
     "listing_years": 3,
-    "notes": "Pendle Finance yield trading. Burn via fee, supply unlimited init."
+    "notes": "Pendle Finance yield trading. Burn via fee, supply unlimited init.",
+    "current_price_usd": 1.88,
+    "ath_all_time_usd": 7.5
   },
   "TONUSDT": {
     "age_years": 7,
@@ -95,7 +109,9 @@
     "concentration_top10": 0.35,
     "recovered_2021_ath": false,
     "listing_years": 4,
-    "notes": "Telegram Open Network. Massive user base, validator burn."
+    "notes": "Telegram Open Network. Massive user base, validator burn.",
+    "current_price_usd": 1.8,
+    "ath_all_time_usd": 8.25
   },
   "NEARUSDT": {
     "age_years": 6,
@@ -105,7 +121,10 @@
     "concentration_top10": 0.4,
     "recovered_2021_ath": false,
     "listing_years": 5,
-    "notes": "L1 sharded. Tx fee burn. ATH 2021 nao recuperado."
+    "notes": "L1 sharded. Tx fee burn. ATH 2021 nao recuperado.",
+    "circulating_supply": 1296191288.0,
+    "current_price_usd": 2.4,
+    "ath_all_time_usd": 20.44
   },
   "HYPEUSDT": {
     "age_years": 1.5,
@@ -116,7 +135,9 @@
     "concentration_insider_pct": 0.55,
     "recovered_2021_ath": false,
     "listing_years": 1,
-    "notes": "Hyperliquid perp DEX. Hard cap 1B. Token new (2024); cycle_resilience N/A (jovem, V1.5 nao penaliza). Insider 55% (alta concentracao initial)."
+    "notes": "Hyperliquid perp DEX. Hard cap 1B. Token new (2024); cycle_resilience N/A (jovem, V1.5 nao penaliza). Insider 55% (alta concentracao initial).",
+    "current_price_usd": 59.74,
+    "ath_all_time_usd": 62.18
   },
   "SOLUSDT": {
     "age_years": 5,
@@ -127,7 +148,9 @@
     "recovered_2021_ath": true,
     "recovered_2021_ath_source": "manual_override_semantic_match_2021_bear_2022_recovered",
     "listing_years": 5,
-    "notes": "L1 high-throughput. 50% tx fee burn. ATH-2021 ~$260, ATH-2024 ~$295 = recovered. Manual override (CoinGecko batch derive=false errado pois compara ATH all-time)."
+    "notes": "L1 high-throughput. 50% tx fee burn. ATH-2021 ~$260, ATH-2024 ~$295 = recovered. Manual override (CoinGecko batch derive=false errado pois compara ATH all-time).",
+    "current_price_usd": 85.77,
+    "ath_all_time_usd": 293.31
   },
   "ATOMUSDT": {
     "age_years": 7,
@@ -137,7 +160,9 @@
     "concentration_top10": 0.3,
     "recovered_2021_ath": false,
     "listing_years": 6,
-    "notes": "Cosmos Hub. Inflation 7-20% sem burn ativo. Long history. ATH 2021 nao recuperado."
+    "notes": "Cosmos Hub. Inflation 7-20% sem burn ativo. Long history. ATH 2021 nao recuperado.",
+    "current_price_usd": 2.1,
+    "ath_all_time_usd": 43.84
   },
   "DOGEUSDT": {
     "age_years": 13,
@@ -147,7 +172,9 @@
     "concentration_top10": 0.65,
     "recovered_2021_ath": false,
     "listing_years": 8,
-    "notes": "Meme classic. No cap, 10K/min issuance. Sem utility tecnica. Surpresa cross-window low corr."
+    "notes": "Meme classic. No cap, 10K/min issuance. Sem utility tecnica. Surpresa cross-window low corr.",
+    "current_price_usd": 0.103007,
+    "ath_all_time_usd": 0.731578
   },
   "CHZUSDT": {
     "age_years": 7,
@@ -157,7 +184,9 @@
     "concentration_top10": 0.55,
     "recovered_2021_ath": false,
     "listing_years": 5,
-    "notes": "Chiliz fan tokens. Hard cap 8.9B. Burn moderate. ATH 2021 nao recuperado."
+    "notes": "Chiliz fan tokens. Hard cap 8.9B. Burn moderate. ATH 2021 nao recuperado.",
+    "current_price_usd": 0.03780133,
+    "ath_all_time_usd": 0.878633
   },
   "LUNCUSDT": {
     "age_years": 6,
@@ -167,7 +196,9 @@
     "concentration_top10": 0.4,
     "recovered_2021_ath": false,
     "listing_years": 4,
-    "notes": "Terra Luna Classic (pos-colapso). Massive aggressive burn. Utility 0.1 (chain quase morta)."
+    "notes": "Terra Luna Classic (pos-colapso). Massive aggressive burn. Utility 0.1 (chain quase morta).",
+    "current_price_usd": 8.163e-05,
+    "ath_all_time_usd": 119.18
   },
   "AAVEUSDT": {
     "age_years": 6,
@@ -177,7 +208,9 @@
     "concentration_top10": 0.35,
     "recovered_2021_ath": false,
     "listing_years": 5,
-    "notes": "Aave DeFi lending #1. Hard cap 16M. Safety module burn. QUALITY forte."
+    "notes": "Aave DeFi lending #1. Hard cap 16M. Safety module burn. QUALITY forte.",
+    "current_price_usd": 86.53,
+    "ath_all_time_usd": 661.69
   },
   "FILUSDT": {
     "age_years": 5,
@@ -187,7 +220,9 @@
     "concentration_top10": 0.45,
     "recovered_2021_ath": false,
     "listing_years": 5,
-    "notes": "Filecoin DePIN storage. Hard cap 2B. Network burn proven."
+    "notes": "Filecoin DePIN storage. Hard cap 2B. Network burn proven.",
+    "current_price_usd": 0.978829,
+    "ath_all_time_usd": 236.84
   },
   "DASHUSDT": {
     "age_years": 12,
@@ -197,7 +232,9 @@
     "concentration_top10": 0.35,
     "recovered_2021_ath": false,
     "listing_years": 8,
-    "notes": "Dash privacy. Hard cap 18.9M. Sem burn. Long history."
+    "notes": "Dash privacy. Hard cap 18.9M. Sem burn. Long history.",
+    "current_price_usd": 46.11,
+    "ath_all_time_usd": 1493.59
   },
   "XMRUSDT": {
     "age_years": 12,
@@ -207,7 +244,9 @@
     "concentration_top10": 0.15,
     "recovered_2021_ath": false,
     "listing_years": 8,
-    "notes": "Monero privacy. Tail emission 0.6 XMR/block (slow inflation). Distributed. QUALITY."
+    "notes": "Monero privacy. Tail emission 0.6 XMR/block (slow inflation). Distributed. QUALITY.",
+    "current_price_usd": 388.21,
+    "ath_all_time_usd": 797.73
   },
   "DYDXUSDT": {
     "age_years": 4,
@@ -217,7 +256,9 @@
     "concentration_top10": 0.5,
     "recovered_2021_ath": false,
     "listing_years": 3,
-    "notes": "dYdX perp DEX. No cap, V4 migration. Sem burn."
+    "notes": "dYdX perp DEX. No cap, V4 migration. Sem burn.",
+    "current_price_usd": 0.150254,
+    "ath_all_time_usd": 4.52
   },
   "ONDOUSDT": {
     "age_years": 2,
@@ -228,7 +269,9 @@
     "concentration_insider_pct": 0.5,
     "recovered_2021_ath": false,
     "listing_years": 1.5,
-    "notes": "Ondo Finance RWA tokenization. Token new 2024; V1.5 NAO bonus young_NA pq age=2 >=2y; concentrated insiders."
+    "notes": "Ondo Finance RWA tokenization. Token new 2024; V1.5 NAO bonus young_NA pq age=2 >=2y; concentrated insiders.",
+    "current_price_usd": 0.423668,
+    "ath_all_time_usd": 2.14
   },
   "COMPUSDT": {
     "age_years": 5,
@@ -238,7 +281,9 @@
     "concentration_top10": 0.4,
     "recovered_2021_ath": false,
     "listing_years": 4,
-    "notes": "Compound DeFi pioneer. Hard cap 10M. Sem burn. Long-standing."
+    "notes": "Compound DeFi pioneer. Hard cap 10M. Sem burn. Long-standing.",
+    "current_price_usd": 20.09,
+    "ath_all_time_usd": 854.45
   },
   "ALGOUSDT": {
     "age_years": 6,
@@ -248,7 +293,9 @@
     "concentration_top10": 0.3,
     "recovered_2021_ath": false,
     "listing_years": 5,
-    "notes": "Algorand L1. Hard cap 10B. Sem burn ativo. Bem distribuido."
+    "notes": "Algorand L1. Hard cap 10B. Sem burn ativo. Bem distribuido.",
+    "current_price_usd": 0.113904,
+    "ath_all_time_usd": 3.56
   },
   "STORJUSDT": {
     "age_years": 9,
@@ -258,7 +305,9 @@
     "concentration_top10": 0.35,
     "recovered_2021_ath": false,
     "listing_years": 8,
-    "notes": "Storj decentralized storage. Hard cap 425M. Long history."
+    "notes": "Storj decentralized storage. Hard cap 425M. Long history.",
+    "current_price_usd": 0.105242,
+    "ath_all_time_usd": 3.81
   },
   "SUIUSDT": {
     "age_years": 2,
@@ -268,7 +317,9 @@
     "concentration_top10": 0.55,
     "recovered_2021_ath": false,
     "listing_years": 2,
-    "notes": "Sui L1 (Move). Hard cap 10B. Insider concentration alta inicial."
+    "notes": "Sui L1 (Move). Hard cap 10B. Insider concentration alta inicial.",
+    "current_price_usd": 1.069,
+    "ath_all_time_usd": 5.35
   },
   "XRPUSDT": {
     "age_years": 13,
@@ -278,7 +329,9 @@
     "concentration_top10": 0.55,
     "recovered_2021_ath": false,
     "listing_years": 7,
-    "notes": "Ripple payments. Hard cap 100B. Burn de fee. Ripple Labs concentracao."
+    "notes": "Ripple payments. Hard cap 100B. Burn de fee. Ripple Labs concentracao.",
+    "current_price_usd": 1.36,
+    "ath_all_time_usd": 3.65
   },
   "BCHUSDT": {
     "age_years": 8,
@@ -288,7 +341,9 @@
     "concentration_top10": 0.3,
     "recovered_2021_ath": false,
     "listing_years": 7,
-    "notes": "Bitcoin Cash fork. Hard cap 21M. Adoption declining."
+    "notes": "Bitcoin Cash fork. Hard cap 21M. Adoption declining.",
+    "current_price_usd": 355.83,
+    "ath_all_time_usd": 3785.82
   },
   "MORPHOUSDT": {
     "age_years": 2,
@@ -299,7 +354,9 @@
     "concentration_insider_pct": 0.35,
     "recovered_2021_ath": false,
     "listing_years": 1,
-    "notes": "Morpho Blue DeFi optimizer. Hard cap 1B. Token jovem mas age=2 entao cycle_resilience nao N/A."
+    "notes": "Morpho Blue DeFi optimizer. Hard cap 1B. Token jovem mas age=2 entao cycle_resilience nao N/A.",
+    "current_price_usd": 2.1,
+    "ath_all_time_usd": 4.17
   },
   "KASUSDT": {
     "age_years": 4,
@@ -309,7 +366,9 @@
     "concentration_top10": 0.2,
     "recovered_2021_ath": false,
     "listing_years": 2,
-    "notes": "Kaspa GhostDAG L1. Hard cap 28.7B. Distributed mining."
+    "notes": "Kaspa GhostDAG L1. Hard cap 28.7B. Distributed mining.",
+    "current_price_usd": 0.03387343,
+    "ath_all_time_usd": 0.207411
   },
   "SKYUSDT": {
     "age_years": 1,
@@ -319,7 +378,9 @@
     "concentration_top10": 0.5,
     "recovered_2021_ath": false,
     "listing_years": 1,
-    "notes": "Sky (former Maker). Recent rebrand. Burn ativo."
+    "notes": "Sky (former Maker). Recent rebrand. Burn ativo.",
+    "current_price_usd": 0.070086,
+    "ath_all_time_usd": 0.100535
   },
   "VVVUSDT": {
     "age_years": 0.3,
@@ -330,7 +391,9 @@
     "concentration_insider_pct": 0.65,
     "recovered_2021_ath": false,
     "listing_years": 0.3,
-    "notes": "Token muito novo (<6 meses). V1.5 da bonus young_NA_cycle mas falha em age + supply + burn + concentration. SPECULATIVE no melhor cenario."
+    "notes": "Token muito novo (<6 meses). V1.5 da bonus young_NA_cycle mas falha em age + supply + burn + concentration. SPECULATIVE no melhor cenario.",
+    "current_price_usd": 18.71,
+    "ath_all_time_usd": 22.58
   },
   "XCHUSDT": {
     "age_years": 4,
@@ -342,7 +405,7 @@
     "listing_years": 3,
     "notes": "Chia Network. Proof-of-Space (PoSpace). Manual baseline pre-coingecko enrich.",
     "circulating_supply": 18423942.0,
-    "current_price_usd": 3.59,
+    "current_price_usd": 2.95,
     "ath_all_time_usd": 1645.12
   },
   "LITUSDT": {
@@ -356,7 +419,7 @@
     "notes": "Litentry/Heima. Identity infra. Manual baseline.",
     "max_supply": 100000000.0,
     "circulating_supply": 45166534.0,
-    "current_price_usd": 0.078453,
+    "current_price_usd": 0.065242,
     "ath_all_time_usd": 13.31
   },
   "RONUSDT": {
@@ -370,7 +433,7 @@
     "notes": "Ronin Network (Axie). EVM sidechain gaming. Manual baseline.",
     "max_supply": 1000000000.0,
     "circulating_supply": 772401679.4337813,
-    "current_price_usd": 0.105291,
+    "current_price_usd": 0.089214,
     "ath_all_time_usd": 4.45
   },
   "BUSDT": {
@@ -384,7 +447,7 @@
     "notes": "Bitrue Coin. Exchange utility token. Manual baseline conservador.",
     "max_supply": 1000000000.0,
     "circulating_supply": 359064638.3973149,
-    "current_price_usd": 0.01168124,
+    "current_price_usd": 0.01167487,
     "ath_all_time_usd": 0.594476
   },
   "ARBUSDT": {
@@ -398,7 +461,7 @@
     "notes": "Arbitrum L2. Optimistic rollup Ethereum. Manual baseline.",
     "max_supply": 10000000000.0,
     "circulating_supply": 6255821492.0,
-    "current_price_usd": 0.112511,
+    "current_price_usd": 0.109558,
     "ath_all_time_usd": 2.39
   },
   "KITEUSDT": {
@@ -412,7 +475,7 @@
     "notes": "Kite AI. AI/agent infrastructure. Baseline conservador pre-CoinGecko.",
     "max_supply": 10000000000.0,
     "circulating_supply": 2273255814.0,
-    "current_price_usd": 0.234314,
+    "current_price_usd": 0.206566,
     "ath_all_time_usd": 0.319747
   },
   "RIVERUSDT": {
@@ -426,7 +489,7 @@
     "notes": "Riverswap. DEX infra. Baseline conservador.",
     "max_supply": 100000000.0,
     "circulating_supply": 19600000.0,
-    "current_price_usd": 6.22,
+    "current_price_usd": 6.67,
     "ath_all_time_usd": 87.73
   },
   "PENGUUSDT": {
@@ -440,7 +503,7 @@
     "notes": "Pudgy Penguins (NFT->token). Meme/community. Baseline conservador.",
     "max_supply": 88888888888.0,
     "circulating_supply": 62860396090.0,
-    "current_price_usd": 0.00936867,
+    "current_price_usd": 0.00907306,
     "ath_all_time_usd": 0.068447
   },
   "TAOUSDT": {
@@ -454,25 +517,27 @@
     "notes": "Bittensor. AI decentralized network. Hard cap 21M (BTC-like). Baseline.",
     "max_supply": 21000000.0,
     "circulating_supply": 9597491.0,
-    "current_price_usd": 273.47,
+    "current_price_usd": 280.06,
     "ath_all_time_usd": 757.6
   },
   "JTOUSDT": {
     "age_years": 1.5,
-    "supply_capped": true,
+    "supply_capped": false,
     "burn_active": false,
     "utility_score": 0.7,
     "concentration_top10": 0.4,
     "recovered_2021_ath": false,
     "listing_years": 1.5,
-    "notes": "Jito Solana liquid staking. Real DeFi utility. VC concentration alta. ATH $4.99 (Dec 2023) — bear cycle nao atingido."
+    "notes": "Jito Solana liquid staking. Real DeFi utility. VC concentration alta. ATH $4.99 (Dec 2023) — bear cycle nao atingido.",
+    "current_price_usd": 0.495133,
+    "ath_all_time_usd": 6.01
   },
   "USELESSUSDT": {
     "supply_capped": true,
     "max_supply": 1000000000.0,
     "circulating_supply": 999940362.02,
     "recovered_2021_ath": false,
-    "current_price_usd": 0.080512,
+    "current_price_usd": 0.077387,
     "ath_all_time_usd": 0.434591
   },
   "GRASSUSDT": {
@@ -480,7 +545,7 @@
     "max_supply": 1000000000.0,
     "circulating_supply": 587143499.0,
     "recovered_2021_ath": false,
-    "current_price_usd": 0.336961,
+    "current_price_usd": 0.531311,
     "ath_all_time_usd": 3.89
   },
   "ARRRUSDT": {
@@ -488,7 +553,7 @@
     "supply_capped": false,
     "circulating_supply": 196213797.97055,
     "recovered_2021_ath": false,
-    "current_price_usd": 0.335667,
+    "current_price_usd": 0.314055,
     "ath_all_time_usd": 16.76,
     "listing_years": 8
   },
@@ -497,7 +562,7 @@
     "max_supply": 8000000000.0,
     "circulating_supply": 2579922243.4698935,
     "recovered_2021_ath": false,
-    "current_price_usd": 0.697815,
+    "current_price_usd": 0.68101,
     "ath_all_time_usd": 2.41
   },
   "PROVEUSDT": {
@@ -505,7 +570,7 @@
     "max_supply": 1000000000.0,
     "circulating_supply": 195000000.0,
     "recovered_2021_ath": false,
-    "current_price_usd": 0.335451,
+    "current_price_usd": 0.288867,
     "ath_all_time_usd": 1.71
   },
   "WIFUSDT": {
@@ -513,7 +578,46 @@
     "max_supply": 998926392.0,
     "circulating_supply": 998926392.0,
     "recovered_2021_ath": false,
-    "current_price_usd": 0.19365,
+    "current_price_usd": 0.193259,
     "ath_all_time_usd": 4.83
+  },
+  "PEAQUSDT": {
+    "supply_capped": true,
+    "max_supply": 5667620228.64,
+    "circulating_supply": 2132881804.606383,
+    "recovered_2021_ath": false,
+    "current_price_usd": 0.03185804,
+    "ath_all_time_usd": 0.750473
+  },
+  "CHEEMSUSDT": {
+    "supply_capped": true,
+    "max_supply": 219776051832671.0,
+    "circulating_supply": 203672952113698.72,
+    "recovered_2021_ath": false,
+    "current_price_usd": 7.2163e-07,
+    "ath_all_time_usd": 2.16e-06
+  },
+  "WLDUSDT": {
+    "supply_capped": true,
+    "max_supply": 10000000000.0,
+    "circulating_supply": 3414545758.127662,
+    "recovered_2021_ath": false,
+    "current_price_usd": 0.300194,
+    "ath_all_time_usd": 11.74
+  },
+  "SUSDT": {
+    "supply_capped": false,
+    "circulating_supply": 3784775845.0,
+    "recovered_2021_ath": false,
+    "current_price_usd": 0.04682943,
+    "ath_all_time_usd": 1.029
+  },
+  "PYTHUSDT": {
+    "supply_capped": true,
+    "max_supply": 10000000000.0,
+    "circulating_supply": 7874982031.884853,
+    "recovered_2021_ath": false,
+    "current_price_usd": 0.0422551,
+    "ath_all_time_usd": 1.2
   }
 }

@@ -1,68 +1,222 @@
 {
-  "computed_at": "2026-05-20T01:26:28Z",
+  "computed_at": "2026-05-24T01:00:46Z",
   "window_days": 60,
   "AAVEUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.143,
-    "hurst": 0.541,
-    "ker_20d": 0.204,
-    "ker_60d": 0.144
+    "score": 0.11,
+    "hurst": 0.535,
+    "ker_20d": 0.149,
+    "ker_60d": 0.147
   },
   "ADAUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.109,
+    "score": 0.111,
+    "hurst": 0.6,
+    "ker_20d": 0.022,
+    "ker_60d": 0.03
+  },
+  "AEROUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.096,
     "hurst": 0.589,
-    "ker_20d": 0.038,
-    "ker_60d": 0.051
+    "ker_20d": 0.013,
+    "ker_60d": 0.113
+  },
+  "ALEOUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.155,
+    "hurst": 0.644,
+    "ker_20d": 0.021,
+    "ker_60d": 0.13
   },
   "ALGOUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.101,
-    "hurst": 0.579,
-    "ker_20d": 0.044,
-    "ker_60d": 0.115
+    "score": 0.112,
+    "hurst": 0.594,
+    "ker_20d": 0.036,
+    "ker_60d": 0.137
+  },
+  "ANKRUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.116,
+    "hurst": 0.578,
+    "ker_20d": 0.075,
+    "ker_60d": 0.079
+  },
+  "APEUSDT": {
+    "label": "MODERATE_TREND",
+    "score": 0.329,
+    "hurst": 0.583,
+    "ker_20d": 0.492,
+    "ker_60d": 0.166
+  },
+  "APTUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.095,
+    "hurst": 0.58,
+    "ker_20d": 0.03,
+    "ker_60d": 0.054
+  },
+  "ARBUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.147,
+    "hurst": 0.593,
+    "ker_20d": 0.108,
+    "ker_60d": 0.09
+  },
+  "ARRRUSDT": {
+    "label": "MODERATE_TREND",
+    "score": 0.275,
+    "hurst": 0.57,
+    "ker_20d": 0.41,
+    "ker_60d": 0.173
+  },
+  "ARUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.134,
+    "hurst": 0.611,
+    "ker_20d": 0.046,
+    "ker_60d": 0.061
+  },
+  "ASTERUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.088,
+    "hurst": 0.576,
+    "ker_20d": 0.025,
+    "ker_60d": 0.041
   },
   "ATOMUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.141,
-    "hurst": 0.573,
-    "ker_20d": 0.137,
-    "ker_60d": 0.122
+    "score": 0.228,
+    "hurst": 0.578,
+    "ker_20d": 0.301,
+    "ker_60d": 0.172
+  },
+  "AUCTIONUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.086,
+    "hurst": 0.577,
+    "ker_20d": 0.019,
+    "ker_60d": 0.023
+  },
+  "AUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.186,
+    "hurst": 0.592,
+    "ker_20d": 0.187,
+    "ker_60d": 0.025
+  },
+  "AVAXUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.133,
+    "hurst": 0.582,
+    "ker_20d": 0.102,
+    "ker_60d": 0.003
+  },
+  "BABYDOGEUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.112,
+    "hurst": 0.593,
+    "ker_20d": 0.039,
+    "ker_60d": 0.022
+  },
+  "BABYUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.167,
+    "hurst": 0.537,
+    "ker_20d": 0.26,
+    "ker_60d": 0.071
   },
   "BCHUSDT": {
-    "label": "MODERATE_TREND",
-    "score": 0.263,
-    "hurst": 0.549,
-    "ker_20d": 0.429,
-    "ker_60d": 0.212
+    "label": "WEAK_TREND",
+    "score": 0.243,
+    "hurst": 0.537,
+    "ker_20d": 0.412,
+    "ker_60d": 0.22
+  },
+  "BDXUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.156,
+    "hurst": 0.59,
+    "ker_20d": 0.132,
+    "ker_60d": 0.013
+  },
+  "BEAMXUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.165,
+    "hurst": 0.619,
+    "ker_20d": 0.093,
+    "ker_60d": 0.025
   },
   "BERAUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.138,
+    "score": 0.142,
     "hurst": 0.575,
-    "ker_20d": 0.126,
-    "ker_60d": 0.255
+    "ker_20d": 0.133,
+    "ker_60d": 0.17
+  },
+  "BLASTUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.151,
+    "hurst": 0.572,
+    "ker_20d": 0.158,
+    "ker_60d": 0.046
   },
   "BNBUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.182,
-    "hurst": 0.607,
-    "ker_20d": 0.15,
-    "ker_60d": 0.014
+    "score": 0.215,
+    "hurst": 0.584,
+    "ker_20d": 0.26,
+    "ker_60d": 0.039
+  },
+  "BOBUSDT": {
+    "label": "MODERATE_TREND",
+    "score": 0.321,
+    "hurst": 0.532,
+    "ker_20d": 0.577,
+    "ker_60d": 0.275
+  },
+  "BONKUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.135,
+    "hurst": 0.63,
+    "ker_20d": 0.009,
+    "ker_60d": 0.031
   },
   "BTCUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.102,
-    "hurst": 0.579,
-    "ker_20d": 0.048,
-    "ker_60d": 0.095
+    "score": 0.11,
+    "hurst": 0.577,
+    "ker_20d": 0.067,
+    "ker_60d": 0.113
   },
   "BUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.245,
-    "hurst": 0.637,
-    "ker_20d": 0.217,
-    "ker_60d": 0.09
+    "score": 0.145,
+    "hurst": 0.627,
+    "ker_20d": 0.036,
+    "ker_60d": 0.046
+  },
+  "CAKEUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.128,
+    "hurst": 0.615,
+    "ker_20d": 0.024,
+    "ker_60d": 0.026
+  },
+  "CETUSDT": {
+    "label": "MODERATE_TREND",
+    "score": 0.413,
+    "hurst": 0.592,
+    "ker_20d": 0.643,
+    "ker_60d": 0.352
+  },
+  "CETUSUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.111,
+    "hurst": 0.6,
+    "ker_20d": 0.022,
+    "ker_60d": 0.056
   },
   "CFGUSDT": {
     "label": "WEAK_TREND",
@@ -73,59 +227,248 @@
   },
   "CHZUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.092,
-    "hurst": 0.577,
-    "ker_20d": 0.029,
-    "ker_60d": 0.125
+    "score": 0.132,
+    "hurst": 0.589,
+    "ker_20d": 0.086,
+    "ker_60d": 0.091
+  },
+  "COMPUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.134,
+    "hurst": 0.578,
+    "ker_20d": 0.112,
+    "ker_60d": 0.106
+  },
+  "CROUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.113,
+    "hurst": 0.592,
+    "ker_20d": 0.043,
+    "ker_60d": 0.101
+  },
+  "CRVUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.09,
+    "hurst": 0.579,
+    "ker_20d": 0.021,
+    "ker_60d": 0.052
   },
   "DASHUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.16,
-    "hurst": 0.577,
-    "ker_20d": 0.167,
-    "ker_60d": 0.106
+    "score": 0.215,
+    "hurst": 0.594,
+    "ker_20d": 0.242,
+    "ker_60d": 0.138
+  },
+  "DEGENUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.208,
+    "hurst": 0.595,
+    "ker_20d": 0.226,
+    "ker_60d": 0.107
   },
   "DOGEUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.179,
-    "hurst": 0.598,
+    "score": 0.127,
+    "hurst": 0.596,
+    "ker_20d": 0.062,
+    "ker_60d": 0.112
+  },
+  "DOGUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.109,
+    "hurst": 0.572,
+    "ker_20d": 0.073,
+    "ker_60d": 0.014
+  },
+  "DOTUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.161,
+    "hurst": 0.58,
     "ker_20d": 0.162,
-    "ker_60d": 0.124
+    "ker_60d": 0.063
   },
   "DYDXUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.118,
-    "hurst": 0.585,
-    "ker_20d": 0.065,
-    "ker_60d": 0.173
+    "score": 0.103,
+    "hurst": 0.593,
+    "ker_20d": 0.021,
+    "ker_60d": 0.213
+  },
+  "EDENUSDT": {
+    "label": "MODERATE_TREND",
+    "score": 0.305,
+    "hurst": 0.589,
+    "ker_20d": 0.433,
+    "ker_60d": 0.344
+  },
+  "EIGENUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.086,
+    "hurst": 0.526,
+    "ker_20d": 0.12,
+    "ker_60d": 0.007
+  },
+  "EMPUSDT": {
+    "label": "MODERATE_TREND",
+    "score": 0.284,
+    "hurst": 0.609,
+    "ker_20d": 0.351,
+    "ker_60d": 0.218
+  },
+  "ENJUSDT": {
+    "label": "MODERATE_TREND",
+    "score": 0.306,
+    "hurst": 0.617,
+    "ker_20d": 0.379,
+    "ker_60d": 0.136
+  },
+  "ETCUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.148,
+    "hurst": 0.575,
+    "ker_20d": 0.147,
+    "ker_60d": 0.051
   },
   "ETHUSDT": {
+    "label": "MODERATE_TREND",
+    "score": 0.255,
+    "hurst": 0.578,
+    "ker_20d": 0.354,
+    "ker_60d": 0.009
+  },
+  "FARTCOINUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.221,
-    "hurst": 0.575,
-    "ker_20d": 0.291,
-    "ker_60d": 0.007
+    "score": 0.075,
+    "hurst": 0.544,
+    "ker_20d": 0.062,
+    "ker_60d": 0.032
+  },
+  "FBUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.111,
+    "hurst": 0.557,
+    "ker_20d": 0.109,
+    "ker_60d": 0.02
+  },
+  "FETUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.112,
+    "hurst": 0.61,
+    "ker_20d": 0.004,
+    "ker_60d": 0.049
+  },
+  "FIDAUSDT": {
+    "label": "MODERATE_TREND",
+    "score": 0.372,
+    "hurst": 0.549,
+    "ker_20d": 0.646,
+    "ker_60d": 0.429
   },
   "FILUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.096,
-    "hurst": 0.577,
-    "ker_20d": 0.038,
-    "ker_60d": 0.032
+    "score": 0.134,
+    "hurst": 0.585,
+    "ker_20d": 0.099,
+    "ker_60d": 0.057
   },
-  "HYPEUSDT": {
+  "FLOKIUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.175,
-    "hurst": 0.548,
-    "ker_20d": 0.255,
+    "score": 0.148,
+    "hurst": 0.604,
+    "ker_20d": 0.087,
+    "ker_60d": 0.026
+  },
+  "FTTUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.133,
+    "hurst": 0.576,
+    "ker_20d": 0.115,
+    "ker_60d": 0.05
+  },
+  "GALAUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.17,
+    "hurst": 0.612,
+    "ker_20d": 0.114,
+    "ker_60d": 0.045
+  },
+  "GRASSUSDT": {
+    "label": "MODERATE_TREND",
+    "score": 0.314,
+    "hurst": 0.635,
+    "ker_20d": 0.358,
     "ker_60d": 0.108
   },
-  "INJUSDT": {
+  "GRTUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.136,
+    "hurst": 0.593,
+    "ker_20d": 0.086,
+    "ker_60d": 0.025
+  },
+  "HBARUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.082,
+    "hurst": 0.557,
+    "ker_20d": 0.049,
+    "ker_60d": 0.043
+  },
+  "HYPEUSDT": {
     "label": "MODERATE_TREND",
-    "score": 0.322,
-    "hurst": 0.57,
-    "ker_20d": 0.504,
-    "ker_60d": 0.322
+    "score": 0.302,
+    "hurst": 0.555,
+    "ker_20d": 0.494,
+    "ker_60d": 0.286
+  },
+  "ICPUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.148,
+    "hurst": 0.597,
+    "ker_20d": 0.102,
+    "ker_60d": 0.053
+  },
+  "ILVUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.147,
+    "hurst": 0.606,
+    "ker_20d": 0.082,
+    "ker_60d": 0.111
+  },
+  "INJUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.245,
+    "hurst": 0.579,
+    "ker_20d": 0.331,
+    "ker_60d": 0.275
+  },
+  "IOTAUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.141,
+    "hurst": 0.61,
+    "ker_20d": 0.061,
+    "ker_60d": 0.018
+  },
+  "IOTXUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.041,
+    "hurst": 0.523,
+    "ker_20d": 0.035,
+    "ker_60d": 0.137
+  },
+  "IOUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.194,
+    "hurst": 0.584,
+    "ker_20d": 0.219,
+    "ker_60d": 0.159
+  },
+  "JUPUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.165,
+    "hurst": 0.573,
+    "ker_20d": 0.184,
+    "ker_60d": 0.165
   },
   "KAIAUSDT": {
     "label": "WEAK_TREND",
@@ -136,24 +479,66 @@
   },
   "KASUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.145,
-    "hurst": 0.617,
-    "ker_20d": 0.056,
-    "ker_60d": 0.063
+    "score": 0.153,
+    "hurst": 0.613,
+    "ker_20d": 0.08,
+    "ker_60d": 0.001
+  },
+  "LDOUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.108,
+    "hurst": 0.564,
+    "ker_20d": 0.088,
+    "ker_60d": 0.083
+  },
+  "LINKUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.16,
+    "hurst": 0.582,
+    "ker_20d": 0.154,
+    "ker_60d": 0.064
+  },
+  "LITUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.106,
+    "hurst": 0.361,
+    "ker_20d": 0.49,
+    "ker_60d": 0.184
+  },
+  "LPTUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.083,
+    "hurst": 0.57,
+    "ker_20d": 0.025,
+    "ker_60d": 0.013
+  },
+  "LRCUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.098,
+    "hurst": 0.587,
+    "ker_20d": 0.022,
+    "ker_60d": 0.211
   },
   "LTCUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.089,
-    "hurst": 0.542,
-    "ker_20d": 0.094,
-    "ker_60d": 0.029
+    "score": 0.102,
+    "hurst": 0.572,
+    "ker_20d": 0.061,
+    "ker_60d": 0.033
   },
   "LUNCUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.121,
-    "hurst": 0.588,
-    "ker_20d": 0.066,
-    "ker_60d": 0.167
+    "score": 0.133,
+    "hurst": 0.593,
+    "ker_20d": 0.08,
+    "ker_60d": 0.189
+  },
+  "MASKUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.125,
+    "hurst": 0.541,
+    "ker_20d": 0.169,
+    "ker_60d": 0.018
   },
   "MORPHOUSDT": {
     "label": "WEAK_TREND",
@@ -163,74 +548,228 @@
     "ker_60d": 0.001
   },
   "NEARUSDT": {
-    "label": "WEAK_TREND",
-    "score": 0.235,
-    "hurst": 0.619,
-    "ker_20d": 0.231,
-    "ker_60d": 0.099
+    "label": "MODERATE_TREND",
+    "score": 0.451,
+    "hurst": 0.629,
+    "ker_20d": 0.644,
+    "ker_60d": 0.357
   },
   "NOTUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.148,
-    "hurst": 0.553,
-    "ker_20d": 0.191,
-    "ker_60d": 0.09
+    "score": 0.129,
+    "hurst": 0.555,
+    "ker_20d": 0.148,
+    "ker_60d": 0.085
   },
   "ONDOUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.202,
+    "score": 0.195,
     "hurst": 0.54,
-    "ker_20d": 0.324,
-    "ker_60d": 0.209
+    "ker_20d": 0.309,
+    "ker_60d": 0.247
+  },
+  "OPUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.107,
+    "hurst": 0.565,
+    "ker_20d": 0.084,
+    "ker_60d": 0.086
+  },
+  "ORDIUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.198,
+    "hurst": 0.56,
+    "ker_20d": 0.275,
+    "ker_60d": 0.094
+  },
+  "PAXGUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.155,
+    "hurst": 0.608,
+    "ker_20d": 0.095,
+    "ker_60d": 0.029
+  },
+  "PEAQUSDT": {
+    "label": "MODERATE_TREND",
+    "score": 0.264,
+    "hurst": 0.575,
+    "ker_20d": 0.378,
+    "ker_60d": 0.226
   },
   "PENDLEUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.245,
-    "hurst": 0.59,
-    "ker_20d": 0.31,
-    "ker_60d": 0.163
+    "score": 0.167,
+    "hurst": 0.566,
+    "ker_20d": 0.203,
+    "ker_60d": 0.194
+  },
+  "PENGUUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.117,
+    "hurst": 0.592,
+    "ker_20d": 0.049,
+    "ker_60d": 0.146
   },
   "PEPEUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.175,
-    "hurst": 0.609,
-    "ker_20d": 0.132,
-    "ker_60d": 0.046
+    "score": 0.159,
+    "hurst": 0.599,
+    "ker_20d": 0.121,
+    "ker_60d": 0.063
+  },
+  "PHBUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.205,
+    "hurst": 0.607,
+    "ker_20d": 0.196,
+    "ker_60d": 0.081
+  },
+  "PLAYUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.087,
+    "hurst": 0.566,
+    "ker_20d": 0.043,
+    "ker_60d": 0.052
+  },
+  "POLUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.203,
+    "hurst": 0.629,
+    "ker_20d": 0.148,
+    "ker_60d": 0.043
+  },
+  "POPCATUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.103,
+    "hurst": 0.571,
+    "ker_20d": 0.065,
+    "ker_60d": 0.062
+  },
+  "PROVEUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.16,
+    "hurst": 0.546,
+    "ker_20d": 0.227,
+    "ker_60d": 0.088
+  },
+  "PUMPUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.091,
+    "hurst": 0.589,
+    "ker_20d": 0.004,
+    "ker_60d": 0.002
+  },
+  "PYTHUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.112,
+    "hurst": 0.531,
+    "ker_20d": 0.161,
+    "ker_60d": 0.029
   },
   "QNTUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.176,
-    "hurst": 0.595,
-    "ker_20d": 0.162,
-    "ker_60d": 0.058
+    "score": 0.153,
+    "hurst": 0.566,
+    "ker_20d": 0.174,
+    "ker_60d": 0.03
   },
   "RENDERUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.162,
-    "hurst": 0.599,
-    "ker_20d": 0.126,
-    "ker_60d": 0.038
+    "score": 0.209,
+    "hurst": 0.585,
+    "ker_20d": 0.247,
+    "ker_60d": 0.107
   },
   "RIVERUSDT": {
-    "label": "MODERATE_TREND",
-    "score": 0.285,
+    "label": "WEAK_TREND",
+    "score": 0.206,
     "hurst": 0.705,
-    "ker_20d": 0.159,
-    "ker_60d": 0.274
+    "ker_20d": 0.002,
+    "ker_60d": 0.385
+  },
+  "RLCUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.109,
+    "hurst": 0.567,
+    "ker_20d": 0.085,
+    "ker_60d": 0.026
+  },
+  "ROSEUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.112,
+    "hurst": 0.597,
+    "ker_20d": 0.031,
+    "ker_60d": 0.089
+  },
+  "RSRUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.099,
+    "hurst": 0.589,
+    "ker_20d": 0.021,
+    "ker_60d": 0.054
+  },
+  "RUNEUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.203,
+    "hurst": 0.605,
+    "ker_20d": 0.194,
+    "ker_60d": 0.024
+  },
+  "SCRUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.108,
+    "hurst": 0.591,
+    "ker_20d": 0.035,
+    "ker_60d": 0.016
+  },
+  "SEIUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.12,
+    "hurst": 0.566,
+    "ker_20d": 0.108,
+    "ker_60d": 0.03
+  },
+  "SHIBUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.179,
+    "hurst": 0.587,
+    "ker_20d": 0.185,
+    "ker_60d": 0.04
+  },
+  "SKYAIUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.209,
+    "hurst": 0.599,
+    "ker_20d": 0.22,
+    "ker_60d": 0.11
   },
   "SKYUSDT": {
     "label": "MODERATE_TREND",
-    "score": 0.355,
-    "hurst": 0.575,
-    "ker_20d": 0.559,
-    "ker_60d": 0.049
+    "score": 0.331,
+    "hurst": 0.592,
+    "ker_20d": 0.479,
+    "ker_60d": 0.029
   },
   "SOLUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.084,
-    "hurst": 0.571,
-    "ker_20d": 0.026,
-    "ker_60d": 0.037
+    "score": 0.106,
+    "hurst": 0.566,
+    "ker_20d": 0.08,
+    "ker_60d": 0.045
+  },
+  "SOLVUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.159,
+    "hurst": 0.622,
+    "ker_20d": 0.072,
+    "ker_60d": 0.056
+  },
+  "SPXUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.088,
+    "hurst": 0.567,
+    "ker_20d": 0.042,
+    "ker_60d": 0.107
   },
   "STORJUSDT": {
     "label": "WEAK_TREND",
@@ -239,88 +778,221 @@
     "ker_20d": 0.209,
     "ker_60d": 0.087
   },
-  "SUIUSDT": {
+  "STRKUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.113,
+    "hurst": 0.558,
+    "ker_20d": 0.11,
+    "ker_60d": 0.089
+  },
+  "STXUSDT": {
     "label": "WEAK_TREND",
     "score": 0.158,
-    "hurst": 0.565,
-    "ker_20d": 0.186,
-    "ker_60d": 0.053
+    "hurst": 0.564,
+    "ker_20d": 0.187,
+    "ker_60d": 0.014
+  },
+  "SUIUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.176,
+    "hurst": 0.569,
+    "ker_20d": 0.213,
+    "ker_60d": 0.098
+  },
+  "SUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.171,
+    "hurst": 0.598,
+    "ker_20d": 0.145,
+    "ker_60d": 0.055
+  },
+  "SUSHIUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.109,
+    "hurst": 0.571,
+    "ker_20d": 0.076,
+    "ker_60d": 0.048
+  },
+  "SWARMSUSDT": {
+    "label": "MODERATE_TREND",
+    "score": 0.299,
+    "hurst": 0.604,
+    "ker_20d": 0.391,
+    "ker_60d": 0.047
   },
   "TAOUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.099,
-    "hurst": 0.587,
-    "ker_20d": 0.024,
-    "ker_60d": 0.032
+    "score": 0.11,
+    "hurst": 0.599,
+    "ker_20d": 0.02,
+    "ker_60d": 0.017
   },
   "TIAUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.175,
-    "hurst": 0.573,
-    "ker_20d": 0.204,
-    "ker_60d": 0.095
+    "score": 0.192,
+    "hurst": 0.574,
+    "ker_20d": 0.235,
+    "ker_60d": 0.139
   },
   "TONUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.193,
-    "hurst": 0.564,
-    "ker_20d": 0.257,
-    "ker_60d": 0.208
+    "score": 0.19,
+    "hurst": 0.56,
+    "ker_20d": 0.261,
+    "ker_60d": 0.199
+  },
+  "TRUMPUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.248,
+    "hurst": 0.592,
+    "ker_20d": 0.312,
+    "ker_60d": 0.315
+  },
+  "TRXUSDT": {
+    "label": "MODERATE_TREND",
+    "score": 0.484,
+    "hurst": 0.577,
+    "ker_20d": 0.814,
+    "ker_60d": 0.437
+  },
+  "TWTUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.187,
+    "hurst": 0.559,
+    "ker_20d": 0.256,
+    "ker_60d": 0.06
+  },
+  "UMAUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.074,
+    "hurst": 0.548,
+    "ker_20d": 0.051,
+    "ker_60d": 0.082
   },
   "UNIUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.12,
-    "hurst": 0.559,
-    "ker_20d": 0.121,
-    "ker_60d": 0.026
+    "score": 0.14,
+    "hurst": 0.544,
+    "ker_20d": 0.192,
+    "ker_60d": 0.009
   },
   "USDCUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.151,
+    "hurst": 0.511,
+    "ker_20d": 0.28,
+    "ker_60d": 0.06
+  },
+  "USDSUSDT": {
     "label": "NOISE",
-    "score": -0.03,
-    "hurst": 0.448,
-    "ker_20d": 0.043,
-    "ker_60d": 0.013
+    "score": -0.154,
+    "hurst": 0.319,
+    "ker_20d": 0.054,
+    "ker_60d": 0.005
+  },
+  "VETUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.147,
+    "hurst": 0.582,
+    "ker_20d": 0.13,
+    "ker_60d": 0.033
+  },
+  "VIRTUALUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.115,
+    "hurst": 0.598,
+    "ker_20d": 0.033,
+    "ker_60d": 0.066
   },
   "VVVUSDT": {
+    "label": "MODERATE_TREND",
+    "score": 0.294,
+    "hurst": 0.597,
+    "ker_20d": 0.395,
+    "ker_60d": 0.35
+  },
+  "WAVESUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.101,
-    "hurst": 0.459,
-    "ker_20d": 0.283,
-    "ker_60d": 0.27
+    "score": 0.24,
+    "hurst": 0.626,
+    "ker_20d": 0.227,
+    "ker_60d": 0.19
+  },
+  "WIFUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.144,
+    "hurst": 0.592,
+    "ker_20d": 0.105,
+    "ker_60d": 0.046
+  },
+  "WLDUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.201,
+    "hurst": 0.59,
+    "ker_20d": 0.221,
+    "ker_60d": 0.074
   },
   "XAUTUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.08,
-    "hurst": 0.532,
-    "ker_20d": 0.097,
-    "ker_60d": 0.042
+    "score": 0.14,
+    "hurst": 0.592,
+    "ker_20d": 0.096,
+    "ker_60d": 0.033
   },
   "XCHUSDT": {
     "label": "MODERATE_TREND",
-    "score": 0.39,
-    "hurst": 0.605,
-    "ker_20d": 0.571,
-    "ker_60d": 0.195
+    "score": 0.32,
+    "hurst": 0.618,
+    "ker_20d": 0.405,
+    "ker_60d": 0.086
+  },
+  "XLMUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.194,
+    "hurst": 0.592,
+    "ker_20d": 0.205,
+    "ker_60d": 0.098
   },
   "XMRUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.067,
-    "hurst": 0.538,
-    "ker_20d": 0.058,
-    "ker_60d": 0.075
+    "score": 0.063,
+    "hurst": 0.557,
+    "ker_20d": 0.011,
+    "ker_60d": 0.073
+  },
+  "XPLUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.075,
+    "hurst": 0.562,
+    "ker_20d": 0.026,
+    "ker_60d": 0.029
   },
   "XRPUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.105,
-    "hurst": 0.59,
-    "ker_20d": 0.029,
-    "ker_60d": 0.051
+    "score": 0.133,
+    "hurst": 0.605,
+    "ker_20d": 0.055,
+    "ker_60d": 0.052
+  },
+  "XTZUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.103,
+    "hurst": 0.557,
+    "ker_20d": 0.092,
+    "ker_60d": 0.095
   },
   "ZECUSDT": {
     "label": "MODERATE_TREND",
-    "score": 0.322,
-    "hurst": 0.607,
-    "ker_20d": 0.429,
-    "ker_60d": 0.329
+    "score": 0.334,
+    "hurst": 0.612,
+    "ker_20d": 0.444,
+    "ker_60d": 0.392
+  },
+  "ZENUSDT": {
+    "label": "WEAK_TREND",
+    "score": 0.144,
+    "hurst": 0.609,
+    "ker_20d": 0.071,
+    "ker_60d": 0.079
   }
 }

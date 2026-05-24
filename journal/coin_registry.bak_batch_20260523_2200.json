@@ -105,7 +105,10 @@
     "concentration_top10": 0.4,
     "recovered_2021_ath": false,
     "listing_years": 5,
-    "notes": "L1 sharded. Tx fee burn. ATH 2021 nao recuperado."
+    "notes": "L1 sharded. Tx fee burn. ATH 2021 nao recuperado.",
+    "circulating_supply": 1296191288.0,
+    "current_price_usd": 2.12,
+    "ath_all_time_usd": 20.44
   },
   "HYPEUSDT": {
     "age_years": 1.5,
@@ -535,9 +538,9 @@
   "WLDUSDT": {
     "supply_capped": true,
     "max_supply": 10000000000.0,
-    "circulating_supply": 3409949399.538485,
+    "circulating_supply": 3414545758.127662,
     "recovered_2021_ath": false,
-    "current_price_usd": 0.256208,
+    "current_price_usd": 0.277513,
     "ath_all_time_usd": 11.74
   },
   "SUSDT": {
