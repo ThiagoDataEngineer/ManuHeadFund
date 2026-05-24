@@ -1,0 +1,6 @@
+"market","entry","current","pnl_pct","pnl_usd","leverage","rsi","atr_pct","dist_sma20","dist_stop","stop_quality","recommendation","action","trailing_should_update","trailing_reason"
+"NEARUSDT","2,3899","2,3625","-1,15","-5,54","5","37,56","0,84","-0,44","100","LARGO (muito risco)","AGUARDAR - Setup em desenvolvimento","hold","False","Profit -1.15% below activation threshold (3%)"
+"UNIUSDT","3,45999888734353","3,4546","-0,16","-0,79","5","50,53","0,28","-0,05","4,48","LARGO (muito risco)","AGUARDAR - Setup em desenvolvimento","hold","False","Profit -0.16% below activation threshold (3%)"
+"LINKUSDT","9,5858","9,6117","0,27","2,64","5","65,8","0,26","0,31","4,8","LARGO (muito risco)","AGUARDAR - Setup em desenvolvimento","hold","False","Profit 0.27% below activation threshold (3%)"
+"BNBUSDT","647,06","661,48","2,23","1,04","50","84,76","0,18","0,47","5,09","LARGO (muito risco)","MONITORAR - Pr??ximo de ativar trailing (+3%)","monitor","False","Profit 2.23% below activation threshold (3%)"
+"SOLUSDT","86,0366666666667","86,58","0,63","9,3","5","69,39","0,26","0,28","4,94","LARGO (muito risco)","AGUARDAR - Setup em desenvolvimento","hold","False","Profit 0.62% below activation threshold (3%)"

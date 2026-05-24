@@ -1,5 +1,97 @@
 ﻿# lib_coinex.ps1 - CoinEx API V2: endpoints publicos e autenticados
 # Dot-source: . "$PSScriptRoot\lib_coinex.ps1"
+#
+# INTEGRACAO: Rate Limiter + Retry (2026-05-23)
+# - Rate limiting automatico por categoria (spot_place: 30 req/s, futures_place: 20 req/s, etc.)
+# - Retry automatico para erros transientes (4213, 3008, timeout)
+# - Backoff exponencial (300ms -> 600ms -> 1.2s -> ...)
+
+# Carregar dependencias de rate limiting e retry
+$rateLimiterPath = Join-Path $PSScriptRoot "lib_rate_limiter.ps1"
+$retryPath = Join-Path $PSScriptRoot "lib_coinex_retry.ps1"
+
+if (Test-Path $rateLimiterPath) {
+    . $rateLimiterPath
+}
+if (Test-Path $retryPath) {
+    . $retryPath
+}
+
+# ============================================================================
+# Get-CategoryFromPath - Classificar endpoint para rate limiting
+# ============================================================================
+
+function Get-CategoryFromPath {
+    <#
+    .SYNOPSIS
+        Classifica endpoint da CoinEx API em categoria de rate limit
+    
+    .PARAMETER Path
+        Path do endpoint (ex: /v2/spot/order)
+    
+    .PARAMETER Method
+        Metodo HTTP (GET, POST)
+    
+    .OUTPUTS
+        String - categoria (spot_place, futures_place, spot_cancel, etc.)
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Path,
+        
+        [Parameter(Mandatory=$false)]
+        [string]$Method = "POST"
+    )
+    
+    # POST endpoints
+    if ($Method -eq "POST") {
+        # Place orders
+        if ($Path -match "/v2/spot/(order|stop-order|batch-order)$") {
+            return "spot_place"
+        }
+        if ($Path -match "/v2/futures/(order|stop-order|batch-order)$") {
+            return "futures_place"
+        }
+        
+        # Cancel orders
+        if ($Path -match "/v2/spot/(cancel-order|cancel-all-order|cancel-stop-order|cancel-batch)") {
+            return "spot_cancel"
+        }
+        if ($Path -match "/v2/futures/(cancel-order|cancel-all-order|cancel-stop-order|cancel-batch)") {
+            return "futures_cancel"
+        }
+        
+        # Account operations (transfer, adjust, etc.)
+        if ($Path -match "/v2/assets/") {
+            return "account_query"
+        }
+        if ($Path -match "/v2/futures/(adjust-position|close-position|set-position)") {
+            return "account_query"
+        }
+    }
+    
+    # GET endpoints
+    if ($Method -eq "GET") {
+        # Spot queries
+        if ($Path -match "/v2/spot/(pending-order|finished-order|user-deals)") {
+            return "spot_query"
+        }
+        
+        # Futures queries
+        if ($Path -match "/v2/futures/(pending-order|finished-order|pending-position|finished-position)") {
+            return "futures_query"
+        }
+        
+        # Account queries
+        if ($Path -match "/v2/assets/") {
+            return "account_query"
+        }
+    }
+    
+    # Default: account_query (mais conservador)
+    return "account_query"
+}
 
 function CoinEx-Sign($method, $path, $body, $secret) {
     $ts     = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds().ToString()
@@ -179,8 +271,36 @@ function Clear-MarketPrecisionCache {
 
 function CoinEx-Get($path) {
     if (-not $COINEX_ACCESS_ID -or -not $COINEX_SECRET_KEY) { throw "Credenciais nao configuradas. Ver agents/config.ps1" }
+    
+    # Classificar categoria para rate limiting
+    $category = Get-CategoryFromPath -Path $path -Method "GET"
+    
+    # Preparar request
     $h = CoinEx-Headers "GET" $path "" $COINEX_ACCESS_ID $COINEX_SECRET_KEY
-    # B19 fix 2026-05-20 PM6+420min: retry transient errors em GET (idempotente, safe).
+    
+    # Executar com rate limiting + retry
+    if (Get-Command Invoke-RateLimitedCall -ErrorAction SilentlyContinue) {
+        $result = Invoke-RateLimitedCall -Category $category -Cost 1 -Action {
+            # B19 fix 2026-05-20 PM6+420min: retry transient errors em GET (idempotente, safe).
+            if (Get-Command Invoke-CoinExWithRetry -ErrorAction SilentlyContinue) {
+                return Invoke-CoinExWithRetry -Action {
+                    Invoke-RestMethod -Uri ($COINEX_BASE_URL + $path) -Method GET -Headers $h -ErrorAction Stop
+                }
+            }
+            else {
+                return Invoke-RestMethod -Uri ($COINEX_BASE_URL + $path) -Method GET -Headers $h -ErrorAction Stop
+            }
+        } -MaxWaitMs 10000
+        
+        if ($result.success) {
+            return $result.result
+        }
+        else {
+            throw "Rate limit error: $($result.error)"
+        }
+    }
+    
+    # Fallback: sem rate limiter (backward compatibility)
     if (Get-Command Invoke-WithRetry -ErrorAction SilentlyContinue) {
         return Invoke-WithRetry -ScriptBlock {
             Invoke-RestMethod -Uri ($COINEX_BASE_URL + $path) -Method GET -Headers $h -ErrorAction Stop
@@ -191,8 +311,14 @@ function CoinEx-Get($path) {
 
 function CoinEx-Post($path, $bodyObj) {
     if (-not $COINEX_ACCESS_ID -or -not $COINEX_SECRET_KEY) { throw "Credenciais nao configuradas. Ver agents/config.ps1" }
+    
+    # Classificar categoria para rate limiting
+    $category = Get-CategoryFromPath -Path $path -Method "POST"
+    
+    # Preparar request
     $json = $bodyObj | ConvertTo-Json -Compress
     $h    = CoinEx-Headers "POST" $path $json $COINEX_ACCESS_ID $COINEX_SECRET_KEY
+    
     # B19/B19b: retry safety logic.
     # - POST /order SEM client_id no body = UNSAFE retry (orphan order risk)
     # - POST /order COM client_id no body = ASSUMIDO safe retry (knowledge/COINEX_REFERENCE.md:352
@@ -208,6 +334,30 @@ function CoinEx-Post($path, $bodyObj) {
     $isOrderCreate = ($path -match '/order$' -and $path -notmatch 'cancel|edit')
     $hasClientId = $bodyObj -and ($bodyObj.ContainsKey('client_id') -or $bodyObj.client_id)
     $retrySafe = (-not $isOrderCreate) -or $hasClientId
+    
+    # Executar com rate limiting + retry
+    if (Get-Command Invoke-RateLimitedCall -ErrorAction SilentlyContinue) {
+        $result = Invoke-RateLimitedCall -Category $category -Cost 1 -Action {
+            # Retry automatico se disponivel e safe
+            if ($retrySafe -and (Get-Command Invoke-CoinExWithRetry -ErrorAction SilentlyContinue)) {
+                return Invoke-CoinExWithRetry -Action {
+                    Invoke-RestMethod -Uri ($COINEX_BASE_URL + $path) -Method POST -Headers $h -Body ([System.Text.Encoding]::UTF8.GetBytes($json)) -ErrorAction Stop
+                }
+            }
+            else {
+                return Invoke-RestMethod -Uri ($COINEX_BASE_URL + $path) -Method POST -Headers $h -Body ([System.Text.Encoding]::UTF8.GetBytes($json)) -ErrorAction Stop
+            }
+        } -MaxWaitMs 10000
+        
+        if ($result.success) {
+            return $result.result
+        }
+        else {
+            throw "Rate limit error: $($result.error)"
+        }
+    }
+    
+    # Fallback: sem rate limiter (backward compatibility)
     if ($retrySafe -and (Get-Command Invoke-WithRetry -ErrorAction SilentlyContinue)) {
         return Invoke-WithRetry -ScriptBlock {
             Invoke-RestMethod -Uri ($COINEX_BASE_URL + $path) -Method POST -Headers $h -Body ([System.Text.Encoding]::UTF8.GetBytes($json)) -ErrorAction Stop

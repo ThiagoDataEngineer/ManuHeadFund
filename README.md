@@ -1,267 +1,255 @@
-# 🚀 ManuHeadFund - Professional Trading System
+# CoinEx AI Trading System
 
-Sistema de trading automatizado para CoinEx com dashboard profissional e alertas Telegram.
-
-![Trading Pipeline](https://github.com/SEU_USUARIO/Coinex_AI_USER_API/actions/workflows/trading-pipeline.yml/badge.svg)
+Sistema automatizado de trading com IA para CoinEx Futures.
 
 ---
 
-## ✨ Features
+## 🚀 SETUP RÁPIDO (1 Comando)
 
-### 📊 Dashboard Profissional
-- Design inspirado em Refinitiv Eikon e Bloomberg
-- Métricas em tempo real (P&L, Win Rate, Sharpe, Max DD)
-- Trailing stop indicator com animação
-- Charts interativos (Chart.js)
-- Auto-refresh a cada 15 minutos
-- **[Ver Dashboard Online →](https://SEU_USUARIO.github.io/Coinex_AI_USER_API/)**
+### Clique direito → Executar com PowerShell:
+```
+SETUP_COMPLETO_OCULTO_ADMIN.ps1
+```
 
-### 🤖 Risk Manager Automático
-- Monitora posições abertas
-- Trailing stop automático (lucro > 3%)
-- Alertas de liquidação próxima
-- Adiciona margem automaticamente
-- Executa a cada 15 minutos
+Isso vai:
+1. ✅ Configurar trailing stop para rodar OCULTO
+2. ✅ Configurar dashboard HTML para atualizar OCULTO
+3. ✅ Abrir dashboard no navegador
+4. ✅ Criar atalho na área de trabalho
 
-### 📱 Alertas Telegram
-- Trailing stop ativado
-- Posições abertas/fechadas
-- Alertas de risco
-- Resumo diário
-- Notificações em tempo real
+**Depois disso, você usa APENAS o Dashboard HTML no navegador!**
 
-### ☁️ Cloud-Native
-- Roda no GitHub Actions (grátis)
-- Não precisa máquina ligada
-- Logs completos na nuvem
-- Deploy automático
+**PowerShell NÃO vai mais aparecer!** 🔇
 
 ---
 
-## 🚀 Quick Start
+## 📊 Dashboard HTML
 
-### 1. Clone o Repositório
-```bash
-git clone https://github.com/SEU_USUARIO/Coinex_AI_USER_API.git
-cd Coinex_AI_USER_API
-```
+### Abrir Dashboard:
+- Clique no atalho "CoinEx Dashboard" na área de trabalho
+- OU abra: `dashboard\index.html`
 
-### 2. Configure Secrets no GitHub
-**Settings** → **Secrets and variables** → **Actions**
-
-```
-COINEX_ACCESS_ID     = seu_access_id
-COINEX_SECRET_KEY    = seu_secret_key
-TELEGRAM_BOT_TOKEN   = seu_bot_token
-TELEGRAM_CHAT_ID     = seu_chat_id
-```
-
-### 3. Ative GitHub Actions
-**Actions** → **Enable workflows**
-
-### 4. Pronto! 🎉
-Sistema roda automaticamente a cada 15 minutos.
-
-**[📖 Guia Completo de Setup →](SETUP_RAPIDO_GITHUB.md)**
+### Recursos:
+- ✅ Posições abertas com PNL em tempo real
+- ✅ Capital disponível
+- ✅ Alertas visuais (posições sem stop loss)
+- ✅ Auto-refresh a cada 5 minutos
+- ✅ Design profissional (estilo terminal financeiro)
 
 ---
 
-## 📊 Dashboard
+## ⚠️ AÇÃO URGENTE: Proteger NEAR
 
-### Local
-```powershell
-.\scripts\generate_dashboard_elite.ps1
-Start-Process dashboard\index.html
+Depois do setup, execute UMA VEZ (clique direito → Executar com PowerShell):
+```
+PROTECT_NEAR_NOW.ps1
 ```
 
-### Online (GitHub Pages)
-```
-https://SEU_USUARIO.github.io/Coinex_AI_USER_API/
-```
+Isso configura o stop loss da posição NEAR que está desprotegida.
 
 ---
 
-## 🔔 Telegram
-
-### Setup
-```powershell
-.\scripts\setup_telegram_quick.ps1 -Token "SEU_TOKEN" -ChatId "SEU_CHAT_ID"
-```
-
-### Testar
-```powershell
-. .\agents\lib_telegram.ps1
-Telegram-SendMessage -Message "Teste"
-```
-
----
-
-## 🛠️ Estrutura
+## 📁 Estrutura do Projeto
 
 ```
 Coinex_AI_USER_API/
-├── .github/
-│   └── workflows/
-│       └── trading-pipeline.yml    # GitHub Actions
-├── agents/
-│   ├── lib_coinex.ps1              # API CoinEx
-│   ├── lib_telegram.ps1            # Telegram Bot
-│   └── lib_position_risk_manager.ps1
-├── scripts/
-│   ├── generate_dashboard_elite.ps1
-│   ├── position_risk_cron.ps1
-│   └── setup_telegram_quick.ps1
+├── SETUP_COMPLETO_OCULTO_ADMIN.ps1  ← COMECE AQUI
+├── PROTECT_NEAR_NOW.ps1             ← Execute depois do setup
 ├── dashboard/
-│   └── index.html                  # Dashboard gerado
-├── config/
-│   └── telegram.json               # Config Telegram
-└── README.md
+│   └── index.html                   ← Dashboard visual
+├── agents/                          ← Código principal
+├── scripts/                         ← Scripts de automação
+├── tests/                           ← Testes TDD
+├── logs/                            ← Logs do sistema
+└── docs/                            ← Documentação
 ```
 
 ---
 
-## 📈 Métricas
+## 🔧 Tasks Agendadas (Ocultas)
 
-### Dashboard
-- **Open Positions** - Posições abertas
-- **Total P&L** - Lucro/Prejuízo total
-- **Win Rate** - Taxa de acerto (%)
-- **Capital** - Capital disponível
-- **Sharpe Ratio** - Retorno ajustado ao risco
-- **Max Drawdown** - Maior perda (%)
+Depois do setup, estas tasks rodam automaticamente em background:
 
-### Charts
-- **Win/Loss Distribution** - Distribuição de ganhos/perdas
-- **Risk Metrics** - Profit Factor, Sharpe, Max DD
+### 1. CoinEx_TrailingStop_Monitor
+- **Frequência**: A cada 5 minutos
+- **Função**: Ajustar trailing stops das posições
+- **Status**: Oculto (sem janela)
+
+### 2. CoinEx_Update_Dashboard_HTML
+- **Frequência**: A cada 5 minutos
+- **Função**: Atualizar dashboard HTML com dados da API
+- **Status**: Oculto (sem janela)
 
 ---
 
-## 🤖 Automação
+## 📝 Ver Logs (Se Precisar)
 
-### GitHub Actions (A cada 15 min)
-- ✅ Risk Manager
-- ✅ Dashboard Generator
-- ✅ Health Check
-- ✅ Telegram Alerts
-
-### Cron Jobs Locais (Opcional)
 ```powershell
-# Ver jobs
-Get-ScheduledTask | Where-Object {$_.TaskName -like "CoinEx*"}
+# Ver últimas 50 linhas
+Get-Content logs\trailing_stop_monitor.log -Tail 50
 
-# Executar manualmente
-.\scripts\position_risk_cron.ps1
+# Ver ao vivo (Ctrl+C para sair)
+Get-Content logs\trailing_stop_monitor.log -Tail 50 -Wait
 ```
 
 ---
 
-## 📱 Alertas Telegram
+## 🛑 Controlar Tasks (Se Precisar)
 
-### Automáticos
-- 📈 Trailing stop ativado (lucro > 3%)
-- ⚠️ Liquidação próxima (< 5%)
-- 💰 Margem adicionada
-- 🔄 Risk Manager executado
+### Ver Tasks
+```powershell
+Get-ScheduledTask | Where-Object { $_.TaskName -like "*CoinEx*" }
+```
 
-### Manuais
-- 🚀 Posição aberta
-- ✅ Posição fechada
-- 📊 Resumo diário
+### Desabilitar
+```powershell
+Disable-ScheduledTask -TaskName "CoinEx_TrailingStop_Monitor"
+Disable-ScheduledTask -TaskName "CoinEx_Update_Dashboard_HTML"
+```
 
----
+### Habilitar
+```powershell
+Enable-ScheduledTask -TaskName "CoinEx_TrailingStop_Monitor"
+Enable-ScheduledTask -TaskName "CoinEx_Update_Dashboard_HTML"
+```
 
-## 🔧 Configuração
-
-### CoinEx API
-1. [CoinEx](https://www.coinex.com/) → **API Management**
-2. Criar API Key
-3. Copiar Access ID e Secret Key
-4. Adicionar aos Secrets do GitHub
-
-### Telegram Bot
-1. Telegram → **@BotFather** → `/newbot`
-2. Copiar Bot Token
-3. Telegram → **@userinfobot** → Copiar Chat ID
-4. Adicionar aos Secrets do GitHub
+### Remover
+```powershell
+Unregister-ScheduledTask -TaskName "CoinEx_TrailingStop_Monitor" -Confirm:$false
+Unregister-ScheduledTask -TaskName "CoinEx_Update_Dashboard_HTML" -Confirm:$false
+```
 
 ---
 
-## 💰 Custos
+## 🎯 Funcionalidades
 
-### GitHub Actions (Grátis)
-- **2.000 minutos/mês** grátis
-- Workflow a cada 15min = ~2.880 min/mês
-- ✅ **Dentro do limite!**
+### ✅ Implementado
 
-### Alternativas
-- **AWS Lambda** - Grátis até 1M requests/mês
-- **Google Cloud Functions** - Grátis até 2M invocations/mês
-- **Heroku** - $7/mês (dyno sempre ligado)
-- **VPS** - $5-10/mês (controle total)
+1. **Validação Pós-Execução**
+   - Verifica se stop loss foi configurado
+   - Retry automático com fallback
+   - Alertas se posição sem proteção
+
+2. **Trailing Stop Inteligente**
+   - Baseado em ATR, suportes técnicos e leverage
+   - Threshold de ativação: +3% de lucro
+   - Ajustes dinâmicos por volatilidade
+
+3. **Dashboard HTML**
+   - Design profissional
+   - Auto-refresh a cada 5 minutos
+   - Alertas visuais
+   - Dados reais da API
+
+4. **Tasks Ocultas**
+   - Rodam em background
+   - Sem janelas do PowerShell
+   - Logs auditáveis
 
 ---
 
 ## 📚 Documentação
 
-- [Setup Rápido GitHub](SETUP_RAPIDO_GITHUB.md)
-- [GitHub Actions Completo](GITHUB_ACTIONS_SETUP.md)
-- [Dashboard Profissional](DASHBOARD_PROFESSIONAL_REFINADO_2026_05_23.md)
-- [Telegram Configurado](TELEGRAM_CONFIGURADO_2026_05_23.md)
+### Guias
+- `COMECE_AQUI.md` - Setup rápido
+- `docs/guides/TASK_OCULTA_GUIA.md` - Tasks ocultas
+- `docs/guides/QUICK_START_VALIDACAO.md` - Sistema de validação
+
+### Documentação Técnica
+- `docs/current/` - Documentação atual (2026-05-24)
+- `docs/archive/` - Documentação antiga
 
 ---
 
-## 🐛 Troubleshooting
+## 🧪 Testes
 
-### Workflow não roda
-- ✅ Verificar se Actions está habilitado
-- ✅ Verificar se secrets estão configurados
-- ✅ Ver logs em **Actions**
+```powershell
+# Executar testes
+Invoke-Pester tests\lib_order_validation.Tests.ps1
+```
 
-### API CoinEx falha
-- ✅ Verificar Access ID e Secret Key
-- ✅ Verificar se IP está na whitelist
-
-### Telegram não envia
-- ✅ Verificar Bot Token e Chat ID
-- ✅ Enviar mensagem para o bot primeiro
+**Status**: ✅ 9/9 testes passando
 
 ---
 
-## 🤝 Contribuindo
+## 🔄 Workflow Recomendado
 
-Pull requests são bem-vindos! Para mudanças grandes, abra uma issue primeiro.
+### Setup Inicial (Uma Vez)
+1. Execute: `SETUP_COMPLETO_OCULTO_ADMIN.ps1` (como admin)
+2. Dashboard abre no navegador
+3. Execute: `PROTECT_NEAR_NOW.ps1` (proteger NEAR)
+
+### Uso Diário
+1. Abra o dashboard HTML (atalho na área de trabalho)
+2. Deixe aberto (atualiza a cada 5 minutos)
+3. Pronto! Sistema roda sozinho em background
 
 ---
 
-## 📄 Licença
+## 📊 Status Atual
 
-[MIT](LICENSE)
+### Posições
+```
+BNBUSDT  : +2.13% ✅ Stop: $627.82
+SOLUSDT  : +0.69% ✅ Stop: $82.30
+LINKUSDT : +0.29% ✅ Stop: $9.15
+UNIUSDT  : -0.33% ✅ Stop: $3.30
+NEARUSDT : -0.96% ❌ SEM STOP LOSS (URGENTE)
+```
+
+### Tasks
+```
+CoinEx_TrailingStop_Monitor: Ready (oculto)
+CoinEx_Update_Dashboard_HTML: Ready (oculto)
+```
 
 ---
 
-## 🎯 Roadmap
+## 🎓 Lições Aprendidas
 
-- [x] Dashboard profissional
-- [x] Risk Manager automático
-- [x] Alertas Telegram
-- [x] GitHub Actions
-- [x] GitHub Pages
-- [ ] Backtesting integrado
-- [ ] Machine Learning para sinais
-- [ ] Multi-exchange support
-- [ ] Mobile app
+1. **Nunca confie na API sem validação**
+   - CoinEx-PlaceOrder com -stopLoss não funciona
+   - Sempre validar resultado real
+
+2. **Tasks ocultas são essenciais**
+   - Rodam em background sem interromper
+   - Logs auditáveis para troubleshooting
+
+3. **Dashboard HTML é melhor para monitoramento**
+   - Visual e profissional
+   - Auto-refresh automático
+   - Pode deixar aberto em segunda tela
 
 ---
 
 ## 📞 Suporte
 
-- **Issues:** [GitHub Issues](https://github.com/SEU_USUARIO/Coinex_AI_USER_API/issues)
-- **Telegram:** @SEU_USUARIO
-- **Email:** seu@email.com
+### Comandos Rápidos
+```powershell
+# Setup completo
+.\SETUP_COMPLETO_OCULTO_ADMIN.ps1
+
+# Proteger NEAR
+.\PROTECT_NEAR_NOW.ps1
+
+# Abrir dashboard
+Start-Process "dashboard\index.html"
+
+# Ver logs
+Get-Content logs\trailing_stop_monitor.log -Tail 50
+
+# Ver tasks
+Get-ScheduledTask | Where-Object { $_.TaskName -like "*CoinEx*" }
+```
 
 ---
 
-**ManuHeadFund** - Professional Trading System  
-Made with ❤️ by [Seu Nome]
+## 🚀 Próximos Passos
 
-![Dashboard Preview](https://via.placeholder.com/800x400?text=Dashboard+Preview)
+1. ⚡ **AGORA**: Execute `SETUP_COMPLETO_OCULTO_ADMIN.ps1`
+2. ⚠️ **URGENTE**: Execute `PROTECT_NEAR_NOW.ps1`
+3. 📊 **DIÁRIO**: Abra dashboard HTML (atalho na área de trabalho)
+
+---
+
+**COMECE AGORA: `SETUP_COMPLETO_OCULTO_ADMIN.ps1`** 🚀

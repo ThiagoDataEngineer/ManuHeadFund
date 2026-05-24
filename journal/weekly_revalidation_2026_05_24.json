@@ -1,0 +1,158 @@
+{
+  "timestamp": "2026-05-24T14:15:19.047896+00:00",
+  "whitelist_source": "per_asset_whitelist_2026_05_20_v3_10.json",
+  "n_revalidated": 11,
+  "stable": [
+    "XMRUSDT",
+    "ZECUSDT",
+    "CFGUSDT",
+    "XRPUSDT",
+    "BCHUSDT",
+    "SUIUSDT"
+  ],
+  "degraded": [
+    "BTCUSDT"
+  ],
+  "failing_gate": [
+    "RENDERUSDT",
+    "INJUSDT",
+    "PENDLEUSDT",
+    "SKYUSDT"
+  ],
+  "errors": [],
+  "results": [
+    {
+      "market": "RENDERUSDT",
+      "tier": "A",
+      "status": "FAILING_GATE",
+      "prior_sharpe": 3.63,
+      "current_sharpe": -7.72,
+      "degradation_pct": 312.7,
+      "current_dsr": 0.0,
+      "current_pbo": 0.17,
+      "best_params": "s3.0/t2.0",
+      "n_trades": 82
+    },
+    {
+      "market": "BTCUSDT",
+      "tier": "A",
+      "status": "DEGRADED",
+      "prior_sharpe": 5.04,
+      "current_sharpe": 2.63,
+      "degradation_pct": 47.8,
+      "current_dsr": 0.71,
+      "current_pbo": 0.2,
+      "best_params": "s3.0/t2.0",
+      "n_trades": 120
+    },
+    {
+      "market": "INJUSDT",
+      "tier": "A",
+      "status": "FAILING_GATE",
+      "prior_sharpe": 3.88,
+      "current_sharpe": -7.0,
+      "degradation_pct": 280.4,
+      "current_dsr": 0.01,
+      "current_pbo": 0.67,
+      "best_params": "s1.0/t3.0",
+      "n_trades": 56
+    },
+    {
+      "market": "XMRUSDT",
+      "tier": "B",
+      "status": "STABLE",
+      "prior_sharpe": 2.23,
+      "current_sharpe": 4.79,
+      "degradation_pct": -114.4,
+      "current_dsr": 0.99,
+      "current_pbo": 0.0,
+      "best_params": "s3.0/t3.0",
+      "n_trades": 238
+    },
+    {
+      "market": "ZECUSDT",
+      "tier": "A",
+      "status": "STABLE",
+      "prior_sharpe": 5.31,
+      "current_sharpe": 6.12,
+      "degradation_pct": -15.3,
+      "current_dsr": 1.0,
+      "current_pbo": 0.0,
+      "best_params": "s3.0/t3.0",
+      "n_trades": 256
+    },
+    {
+      "market": "CFGUSDT",
+      "tier": "A",
+      "status": "STABLE",
+      "prior_sharpe": 8.48,
+      "current_sharpe": 8.48,
+      "degradation_pct": 0.0,
+      "current_dsr": 1.0,
+      "current_pbo": 0.1,
+      "best_params": "s3.0/t2.0",
+      "n_trades": 170
+    },
+    {
+      "market": "PENDLEUSDT",
+      "tier": "A",
+      "status": "FAILING_GATE",
+      "prior_sharpe": 8.75,
+      "current_sharpe": 0.72,
+      "degradation_pct": 91.8,
+      "current_dsr": 0.28,
+      "current_pbo": 0.2,
+      "best_params": "s3.0/t2.0",
+      "n_trades": 166
+    },
+    {
+      "market": "SKYUSDT",
+      "tier": "B",
+      "status": "FAILING_GATE",
+      "prior_sharpe": 2.57,
+      "current_sharpe": -1.02,
+      "degradation_pct": 139.5,
+      "current_dsr": 0.04,
+      "current_pbo": 0.05,
+      "best_params": "s3.0/t2.0",
+      "n_trades": 160
+    },
+    {
+      "market": "XRPUSDT",
+      "tier": "B",
+      "status": "STABLE",
+      "prior_sharpe": 3.72,
+      "current_sharpe": 3.66,
+      "degradation_pct": 1.5,
+      "current_dsr": 0.91,
+      "current_pbo": 0.15,
+      "best_params": "s3.0/t5.0",
+      "n_trades": 136
+    },
+    {
+      "market": "BCHUSDT",
+      "tier": "B",
+      "status": "STABLE",
+      "prior_sharpe": 2.67,
+      "current_sharpe": 3.55,
+      "degradation_pct": -32.7,
+      "current_dsr": 0.9,
+      "current_pbo": 0.0,
+      "best_params": "s3.0/t2.0",
+      "n_trades": 187
+    },
+    {
+      "market": "SUIUSDT",
+      "tier": "B",
+      "status": "STABLE",
+      "prior_sharpe": 2.59,
+      "current_sharpe": 2.55,
+      "degradation_pct": 1.7,
+      "current_dsr": 0.73,
+      "current_pbo": 0.05,
+      "best_params": "s3.0/t2.0",
+      "n_trades": 166
+    }
+  ],
+  "elapsed_sec": 19.7
+}

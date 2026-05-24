@@ -1,22 +1,20 @@
-<!DOCTYPE html>
-<html lang="en">
+﻿<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="refresh" content="300">
-    <title>ManuHeadFund | Trading Dashboard</title>
+    <title>CoinEx Trading Dashboard</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
             background: linear-gradient(135deg, #0a0e27 0%, #1a1f3a 100%);
             color: #e8eaf6;
             padding: 0;
             min-height: 100vh;
-            overflow-x: hidden;
         }
         .header {
             background: linear-gradient(180deg, #1e2139 0%, #181b2e 100%);
@@ -38,9 +36,9 @@
             color: #9fa8da;
             font-weight: 400;
         }
-        .container { max-width: 1800px; margin: 0 auto; padding: 30px; }
-
-        /* Metrics Grid - Refinitiv Style */
+        .container { max-width: 1900px; margin: 0 auto; padding: 30px; }
+        
+        /* Metrics Grid */
         .metrics-grid {
             display: grid;
             grid-template-columns: repeat(6, 1fr);
@@ -78,8 +76,8 @@
         .metric-card.negative .value { color: #ef5350; }
         .metric-card.warning .value { color: #ffa726; }
         .metric-card.info .value { color: #42a5f5; }
-
-        /* Panel - Professional Style */
+        
+        /* Panel */
         .panel {
             background: linear-gradient(135deg, #1e2139 0%, #252a45 100%);
             border: 1px solid rgba(100, 181, 246, 0.12);
@@ -97,43 +95,42 @@
             color: #64b5f6;
             text-transform: uppercase;
             letter-spacing: 1px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
-        .panel-body {
-            padding: 24px;
-        }
-
-        /* Table - Financial Terminal Style */
+        .panel-body { padding: 24px; }
+        
+        /* Table */
         table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 0.9em;
+            font-size: 0.85em;
         }
         th {
             background: rgba(100, 181, 246, 0.08);
             color: #7986cb;
-            padding: 14px 16px;
+            padding: 12px 14px;
             text-align: left;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            font-size: 0.75em;
+            font-size: 0.7em;
             border-bottom: 1px solid rgba(100, 181, 246, 0.15);
         }
         td {
-            padding: 16px;
+            padding: 14px;
             border-bottom: 1px solid rgba(100, 181, 246, 0.06);
             color: #c5cae9;
         }
-        tr:hover {
-            background: rgba(100, 181, 246, 0.04);
-        }
-
-        /* Badge - Subtle Professional */
+        tr:hover { background: rgba(100, 181, 246, 0.04); }
+        
+        /* Badge */
         .badge {
             display: inline-block;
-            padding: 5px 12px;
+            padding: 4px 10px;
             border-radius: 4px;
-            font-size: 0.75em;
+            font-size: 0.7em;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
@@ -148,269 +145,385 @@
             color: #ef5350;
             border: 1px solid rgba(239, 83, 80, 0.3);
         }
-
-        /* Status Colors - Professional */
+        
+        /* Status */
         .status-positive { color: #66bb6a; font-weight: 600; }
         .status-negative { color: #ef5350; font-weight: 600; }
         .status-neutral { color: #9fa8da; font-weight: 600; }
-
-        /* Trailing Indicator - Elegant */
+        .status-info { color: #42a5f5; font-weight: 600; }
+        
+        /* Trailing */
         .trailing-active {
             display: inline-flex;
             align-items: center;
-            gap: 8px;
-            padding: 6px 14px;
+            gap: 6px;
+            padding: 5px 12px;
             background: rgba(102, 187, 106, 0.15);
             color: #66bb6a;
             border: 1px solid rgba(102, 187, 106, 0.3);
             border-radius: 4px;
-            font-size: 0.75em;
+            font-size: 0.7em;
             font-weight: 600;
             text-transform: uppercase;
             letter-spacing: 0.5px;
         }
-        .trailing-active i {
-            animation: pulse 2s ease-in-out infinite;
-        }
+        .trailing-active i { animation: pulse 2s ease-in-out infinite; }
         .trailing-waiting {
             color: #5c6bc0;
-            font-size: 0.75em;
+            font-size: 0.7em;
             text-transform: uppercase;
             font-weight: 500;
         }
-
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
+        
+        /* Logs */
+        .logs-container {
+            background: #0d1117;
+            border-radius: 6px;
+            padding: 16px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8em;
         }
-
-        /* Charts Container */
-        .charts-container {
+        .log-line {
+            padding: 6px 10px;
+            margin-bottom: 4px;
+            border-left: 3px solid transparent;
+            border-radius: 3px;
+        }
+        .log-normal { color: #9fa8da; border-left-color: #5c6bc0; }
+        .log-success { color: #66bb6a; border-left-color: #66bb6a; background: rgba(102, 187, 106, 0.05); }
+        .log-warning { color: #ffa726; border-left-color: #ffa726; background: rgba(255, 167, 38, 0.05); }
+        .log-error { color: #ef5350; border-left-color: #ef5350; background: rgba(239, 83, 80, 0.05); }
+        .log-line i { margin-right: 8px; opacity: 0.7; }
+        
+        /* Grid Layout */
+        .grid-2 {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
             gap: 24px;
         }
-        .chart-panel {
-            background: linear-gradient(135deg, #1e2139 0%, #252a45 100%);
-            border: 1px solid rgba(100, 181, 246, 0.12);
-            border-radius: 8px;
-            padding: 24px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
         }
-        .chart-panel h3 {
-            color: #64b5f6;
-            font-size: 0.85em;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            margin-bottom: 20px;
-            font-weight: 600;
-        }
-
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: 80px 40px;
-            color: #5c6bc0;
-        }
-        .empty-state i {
-            font-size: 3.5em;
-            margin-bottom: 20px;
-            display: block;
-            opacity: 0.4;
-        }
-        .empty-state p {
-            font-size: 0.9em;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            font-weight: 500;
-        }
-
-        /* Responsive */
-        @media (max-width: 1200px) {
+        
+        @media (max-width: 1400px) {
             .metrics-grid { grid-template-columns: repeat(3, 1fr); }
-            .charts-container { grid-template-columns: 1fr; }
-        }
-        @media (max-width: 768px) {
-            .metrics-grid { grid-template-columns: repeat(2, 1fr); }
-            .header { flex-direction: column; gap: 10px; text-align: center; padding: 20px; }
-            .container { padding: 20px; }
+            .grid-2 { grid-template-columns: 1fr; }
         }
     </style>
 </head>
 <body>
     <div class="header">
-        <div class="logo">ManuHeadFund</div>
-        <div class="timestamp">2026-05-23 22:16:35 UTC</div>
+        <div class="logo"><i class="fas fa-chart-line"></i> CoinEx Trading Dashboard</div>
+        <div class="timestamp"><i class="far fa-clock"></i> 2026-05-24 11:35:16 UTC | Auto-refresh: 5 min</div>
     </div>
     
     <div class="container">
         <!-- Metrics Grid -->
         <div class="metrics-grid">
             <div class="metric-card info">
-                <div class="label">Open Positions</div>
-                <div class="value">1</div>
+                <div class="label"><i class="fas fa-layer-group"></i> PosiÃ§Ãµes Abertas</div>
+                <div class="value">4</div>
             </div>
             <div class="metric-card negative">
-                <div class="label">Total P&L</div>
-                <div class="value">$-612.03</div>
-            </div>
-            <div class="metric-card warning">
-                <div class="label">Win Rate</div>
-                <div class="value">49%</div>
+                <div class="label"><i class="fas fa-dollar-sign"></i> PNL Total</div>
+                <div class="value">$-39.68</div>
             </div>
             <div class="metric-card">
-                <div class="label">Available Capital</div>
-                <div class="value">$2157</div>
+                <div class="label"><i class="fas fa-wallet"></i> Capital DisponÃ­vel</div>
+                <div class="value">$1579.25</div>
             </div>
-            <div class="metric-card negative">
-                <div class="label">Sharpe Ratio</div>
+            <div class="metric-card positive">
+                <div class="label"><i class="fas fa-shield-alt"></i> Sem Stop Loss</div>
                 <div class="value">0</div>
             </div>
-            <div class="metric-card negative">
-                <div class="label">Max Drawdown</div>
-                <div class="value">63.76%</div>
+            <div class="metric-card info">
+                <div class="label"><i class="fas fa-chart-line"></i> Trailing Ativo</div>
+                <div class="value">0</div>
             </div>
-        </div>        
-        <!-- Open Positions -->
+            <div class="metric-card positive">
+                <div class="label"><i class="fas fa-tasks"></i> Tasks Ativas</div>
+                <div class="value">16</div>
+            </div>
+        </div>
+        
+        <!-- Positions -->
         <div class="panel">
-            <div class="panel-header">Open Positions</div>
+            <div class="panel-header">
+                <span><i class="fas fa-chart-bar"></i> PosiÃ§Ãµes Abertas</span>
+                <span style="font-size: 0.9em; color: #9fa8da;">4 posiÃ§Ã£o(Ãµes)</span>
+            </div>
             <div class="panel-body">
                 <table>
                     <thead>
                         <tr>
                             <th>Market</th>
                             <th>Side</th>
-                            <th>Entry Price</th>
-                            <th>Current Price</th>
-                            <th>P&L %</th>
-                            <th>Unrealized P&L</th>
+                            <th>Entry</th>
+                            <th>Current</th>
+                            <th>PNL %</th>
+                            <th>PNL USD</th>
                             <th>Leverage</th>
-                            <th>Trailing Stop</th>
+                            <th>Margin</th>
+                            <th>Stop Loss</th>
+                            <th>Take Profit</th>
+                            <th>Trailing</th>
                         </tr>
                     </thead>
-                    <tbody>                        <tr>
+                    <tbody>
+                        <tr>
+                            <td><strong>UNIUSDT</strong></td>
+                            <td><span class='badge long'>LONG</span></td>
+                            <td>$3.46</td>
+                            <td>$0</td>
+                            <td class='status-negative'>0%</td>
+                            <td class='status-negative'>$-11.59</td>
+                            <td>5x</td>
+                            <td>$99.51</td>
+                            <td>$3.3</td>
+                            <td>$3.6</td>
+                            <td><span class='trailing-waiting'>Aguardando +3%</span></td>
+                        </tr>                        <tr>
+                            <td><strong>LINKUSDT</strong></td>
+                            <td><span class='badge long'>LONG</span></td>
+                            <td>$9.5858</td>
+                            <td>$0</td>
+                            <td class='status-negative'>0%</td>
+                            <td class='status-negative'>$-15.09</td>
+                            <td>5x</td>
+                            <td>$183.28</td>
+                            <td>$9.15</td>
+                            <td>$10</td>
+                            <td><span class='trailing-waiting'>Aguardando +3%</span></td>
+                        </tr>                        <tr>
                             <td><strong>BNBUSDT</strong></td>
                             <td><span class='badge long'>LONG</span></td>
                             <td>$647.06</td>
-                            <td>$657</td>
-                            <td class='status-positive'>1.54%</td>
-                            <td class='status-positive'>$0.7</td>
-                            <td>—</td>
-                            <td><span class='trailing-waiting'>Waiting +3%</span></td>
-                        </tr>                    </tbody>
+                            <td>$0</td>
+                            <td class='status-positive'>0%</td>
+                            <td class='status-positive'>$0.63</td>
+                            <td>50x</td>
+                            <td>$0.91</td>
+                            <td>$627.82</td>
+                            <td>$679.6</td>
+                            <td><span class='trailing-waiting'>Aguardando +3%</span></td>
+                        </tr>                        <tr>
+                            <td><strong>SOLUSDT</strong></td>
+                            <td><span class='badge long'>LONG</span></td>
+                            <td>$86.0367</td>
+                            <td>$0</td>
+                            <td class='status-negative'>0%</td>
+                            <td class='status-negative'>$-13.64</td>
+                            <td>5x</td>
+                            <td>$283.92</td>
+                            <td>$82.3</td>
+                            <td>$89.6</td>
+                            <td><span class='trailing-waiting'>Aguardando +3%</span></td>
+                        </tr>
+                    </tbody>
                 </table>
             </div>
-        </div>        
-        <!-- Performance Charts -->
-        <div class="panel">
-            <div class="panel-header">Performance Analytics</div>
-            <div class="panel-body">
-                <div class="charts-container">
-                    <div class="chart-panel">
-                        <h3>Win/Loss Distribution</h3>
-                        <canvas id="winLossChart"></canvas>
-                    </div>
-                    <div class="chart-panel">
-                        <h3>Risk Metrics</h3>
-                        <canvas id="metricsChart"></canvas>
+        </div>
+        
+        <div class="grid-2">
+            <!-- Tasks -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span><i class="fas fa-cogs"></i> Tasks Agendadas</span>
+                    <span style="font-size: 0.9em; color: #9fa8da;">18 task(s) | 16 ativas</span>
+                </div>
+                <div class="panel-body">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Task</th>
+                                <th>Status</th>
+                                <th>Ãšltima Exec</th>
+                                <th>PrÃ³xima Exec</th>
+                                <th>Resultado</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        <tr>
+                            <td><strong>CoinExDaemonRestart</strong></td>
+                            <td><span class='status-positive'><i class='fas fa-check-circle'></i> Ready</span></td>
+                            <td>24/05 11:14</td>
+                            <td>25/05 03:00</td>
+                            <td><span class='status-positive'>OK</span></td>
+                        </tr>                        <tr>
+                            <td><strong>CoinExDailyDigest</strong></td>
+                            <td><span class='status-positive'><i class='fas fa-check-circle'></i> Ready</span></td>
+                            <td>30/11 00:00</td>
+                            <td>24/05 23:55</td>
+                            <td><span class='status-negative'>ERRO</span></td>
+                        </tr>                        <tr>
+                            <td><strong>CoinExHourlyHeartbeat</strong></td>
+                            <td><span class='status-positive'><i class='fas fa-check-circle'></i> Ready</span></td>
+                            <td>24/05 10:59</td>
+                            <td>24/05 11:59</td>
+                            <td><span class='status-positive'>OK</span></td>
+                        </tr>                        <tr>
+                            <td><strong>CoinExKellyGraduation</strong></td>
+                            <td><span class='status-positive'><i class='fas fa-check-circle'></i> Ready</span></td>
+                            <td>30/11 00:00</td>
+                            <td>25/05 02:35</td>
+                            <td><span class='status-negative'>ERRO</span></td>
+                        </tr>                        <tr>
+                            <td><strong>CoinExParallelGraduation</strong></td>
+                            <td><span class='status-positive'><i class='fas fa-check-circle'></i> Ready</span></td>
+                            <td>30/11 00:00</td>
+                            <td>25/05 02:30</td>
+                            <td><span class='status-negative'>ERRO</span></td>
+                        </tr>                        <tr>
+                            <td><strong>CoinExPromotionCron</strong></td>
+                            <td><span class='status-positive'><i class='fas fa-check-circle'></i> Ready</span></td>
+                            <td>24/05 11:14</td>
+                            <td>25/05 02:00</td>
+                            <td><span class='status-positive'>OK</span></td>
+                        </tr>                        <tr>
+                            <td><strong>CoinExShortScanner</strong></td>
+                            <td><span class='status-positive'><i class='fas fa-check-circle'></i> Ready</span></td>
+                            <td>24/05 10:37</td>
+                            <td>24/05 11:37</td>
+                            <td><span class='status-positive'>OK</span></td>
+                        </tr>                        <tr>
+                            <td><strong>CoinExStalenessAudit</strong></td>
+                            <td><span class='status-positive'><i class='fas fa-check-circle'></i> Ready</span></td>
+                            <td>30/11 00:00</td>
+                            <td>25/05 02:00</td>
+                            <td><span class='status-negative'>ERRO</span></td>
+                        </tr>                        <tr>
+                            <td><strong>CoinExToriProximity</strong></td>
+                            <td><span class='status-positive'><i class='fas fa-check-circle'></i> Ready</span></td>
+                            <td>24/05 11:22</td>
+                            <td>24/05 11:37</td>
+                            <td><span class='status-positive'>OK</span></td>
+                        </tr>                        <tr>
+                            <td><strong>CoinExVolClimax</strong></td>
+                            <td><span class='status-positive'><i class='fas fa-check-circle'></i> Ready</span></td>
+                            <td>24/05 11:33</td>
+                            <td>24/05 12:33</td>
+                            <td><span class='status-positive'>OK</span></td>
+                        </tr>                        <tr>
+                            <td><strong>CoinExWeeklyCostReport</strong></td>
+                            <td><span class='status-positive'><i class='fas fa-check-circle'></i> Ready</span></td>
+                            <td>30/11 00:00</td>
+                            <td>24/05 23:00</td>
+                            <td><span class='status-negative'>ERRO</span></td>
+                        </tr>                        <tr>
+                            <td><strong>CoinExWeeklyDataRefresh</strong></td>
+                            <td><span class='status-positive'><i class='fas fa-check-circle'></i> Ready</span></td>
+                            <td>30/11 00:00</td>
+                            <td>30/05 22:00</td>
+                            <td><span class='status-negative'>ERRO</span></td>
+                        </tr>                        <tr>
+                            <td><strong>CoinExWhaleWatcher</strong></td>
+                            <td><span class='status-positive'><i class='fas fa-check-circle'></i> Ready</span></td>
+                            <td>24/05 11:30</td>
+                            <td>24/05 11:40</td>
+                            <td><span class='status-positive'>OK</span></td>
+                        </tr>                        <tr>
+                            <td><strong>CoinExWssForwardResolve</strong></td>
+                            <td><span class='status-positive'><i class='fas fa-check-circle'></i> Ready</span></td>
+                            <td>30/11 00:00</td>
+                            <td>30/05 23:00</td>
+                            <td><span class='status-negative'>ERRO</span></td>
+                        </tr>                        <tr>
+                            <td><strong>CoinEx_Dashboard_Elite</strong></td>
+                            <td><span class='status-neutral'><i class='fas fa-ban'></i> Disabled</span></td>
+                            <td>24/05 09:46</td>
+                            <td>24/05 11:36</td>
+                            <td><span class='status-positive'>OK</span></td>
+                        </tr>                        <tr>
+                            <td><strong>CoinEx_PositionRisk</strong></td>
+                            <td><span class='status-positive'><i class='fas fa-check-circle'></i> Ready</span></td>
+                            <td>24/05 11:32</td>
+                            <td>24/05 11:37</td>
+                            <td><span class='status-positive'>OK</span></td>
+                        </tr>                        <tr>
+                            <td><strong>CoinEx_TrailingStop_Monitor</strong></td>
+                            <td><span class='status-positive'><i class='fas fa-check-circle'></i> Ready</span></td>
+                            <td>24/05 11:31</td>
+                            <td>24/05 11:36</td>
+                            <td><span class='status-positive'>OK</span></td>
+                        </tr>                        <tr>
+                            <td><strong>CoinEx_Update_Dashboard_HTML</strong></td>
+                            <td><span class='status-info'><i class='fas fa-spinner fa-spin'></i> Running</span></td>
+                            <td>24/05 11:35</td>
+                            <td>24/05 11:40</td>
+                            <td><span class='status-negative'>ERRO</span></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <!-- Logs -->
+            <div class="panel">
+                <div class="panel-header">
+                    <span><i class="fas fa-file-alt"></i> Logs do Sistema</span>
+                    <span style="font-size: 0.9em; color: #9fa8da;">Ãšltimas 50 linhas</span>
+                </div>
+                <div class="panel-body">
+                    <div class="logs-container">
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:16:40]   SOLUSDT: NO UPDATE - Profit -1.09% below activation threshold (3%) (PNL -1.08868311960017%)</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:16:40] === TRAILING STOP MONITOR END ===</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:21:33] === TRAILING STOP MONITOR START ===</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:21:33] Buscando posicoes abertas...</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:21:38] Total positions: 4</div>
+<div class='log-line log-success'><i class='fas fa-check-circle'></i> [2026-05-24 11:21:38] Updated: 0</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:21:38] No update needed: 4</div>
+<div class='log-line log-error'><i class='fas fa-exclamation-circle'></i> [2026-05-24 11:21:38] Errors: 0</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:21:38] </div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:21:38] === VALIDACAO DE STOP LOSS ===</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:21:39] All positions have stop loss configured.</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:21:39] </div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:21:39] === TRAILING STOP RESULTS ===</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:21:39]   UNIUSDT: NO UPDATE - Profit -2.66% below activation threshold (3%) (PNL -2.66470858360072%)</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:21:39]   LINKUSDT: NO UPDATE - Profit -1.97% below activation threshold (3%) (PNL -1.97270963299883%)</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:21:39]   BNBUSDT: NO UPDATE - Profit 1.07% below activation threshold (3%) (PNL 1.0663616975242%)</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:21:39]   SOLUSDT: NO UPDATE - Profit -1.26% below activation threshold (3%) (PNL -1.26302739142225%)</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:21:39] === TRAILING STOP MONITOR END ===</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:26:33] === TRAILING STOP MONITOR START ===</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:26:33] Buscando posicoes abertas...</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:26:39] Total positions: 4</div>
+<div class='log-line log-success'><i class='fas fa-check-circle'></i> [2026-05-24 11:26:39] Updated: 0</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:26:39] No update needed: 4</div>
+<div class='log-line log-error'><i class='fas fa-exclamation-circle'></i> [2026-05-24 11:26:39] Errors: 0</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:26:39] </div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:26:39] === VALIDACAO DE STOP LOSS ===</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:26:40] All positions have stop loss configured.</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:26:40] </div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:26:40] === TRAILING STOP RESULTS ===</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:26:41]   UNIUSDT: NO UPDATE - Profit -2.38% below activation threshold (3%) (PNL -2.37569114961889%)</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:26:41]   LINKUSDT: NO UPDATE - Profit -1.74% below activation threshold (3%) (PNL -1.7369442300069%)</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:26:41]   BNBUSDT: NO UPDATE - Profit 1.23% below activation threshold (3%) (PNL 1.22708867802059%)</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:26:41]   SOLUSDT: NO UPDATE - Profit -1.12% below activation threshold (3%) (PNL -1.12355197396459%)</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:26:41] === TRAILING STOP MONITOR END ===</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:31:32] === TRAILING STOP MONITOR START ===</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:31:32] Buscando posicoes abertas...</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:31:37] Total positions: 4</div>
+<div class='log-line log-success'><i class='fas fa-check-circle'></i> [2026-05-24 11:31:37] Updated: 0</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:31:37] No update needed: 4</div>
+<div class='log-line log-error'><i class='fas fa-exclamation-circle'></i> [2026-05-24 11:31:37] Errors: 0</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:31:37] </div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:31:37] === VALIDACAO DE STOP LOSS ===</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:31:38] All positions have stop loss configured.</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:31:38] </div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:31:38] === TRAILING STOP RESULTS ===</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:31:38]   UNIUSDT: NO UPDATE - Profit -2.26% below activation threshold (3%) (PNL -2.26297435036599%)</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:31:38]   LINKUSDT: NO UPDATE - Profit -1.63% below activation threshold (3%) (PNL -1.62740720649294%)</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:31:38]   BNBUSDT: NO UPDATE - Profit 1.41% below activation threshold (3%) (PNL 1.40790653107904%)</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:31:39]   SOLUSDT: NO UPDATE - Profit -0.98% below activation threshold (3%) (PNL -0.984076556506913%)</div>
+<div class='log-line log-normal'><i class='fas fa-circle'></i> [2026-05-24 11:31:39] === TRAILING STOP MONITOR END ===</div>
+
                     </div>
                 </div>
             </div>
         </div>
     </div>
-    
-    <script>
-        // Chart.js Professional Theme
-        Chart.defaults.color = '#9fa8da';
-        Chart.defaults.borderColor = 'rgba(100, 181, 246, 0.1)';
-        Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-        
-        // Win/Loss Chart
-        const winLossCtx = document.getElementById('winLossChart').getContext('2d');
-        new Chart(winLossCtx, {
-            type: 'doughnut',
-            data: {
-                labels: ['Wins', 'Losses'],
-                datasets: [{
-                    data: [49, 51],
-                    backgroundColor: [
-                        'rgba(102, 187, 106, 0.8)',
-                        'rgba(239, 83, 80, 0.8)'
-                    ],
-                    borderWidth: 0
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: {
-                        position: 'bottom',
-                        labels: {
-                            color: '#9fa8da',
-                            font: { size: 12, weight: '500' },
-                            padding: 20,
-                            usePointStyle: true,
-                            pointStyle: 'circle'
-                        }
-                    },
-                    title: {
-                        display: true,
-                        text: 'Win Rate: 49%',
-                        color: '#64b5f6',
-                        font: { size: 14, weight: '600' },
-                        padding: { top: 10, bottom: 20 }
-                    }
-                }
-            }
-        });
-        
-        // Metrics Bar Chart
-        const metricsCtx = document.getElementById('metricsChart').getContext('2d');
-        new Chart(metricsCtx, {
-            type: 'bar',
-            data: {
-                labels: ['Profit Factor', 'Sharpe Ratio', 'Max Drawdown'],
-                datasets: [{
-                    label: 'Value',
-                    data: [0.26, 0, 63.76],
-                    backgroundColor: [
-                        'rgba(66, 165, 245, 0.7)',
-                        'rgba(102, 187, 106, 0.7)',
-                        'rgba(239, 83, 80, 0.7)'
-                    ],
-                    borderWidth: 0,
-                    borderRadius: 4
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: true,
-                plugins: {
-                    legend: { display: false }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            color: '#9fa8da',
-                            font: { size: 11 }
-                        },
-                        grid: {
-                            color: 'rgba(100, 181, 246, 0.08)',
-                            drawBorder: false
-                        }
-                    },
-                    x: {
-                        ticks: {
-                            color: '#9fa8da',
-                            font: { size: 10, weight: '500' }
-                        },
-                        grid: { display: false }
-                    }
-                }
-            }
-        });
-    </script>
 </body>
 </html>
