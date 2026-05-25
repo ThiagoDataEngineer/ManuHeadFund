@@ -82,3 +82,38 @@ journal/idea_triggers.jsonl
 journal/halving_phase_state.json
 journal/regime_state.json
 journal/tier_a_drawdown_*.json
+
+# ============================================================
+# Journal data (dados operacionais locais, nao versionar)
+# ============================================================
+journal/*.csv
+journal/*.jsonl
+journal/*.json
+journal/tg_listener_hb
+journal/watchdog_respawn_state.json
+journal/tori_proximity_state.json
+journal/trailing_positions.json
+
+# ============================================================
+# Dashboards temporarios e testes
+# ============================================================
+dashboard/*.html
+!dashboard/index.html
+dashboard/*.json
+dashboard/*.js
+TEST_*.ps1
+*_FIXED.ps1
+*_TEMP.ps1
+
+# ============================================================
+# Scripts temporarios de dashboard
+# ============================================================
+ABRIR_DASHBOARD_*.ps1
+GERAR_DASHBOARD_*.ps1
+UPDATE_DASHBOARD_*.ps1
+DASHBOARD_FINAL.ps1
+
+# ============================================================
+# Locks
+# ============================================================
+locks/*.lock

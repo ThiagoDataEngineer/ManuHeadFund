@@ -1,12 +1,12 @@
 # GitHub Actions - ManuHeadFund Trading Pipeline COMPLETO
-# Roda na nuvem sem depender da máquina local
-# Replica TODOS os cron jobs da máquina local
+# Sistema 100% independente da máquina local
+# Roda na nuvem 24/7
 
 name: Trading Pipeline Complete
 
 on:
   schedule:
-    # A cada 5 minutos (failover quando máquina desligada)
+    # A cada 5 minutos (crítico)
     - cron: '*/5 * * * *'
   
   workflow_dispatch:
@@ -118,7 +118,7 @@ jobs:
             Write-Host "ERRO: $_" -ForegroundColor Red
           }
       
-      - name: Upload
+      - name: Upload Artifact
         if: success()
         uses: actions/upload-artifact@v4
         with:
@@ -127,12 +127,82 @@ jobs:
           retention-days: 7
   
   # ============================================================================
-  # JOB 4: HEALTH CHECK
+  # JOB 4: DEPLOY DASHBOARD TO GITHUB PAGES
+  # ============================================================================
+  deploy-dashboard:
+    name: Deploy Dashboard to GitHub Pages
+    runs-on: ubuntu-latest
+    needs: [dashboard]
+    if: success()
+    
+    permissions:
+      contents: write
+      pages: write
+      id-token: write
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Download Dashboard
+        uses: actions/download-artifact@v4
+        with:
+          name: dashboard-${{ github.run_number }}
+          path: ./public
+      
+      - name: Deploy to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./public
+          publish_branch: gh-pages
+          force_orphan: true
+  
+  # ============================================================================
+  # JOB 5: SHORT SCANNER (a cada hora)
+  # ============================================================================
+  short-scanner:
+    name: Short Scanner
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          @"
+          `$env:COINEX_ACCESS_ID = "${{ secrets.COINEX_ACCESS_ID }}"
+          `$env:COINEX_SECRET_KEY = "${{ secrets.COINEX_SECRET_KEY }}"
+          `$env:TELEGRAM_BOT_TOKEN = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
+          `$env:TELEGRAM_CHAT_ID = "${{ secrets.TELEGRAM_CHAT_ID }}"
+          "@ | Out-File "agents/config.local.ps1" -Encoding UTF8
+      
+      - name: Run
+        shell: pwsh
+        run: |
+          try {
+            $minute = (Get-Date).Minute
+            if ($minute -eq 0) {
+              Write-Host "=== SHORT SCANNER ===" -ForegroundColor Cyan
+              & ./scripts/short_scanner.ps1
+              Write-Host "OK" -ForegroundColor Green
+            } else {
+              Write-Host "Skipped (runs hourly)" -ForegroundColor Yellow
+            }
+          } catch {
+            Write-Host "ERRO: $_" -ForegroundColor Red
+          }
+  
+  # ============================================================================
+  # JOB 6: HEALTH CHECK
   # ============================================================================
   health-check:
     name: Health Check
     runs-on: ubuntu-latest
-    needs: [trailing-stop-monitor, position-risk, dashboard]
+    needs: [trailing-stop-monitor, position-risk, dashboard, deploy-dashboard, short-scanner]
     if: always()
     
     steps:
@@ -164,10 +234,12 @@ jobs:
             $token = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
             $chatId = "${{ secrets.TELEGRAM_CHAT_ID }}"
             
-            $msg = "GITHUB ACTIONS ALERT`n`n"
+            $msg = "🚨 GITHUB ACTIONS ALERT`n`n"
             $msg += "Trailing Stop: ${{ needs.trailing-stop-monitor.result }}`n"
             $msg += "Position Risk: ${{ needs.position-risk.result }}`n"
-            $msg += "Dashboard: ${{ needs.dashboard.result }}`n`n"
+            $msg += "Dashboard: ${{ needs.dashboard.result }}`n"
+            $msg += "Deploy Pages: ${{ needs.deploy-dashboard.result }}`n"
+            $msg += "Short Scanner: ${{ needs.short-scanner.result }}`n`n"
             $msg += "Check: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             
             $body = @{ chat_id = $chatId; text = $msg } | ConvertTo-Json
