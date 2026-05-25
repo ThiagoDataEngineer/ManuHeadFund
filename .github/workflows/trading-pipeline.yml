@@ -27,12 +27,11 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
-          @"
-          `$env:COINEX_ACCESS_ID = "${{ secrets.COINEX_ACCESS_ID }}"
-          `$env:COINEX_SECRET_KEY = "${{ secrets.COINEX_SECRET_KEY }}"
-          `$env:TELEGRAM_BOT_TOKEN = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
-          `$env:TELEGRAM_CHAT_ID = "${{ secrets.TELEGRAM_CHAT_ID }}"
-          "@ | Out-File "agents/config.local.ps1" -Encoding UTF8
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
+          $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
       
       - name: Run
         shell: pwsh
@@ -61,12 +60,11 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
-          @"
-          `$env:COINEX_ACCESS_ID = "${{ secrets.COINEX_ACCESS_ID }}"
-          `$env:COINEX_SECRET_KEY = "${{ secrets.COINEX_SECRET_KEY }}"
-          `$env:TELEGRAM_BOT_TOKEN = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
-          `$env:TELEGRAM_CHAT_ID = "${{ secrets.TELEGRAM_CHAT_ID }}"
-          "@ | Out-File "agents/config.local.ps1" -Encoding UTF8
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
+          $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
       
       - name: Run
         shell: pwsh
@@ -100,12 +98,11 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path "agents","journal","logs","dashboard" -Force | Out-Null
-          @"
-          `$env:COINEX_ACCESS_ID = "${{ secrets.COINEX_ACCESS_ID }}"
-          `$env:COINEX_SECRET_KEY = "${{ secrets.COINEX_SECRET_KEY }}"
-          `$env:TELEGRAM_BOT_TOKEN = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
-          `$env:TELEGRAM_CHAT_ID = "${{ secrets.TELEGRAM_CHAT_ID }}"
-          "@ | Out-File "agents/config.local.ps1" -Encoding UTF8
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
+          $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
       
       - name: Run
         shell: pwsh
@@ -173,12 +170,11 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
-          @"
-          `$env:COINEX_ACCESS_ID = "${{ secrets.COINEX_ACCESS_ID }}"
-          `$env:COINEX_SECRET_KEY = "${{ secrets.COINEX_SECRET_KEY }}"
-          `$env:TELEGRAM_BOT_TOKEN = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
-          `$env:TELEGRAM_CHAT_ID = "${{ secrets.TELEGRAM_CHAT_ID }}"
-          "@ | Out-File "agents/config.local.ps1" -Encoding UTF8
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
+          $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
       
       - name: Run
         shell: pwsh
