@@ -3,3 +3,4 @@
 {"ts_utc":"2026-05-23T10:07:15.9644776Z","market":"ZECUSDT","price":592.18,"action_line":593.055648,"proximity_pct":-0.15,"touches":9,"slope_deg":8.87,"rsi":null,"vol_drying":null}
 {"ts_utc":"2026-05-23T13:37:15.9965580Z","market":"INJUSDT","price":5.0548,"action_line":5.033984,"proximity_pct":0.41,"touches":22,"slope_deg":7.63,"rsi":null,"vol_drying":null}
 {"ts_utc":"2026-05-23T14:22:15.2360474Z","market":"ZECUSDT","price":588.74,"action_line":595.168593,"proximity_pct":-1.08,"touches":7,"slope_deg":9.48,"rsi":null,"vol_drying":null}
+{"ts_utc":"2026-05-25T04:14:12.8296737Z","market":"ZECUSDT","price":653.85,"action_line":632.672231,"proximity_pct":3.35,"touches":17,"slope_deg":16.38,"rsi":null,"vol_drying":null}

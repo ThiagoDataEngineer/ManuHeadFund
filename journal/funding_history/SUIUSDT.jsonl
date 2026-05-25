@@ -3348,3 +3348,6 @@
 {"symbol": "SUIUSDT", "funding_time": 1779523200001, "funding_rate": "0.00006580", "mark_price": "0.99543853"}
 {"symbol": "SUIUSDT", "funding_time": 1779552000003, "funding_rate": "-0.00004671", "mark_price": "1.03900834"}
 {"symbol": "SUIUSDT", "funding_time": 1779580800011, "funding_rate": "0.00004904", "mark_price": "1.06664002"}
+{"symbol": "SUIUSDT", "funding_time": 1779609600008, "funding_rate": "0.00004328", "mark_price": "1.05660000"}
+{"symbol": "SUIUSDT", "funding_time": 1779638400000, "funding_rate": "0.00008465", "mark_price": "1.04350411"}
+{"symbol": "SUIUSDT", "funding_time": 1779667200001, "funding_rate": "0.00005647", "mark_price": "1.03190000"}

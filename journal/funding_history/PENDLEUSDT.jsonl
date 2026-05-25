@@ -3099,3 +3099,6 @@
 {"symbol": "PENDLEUSDT", "funding_time": 1779523200001, "funding_rate": "-0.00015837", "mark_price": "1.74290000"}
 {"symbol": "PENDLEUSDT", "funding_time": 1779552000003, "funding_rate": "0.00005861", "mark_price": "1.80010000"}
 {"symbol": "PENDLEUSDT", "funding_time": 1779580800011, "funding_rate": "-0.00006848", "mark_price": "1.89070000"}
+{"symbol": "PENDLEUSDT", "funding_time": 1779609600008, "funding_rate": "-0.00017831", "mark_price": "1.86680000"}
+{"symbol": "PENDLEUSDT", "funding_time": 1779638400000, "funding_rate": "0.00001813", "mark_price": "1.81540000"}
+{"symbol": "PENDLEUSDT", "funding_time": 1779667200001, "funding_rate": "-0.00015175", "mark_price": "1.82000000"}

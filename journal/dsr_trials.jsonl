@@ -134,3 +134,11 @@
 {"ts":"2026-05-24T14:14:52Z","gate":"obs_to_c","market":"RENDERUSDT","direction":"LONG"}
 {"ts":"2026-05-24T14:14:53Z","gate":"obs_to_c","market":"INJUSDT","direction":"LONG"}
 {"ts":"2026-05-24T14:14:55Z","gate":"obs_to_c","market":"PENDLEUSDT","direction":"LONG"}
+{"ts":"2026-05-25T04:16:15Z","gate":"obs_to_c","market":"NEARUSDT","direction":"LONG"}
+{"ts":"2026-05-25T04:16:16Z","gate":"obs_to_c","market":"ZECUSDT","direction":"LONG"}
+{"ts":"2026-05-25T04:16:17Z","gate":"obs_to_c","market":"HYPEUSDT","direction":"LONG"}
+{"ts":"2026-05-25T04:16:18Z","gate":"obs_to_c","market":"CFGUSDT","direction":"LONG"}
+{"ts":"2026-05-25T04:16:20Z","gate":"obs_to_c","market":"TONUSDT","direction":"LONG"}
+{"ts":"2026-05-25T04:16:22Z","gate":"obs_to_c","market":"RENDERUSDT","direction":"LONG"}
+{"ts":"2026-05-25T04:16:23Z","gate":"obs_to_c","market":"INJUSDT","direction":"LONG"}
+{"ts":"2026-05-25T04:16:25Z","gate":"obs_to_c","market":"PENDLEUSDT","direction":"LONG"}

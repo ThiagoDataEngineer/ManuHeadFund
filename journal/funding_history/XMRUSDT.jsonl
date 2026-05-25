@@ -6948,3 +6948,6 @@
 {"symbol": "XMRUSDT", "funding_time": 1779523200001, "funding_rate": "0.00010000", "mark_price": "373.87850000"}
 {"symbol": "XMRUSDT", "funding_time": 1779552000003, "funding_rate": "0.00010000", "mark_price": "378.21304762"}
 {"symbol": "XMRUSDT", "funding_time": 1779580800011, "funding_rate": "0.00010000", "mark_price": "387.06000000"}
+{"symbol": "XMRUSDT", "funding_time": 1779609600008, "funding_rate": "0.00010000", "mark_price": "385.06000000"}
+{"symbol": "XMRUSDT", "funding_time": 1779638400000, "funding_rate": "0.00010000", "mark_price": "390.92659524"}
+{"symbol": "XMRUSDT", "funding_time": 1779667200001, "funding_rate": "0.00010000", "mark_price": "393.37000000"}

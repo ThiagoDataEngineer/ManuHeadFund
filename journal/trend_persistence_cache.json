@@ -1,5 +1,5 @@
 {
-  "computed_at": "2026-05-24T01:00:46Z",
+  "computed_at": "2026-05-25T04:10:53Z",
   "window_days": 60,
   "AAVEUSDT": {
     "label": "WEAK_TREND",
@@ -128,11 +128,11 @@
     "ker_60d": 0.071
   },
   "BCHUSDT": {
-    "label": "WEAK_TREND",
-    "score": 0.243,
-    "hurst": 0.537,
-    "ker_20d": 0.412,
-    "ker_60d": 0.22
+    "label": "MODERATE_TREND",
+    "score": 0.279,
+    "hurst": 0.536,
+    "ker_20d": 0.485,
+    "ker_60d": 0.251
   },
   "BDXUSDT": {
     "label": "WEAK_TREND",
@@ -185,10 +185,10 @@
   },
   "BTCUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.11,
-    "hurst": 0.577,
-    "ker_20d": 0.067,
-    "ker_60d": 0.113
+    "score": 0.173,
+    "hurst": 0.575,
+    "ker_20d": 0.194,
+    "ker_60d": 0.092
   },
   "BUSDT": {
     "label": "WEAK_TREND",
@@ -220,10 +220,10 @@
   },
   "CFGUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.238,
+    "score": 0.175,
     "hurst": 0.526,
-    "ker_20d": 0.423,
-    "ker_60d": 0.231
+    "ker_20d": 0.298,
+    "ker_60d": 0.233
   },
   "CHZUSDT": {
     "label": "WEAK_TREND",
@@ -436,11 +436,11 @@
     "ker_60d": 0.111
   },
   "INJUSDT": {
-    "label": "WEAK_TREND",
-    "score": 0.245,
-    "hurst": 0.579,
-    "ker_20d": 0.331,
-    "ker_60d": 0.275
+    "label": "MODERATE_TREND",
+    "score": 0.251,
+    "hurst": 0.58,
+    "ker_20d": 0.341,
+    "ker_60d": 0.266
   },
   "IOTAUSDT": {
     "label": "WEAK_TREND",
@@ -598,10 +598,10 @@
   },
   "PENDLEUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.167,
-    "hurst": 0.566,
-    "ker_20d": 0.203,
-    "ker_60d": 0.194
+    "score": 0.076,
+    "hurst": 0.565,
+    "ker_20d": 0.021,
+    "ker_60d": 0.151
   },
   "PENGUUSDT": {
     "label": "WEAK_TREND",
@@ -675,10 +675,10 @@
   },
   "RENDERUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.209,
+    "score": 0.172,
     "hurst": 0.585,
-    "ker_20d": 0.247,
-    "ker_60d": 0.107
+    "ker_20d": 0.175,
+    "ker_60d": 0.042
   },
   "RIVERUSDT": {
     "label": "WEAK_TREND",
@@ -745,10 +745,10 @@
   },
   "SKYUSDT": {
     "label": "MODERATE_TREND",
-    "score": 0.331,
-    "hurst": 0.592,
-    "ker_20d": 0.479,
-    "ker_60d": 0.029
+    "score": 0.341,
+    "hurst": 0.591,
+    "ker_20d": 0.5,
+    "ker_60d": 0.032
   },
   "SOLUSDT": {
     "label": "WEAK_TREND",
@@ -794,10 +794,10 @@
   },
   "SUIUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.176,
+    "score": 0.143,
     "hurst": 0.569,
-    "ker_20d": 0.213,
-    "ker_60d": 0.098
+    "ker_20d": 0.148,
+    "ker_60d": 0.056
   },
   "SUSDT": {
     "label": "WEAK_TREND",
@@ -955,10 +955,10 @@
   },
   "XMRUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.063,
-    "hurst": 0.557,
-    "ker_20d": 0.011,
-    "ker_60d": 0.073
+    "score": 0.137,
+    "hurst": 0.558,
+    "ker_20d": 0.159,
+    "ker_60d": 0.097
   },
   "XPLUSDT": {
     "label": "WEAK_TREND",
@@ -969,10 +969,10 @@
   },
   "XRPUSDT": {
     "label": "WEAK_TREND",
-    "score": 0.133,
-    "hurst": 0.605,
-    "ker_20d": 0.055,
-    "ker_60d": 0.052
+    "score": 0.14,
+    "hurst": 0.604,
+    "ker_20d": 0.071,
+    "ker_60d": 0.045
   },
   "XTZUSDT": {
     "label": "WEAK_TREND",
@@ -983,10 +983,10 @@
   },
   "ZECUSDT": {
     "label": "MODERATE_TREND",
-    "score": 0.334,
+    "score": 0.289,
     "hurst": 0.612,
-    "ker_20d": 0.444,
-    "ker_60d": 0.392
+    "ker_20d": 0.354,
+    "ker_60d": 0.367
   },
   "ZENUSDT": {
     "label": "WEAK_TREND",

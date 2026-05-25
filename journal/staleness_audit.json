@@ -1,6 +1,6 @@
 ﻿{
-    "audit_ts":  "2026-05-22T13:25:11.1059494Z",
-    "drift_pct":  0,
+    "audit_ts":  "2026-05-25T04:06:36.5865890Z",
+    "drift_pct":  -100,
     "capital_snapshot":  {
                              "futures":  0,
                              "total":  0,
@@ -8,22 +8,24 @@
                          },
     "items_stale":  [
                         {
-                            "name":  "per_asset_whitelist",
+                            "name":  "dsr_global",
                             "priority":  "HIGH",
                             "reasons":  [
-                                            "source_data_changed"
-                                        ],
-                            "rerun_cmd":  "powershell -File scripts/rebuild_per_asset_whitelist.ps1",
-                            "auto_safe":  true
-                        },
-                        {
-                            "name":  "dsr_global",
-                            "priority":  "MEDIUM",
-                            "reasons":  [
+                                            "capital_drift_-100pct",
                                             "age_above_90d"
                                         ],
                             "rerun_cmd":  "echo \u0027dsr_global recompute requires careful review\u0027",
                             "auto_safe":  false
+                        },
+                        {
+                            "name":  "per_asset_whitelist",
+                            "priority":  "HIGH",
+                            "reasons":  [
+                                            "capital_drift_-100pct",
+                                            "source_data_changed"
+                                        ],
+                            "rerun_cmd":  "powershell -File scripts/rebuild_per_asset_whitelist.ps1",
+                            "auto_safe":  true
                         },
                         {
                             "name":  "wyckoff_market_quality",
@@ -45,6 +47,6 @@
                         }
                     ],
     "n_stale":  4,
-    "n_high":  1,
+    "n_high":  2,
     "n_auto_safe":  3
 }

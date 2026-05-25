@@ -6988,3 +6988,6 @@
 {"symbol": "XRPUSDT", "funding_time": 1779523200001, "funding_rate": "-0.00008488", "mark_price": "1.31133828"}
 {"symbol": "XRPUSDT", "funding_time": 1779552000003, "funding_rate": "0.00000359", "mark_price": "1.33511430"}
 {"symbol": "XRPUSDT", "funding_time": 1779580800011, "funding_rate": "-0.00004818", "mark_price": "1.35745065"}
+{"symbol": "XRPUSDT", "funding_time": 1779609600008, "funding_rate": "0.00003251", "mark_price": "1.35880000"}
+{"symbol": "XRPUSDT", "funding_time": 1779638400000, "funding_rate": "0.00002035", "mark_price": "1.34770000"}
+{"symbol": "XRPUSDT", "funding_time": 1779667200001, "funding_rate": "-0.00005123", "mark_price": "1.34992620"}

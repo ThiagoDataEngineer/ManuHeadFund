@@ -6901,3 +6901,6 @@
 {"symbol": "ZECUSDT", "funding_time": 1779523200001, "funding_rate": "-0.00009710", "mark_price": "574.80189262"}
 {"symbol": "ZECUSDT", "funding_time": 1779552000003, "funding_rate": "-0.00001644", "mark_price": "607.88026256"}
 {"symbol": "ZECUSDT", "funding_time": 1779580800011, "funding_rate": "-0.00008924", "mark_price": "630.29179777"}
+{"symbol": "ZECUSDT", "funding_time": 1779609600008, "funding_rate": "-0.00010899", "mark_price": "628.37000000"}
+{"symbol": "ZECUSDT", "funding_time": 1779638400000, "funding_rate": "-0.00010607", "mark_price": "660.07000000"}
+{"symbol": "ZECUSDT", "funding_time": 1779667200001, "funding_rate": "0.00000037", "mark_price": "662.50000000"}

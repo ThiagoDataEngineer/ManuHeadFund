@@ -4128,3 +4128,6 @@
 {"symbol": "INJUSDT", "funding_time": 1779523200001, "funding_rate": "-0.00039939", "mark_price": "4.80748056"}
 {"symbol": "INJUSDT", "funding_time": 1779552000003, "funding_rate": "-0.00021324", "mark_price": "5.28600000"}
 {"symbol": "INJUSDT", "funding_time": 1779580800011, "funding_rate": "0.00002147", "mark_price": "5.33760144"}
+{"symbol": "INJUSDT", "funding_time": 1779609600008, "funding_rate": "-0.00012840", "mark_price": "5.18800000"}
+{"symbol": "INJUSDT", "funding_time": 1779638400000, "funding_rate": "-0.00015326", "mark_price": "5.14654301"}
+{"symbol": "INJUSDT", "funding_time": 1779667200001, "funding_rate": "-0.00007890", "mark_price": "5.13100000"}
