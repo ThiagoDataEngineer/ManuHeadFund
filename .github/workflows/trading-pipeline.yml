@@ -36,14 +36,46 @@ jobs:
       - name: Run
         shell: pwsh
         run: |
-          try {
-            Write-Host "=== TRAILING STOP ===" -ForegroundColor Cyan
-            & ./scripts/trailing_stop_monitor.ps1
-            Write-Host "OK" -ForegroundColor Green
-          } catch {
-            Write-Host "ERRO: $_" -ForegroundColor Red
-            throw
-          }
+          Write-Host "=== TRAILING STOP ===" -ForegroundColor Cyan
+          Write-Host "PWD: $(Get-Location)"
+          Write-Host "PSVersion: $($PSVersionTable.PSVersion)"
+          Write-Host "OS: $($PSVersionTable.OS)"
+          Write-Host "Files in agents/:"
+          Get-ChildItem agents/ | Select-Object Name | Format-Table -AutoSize
+          
+          # Testar carregamento das libs passo a passo
+          Write-Host "--- Loading lib_cross_platform ---"
+          . ./agents/lib_cross_platform.ps1
+          Write-Host "OK: lib_cross_platform"
+          
+          Write-Host "--- Loading config.local ---"
+          . ./agents/config.local.ps1
+          Write-Host "OK: config.local"
+          Write-Host "COINEX_ACCESS_ID set: $(-not [string]::IsNullOrEmpty($env:COINEX_ACCESS_ID))"
+          
+          Write-Host "--- Loading config.ps1 ---"
+          . ./agents/config.ps1
+          Write-Host "OK: config.ps1"
+          
+          Write-Host "--- Loading lib_coinex ---"
+          . ./agents/lib_coinex.ps1
+          Write-Host "OK: lib_coinex"
+          
+          Write-Host "--- Loading lib_telegram ---"
+          . ./agents/lib_telegram.ps1
+          Write-Host "OK: lib_telegram"
+          
+          Write-Host "--- Loading lib_trailing ---"
+          . ./agents/lib_trailing.ps1
+          Write-Host "OK: lib_trailing"
+          
+          Write-Host "--- Loading lib_trailing_orphan_detection ---"
+          . ./agents/lib_trailing_orphan_detection.ps1
+          Write-Host "OK: lib_trailing_orphan_detection"
+          
+          Write-Host "--- Running main script ---"
+          & ./scripts/trailing_stop_monitor.ps1
+          Write-Host "=== DONE ==="
   
   # ============================================================================
   # JOB 2: POSITION RISK MANAGER (a cada 15min)
