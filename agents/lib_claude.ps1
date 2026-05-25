@@ -2,6 +2,12 @@
 # Dot-source: . (Join-Path $PSScriptRoot "lib_claude.ps1")
 # Requer: $ANTHROPIC_API_KEY no ambiente ou config.ps1
 
+# 2026-05-25: Forçar TLS 1.2+ para PowerShell 5.1 (default e SSLv3 + TLSv1, mas
+# Anthropic/Groq/Gemini/OpenAI exigem TLS 1.2+. Sem isso = "A conexao subjacente
+# estava fechada: Nao foi possivel estabelecer relacao de confianca para o canal
+# seguro de SSL/TLS" -> cascade retorna null -> Mentor indisponivel -> veto auto.
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13
+
 function Invoke-Claude {
     param(
         [string]$SystemPrompt,
@@ -271,7 +277,7 @@ function Invoke-MesaDroneCascade {
     if ($HaikuPrimary -and $env:ANTHROPIC_API_KEY) {
         try {
             return Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model "claude-haiku-4" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+                -Model "claude-haiku-4-5" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
             Write-Host "  [$Agent] Haiku primary falhou, fallback Groq: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
@@ -298,7 +304,7 @@ function Invoke-MesaDroneCascade {
     if (-not $HaikuPrimary -and $env:ANTHROPIC_API_KEY) {
         try {
             return Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model "claude-haiku-4" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+                -Model "claude-haiku-4-5" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
             Write-Warning "  [$Agent] Haiku final falhou: $($_.Exception.Message)"
         }
@@ -361,7 +367,7 @@ function Invoke-MentorCascade {
     if ($env:ANTHROPIC_API_KEY) {
         try {
             $r = Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model "claude-haiku-4" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+                -Model "claude-haiku-4-5" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
             $script:LAST_CASCADE_PROVIDER = "anthropic_haiku"
             return $r
         } catch {
@@ -405,7 +411,7 @@ function Invoke-TriagemCascade {
     if ($env:ANTHROPIC_API_KEY) {
         try {
             return Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model "claude-haiku-4" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+                -Model "claude-haiku-4-5" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
             Write-Warning "  [$Agent] Haiku final falhou: $($_.Exception.Message)"
         }
@@ -492,7 +498,7 @@ function Invoke-TechCascadeJson {
         if ($env:ANTHROPIC_API_KEY) {
             try {
                 $raw = Invoke-Claude -SystemPrompt $sysWithJson -UserContent $UserContent `
-                    -Model "claude-haiku-4" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+                    -Model "claude-haiku-4-5" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
                 $parsed = _ParseJsonResponse $raw
                 if ($parsed) { return $parsed }
             } catch { Write-Warning "  [$Agent] Haiku falhou: $($_.Exception.Message)" }
