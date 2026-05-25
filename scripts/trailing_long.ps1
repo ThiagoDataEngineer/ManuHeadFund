@@ -1,4 +1,4 @@
-# trailing_long.ps1 — Trailing stop para posicoes LONG (parametrizado)
+﻿# trailing_long.ps1 â€” Trailing stop para posicoes LONG (parametrizado)
 # Suporta: trailing % fixo ou ATR-adaptativo
 # Uso: .\trailing_long.ps1 -Market BTCUSDT -EntryPrice 65000 -TrailPct 0.03
 # Uso ATR: .\trailing_long.ps1 -Market BTCUSDT -EntryPrice 65000 -ATRMultiplier 2.0
@@ -17,12 +17,12 @@ param(
     [switch]$DryRun                        # Simula sem executar ordens reais
 )
 
-# ── Carregar libs se nao estiverem carregadas ─────────────────────────────────
+# â”€â”€ Carregar libs se nao estiverem carregadas â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 $scriptDir = $PSScriptRoot
 if (-not (Get-Command CoinEx-GetTicker -ErrorAction SilentlyContinue)) {
-    . "$scriptDir\agents\config.ps1"
-    . "$scriptDir\agents\lib_coinex.ps1"
+    . (Join-Path (Join-Path $scriptDir "agents") "config.ps1")
+    . (Join-Path (Join-Path $scriptDir "agents") "lib_coinex.ps1")
 }
 
 # Override com credenciais diretas se env vars nao configuradas
@@ -31,14 +31,14 @@ if (-not $COINEX_ACCESS_ID) {
     exit 1
 }
 
-# ── Validacoes ─────────────────────────────────────────────────────────────────
+# â”€â”€ Validacoes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 if ($EntryPrice -le 0) {
     Write-Error "EntryPrice deve ser maior que 0. Use: -EntryPrice <preco>"
     exit 1
 }
 
-# ── Funcoes auxiliares ────────────────────────────────────────────────────────
+# â”€â”€ Funcoes auxiliares â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function Get-CurrentATR {
     param([string]$Market, [int]$Period = 14)
@@ -114,7 +114,7 @@ function Log {
     Write-Host "$t | $Message" -ForegroundColor $Color
 }
 
-# ── Inicializacao ─────────────────────────────────────────────────────────────
+# â”€â”€ Inicializacao â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 $highestPrice = $EntryPrice
 
@@ -136,13 +136,13 @@ if ($InitialStop -gt 0) {
 
 $trailMode = if ($ATRMultiplier -gt 0) { "ATR x$ATRMultiplier" } else { "Fixed $([math]::Round($TrailPct*100,1))%" }
 
-Log "══════════════════════════════════════"
-Log " TRAILING STOP LONG — $Market"
+Log "â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•"
+Log " TRAILING STOP LONG â€” $Market"
 Log " Modo: $trailMode$(if($DryRun){' [DRY RUN]'} else {''})"
 Log " Entrada: $EntryPrice"
 Log " Stop inicial: $currentStop"
 if ($TradeId) { Log " TradeId journal: $TradeId" }
-Log "══════════════════════════════════════"
+Log "â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•"
 
 # Definir stop inicial na exchange
 if (-not $DryRun) {
@@ -151,7 +151,7 @@ if (-not $DryRun) {
     else { Log "AVISO: Falha ao definir stop inicial" "Yellow" }
 }
 
-# ── Loop principal ────────────────────────────────────────────────────────────
+# â”€â”€ Loop principal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 $iteration    = 0
 $stopAtingido = $false
@@ -162,7 +162,7 @@ while ($true) {
         # Verificar se posicao ainda esta aberta
         $pos = Get-OpenPosition $Market
         if (-not $pos -and -not $DryRun) {
-            Log "POSICAO FECHADA EXTERNAMENTE — encerrando trailing" "Yellow"
+            Log "POSICAO FECHADA EXTERNAMENTE â€” encerrando trailing" "Yellow"
             $stopAtingido = $true
             break
         }
@@ -221,7 +221,7 @@ while ($true) {
             if ($closed) {
                 Log "POSICAO FECHADA. PnL final: $pnlUSD ($pnlPct%)" $(if($pnlUSD -ge 0){"Green"}else{"Red"})
             } else {
-                Log "ERRO ao fechar posicao — verificar manualmente!" "Red"
+                Log "ERRO ao fechar posicao â€” verificar manualmente!" "Red"
             }
             $stopAtingido = $true
             break
@@ -234,10 +234,10 @@ while ($true) {
     Start-Sleep -Seconds $CheckSecs
 }
 
-# ── Pos-loop: atualizar journal se TradeId foi fornecido ──────────────────────
+# â”€â”€ Pos-loop: atualizar journal se TradeId foi fornecido â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 if ($TradeId -and $stopAtingido) {
-    $journalPath = "$scriptDir\agents\journal.ps1"
+    $journalPath = (Join-Path (Join-Path $scriptDir "agents") "journal.ps1")
     if (Test-Path $journalPath) {
         try {
             . $journalPath
@@ -251,4 +251,4 @@ if ($TradeId -and $stopAtingido) {
     }
 }
 
-Log "TRAILING STOP ENCERRADO — $Market"
+Log "TRAILING STOP ENCERRADO â€” $Market"

@@ -1,4 +1,4 @@
-# cron_staleness_audit.ps1 -- Weekly Mon 02:00 BRT: capital drift + items stale.
+﻿# cron_staleness_audit.ps1 -- Weekly Mon 02:00 BRT: capital drift + items stale.
 #
 # Phase 0b (2026-05-23): identifica automaticamente o que precisa rodar.
 # Output: journal/staleness_audit.json + TG alert se HIGH priority items.
@@ -9,10 +9,10 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot = Split-Path -Parent $scriptDir
 Set-Location $projectRoot
 
-. (Join-Path $projectRoot "agents\config.local.ps1") -ErrorAction SilentlyContinue
-. (Join-Path $projectRoot "agents\lib_capital_context.ps1")
-. (Join-Path $projectRoot "agents\lib_staleness_engine.ps1")
-. (Join-Path $projectRoot "agents\lib_telegram.ps1") -ErrorAction SilentlyContinue
+. (Join-Path (Join-Path $projectRoot "agents") "config.local.ps1") -ErrorAction SilentlyContinue
+. (Join-Path (Join-Path $projectRoot "agents") "lib_capital_context.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "lib_staleness_engine.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "lib_telegram.ps1") -ErrorAction SilentlyContinue
 
 $logFile = Join-Path $projectRoot ("logs\staleness_audit_" + (Get-Date -Format "yyyyMMdd") + ".log")
 $logDir = Split-Path $logFile -Parent

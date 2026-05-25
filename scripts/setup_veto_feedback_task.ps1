@@ -84,7 +84,7 @@ if ($response -eq "S" -or $response -eq "s") {
     
     Write-Host ""
     Write-Host "Verificando log..." -ForegroundColor Cyan
-    $logFile = "$workingDir\logs\veto_feedback_processor.log"
+    $logFile = (Join-Path (Join-Path $workingDir "logs") "veto_feedback_processor.log")
     if (Test-Path $logFile) {
         Get-Content $logFile -Tail 20
     } else {

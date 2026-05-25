@@ -1,4 +1,4 @@
-# cron_wss_forward_resolve.ps1 -- Weekly: resolve WSS forward signals + audit alert.
+﻿# cron_wss_forward_resolve.ps1 -- Weekly: resolve WSS forward signals + audit alert.
 #
 # Caminho 2 final wire: completa o forward validation loop.
 #
@@ -20,10 +20,10 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot = Split-Path -Parent $scriptDir
 Set-Location $projectRoot
 
-. (Join-Path $projectRoot "agents\config.local.ps1") -ErrorAction SilentlyContinue
-. (Join-Path $projectRoot "agents\lib_wss_forward_tracker.ps1")
-. (Join-Path $projectRoot "agents\lib_coinex.ps1") -ErrorAction SilentlyContinue
-. (Join-Path $projectRoot "agents\lib_telegram.ps1") -ErrorAction SilentlyContinue
+. (Join-Path (Join-Path $projectRoot "agents") "config.local.ps1") -ErrorAction SilentlyContinue
+. (Join-Path (Join-Path $projectRoot "agents") "lib_wss_forward_tracker.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "lib_coinex.ps1") -ErrorAction SilentlyContinue
+. (Join-Path (Join-Path $projectRoot "agents") "lib_telegram.ps1") -ErrorAction SilentlyContinue
 
 $logFile = Join-Path $projectRoot ("logs\wss_forward_resolve_" + (Get-Date -Format "yyyyMMdd") + ".log")
 $logDir = Split-Path $logFile -Parent

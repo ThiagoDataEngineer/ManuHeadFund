@@ -1,224 +1,145 @@
-# ✅ AVALIAÇÃO HONESTA - GitHub Actions
+# 📊 AVALIAÇÃO HONESTA: O QUE FUNCIONA NO GITHUB ACTIONS
 
-## 🎯 VOCÊ ESTAVA CERTO EM QUESTIONAR!
-
-O primeiro workflow **NÃO ia funcionar** no Ubuntu porque:
-
-### ❌ Problemas Identificados
-
-1. **Caminhos Windows** (`\` vs `/`)
-   - Scripts usavam `$scriptRoot\agents\config.ps1`
-   - No Linux precisa ser `/` ou `Join-Path`
-
-2. **Dependências Complexas**
-   - Scripts originais carregam MUITAS libs
-   - Algumas podem ter dependências Windows-specific
-   - Dot-sourcing com caminhos relativos problemático
-
-3. **Falta de Testes**
-   - Não testamos no Ubuntu antes
-   - Assumimos que "PowerShell Core funciona igual"
-   - Na prática, há diferenças
+**Data:** 2026-05-25  
+**Status do último workflow:** ✅ SUCCESS (commit e2658c4)
 
 ---
 
-## ✅ SOLUÇÃO IMPLEMENTADA
+## ✅ O QUE ESTÁ NO GITHUB ACTIONS (FUNCIONANDO)
 
-### Runner Cross-Platform
+| Job | Frequência | Função | Status |
+|-----|-----------|--------|--------|
+| 1. Trailing Stop Monitor | 5min | Detecta órfãs + monitora stops | ✅ OK |
+| 2. Position Risk Manager | 15min | Monitora alavancagem e PnL | ✅ OK |
+| 3. Dashboard Generator | 5min | Gera HTML do dashboard | ✅ OK |
+| 4. Deploy GitHub Pages | 5min | Publica dashboard em URL pública | ✅ OK |
+| 5. Short Scanner | 1h | Procura oportunidades short | ✅ OK |
+| 6. Health Check | 5min | Verifica APIs + alerta Telegram | ✅ OK |
 
-Criado `scripts/github_actions_runner.ps1`:
-
-**Características:**
-- ✅ Detecta OS automaticamente (Linux/Windows)
-- ✅ Usa `Join-Path` para caminhos cross-platform
-- ✅ Carrega apenas libs essenciais
-- ✅ Implementação simplificada mas funcional
-- ✅ Logs claros para debug
-
-**Jobs Implementados:**
-
-1. **Trailing Stop** (`-Job trailing-stop`)
-   - Carrega: config, lib_coinex, lib_trailing, lib_trailing_orphan_detection
-   - Busca posições na exchange
-   - Detecta e registra órfãs
-   - Verifica posições locais
-
-2. **Position Risk** (`-Job position-risk`)
-   - Roda apenas a cada 15min (check interno)
-   - Carrega: config, lib_coinex
-   - Lista posições e PNL
-   - Versão simplificada (não faz ajustes complexos)
-
-3. **Dashboard** (`-Job dashboard`)
-   - Carrega: config, lib_coinex
-   - Gera HTML simples com posições
-   - Auto-refresh a cada 5min
-   - Upload como artifact
+**Cobertura: 6 jobs ativos**
 
 ---
 
-## 📊 O QUE FUNCIONA vs O QUE NÃO FUNCIONA
+## ❌ O QUE NÃO ESTÁ NO GITHUB ACTIONS (depende da máquina)
 
-### ✅ FUNCIONA no GitHub Actions
+### Tasks Windows que NÃO foram migradas:
 
-| Feature | Status | Notas |
-|---------|--------|-------|
-| Buscar posições CoinEx | ✅ | API REST funciona |
-| Detectar órfãs | ✅ | Lógica implementada |
-| Registrar órfãs | ✅ | JSON local funciona |
-| Dashboard básico | ✅ | HTML gerado |
-| Health checks | ✅ | APIs verificadas |
-| Alertas Telegram | ✅ | REST API funciona |
+| Task Windows | Frequência | Função | Migrar? |
+|--------------|-----------|--------|---------|
+| `CoinExDailyDigest` | 1x/dia | Resumo diário do dia | ⚠️ Sim |
+| `CoinExHourlyHeartbeat` | 1h | Sinal de vida no Telegram | ⚠️ Sim |
+| `CoinExWhaleWatcher` | 30min | Detecta movimentos de whales | ⚠️ Sim |
+| `CoinExVolClimax` | 1h | Detecta volume climax | ⚠️ Sim |
+| `CoinExToriProximity` | 15min | Trendline bounce strategy | ⚠️ Sim |
+| `CoinExStalenessAudit` | 6h | Audita dados antigos | ⚠️ Sim |
+| `CoinExWssForwardResolve` | 1h | Resolve trades pendentes | ⚠️ Sim |
+| `CoinExKellyGraduation` | 1x/dia | Avaliação Kelly criterion | ⚠️ Sim |
+| `CoinExParallelGraduation` | 1x/dia | Promoção paralela | ⚠️ Sim |
+| `CoinExPromotionCron` | 1x/semana | Promoção semanal | ⚠️ Sim |
+| `CoinExWeeklyCostReport` | 1x/semana | Relatório de custos LLM | ⚠️ Sim |
+| `CoinExWeeklyDataRefresh` | 1x/semana | Atualização de dados | ⚠️ Sim |
+| `CoinExShortScanner` | 1h | (já migrado, duplicata) | ✅ OK |
+| `CoinExDaemonRestart` | 1x/dia | Restart de daemons locais | ❌ Não (só local) |
 
-### ⚠️ LIMITADO no GitHub Actions
+### Fluxos que NÃO funcionam sem máquina:
 
-| Feature | Status | Notas |
-|---------|--------|-------|
-| Trailing stop updates | ⚠️ | Simplificado - não faz updates complexos |
-| Position risk management | ⚠️ | Só monitora, não ajusta leverage |
-| Logs persistentes | ⚠️ | Logs não persistem entre runs |
-| Estado compartilhado | ⚠️ | Cada run é isolado |
+❌ **Orchestrator (trading principal)** - `agents/orchestrator.ps1`  
+   - Decide entradas baseado em 4 agentes (Tech, Fund, Sent, Chain) + Mentor
+   - Usa Claude/Groq/Gemini para análise
+   - **Não está no GitHub Actions** porque depende do `scan_master.ps1` que tem +30 dependências
 
-### ❌ NÃO FUNCIONA no GitHub Actions
+❌ **Gem Agent (micro-caps SPOT)** - `agents/gem_agent.ps1` + `agents/gem_executor.ps1`  
+   - Pipeline independente para detectar gems
+   - Roda via `gem_loop.ps1`
+   - **Não está no GitHub Actions**
 
-| Feature | Status | Notas |
-|---------|--------|-------|
-| Scripts originais completos | ❌ | Muitas dependências |
-| Tori monitoring | ❌ | Não implementado |
-| Feedback loops complexos | ❌ | Requer estado persistente |
-| Integração com Claude API | ❌ | Não necessário para trailing |
+❌ **Tori Proximity Scanner** - `scripts/tori_proximity_scanner.ps1`  
+   - Estratégia validada (+77.6pp/ano, p=0.0087)
+   - Trendline bounce em PAPER mode
+   - **Não está no GitHub Actions**
 
----
+❌ **Telegram Listener** - `scripts/telegram_listener.ps1`  
+   - Recebe comandos via Telegram (✅/❌ approval)
+   - Precisa rodar continuamente (long polling)
+   - **Não pode rodar no GitHub Actions** (limite 6h por job)
 
-## 🎯 REALIDADE DO SISTEMA
-
-### Quando Máquina LIGADA (Windows)
-```
-✅ TUDO FUNCIONA 100%
-├── Trailing stops completos
-├── Position risk management completo
-├── Dashboard completo
-├── Tori monitoring
-├── Feedback loops
-└── Todos os agentes
-```
-
-### Quando Máquina DESLIGADA (GitHub Actions)
-```
-⚠️ FUNCIONALIDADE BÁSICA
-├── ✅ Detecta órfãs
-├── ✅ Registra órfãs com stops conservadores
-├── ✅ Monitora posições (read-only)
-├── ✅ Dashboard básico
-├── ✅ Health checks
-└── ❌ Sem trailing stop updates complexos
-```
+❌ **Watchdog Paper** - `scripts/watchdog_paper.ps1`  
+   - Monitora paper trades em tempo real
+   - **Não está no GitHub Actions**
 
 ---
 
-## 💡 RECOMENDAÇÃO HONESTA
+## 🎯 RESPOSTA HONESTA
 
-### Opção 1: Manter Máquina Ligada (RECOMENDADO)
-**Prós:**
-- ✅ Sistema 100% funcional
-- ✅ Trailing stops ativos
-- ✅ Risk management completo
-- ✅ Todos os agentes rodando
+### O que funciona SEM máquina ligada:
+1. ✅ **Stop loss adaptativo** (trailing) - posições já abertas são protegidas
+2. ✅ **Risk monitor** - alerta sobre alavancagem alta
+3. ✅ **Dashboard público** em https://thiagodataengineer.github.io/ManuHeadFund/
+4. ✅ **Short scanner básico** - encontra oportunidades de short
+5. ✅ **Health check** - alerta no Telegram se algo falhar
 
-**Contras:**
-- ❌ Precisa manter máquina ligada
-- ❌ Custo de energia
-- ❌ Dependência de internet local
-
-### Opção 2: GitHub Actions como Failover
-**Prós:**
-- ✅ Detecta órfãs automaticamente
-- ✅ Protege posições novas
-- ✅ Monitora status
-- ✅ Alertas funcionam
-
-**Contras:**
-- ⚠️ Não atualiza trailing stops existentes
-- ⚠️ Não faz risk management ativo
-- ⚠️ Funcionalidade limitada
-
-### Opção 3: VPS/Cloud (MELHOR SOLUÇÃO)
-**Prós:**
-- ✅ Sistema 100% funcional 24/7
-- ✅ Sem dependência de máquina local
-- ✅ Todos os scripts originais funcionam
-- ✅ Logs persistentes
-
-**Contras:**
-- 💰 Custo mensal (~$5-10/mês)
-- 🔧 Setup inicial necessário
+### O que NÃO funciona sem máquina:
+1. ❌ **Abrir novas posições no FUTURES** (Orchestrator não roda)
+2. ❌ **Detectar gems no SPOT** (Gem Agent não roda)
+3. ❌ **Tori Proximity** (estratégia validada não roda)
+4. ❌ **Comandos Telegram** (não há listener)
+5. ❌ **Whale Watcher** (não detecta whales)
+6. ❌ **Daily/Hourly digests** (sem resumos no Telegram)
+7. ❌ **Vol Climax** (não detecta climax)
 
 ---
 
-## 🚀 PRÓXIMOS PASSOS
+## 📈 CONCLUSÃO
 
-### Curto Prazo (Agora)
-1. ✅ GitHub Actions está rodando (versão básica)
-2. ✅ Detecta órfãs automaticamente
-3. ✅ Protege posições novas
-4. ⚠️ **Mantenha máquina ligada para trailing stops ativos**
+**Sistema atual no GitHub Actions = MODO DEFENSIVO**
+- Protege posições já abertas ✅
+- Monitora risco ✅
+- Mostra dashboard ✅
 
-### Médio Prazo (Próximas semanas)
-1. Testar GitHub Actions por alguns dias
-2. Verificar se detecção de órfãs funciona bem
-3. Avaliar se funcionalidade básica é suficiente
-4. Decidir: VPS ou manter máquina ligada?
-
-### Longo Prazo (Futuro)
-1. Migrar para VPS se necessário
-2. Ou: Simplificar sistema para rodar 100% no GitHub Actions
-3. Ou: Aceitar limitações e usar como failover apenas
+**Sistema completo (FUTURES + SPOT + estratégias) = REQUER MÁQUINA**
+- Trading ativo precisa de:
+  - `orchestrator.ps1` rodando 24/7
+  - `gem_loop.ps1` rodando continuamente
+  - `tori_monitoring_cron.ps1` a cada 15min
+  - `telegram_listener.ps1` em long polling
+  - +30 dependências (Claude API, scanner, agentes)
 
 ---
 
-## 📝 CONCLUSÃO
+## 🚀 PRÓXIMOS PASSOS POSSÍVEIS
 
-**Você estava certo em questionar!**
+### Opção A: Continuar como está (recomendado para agora)
+- ✅ Sistema defensivo no GitHub Actions
+- ✅ Trading ativo na máquina quando ligada
+- ✅ Dashboard público sempre disponível
 
-O sistema agora:
-- ✅ Roda no GitHub Actions (versão simplificada)
-- ✅ Detecta e protege órfãs
-- ✅ Monitora posições
-- ⚠️ **MAS não substitui 100% a máquina local**
+### Opção B: Migrar mais tasks para GitHub Actions
+Tarefas que dá pra migrar (independentes, sem long-polling):
+- Whale Watcher (30min)
+- Vol Climax (1h)
+- Daily Digest (1x/dia)
+- Hourly Heartbeat (1h)
+- Tori Proximity (15min)
+- Staleness Audit (6h)
+- Kelly Audit (1x/dia)
+- Weekly Cost Report (1x/semana)
+- Weekly Data Refresh (1x/semana)
 
-**Recomendação:**
-- Use GitHub Actions como **failover/backup**
-- Mantenha máquina ligada para **funcionalidade completa**
-- Considere VPS para **solução definitiva 24/7**
+**Esforço**: ~2-4 horas para migrar todos  
+**Risco**: Cada um precisa testar individualmente para garantir compatibilidade Linux
 
-**Status Atual:**
-- Commit: 682f6ed
-- Workflow: Rodando a cada 5min
-- Funcionalidade: ~60% do sistema completo
-- Proteção: Órfãs detectadas e protegidas ✅
+### Opção C: Migrar trading principal (Orchestrator)
+- ❌ Muito complexo - 30+ dependências
+- ❌ Requer Claude API ($) ou Groq (free com limites)
+- ❌ Pode conflitar com posições abertas pela máquina
+- ⚠️ **Não recomendo** sem refatoração grande
 
 ---
 
-## 🔍 COMO VERIFICAR SE ESTÁ FUNCIONANDO
+## 💡 RECOMENDAÇÃO
 
-1. **GitHub Actions**: https://github.com/ThiagoDataEngineer/ManuHeadFund/actions
-   - Deve rodar a cada 5 minutos
-   - Verificar logs de cada job
-   - Procurar por "OK" em verde
+**Para agora**: Manter como está. O sistema defensivo cobre o crítico.
 
-2. **Telegram**:
-   - Alertas em caso de falha
-   - Sem notícia = boa notícia
+**Quando quiser**: Migrar 1 fluxo por vez (Tori → Whale → Vol Climax → Digest).
 
-3. **Posições**:
-   - Abrir posição manual na CoinEx
-   - Aguardar 5 minutos
-   - Verificar se foi detectada como órfã
-   - Verificar se stop foi configurado
-
-**Teste Real Recomendado:**
-- Abrir posição pequena manual
-- Desligar máquina
-- Aguardar 10 minutos
-- Verificar se órfã foi detectada
-- Verificar logs no GitHub Actions
+**Trading ativo**: Continua precisando da máquina ligada.

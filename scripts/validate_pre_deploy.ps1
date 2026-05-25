@@ -1,4 +1,4 @@
-# validate_pre_deploy.ps1 -- Pre-deploy / pre-commit validation suite
+﻿# validate_pre_deploy.ps1 -- Pre-deploy / pre-commit validation suite
 #
 # Roda checks essenciais antes de deploy/commit:
 #   1. Runspace libs audit (Test-RunspaceLibsComplete)
@@ -41,10 +41,10 @@ Write-Host ""
 # 1. Runspace audit
 Write-Host "[1] Runspace libs audit..." -ForegroundColor Cyan
 try {
-    . (Join-Path $projectRoot "agents\lib_runspace_audit.ps1")
+    . (Join-Path (Join-Path $projectRoot "agents") "lib_runspace_audit.ps1")
     $audit = Test-RunspaceLibsComplete `
-        -OrchestratorPath (Join-Path $projectRoot "agents\orchestrator_v6.ps1") `
-        -ParallelPath (Join-Path $projectRoot "agents\lib_orchestrator_parallel.ps1") `
+        -OrchestratorPath (Join-Path (Join-Path $projectRoot "agents") "orchestrator_v6.ps1") `
+        -ParallelPath (Join-Path (Join-Path $projectRoot "agents") "lib_orchestrator_parallel.ps1") `
         -AgentsDir (Join-Path $projectRoot "agents")
     if ($audit.all_covered) {
         Add-Result -Check "runspace_audit" -Pass $true -Detail "$($audit.covered_refs.Count)/$($audit.total_refs) refs covered"
@@ -122,7 +122,7 @@ foreach ($f in $expectedSchemas.Keys) {
         Add-Result -Check "schema_$f" -Pass $true -Detail "file ausente (ok pre-cycle)"
         continue
     }
-    $firstLine = (Get-Content $path -TotalCount 1 -Encoding UTF8) -replace "^﻿", ""
+    $firstLine = (Get-Content $path -TotalCount 1 -Encoding UTF8) -replace "^ï»¿", ""
     if ($firstLine -eq $expectedSchemas[$f]) {
         Add-Result -Check "schema_$f" -Pass $true -Detail "header match"
     } else {

@@ -1,4 +1,4 @@
-# warmup_llm_endpoints.ps1 -- Pre-aquece endpoints LLM para evitar cold-start.
+﻿# warmup_llm_endpoints.ps1 -- Pre-aquece endpoints LLM para evitar cold-start.
 #
 # Background:
 # Audit Mesa drones 2026-05-21 manha: 3/3 LIDAR null no primeiro cycle do dia
@@ -19,9 +19,9 @@
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot = Split-Path -Parent $scriptDir
 
-. (Join-Path $projectRoot "agents\config.local.ps1")
-. (Join-Path $projectRoot "agents\lib_claude.ps1")
-. (Join-Path $projectRoot "agents\lib_cost_tracker.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "config.local.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "lib_claude.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "lib_cost_tracker.ps1")
 
 $logFile = Join-Path $projectRoot ("logs\llm_warmup_" + (Get-Date -Format "yyyyMMdd_HHmm") + ".log")
 function Log { param($M) "[$((Get-Date).ToString('HH:mm:ss'))] $M" | Tee-Object -FilePath $logFile -Append }

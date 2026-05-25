@@ -191,6 +191,164 @@ jobs:
           } catch {
             Write-Host "ERRO: $_" -ForegroundColor Red
           }
+
+  # ============================================================================
+  # JOB 7: WHALE WATCHER (a cada 30min)
+  # ============================================================================
+  whale-watcher:
+    name: Whale Watcher
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
+          $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+      
+      - name: Run
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $minute = (Get-Date).Minute
+          if ($minute -eq 0 -or $minute -eq 30) {
+            Write-Host "=== WHALE WATCHER ===" -ForegroundColor Cyan
+            try {
+              & ./scripts/whale_watcher_cron.ps1 -DryRun
+              Write-Host "OK" -ForegroundColor Green
+            } catch {
+              Write-Host "WARN: $_" -ForegroundColor Yellow
+            }
+          } else {
+            Write-Host "Skipped (runs every 30min)" -ForegroundColor Yellow
+          }
+
+  # ============================================================================
+  # JOB 8: STALENESS AUDIT (a cada 6h)
+  # ============================================================================
+  staleness-audit:
+    name: Staleness Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
+          $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+      
+      - name: Run
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $hour = (Get-Date).Hour
+          $minute = (Get-Date).Minute
+          # Roda a cada 6h (0, 6, 12, 18) no minuto 0
+          if (($hour % 6 -eq 0) -and $minute -eq 0) {
+            Write-Host "=== STALENESS AUDIT ===" -ForegroundColor Cyan
+            try {
+              & ./scripts/cron_staleness_audit.ps1 -SendTg
+              Write-Host "OK" -ForegroundColor Green
+            } catch {
+              Write-Host "WARN: $_" -ForegroundColor Yellow
+            }
+          } else {
+            Write-Host "Skipped (runs every 6h)" -ForegroundColor Yellow
+          }
+
+  # ============================================================================
+  # JOB 9: KELLY AUDIT (1x/dia)
+  # ============================================================================
+  kelly-audit:
+    name: Kelly Graduation Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
+          $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+      
+      - name: Run
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $hour = (Get-Date).Hour
+          $minute = (Get-Date).Minute
+          # Roda 1x/dia as 05:00 UTC (02:00 BRT)
+          if ($hour -eq 5 -and $minute -eq 0) {
+            Write-Host "=== KELLY AUDIT ===" -ForegroundColor Cyan
+            try {
+              & ./scripts/daily_kelly_audit.ps1
+              Write-Host "OK" -ForegroundColor Green
+            } catch {
+              Write-Host "WARN: $_" -ForegroundColor Yellow
+            }
+          } else {
+            Write-Host "Skipped (runs daily 05:00 UTC)" -ForegroundColor Yellow
+          }
+
+  # ============================================================================
+  # JOB 10: DAILY DIGEST (1x/dia)
+  # ============================================================================
+  daily-digest:
+    name: Daily Summary Digest
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
+          $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+      
+      - name: Run
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $hour = (Get-Date).Hour
+          $minute = (Get-Date).Minute
+          # Roda 1x/dia as 02:55 UTC (23:55 BRT)
+          if ($hour -eq 2 -and $minute -eq 55) {
+            Write-Host "=== DAILY DIGEST ===" -ForegroundColor Cyan
+            try {
+              & ./scripts/daily_summary_digest.ps1
+              Write-Host "OK" -ForegroundColor Green
+            } catch {
+              Write-Host "WARN: $_" -ForegroundColor Yellow
+            }
+          } else {
+            Write-Host "Skipped (runs daily 02:55 UTC)" -ForegroundColor Yellow
+          }
   
   # ============================================================================
   # JOB 6: HEALTH CHECK

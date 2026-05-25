@@ -1,4 +1,4 @@
-# smoke_test_mentor_evolutions.ps1 -- Integration smoke test (sem API real).
+﻿# smoke_test_mentor_evolutions.ps1 -- Integration smoke test (sem API real).
 #
 # Exercita E5+E2+E4 end-to-end usando mocks:
 #   - E5: LLM mock infra (Capture-And-Return)
@@ -14,8 +14,8 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot = Split-Path -Parent $scriptDir
 Set-Location $projectRoot
 
-. (Join-Path $projectRoot "agents\lib_mentor_gate_block.ps1")
-. (Join-Path $projectRoot "agents\lib_alpha_vs_btc.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "lib_mentor_gate_block.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "lib_alpha_vs_btc.ps1")
 . (Join-Path $projectRoot "tests\_helpers\llm_mocks.ps1")
 
 $failures = @()
@@ -119,12 +119,12 @@ try {
 
 Write-Host ""
 Write-Host "=== Mentor wire integration (mock LLM call) ==="
-# Simula chamada Mentor com mock — verifica que ctxBlock contem GATE STATUS
+# Simula chamada Mentor com mock â€” verifica que ctxBlock contem GATE STATUS
 # Sem chamar API real, testamos que o WIRE funciona end-to-end.
 # Source mentor_agent.ps1 OUTSIDE mock context to avoid global state pollution
 
 # Just verify wire works by checking that mentor_agent.ps1 source loads E2 lib
-$mentorScript = Get-Content (Join-Path $projectRoot "agents\mentor_agent.ps1") -Raw
+$mentorScript = Get-Content (Join-Path (Join-Path $projectRoot "agents") "mentor_agent.ps1") -Raw
 if ($mentorScript -match "Build-GateStatusBlock") { _Ok "mentor_agent.ps1 wire: chama Build-GateStatusBlock" } else { _Fail "wire" "Build-GateStatusBlock not referenced" }
 if ($mentorScript -match "Test-PromptForbiddenPhrases") { _Ok "mentor_agent.ps1 wire: chama Test-PromptForbiddenPhrases post-LLM" } else { _Fail "wire" "Test-PromptForbiddenPhrases not referenced" }
 

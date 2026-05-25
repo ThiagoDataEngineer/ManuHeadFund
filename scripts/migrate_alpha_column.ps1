@@ -1,6 +1,6 @@
-# migrate_alpha_column.ps1 -- Schema migration: add alpha_vs_btc column to trades.csv.
+﻿# migrate_alpha_column.ps1 -- Schema migration: add alpha_vs_btc column to trades.csv.
 #
-# Idempotente — safe to re-run. Backup automatico.
+# Idempotente â€” safe to re-run. Backup automatico.
 #
 # Usage:
 #   powershell -File scripts/migrate_alpha_column.ps1            # apply
@@ -15,14 +15,14 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot = Split-Path -Parent $scriptDir
 Set-Location $projectRoot
 
-. (Join-Path $projectRoot "agents\lib_alpha_wire.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "lib_alpha_wire.ps1")
 
 Write-Host "=== Migration: alpha_vs_btc column ==="
 Write-Host ""
 
 $targets = @(
-    (Join-Path $projectRoot "journal\trades.csv"),
-    (Join-Path $projectRoot "journal\gem_trades.csv")
+    (Join-Path (Join-Path $projectRoot "journal") "trades.csv"),
+    (Join-Path (Join-Path $projectRoot "journal") "gem_trades.csv")
 )
 
 foreach ($t in $targets) {

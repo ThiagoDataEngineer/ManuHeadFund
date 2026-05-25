@@ -1,4 +1,4 @@
-# replay_decisions_analyzer.ps1 -- Analise offline de decisoes passadas
+﻿# replay_decisions_analyzer.ps1 -- Analise offline de decisoes passadas
 #
 # Re-roda Build-MentorFullContext sobre decisoes historicas + classifica:
 #   - "improved": decisao foi hallucination, prompt atual ja resolveria
@@ -19,8 +19,8 @@ $projectRoot = Split-Path -Parent $scriptDir
 $journalDir = Join-Path $projectRoot "journal"
 Set-Location $projectRoot
 
-. (Join-Path $projectRoot "agents\lib_fundamental_quality.ps1")
-. (Join-Path $projectRoot "agents\mentor_agent.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "lib_fundamental_quality.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "mentor_agent.ps1")
 
 $decPath = Join-Path $journalDir "decisions.csv"
 if (-not (Test-Path $decPath)) { Write-Host "decisions.csv ausente" -ForegroundColor Red; exit 1 }
@@ -81,7 +81,7 @@ foreach ($r in $rows) {
         $delta_notes += "Era hallucination tipo A (Mesa pulou). Prompt atual usa NAO_APLICAVEL."
     }
 
-    # Detector tipo E (PM6): "Conflito CRITICO DE MODO" (bug arquitetural — mode mapping cego)
+    # Detector tipo E (PM6): "Conflito CRITICO DE MODO" (bug arquitetural â€” mode mapping cego)
     if ($reason -match "CONFLITO.*MODO|conflito.*modo|mutuamente exclusivos") {
         $classification = "improved"
         $delta_notes += "Era bug arquitetural PM6 (mode mapping cego). Fix: 4 modes ortogonais incl TIER_A_PAPER."
@@ -94,7 +94,7 @@ foreach ($r in $rows) {
     }
 
     # Detector tipo B: KNOWLEDGE empty
-    if ($reason -match "caixa preta|sem knowledge|ausência de knowledge") {
+    if ($reason -match "caixa preta|sem knowledge|ausÃªncia de knowledge") {
         $classification = "improved"
         $delta_notes += "Era hallucination tipo B (knowledge empty). Prompt atual skip header se vazio."
     }
@@ -105,8 +105,8 @@ foreach ($r in $rows) {
         $delta_notes += "Era hallucination tipo C ([ALERTA] trigger). Substituido por linguagem neutra."
     }
 
-    # Detector tipo D: FQS não declarado quando registry tem
-    if ($reason -match "FQS não declarado|FQS indisponível") {
+    # Detector tipo D: FQS nÃ£o declarado quando registry tem
+    if ($reason -match "FQS nÃ£o declarado|FQS indisponÃ­vel") {
         if ($ctx -and $ctx.fqs -and $null -ne $ctx.fqs.score) {
             $classification = "needs_attention"
             $delta_notes += "Mentor disse FQS missing mas registry TEM entry (fqs=$($ctx.fqs.score)/$($ctx.fqs.category)). Prompt PM3 deve resolver via uppercase FQS=."

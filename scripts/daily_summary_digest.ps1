@@ -1,4 +1,4 @@
-# daily_summary_digest.ps1 -- End-of-day report ao Telegram (23:55 BRT)
+﻿# daily_summary_digest.ps1 -- End-of-day report ao Telegram (23:55 BRT)
 #
 # Roda 1x/dia, agrega tudo do dia:
 #   - Mentor decisions (APROVAR/VETAR breakdown)
@@ -13,7 +13,7 @@ $projectRoot = Split-Path -Parent $scriptDir
 $journalDir = Join-Path $projectRoot "journal"
 Set-Location $projectRoot
 
-. (Join-Path $projectRoot "agents\lib_telegram.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "lib_telegram.ps1")
 
 $today = Get-Date -Format "yyyy-MM-dd"
 $lines = New-Object System.Collections.Generic.List[string]
@@ -72,7 +72,7 @@ try {
 
 # 4. Missing commands report
 try {
-    . (Join-Path $projectRoot "agents\lib_runspace_warnings.ps1")
+    . (Join-Path (Join-Path $projectRoot "agents") "lib_runspace_warnings.ps1")
     $mc = Get-MissingCommandsReport -LastHours 24
     if ($mc.total -gt 0) {
         $lines.Add("Missing cmds 24h: $($mc.total) - " + (($mc.by_command.GetEnumerator() | ForEach-Object { "$($_.Key)x$($_.Value)" }) -join ","))
@@ -94,7 +94,7 @@ $live = Test-Path (Join-Path $journalDir "LIVE_MODE_ENABLED.flag")
 $mode = if ($v6 -and $live) { "LIVE_V6" } elseif ($live) { "PAPER_V6_LIVE_GEM" } else { "DRYRUN" }
 $lines.Add("Mode: $mode")
 
-# 7. Schema audit promotion_pipeline (C6 — detecta entries com schema invalido tipo HYPE)
+# 7. Schema audit promotion_pipeline (C6 â€” detecta entries com schema invalido tipo HYPE)
 try {
     $svPath = Join-Path $projectRoot "agents\lib_schema_validators.ps1"
     if (Test-Path $svPath) {
@@ -108,7 +108,7 @@ try {
     }
 } catch { $lines.Add("Schema audit: ERR $_") }
 
-# 8. Replay analyzer (auto daily — mostra metricas merit-only)
+# 8. Replay analyzer (auto daily â€” mostra metricas merit-only)
 try {
     $replayScript = Join-Path $scriptDir "replay_decisions_analyzer.ps1"
     if (Test-Path $replayScript) {

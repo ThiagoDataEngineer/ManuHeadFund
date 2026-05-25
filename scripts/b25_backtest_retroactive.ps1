@@ -1,4 +1,4 @@
-# b25_backtest_retroactive.ps1 -- Avalia retroativo: quais markets mudariam de classe
+﻿# b25_backtest_retroactive.ps1 -- Avalia retroativo: quais markets mudariam de classe
 # com regime-conditioned Sharpe (B25) vs gates fixos antigos.
 #
 # Strategy:
@@ -13,7 +13,7 @@ param([string]$Phase = "phase_3_bear")
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot = Split-Path -Parent $scriptDir
 Set-Location $projectRoot
-. (Join-Path $projectRoot "agents\lib_methodology_gates.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "lib_methodology_gates.ps1")
 
 $journalDir = Join-Path $projectRoot "journal"
 $wlFiles = Get-ChildItem -Path $journalDir -Filter "per_asset_whitelist_*.json" |

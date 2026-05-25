@@ -1,4 +1,4 @@
-# cron_mentor_reflector.ps1 -- Cron: resolve pending reflections diariamente.
+﻿# cron_mentor_reflector.ps1 -- Cron: resolve pending reflections diariamente.
 #
 # E3 (2026-05-22): rotaciona daily 04:00 BRT (apos DaemonRestart 03:00).
 #
@@ -22,12 +22,12 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot = Split-Path -Parent $scriptDir
 Set-Location $projectRoot
 
-. (Join-Path $projectRoot "agents\config.local.ps1") -ErrorAction SilentlyContinue
-. (Join-Path $projectRoot "agents\lib_decision_reflection.ps1")
-. (Join-Path $projectRoot "agents\lib_alpha_vs_btc.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "config.local.ps1") -ErrorAction SilentlyContinue
+. (Join-Path (Join-Path $projectRoot "agents") "lib_decision_reflection.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "lib_alpha_vs_btc.ps1")
 # Optional libs
-if (Test-Path (Join-Path $projectRoot "agents\lib_claude.ps1")) {
-    . (Join-Path $projectRoot "agents\lib_claude.ps1")
+if (Test-Path (Join-Path (Join-Path $projectRoot "agents") "lib_claude.ps1")) {
+    . (Join-Path (Join-Path $projectRoot "agents") "lib_claude.ps1")
 }
 
 $logFile = Join-Path $projectRoot ("logs\mentor_reflector_" + (Get-Date -Format "yyyyMMdd") + ".log")

@@ -1,4 +1,4 @@
-# audit_alpha_negative_rate.ps1 -- Audit script: pipeline esta perdendo pra BTC?
+﻿# audit_alpha_negative_rate.ps1 -- Audit script: pipeline esta perdendo pra BTC?
 #
 # Le trades fechados de journal/gem_trades.csv + journal/journal.csv (se houver
 # alpha_vs_btc field). Computa rolling negative rate sobre N most recent.
@@ -17,8 +17,8 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot = Split-Path -Parent $scriptDir
 Set-Location $projectRoot
 
-. (Join-Path $projectRoot "agents\config.local.ps1") -ErrorAction SilentlyContinue
-. (Join-Path $projectRoot "agents\lib_alpha_vs_btc.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "config.local.ps1") -ErrorAction SilentlyContinue
+. (Join-Path (Join-Path $projectRoot "agents") "lib_alpha_vs_btc.ps1")
 
 Write-Host "=== Alpha vs BTC Audit ==="
 Write-Host ""

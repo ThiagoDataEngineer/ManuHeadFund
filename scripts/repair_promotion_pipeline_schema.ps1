@@ -1,4 +1,4 @@
-# repair_promotion_pipeline_schema.ps1 -- C6 J2 audit retroativo 2026-05-20 PM6+700min.
+﻿# repair_promotion_pipeline_schema.ps1 -- C6 J2 audit retroativo 2026-05-20 PM6+700min.
 #
 # Re-normaliza entries com schema invalido (failures/reasons/blocked_by como scalar string)
 # em journal/promotion_pipeline.jsonl. Idempotent. Cria backup antes.
@@ -11,8 +11,8 @@ param([switch] $DryRun)
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot = Split-Path -Parent $scriptDir
-. (Join-Path $projectRoot "agents\lib_json_contract.ps1")
-. (Join-Path $projectRoot "agents\lib_schema_validators.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "lib_json_contract.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "lib_schema_validators.ps1")
 
 $path = Join-Path $projectRoot "journal\promotion_pipeline.jsonl"
 if (-not (Test-Path $path)) { Write-Host "  arquivo nao existe"; exit 0 }

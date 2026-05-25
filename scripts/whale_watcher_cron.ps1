@@ -1,4 +1,4 @@
-# whale_watcher_cron.ps1 -- Cron entry point pra whale watcher.
+﻿# whale_watcher_cron.ps1 -- Cron entry point pra whale watcher.
 #
 # Roda 1 cycle de Invoke-WhaleWatcherCycle, persiste log.
 # Idempotent: lib_whale_watcher dedupa via journal/whale_alerts_seen.jsonl.
@@ -16,9 +16,9 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot = Split-Path -Parent $scriptDir
 Set-Location $projectRoot
 
-. (Join-Path $projectRoot "agents\config.local.ps1")
-. (Join-Path $projectRoot "agents\lib_telegram.ps1")
-. (Join-Path $projectRoot "agents\lib_whale_watcher.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "config.local.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "lib_telegram.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "lib_whale_watcher.ps1")
 
 $logFile = Join-Path $projectRoot ("logs\whale_cron_" + (Get-Date -Format "yyyyMMdd") + ".log")
 $logDir = Split-Path $logFile -Parent

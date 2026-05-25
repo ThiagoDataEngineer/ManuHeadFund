@@ -1,13 +1,13 @@
-#!/usr/bin/env powershell
+﻿#!/usr/bin/env powershell
 # Start services - Windows PowerShell 5.1 compatible
 
 $wd = "C:\Users\thiag\Coinex_AI_USER_API"
 $logsDir = Join-Path $wd "journal"
 
 Write-Host ""
-Write-Host "════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•" -ForegroundColor Cyan
 Write-Host "  INICIANDO GEM_LOOP + GEMS INTRADAY" -ForegroundColor Cyan
-Write-Host "════════════════════════════════════════" -ForegroundColor Cyan
+Write-Host "â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•" -ForegroundColor Cyan
 Write-Host ""
 
 # Ensure journal dir
@@ -29,7 +29,7 @@ Get-Process powershell -ErrorAction SilentlyContinue | ForEach-Object {
     }
 }
 if ($oldCount -gt 0) {
-    Write-Host "  ✓ Matou $oldCount processo(s) antigo(s)" -ForegroundColor Yellow
+    Write-Host "  âœ“ Matou $oldCount processo(s) antigo(s)" -ForegroundColor Yellow
 } else {
     Write-Host "  (nenhum processo antigo)" -ForegroundColor Gray
 }
@@ -51,12 +51,12 @@ try {
     . (Join-Path $agentsDir "gem_agent.ps1") -ErrorAction Stop
     
     if (Get-Command "Invoke-GemScan" -ErrorAction SilentlyContinue) {
-        Write-Host "  ✓ Sourcing OK - Invoke-GemScan available" -ForegroundColor Green
+        Write-Host "  âœ“ Sourcing OK - Invoke-GemScan available" -ForegroundColor Green
     } else {
         throw "Invoke-GemScan not found"
     }
 } catch {
-    Write-Host "  ✗ ERRO: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "  âœ— ERRO: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 }
 
@@ -67,19 +67,19 @@ Write-Host "[3/3] Iniciando gem_loop..." -ForegroundColor Yellow
 $gemProc = Start-Process powershell.exe -ArgumentList @(
     "-NoProfile",
     "-ExecutionPolicy", "Bypass",
-    "-File", (Join-Path $wd "scripts\gem_loop.ps1"),
+    "-File", (Join-Path (Join-Path $wd "scripts") "gem_loop.ps1"),
     "-Force"
 ) -WorkingDirectory $wd -PassThru
 
-Write-Host "  • PID=$($gemProc.Id)" -ForegroundColor Yellow
+Write-Host "  â€¢ PID=$($gemProc.Id)" -ForegroundColor Yellow
 
 Start-Sleep -Seconds 4
 
 # Verify alive
 if (Get-Process -Id $gemProc.Id -ErrorAction SilentlyContinue) {
-    Write-Host "  ✓ gem_loop ALIVE" -ForegroundColor Green
+    Write-Host "  âœ“ gem_loop ALIVE" -ForegroundColor Green
 } else {
-    Write-Host "  ✗ gem_loop FALHOU" -ForegroundColor Red
+    Write-Host "  âœ— gem_loop FALHOU" -ForegroundColor Red
     exit 1
 }
 
@@ -87,16 +87,16 @@ if (Get-Process -Id $gemProc.Id -ErrorAction SilentlyContinue) {
 $gemLog = Join-Path $logsDir "gem_loop.log"
 if (Test-Path $gemLog) {
     Write-Host ""
-    Write-Host "Últimos eventos:" -ForegroundColor Cyan
+    Write-Host "Ãšltimos eventos:" -ForegroundColor Cyan
     Get-Content $gemLog -Tail 6 -ErrorAction SilentlyContinue | ForEach-Object {
         Write-Host "  $_" -ForegroundColor Gray
     }
 }
 
 Write-Host ""
-Write-Host "════════════════════════════════════════" -ForegroundColor Green
-Write-Host "  ✓ SISTEMA ONLINE" -ForegroundColor Green
-Write-Host "════════════════════════════════════════" -ForegroundColor Green
+Write-Host "â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•" -ForegroundColor Green
+Write-Host "  âœ“ SISTEMA ONLINE" -ForegroundColor Green
+Write-Host "â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•" -ForegroundColor Green
 Write-Host ""
 Write-Host "gem_loop PID=$($gemProc.Id) - RODANDO" -ForegroundColor Cyan
 Write-Host ""

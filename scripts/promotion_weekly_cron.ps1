@@ -214,7 +214,7 @@ function Invoke-CronCycle {
     if ((Get-Date).DayOfWeek -eq 'Sunday') {
         Write-CronLog "INFO" "Weekly Cost Report (Domingo)..."
         try {
-            . "$projectRoot\agents\lib_cost_tracker.ps1"
+            . (Join-Path (Join-Path $projectRoot "agents") "lib_cost_tracker.ps1")
             $costMsg = Format-TgCostReport
             if (-not $DryRun) { Send-TelegramAlert -Message $costMsg | Out-Null }
             $s = Get-CostSummary
@@ -229,8 +229,8 @@ function Invoke-CronCycle {
     # Validado backtest 14y: strict_v3 phase-aware +18% total R vs strict_v2.
     Write-CronLog "INFO" "Halving Phase Check..."
     try {
-        . "$projectRoot\agents\lib_market_context_engine.ps1"
-        . "$projectRoot\agents\lib_halving_phase_alert.ps1"
+        . (Join-Path (Join-Path $projectRoot "agents") "lib_market_context_engine.ps1")
+        . (Join-Path (Join-Path $projectRoot "agents") "lib_halving_phase_alert.ps1")
         $sendBlock = $null
         if (-not $DryRun) {
             $sendBlock = { param($m) Send-TelegramAlert -Message $m }

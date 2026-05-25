@@ -1,4 +1,4 @@
-# vol_climax_scanner.ps1 -- Scanner dedicated LONG_vol_climax (edge +8.6pp validado).
+﻿# vol_climax_scanner.ps1 -- Scanner dedicated LONG_vol_climax (edge +8.6pp validado).
 #
 # Filosofia: backtest unified mostrou que LONG_vol_climax eh UNICO pattern com edge
 # real (n=278 hit 58.3% vs baseline 49.6%, +14.4% avg outcome wins). Outros patterns
@@ -17,15 +17,15 @@ $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot = Split-Path -Parent $scriptDir
 Set-Location $projectRoot
 
-. (Join-Path $projectRoot "agents\config.local.ps1")
-. (Join-Path $projectRoot "agents\lib_coinex.ps1")
-. (Join-Path $projectRoot "agents\lib_telegram.ps1")
-. (Join-Path $projectRoot "agents\lib_chart_patterns.ps1")
-. (Join-Path $projectRoot "agents\lib_cluster_filter.ps1")
-. (Join-Path $projectRoot "agents\lib_wyckoff_spring_score.ps1")
-# Caminho 2 (2026-05-23): forward validation tracker — captura Tier S signals pra audit real
-if (Test-Path (Join-Path $projectRoot "agents\lib_wss_forward_tracker.ps1")) {
-    . (Join-Path $projectRoot "agents\lib_wss_forward_tracker.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "config.local.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "lib_coinex.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "lib_telegram.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "lib_chart_patterns.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "lib_cluster_filter.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "lib_wyckoff_spring_score.ps1")
+# Caminho 2 (2026-05-23): forward validation tracker â€” captura Tier S signals pra audit real
+if (Test-Path (Join-Path (Join-Path $projectRoot "agents") "lib_wss_forward_tracker.ps1")) {
+    . (Join-Path (Join-Path $projectRoot "agents") "lib_wss_forward_tracker.ps1")
 }
 
 $logFile = Join-Path $projectRoot ("logs\vol_climax_" + (Get-Date -Format "yyyyMMdd") + ".log")
@@ -135,10 +135,10 @@ function _FetchDailyCandles {
     return @()
 }
 
-# WSS context — fetched once per scan (BTC regime + market quality table).
+# WSS context â€” fetched once per scan (BTC regime + market quality table).
 # Must be AFTER function definitions (PS 5.1 no forward ref).
 $btcRegime  = _FetchBtcRegime
-$wssQuality = Read-WyckoffMarketQuality (Join-Path $projectRoot "journal\wyckoff_market_quality.json")
+$wssQuality = Read-WyckoffMarketQuality (Join-Path (Join-Path $projectRoot "journal") "wyckoff_market_quality.json")
 $wssEnabled = ($null -ne $btcRegime) -and ($wssQuality.Count -gt 0)
 if ($wssEnabled) {
     Log "  WSS context: BTC DD=$([math]::Round($btcRegime.drawdown_pct,1))% vol_20d=$([math]::Round($btcRegime.vol_20d,2))% quality_table=$($wssQuality.Count) markets"
@@ -239,7 +239,7 @@ foreach ($mkt in $markets) {
                 $msg = "[VOL CLIMAX][TIER A obs] $mkt WSS=$($wssResult.wss)`nstrength=$($r.strength) vol_ratio=$($r.vol_ratio)x`nObservatory only (tier A nao paper-trade)."
                 try { Send-TelegramAlert -Message $msg | Out-Null } catch {}
             } else {
-                # Tier B ou WSS disabled — log silent
+                # Tier B ou WSS disabled â€” log silent
             }
         }
         $tag = ""

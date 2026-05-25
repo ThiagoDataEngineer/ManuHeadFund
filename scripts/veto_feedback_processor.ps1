@@ -1,13 +1,13 @@
-# scripts\veto_feedback_processor.ps1
+﻿# scripts\veto_feedback_processor.ps1
 # Processa fila de vetos e executa acoes corretivas
 # Executar a cada 30min via Task Scheduler
 # 2026-05-24
 
 $scriptRoot = Split-Path -Parent $PSScriptRoot
-. "$scriptRoot\agents\lib_veto_feedback.ps1"
+. (Join-Path (Join-Path $scriptRoot "agents") "lib_veto_feedback.ps1")
 
 # Log file
-$logFile = "$scriptRoot\logs\veto_feedback_processor.log"
+$logFile = (Join-Path (Join-Path $scriptRoot "logs") "veto_feedback_processor.log")
 $logDir = Split-Path -Parent $logFile
 
 if (-not (Test-Path $logDir)) {

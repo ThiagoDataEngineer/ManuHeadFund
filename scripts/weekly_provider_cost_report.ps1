@@ -1,4 +1,4 @@
-# weekly_provider_cost_report.ps1 -- Domingo 23:00 BRT
+﻿# weekly_provider_cost_report.ps1 -- Domingo 23:00 BRT
 #
 # Agrega 7d de claude_usage.csv + decisions.csv:
 #   - Total calls por provider/model
@@ -11,7 +11,7 @@ $projectRoot = Split-Path -Parent $scriptDir
 $journalDir = Join-Path $projectRoot "journal"
 Set-Location $projectRoot
 
-. (Join-Path $projectRoot "agents\lib_telegram.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "lib_telegram.ps1")
 
 # Pricing por 1K tokens (Anthropic 2026 pricing)
 $pricing = @{
@@ -82,7 +82,7 @@ if (Test-Path $decPath) {
         }
         if ($r.mentor_decision -eq "APROVAR") { $byProv[$p].aprovar++ }
         elseif ($r.mentor_decision -eq "VETAR") { $byProv[$p].vetar++ }
-        if ($r.reason -match "Mesa pulou|FQS indisponível") { $byProv[$p].halluc++ }
+        if ($r.reason -match "Mesa pulou|FQS indisponÃ­vel") { $byProv[$p].halluc++ }
     }
     $lines.Add("")
     $lines.Add("MENTOR DECISIONS 7d por provider:")

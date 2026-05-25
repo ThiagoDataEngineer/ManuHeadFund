@@ -1,6 +1,6 @@
-# smoke_test_mentor_e2e.ps1 -- E2E real: Invoke-MentorDebate via mock LLM cascade.
+﻿# smoke_test_mentor_e2e.ps1 -- E2E real: Invoke-MentorDebate via mock LLM cascade.
 #
-# Diferente do smoke_test_mentor_evolutions.ps1 que testa libs isoladas — este invoca
+# Diferente do smoke_test_mentor_evolutions.ps1 que testa libs isoladas â€” este invoca
 # o fluxo REAL Invoke-MentorDebate substituindo APENAS Invoke-MentorCascade (binding).
 # Valida que:
 #   - GATE STATUS block aparece no prompt enviado
@@ -19,8 +19,8 @@ Set-Location $projectRoot
 # Garante journal dir set
 if (-not $global:JOURNAL_DIR) { $global:JOURNAL_DIR = Join-Path $projectRoot "journal" }
 
-. (Join-Path $projectRoot "agents\config.local.ps1") -ErrorAction SilentlyContinue
-. (Join-Path $projectRoot "agents\mentor_agent.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "config.local.ps1") -ErrorAction SilentlyContinue
+. (Join-Path (Join-Path $projectRoot "agents") "mentor_agent.ps1")
 . (Join-Path $projectRoot "tests\_helpers\llm_mocks.ps1")
 
 # Setup tmp reflections file for E3 wire test
@@ -40,7 +40,7 @@ function _Fail($name, $why) { Write-Host "  FAIL $name :: $why" -ForegroundColor
 Write-Host ""
 Write-Host "=== Mentor E2E (mock LLM cascade) ==="
 
-# Mock Invoke-MentorCascade — captura prompts + retorna mock response
+# Mock Invoke-MentorCascade â€” captura prompts + retorna mock response
 Reset-LlmCapture
 $mockCalls = @()
 
