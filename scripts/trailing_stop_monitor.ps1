@@ -46,10 +46,10 @@ if (-not (Test-CrossPlatformCredentials)) {
 try {
     Write-CrossPlatformLog "Loading libraries..." -LogFile "trailing_stop_monitor.log"
     
-    # Carregar libs diretamente (dot-sourcing funciona melhor)
-    $agentsDir = Join-Path $projectRoot "agents"
+    # Carregar libs diretamente com Join-Path (cross-platform)
     . (Join-Path $agentsDir "config.ps1")
     . (Join-Path $agentsDir "lib_coinex.ps1")
+    . (Join-Path $agentsDir "lib_telegram.ps1")
     . (Join-Path $agentsDir "lib_trailing.ps1")
     . (Join-Path $agentsDir "lib_trailing_orphan_detection.ps1")
     

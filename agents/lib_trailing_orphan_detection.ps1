@@ -17,10 +17,10 @@
 
 # Dependências
 if (-not (Get-Command Get-TrailingPositions -ErrorAction SilentlyContinue)) {
-    . "$PSScriptRoot\lib_trailing.ps1"
+    . (Join-Path $PSScriptRoot "lib_trailing.ps1")
 }
 if (-not (Get-Command CoinEx-GetPendingPositions -ErrorAction SilentlyContinue)) {
-    . "$PSScriptRoot\lib_coinex.ps1"
+    . (Join-Path $PSScriptRoot "lib_coinex.ps1")
 }
 
 # ============================================================================

@@ -8,11 +8,11 @@
 #
 # Para SHORT: logica espelhada (stop desce conforme preco cai)
 
-. "$PSScriptRoot\config.ps1"
-. "$PSScriptRoot\lib_coinex.ps1"
-. "$PSScriptRoot\lib_telegram.ps1"
+. (Join-Path $PSScriptRoot "config.ps1")
+. (Join-Path $PSScriptRoot "lib_coinex.ps1")
+. (Join-Path $PSScriptRoot "lib_telegram.ps1")
 
-$TRAILING_FILE = "$PSScriptRoot\..\journal\trailing_positions.json"
+$TRAILING_FILE = Join-Path $PSScriptRoot ".." "journal" "trailing_positions.json"
 
 # ── Persistencia ──────────────────────────────────────────────────────────────
 
