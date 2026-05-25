@@ -40,37 +40,37 @@ try {
     Write-Host "  [x] lib_cycle_*.ps1" -ForegroundColor Green
     
     # Macro e Seasonal
-    if (Test-Path (Join-Path $PSScriptRoot ".." "agents" "lib_macro.ps1")) {
+    if (Test-Path (Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "agents") "lib_macro.ps1")) {
         . (Join-Path $PSScriptRoot "..\agents\lib_macro.ps1")
         Write-Host "  [x] lib_macro.ps1" -ForegroundColor Green
     }
-    if (Test-Path (Join-Path $PSScriptRoot ".." "agents" "lib_seasonal.ps1")) {
+    if (Test-Path (Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "agents") "lib_seasonal.ps1")) {
         . (Join-Path $PSScriptRoot "..\agents\lib_seasonal.ps1")
         Write-Host "  [x] lib_seasonal.ps1" -ForegroundColor Green
     }
     
     # Whitelist
-    if (Test-Path (Join-Path $PSScriptRoot ".." "agents" "lib_operational_whitelist.ps1")) {
+    if (Test-Path (Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "agents") "lib_operational_whitelist.ps1")) {
         . (Join-Path $PSScriptRoot "..\agents\lib_operational_whitelist.ps1")
         Write-Host "  [x] lib_operational_whitelist.ps1" -ForegroundColor Green
     }
     
     # Agents (Triagem, Mesa, Mentor)
-    if (Test-Path (Join-Path $PSScriptRoot ".." "agents" "triagem_agent.ps1")) {
+    if (Test-Path (Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "agents") "triagem_agent.ps1")) {
         . (Join-Path $PSScriptRoot "..\agents\triagem_agent.ps1")
         Write-Host "  [x] triagem_agent.ps1" -ForegroundColor Green
     }
-    if (Test-Path (Join-Path $PSScriptRoot ".." "agents" "mesa_agent.ps1")) {
+    if (Test-Path (Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "agents") "mesa_agent.ps1")) {
         . (Join-Path $PSScriptRoot "..\agents\mesa_agent.ps1")
         Write-Host "  [x] mesa_agent.ps1" -ForegroundColor Green
     }
-    if (Test-Path (Join-Path $PSScriptRoot ".." "agents" "mentor_agent.ps1")) {
+    if (Test-Path (Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "agents") "mentor_agent.ps1")) {
         . (Join-Path $PSScriptRoot "..\agents\mentor_agent.ps1")
         Write-Host "  [x] mentor_agent.ps1" -ForegroundColor Green
     }
     
     # Mocks (fallback se agents nao existirem)
-    if (Test-Path (Join-Path $PSScriptRoot ".." "agents" "lib_esquadrao_mocks.ps1")) {
+    if (Test-Path (Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "agents") "lib_esquadrao_mocks.ps1")) {
         . (Join-Path $PSScriptRoot "..\agents\lib_esquadrao_mocks.ps1")
         Write-Host "  [x] lib_esquadrao_mocks.ps1 (fallback)" -ForegroundColor Yellow
     }
@@ -114,7 +114,7 @@ Write-Host "  Capital Total: $CAPITAL_TOTAL USDT" -ForegroundColor Cyan
 Write-Host "`n[3/5] Preparando ambiente..." -ForegroundColor Yellow
 
 # Criar pasta journal se nao existir
-$journalPath = (Join-Path $PSScriptRoot ".." "journal"
+$journalPath = Join-Path $PSScriptRoot (Join-Path ".." "journal")
 if (-not (Test-Path $journalPath)) {
     New-Item -ItemType Directory -Path $journalPath -Force | Out-Null
     Write-Host "  [x] Pasta journal criada" -ForegroundColor Green

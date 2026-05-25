@@ -124,7 +124,7 @@ function Initialize-TDDDeployment {
     }
     
     # Create deployment log
-    $log_dir = (Join-Path $PSScriptRoot ".." "journal"
+    $log_dir = Join-Path $PSScriptRoot (Join-Path ".." "journal")
     if (-not (Test-Path $log_dir)) {
         New-Item -ItemType Directory -Path $log_dir -Force | Out-Null
     }

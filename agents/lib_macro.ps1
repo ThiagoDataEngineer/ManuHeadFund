@@ -3,7 +3,7 @@
 # Design: utilitario puro, igual a lib_coinex.ps1 -- sem peso no orquestrador,
 #         sem chamada Claude. Dado macro muda 1x/dia; injetado nos prompts existentes.
 
-$MACRO_CACHE_PATH  = if ($env:TEMP) { "$env:TEMP\macro_cache.json" } else { (Join-Path $PSScriptRoot ".." "logs" "macro_cache.json") }
+$MACRO_CACHE_PATH  = if ($env:TEMP) { "$env:TEMP\macro_cache.json" } else { (Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "logs") "macro_cache.json") }
 $MACRO_CACHE_TTL_H = 24
 
 # Extrai o primeiro valor numerico valido de uma resposta FRED (ignora ".")

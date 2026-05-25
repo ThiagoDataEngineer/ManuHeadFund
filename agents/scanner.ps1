@@ -221,7 +221,7 @@ function Get-QuickTechScore {
 function Get-FullTechScore {
     param([string]$Market)
     # Roda tech_agent.ps1 completo para score detalhado
-    $techPath = (Join-Path $PSScriptRoot ".." "scripts" "tech_agent.ps1")
+    $techPath = (Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "scripts") "tech_agent.ps1")
     if (-not (Test-Path $techPath)) { return $null }
     try {
         $data = & $techPath -Market $Market -Once -Quiet

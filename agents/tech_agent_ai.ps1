@@ -173,7 +173,7 @@ function Invoke-TechAgent {
     Write-Host "  [TechAgent] Coletando dados: $Market..." -ForegroundColor DarkCyan
 
     # Chama tech_agent.ps1 existente em modo silencioso
-    $techPath = (Join-Path $PSScriptRoot ".." "scripts" "tech_agent.ps1")
+    $techPath = (Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "scripts") "tech_agent.ps1")
     $data = & $techPath -Market $Market -Once -Quiet
 
     if (-not $data) {

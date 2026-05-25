@@ -2,7 +2,7 @@
 # Chama tech_agent.ps1 em modo silencioso e retorna dados estruturados
 # Dot-source: . (Join-Path $PSScriptRoot "lib_indicators.ps1")
 
-$_TECH_AGENT_PATH = (Join-Path $PSScriptRoot ".." "scripts" "tech_agent.ps1")
+$_TECH_AGENT_PATH = (Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "scripts") "tech_agent.ps1")
 
 function Get-TechData {
     param(

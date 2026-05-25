@@ -144,14 +144,17 @@ $TORI_MAX_HOLD_DAYS = 20       # h20 (20 days max hold)
 
 # Monitoring
 $TORI_CHECK_INTERVAL_MIN = 15  # Check every 15 minutes
-$TORI_STATE_FILE = "$JOURNAL_DIR\tori_proximity_state.json"
-$TORI_SIGNALS_FILE = "$JOURNAL_DIR\tori_paper_signals.jsonl"
+# Note: TORI_STATE_FILE e TORI_SIGNALS_FILE definidos abaixo, apos $JOURNAL_DIR
 
 # ── Diretorio de Journal ──────────────────────────────────────────────────────
 
-$JOURNAL_DIR  = (Join-Path $PSScriptRoot ".." "journal"
-$JOURNAL_FILE = "$JOURNAL_DIR" "trades.csv")
-$LOG_DIR      = (Join-Path $PSScriptRoot ".." "logs")
+$JOURNAL_DIR  = Join-Path $PSScriptRoot (Join-Path ".." "journal")
+$JOURNAL_FILE = Join-Path $JOURNAL_DIR "trades.csv"
+$LOG_DIR      = Join-Path $PSScriptRoot (Join-Path ".." "logs")
+
+# Tori files (precisam de $JOURNAL_DIR)
+$TORI_STATE_FILE   = Join-Path $JOURNAL_DIR "tori_proximity_state.json"
+$TORI_SIGNALS_FILE = Join-Path $JOURNAL_DIR "tori_paper_signals.jsonl"
 
 # ── GemAgent — Micro-Caps Explosivos (SPOT, pipeline independente) ────────────
 

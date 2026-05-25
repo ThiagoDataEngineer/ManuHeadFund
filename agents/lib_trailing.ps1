@@ -12,7 +12,7 @@
 . (Join-Path $PSScriptRoot "lib_coinex.ps1")
 . (Join-Path $PSScriptRoot "lib_telegram.ps1")
 
-$TRAILING_FILE = Join-Path $PSScriptRoot ".." "journal" "trailing_positions.json"
+$TRAILING_FILE = Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "journal") "trailing_positions.json"
 
 # ── Persistencia ──────────────────────────────────────────────────────────────
 

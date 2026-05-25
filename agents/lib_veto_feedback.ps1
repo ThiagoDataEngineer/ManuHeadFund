@@ -42,7 +42,7 @@ function Register-VetoFeedback {
         [Parameter(Mandatory)] [hashtable] $Context
     )
     
-    $feedbackFile = (Join-Path $PSScriptRoot ".." "journal" "veto_feedback.jsonl")
+    $feedbackFile = (Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "journal") "veto_feedback.jsonl")
     
     # Criar diretorio se nao existir
     $dir = Split-Path -Parent $feedbackFile
@@ -87,7 +87,7 @@ function Get-PendingVetoFeedbacks {
         [int] $MaxAge = 24  # horas
     )
     
-    $feedbackFile = (Join-Path $PSScriptRoot ".." "journal" "veto_feedback.jsonl")
+    $feedbackFile = (Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "journal") "veto_feedback.jsonl")
     
     if (-not (Test-Path $feedbackFile)) {
         return @()
@@ -208,7 +208,7 @@ function Update-VetoFeedbackStatus {
         [string] $Note = ""
     )
     
-    $feedbackFile = (Join-Path $PSScriptRoot ".." "journal" "veto_feedback.jsonl")
+    $feedbackFile = (Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "journal") "veto_feedback.jsonl")
     
     if (-not (Test-Path $feedbackFile)) {
         return

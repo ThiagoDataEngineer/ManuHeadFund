@@ -10,7 +10,7 @@
 #
 # Estado persistido em journal/live_guards_state.json (trades/semana counter).
 
-$LIVE_GUARDS_FILE = (Join-Path $PSScriptRoot ".." "journal" "live_guards_state.json")
+$LIVE_GUARDS_FILE = (Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "journal") "live_guards_state.json")
 
 
 function Get-LiveGuardsState {

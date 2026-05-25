@@ -13,7 +13,7 @@
 #
 # State persistido em journal/llm_http_errors.json (rolling 24h window).
 
-$LLM_ERROR_FILE = (Join-Path $PSScriptRoot ".." "journal" "llm_http_errors.json")
+$LLM_ERROR_FILE = (Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "journal") "llm_http_errors.json")
 
 
 function Get-LlmErrorState {

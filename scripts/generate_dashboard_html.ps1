@@ -10,11 +10,11 @@ param(
 )
 
 # Ler template HTML base
-$templatePath = (Join-Path $PSScriptRoot ".." "dashboard" "template.html")
+$templatePath = (Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "dashboard") "template.html")
 
 if (-not (Test-Path $templatePath)) {
     Write-Host "Template nao encontrado, usando dashboard atual como base" -ForegroundColor Yellow
-    $templatePath = (Join-Path $PSScriptRoot ".." "dashboard" "index.html")
+    $templatePath = (Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "dashboard") "index.html")
 }
 
 # Ler HTML base

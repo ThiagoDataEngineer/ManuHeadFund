@@ -159,7 +159,7 @@ foreach ($opp in $top5) {
 }
 
 # Salva resultado completo
-$reportPath = (Join-Path $PSScriptRoot ".." "SHORT_OPPORTUNITIES_$(Get-Date -Format 'yyyy_MM_dd_HHmm').md")
+$reportPath = (Join-Path $PSScriptRoot (Join-Path ".." "SHORT_OPPORTUNITIES_$(Get-Date -Format 'yyyy_MM_dd_HHmm').md"))
 $report = @"
 # SHORT OPPORTUNITIES - $(Get-Date -Format 'yyyy-MM-dd HH:mm')
 

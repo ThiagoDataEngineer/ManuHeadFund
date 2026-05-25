@@ -258,7 +258,7 @@ function Get-WhaleAccumulationContext {
     [CmdletBinding()]
     param([int]$DaysLookback = 30, [int]$CacheHours = 12)
 
-    $cacheFile = (Join-Path $PSScriptRoot ".." "journal" "whale_cache.json")
+    $cacheFile = (Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "journal") "whale_cache.json")
     if (Test-Path $cacheFile) {
         try {
             $cached = Get-Content $cacheFile -Raw -Encoding UTF8 | ConvertFrom-Json
@@ -328,7 +328,7 @@ function Get-EtfFlowContext {
     [CmdletBinding()]
     param([int]$DaysLookback = 7, [int]$CacheHours = 6)
 
-    $cacheFile = (Join-Path $PSScriptRoot ".." "journal" "etf_flow_cache.json")
+    $cacheFile = (Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "journal") "etf_flow_cache.json")
     if (Test-Path $cacheFile) {
         try {
             $cached = Get-Content $cacheFile -Raw -Encoding UTF8 | ConvertFrom-Json

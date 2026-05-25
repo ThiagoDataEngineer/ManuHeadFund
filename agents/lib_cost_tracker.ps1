@@ -2,7 +2,7 @@
 # Persiste cada chamada em journal/claude_usage.csv para analise posterior.
 # Zero dependencia externa ï¿½ apenas escrita CSV.
 
-$COST_USAGE_FILE = (Join-Path $PSScriptRoot ".." "journal" "claude_usage.csv")
+$COST_USAGE_FILE = (Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "journal") "claude_usage.csv")
 
 # Tabela de precos Anthropic (USD por 1M tokens) ï¿½ Maio 2026
 # Atualizar se Anthropic mudar pricing
