@@ -6,9 +6,11 @@
 # Detectar Sistema Operacional
 # ============================================================================
 
-$script:IsLinux = $PSVersionTable.Platform -eq "Unix" -or $PSVersionTable.OS -like "*Linux*"
-$script:IsWindows = -not $script:IsLinux
-$script:PathSeparator = if ($script:IsLinux) { "/" } else { "\" }
+# Usar nomes que nao conflitam com variaveis automaticas do PowerShell 7+
+# ($IsLinux, $IsWindows, $IsMacOS sao read-only no PS7)
+$script:IsLinuxOS = $PSVersionTable.Platform -eq "Unix" -or $PSVersionTable.OS -like "*Linux*"
+$script:IsWindowsOS = -not $script:IsLinuxOS
+$script:PathSeparator = if ($script:IsLinuxOS) { "/" } else { "\" }
 
 # ============================================================================
 # Get-ProjectRoot - Retorna raiz do projeto de forma cross-platform
@@ -145,8 +147,8 @@ function Initialize-CrossPlatformEnvironment {
     
     # Retornar informações do ambiente
     return @{
-        IsLinux = $script:IsLinux
-        IsWindows = $script:IsWindows
+        IsLinux = $script:IsLinuxOS
+        IsWindows = $script:IsWindowsOS
         ProjectRoot = $projectRoot
         JournalDir = Join-Path $projectRoot "journal"
         LogsDir = Join-Path $projectRoot "logs"
@@ -237,10 +239,10 @@ function Test-CrossPlatformCredentials {
 # Exportar variáveis globais
 # ============================================================================
 
-$global:CROSS_PLATFORM_IS_LINUX = $script:IsLinux
-$global:CROSS_PLATFORM_IS_WINDOWS = $script:IsWindows
+$global:CROSS_PLATFORM_IS_LINUX = $script:IsLinuxOS
+$global:CROSS_PLATFORM_IS_WINDOWS = $script:IsWindowsOS
 $global:CROSS_PLATFORM_PROJECT_ROOT = Get-ProjectRoot
 
 Write-Verbose "Cross-platform library loaded"
-Write-Verbose "  OS: $(if ($script:IsLinux) { 'Linux' } else { 'Windows' })"
+Write-Verbose "  OS: $(if ($script:IsLinuxOS) { 'Linux' } else { 'Windows' })"
 Write-Verbose "  Project Root: $global:CROSS_PLATFORM_PROJECT_ROOT"
