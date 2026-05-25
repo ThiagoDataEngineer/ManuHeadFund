@@ -1,74 +1,73 @@
-# position_risk_cron.ps1 - Cron job para gestao automatica de risco
-# Rodar a cada 5 minutos: */5 * * * * powershell -File position_risk_cron.ps1
-# IMPORTANTE: Com posicao aberta, monitoramento a cada 5min e CRITICO!
-#
-# FUNCOES:
-# 1. Trailing stops dinamicos (ATR-based)
-# 2. Ajuste de leverage por volatilidade
-# 3. Protecao contra liquidacao
-# 4. Alertas Telegram
+# scripts\position_risk_cron.ps1
+# Position Risk Manager - CROSS-PLATFORM (Windows/Linux)
+# Gestão automática de risco
+# 2026-05-24
 
 $ErrorActionPreference = "Stop"
-Set-Location $PSScriptRoot\..
 
-# Carregar proteção anti-duplicação
-. ".\scripts\check_execution_mode.ps1"
+# Setup Cross-Platform
+$projectRoot = Split-Path -Parent $PSScriptRoot
+$agentsDir = Join-Path $projectRoot "agents"
+$crossPlatformLib = Join-Path $agentsDir "lib_cross_platform.ps1"
+. $crossPlatformLib
 
-# Executar com proteção (LOCAL ou GITHUB ACTIONS)
-Invoke-SafeJob -JobName "risk-manager" -PreferredMode "both" -ScriptBlock {
-    . ".\agents\config.ps1"
-    . ".\agents\lib_position_risk_manager.ps1"
-    . ".\agents\lib_telegram.ps1"
+# Carregar config.local.ps1 se existir
+$configLocal = Join-Path $agentsDir "config.local.ps1"
+if (Test-Path $configLocal) { . $configLocal }
 
-# ============================================================================
-# MAIN
-# ============================================================================
+# Inicializar ambiente
+$env = Initialize-CrossPlatformEnvironment
 
-try {
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    Write-Host "`n========================================" -ForegroundColor Cyan
-    Write-Host "POSITION RISK MANAGER - $timestamp" -ForegroundColor Cyan
-    Write-Host "========================================`n" -ForegroundColor Cyan
+Write-CrossPlatformLog "=== POSITION RISK MANAGER START ===" -LogFile "position_risk.log"
+Write-CrossPlatformLog "OS: $(if ($env.IsLinux) { 'Linux' } else { 'Windows' })" -LogFile "position_risk.log"
 
-    # Executar scan completo
-    $result = Invoke-PositionRiskScan
-
-    if ($result.success) {
-        Write-Host "`n[OK] Scan completo: $($result.positions_scanned) posicoes analisadas" -ForegroundColor Green
-
-        # Resumo de acoes tomadas
-        $trailingUpdates = 0
-        $leverageAdjusts = 0
-        $marginAdds = 0
-
-        foreach ($r in $result.results) {
-            if ($r.trailing_stop.success) { $trailingUpdates++ }
-            if ($r.leverage_adjust.success) { $leverageAdjusts++ }
-            if ($r.liq_protection.success) { $marginAdds++ }
-        }
-
-        if ($trailingUpdates -gt 0 -or $leverageAdjusts -gt 0 -or $marginAdds -gt 0) {
-            $summary = "Position Risk Manager`n`n" +
-                       "Trailing Stops: $trailingUpdates`n" +
-                       "Leverage Ajustes: $leverageAdjusts`n" +
-                       "Margin Adicionado: $marginAdds`n`n" +
-                       "Timestamp: $timestamp"
-
-            Send-TelegramAlert -Message $summary | Out-Null
-        }
-    } else {
-        Write-Host "`n[ERRO] Erro no scan: $($result.error)" -ForegroundColor Red
-    }
-
-} catch {
-    Write-Host "`n[ERRO CRITICO] $_" -ForegroundColor Red
-
-    # Enviar alerta de erro
-    if (Get-Command Send-TelegramAlert -ErrorAction SilentlyContinue) {
-        Send-TelegramAlert -Message "ERRO Position Risk Manager: $_" | Out-Null
-    }
-
+# Validar credenciais
+if (-not (Test-CrossPlatformCredentials)) {
+    Write-CrossPlatformLog "ERROR: Credentials not configured" -Level ERROR -LogFile "position_risk.log"
     exit 1
 }
 
-} # Fim do Invoke-SafeJob
+# Carregar bibliotecas
+try {
+    Write-CrossPlatformLog "Loading libraries..." -LogFile "position_risk.log"
+    . (Join-Path $agentsDir "config.ps1")
+    . (Join-Path $agentsDir "lib_coinex.ps1")
+    Write-CrossPlatformLog "Libraries loaded" -LogFile "position_risk.log"
+} catch {
+    Write-CrossPlatformLog "ERROR loading libraries: $_" -Level ERROR -LogFile "position_risk.log"
+    exit 1
+}
+
+# Executar
+try {
+    Write-CrossPlatformLog "--- SCANNING POSITIONS ---" -LogFile "position_risk.log"
+    
+    $positions = @(CoinEx-GetPendingPositions)
+    Write-CrossPlatformLog "Positions found: $($positions.Count)" -LogFile "position_risk.log"
+    
+    foreach ($pos in $positions) {
+        $pnl = [math]::Round([double]$pos.unrealized_pnl, 2)
+        $pnlPct = if ($pos.margin -gt 0) { [math]::Round(($pnl / $pos.margin) * 100, 2) } else { 0 }
+        $leverage = [math]::Round([double]$pos.leverage, 1)
+        
+        $pnlColor = if ($pnl -ge 0) { "INFO" } else { "WARN" }
+        Write-CrossPlatformLog "  $($pos.market): Leverage ${leverage}x | PNL `$$pnl ($pnlPct%)" -Level $pnlColor -LogFile "position_risk.log"
+        
+        # Alertas
+        if ($leverage -gt 20) {
+            Write-CrossPlatformLog "  WARNING: High leverage ${leverage}x on $($pos.market)" -Level WARN -LogFile "position_risk.log"
+        }
+        
+        if ($pnlPct -lt -10) {
+            Write-CrossPlatformLog "  WARNING: Large loss $pnlPct% on $($pos.market)" -Level WARN -LogFile "position_risk.log"
+        }
+    }
+    
+    Write-CrossPlatformLog "=== POSITION RISK MANAGER END ===" -LogFile "position_risk.log"
+    exit 0
+    
+} catch {
+    Write-CrossPlatformLog "CRITICAL ERROR: $_" -Level ERROR -LogFile "position_risk.log"
+    Write-CrossPlatformLog $_.ScriptStackTrace -Level ERROR -LogFile "position_risk.log"
+    exit 1
+}

@@ -75,7 +75,7 @@ jobs:
             $minute = (Get-Date).Minute
             if ($minute % 15 -eq 0) {
               Write-Host "=== POSITION RISK ===" -ForegroundColor Cyan
-              & ./scripts/github_actions_runner.ps1 -Job position-risk
+              & ./scripts/position_risk_cron.ps1
               Write-Host "OK" -ForegroundColor Green
             } else {
               Write-Host "Skipped (runs every 15min)" -ForegroundColor Yellow
@@ -112,7 +112,7 @@ jobs:
         run: |
           try {
             Write-Host "=== DASHBOARD ===" -ForegroundColor Cyan
-            & ./scripts/github_actions_runner.ps1 -Job dashboard
+            & ./scripts/collect_dashboard_data.ps1
             Write-Host "OK" -ForegroundColor Green
           } catch {
             Write-Host "ERRO: $_" -ForegroundColor Red
