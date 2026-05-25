@@ -279,6 +279,34 @@ function Invoke-OrchestratorAgent {
     Write-Host "└───────────────────────────────────────────────────┘" -ForegroundColor White
     Write-Host ""
 
+    # ── FASE 2.5: GATE INTERMEDIARIO — score muito baixo aborta antes do Mentor ──
+    # 2026-05-25 BUG FIX: pre-screen so checa tecnicos (ADX/RSI/EMA/Vol), nao score.
+    # Caso BCH: passou pre-screen (3/4 tecnicos), tech retornou score 10, foi pro
+    # Mentor gastando ~$0.02 LLM. Score < 35 = sinal claro de no-trade, nao precisa
+    # de Mentor. Margem segura para evitar abortar setups borderline.
+    if ($scorePonderado -lt 35) {
+        Write-Host "  [GATE 2.5 BLOQUEADO] Score $scorePonderado/100 muito baixo. Abortando antes do Mentor (poupanca LLM)." -ForegroundColor Yellow
+        return [PSCustomObject]@{
+            market         = $Market
+            timestamp      = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+            decisao        = "ABORTAR"
+            motivo         = "Score $scorePonderado/100 abaixo do gate 2.5 (35). Sinal claro de no-trade, evitando custo LLM do Mentor."
+            scorePonderado = $scorePonderado
+            sinalTech      = $tech.sinal
+            forcaTech      = $tech.forca
+            qualidadeSetup = $tech.qualidade_setup
+            entryPrice     = if ($tech.preco_entrada) { $tech.preco_entrada } else { 0 }
+            stopLoss       = if ($tech.stop_loss) { $tech.stop_loss } else { 0 }
+            alvo1          = if ($tech.alvo1) { $tech.alvo1 } else { 0 }
+            rrFinal        = 0; rrBruto = 0
+            feeContext     = $feeCtx; quantidadeUnits = 0
+            capitalTotal   = $capitalReal; riscoUSD = 0
+            mentorVeredicto = "NAO_CHAMADO"; mentorMensagem = "Mentor pulado por score baixo (gate 2.5)."
+            ordemId        = $null; elapsed = ((Get-Date) - $startTime).TotalSeconds
+            macroContext   = $macro; agents = $null
+        }
+    }
+
     # ── FASE 3: Position sizing preliminar ────────────────────────────────────
 
     $validation = Test-TradeSetup `
@@ -295,6 +323,25 @@ function Invoke-OrchestratorAgent {
         -FeeContext      $feeCtx
 
     # ── FASE 4: MentorAgent — veto final ──────────────────────────────────────
+
+    # 2026-05-25 BUG FIX: validar/recalcular rr_calculado antes do Mentor.
+    # LLM Tech as vezes retorna rr_calculado errado (ex: 1.5 quando real e 3.0).
+    # Recalcular baseado em entry/stop/alvo garante valor correto.
+    if ($tech -and $tech.preco_entrada -gt 0 -and $tech.stop_loss -gt 0 -and $tech.alvo1 -gt 0) {
+        $entryReal = [double]$tech.preco_entrada
+        $stopReal = [double]$tech.stop_loss
+        $alvoReal = [double]$tech.alvo1
+        $riskAbs = [math]::Abs($entryReal - $stopReal)
+        $rewardAbs = [math]::Abs($alvoReal - $entryReal)
+        if ($riskAbs -gt 0) {
+            $rrComputed = [math]::Round($rewardAbs / $riskAbs, 2)
+            $rrInformado = if ($tech.PSObject.Properties['rr_calculado']) { [double]$tech.rr_calculado } else { 0 }
+            if ([math]::Abs($rrComputed - $rrInformado) -gt 0.1) {
+                Write-Host "  [RR FIX] Tech informou rr=$rrInformado mas calculado=$rrComputed (entry=$entryReal stop=$stopReal alvo=$alvoReal). Corrigindo." -ForegroundColor Yellow
+                $tech | Add-Member -NotePropertyName rr_calculado -NotePropertyValue $rrComputed -Force
+            }
+        }
+    }
 
     $mentor = $null
     if (-not $SkipMentor) {
