@@ -24,11 +24,11 @@ if (Test-Path $configLocal) {
 }
 
 # Inicializar ambiente
-$env = Initialize-CrossPlatformEnvironment
+$cpEnv = Initialize-CrossPlatformEnvironment
 
 Write-CrossPlatformLog "=== TRAILING STOP MONITOR START ===" -LogFile "trailing_stop_monitor.log"
-Write-CrossPlatformLog "OS: $(if ($env.IsLinux) { 'Linux' } else { 'Windows' })" -LogFile "trailing_stop_monitor.log"
-Write-CrossPlatformLog "Project Root: $($env.ProjectRoot)" -LogFile "trailing_stop_monitor.log"
+Write-CrossPlatformLog "OS: $(if ($cpEnv.IsLinux) { 'Linux' } else { 'Windows' })" -LogFile "trailing_stop_monitor.log"
+Write-CrossPlatformLog "Project Root: $($cpEnv.ProjectRoot)" -LogFile "trailing_stop_monitor.log"
 
 # ============================================================================
 # Validar Credenciais

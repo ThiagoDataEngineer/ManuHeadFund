@@ -16,10 +16,10 @@ $configLocal = Join-Path $agentsDir "config.local.ps1"
 if (Test-Path $configLocal) { . $configLocal }
 
 # Inicializar ambiente
-$env = Initialize-CrossPlatformEnvironment
+$cpEnv = Initialize-CrossPlatformEnvironment
 
 Write-CrossPlatformLog "=== POSITION RISK MANAGER START ===" -LogFile "position_risk.log"
-Write-CrossPlatformLog "OS: $(if ($env.IsLinux) { 'Linux' } else { 'Windows' })" -LogFile "position_risk.log"
+Write-CrossPlatformLog "OS: $(if ($cpEnv.IsLinux) { 'Linux' } else { 'Windows' })" -LogFile "position_risk.log"
 
 # Validar credenciais
 if (-not (Test-CrossPlatformCredentials)) {

@@ -16,10 +16,10 @@ $configLocal = Join-Path $agentsDir "config.local.ps1"
 if (Test-Path $configLocal) { . $configLocal }
 
 # Inicializar ambiente
-$env = Initialize-CrossPlatformEnvironment
+$cpEnv = Initialize-CrossPlatformEnvironment
 
 Write-CrossPlatformLog "=== DASHBOARD GENERATOR START ===" -LogFile "dashboard.log"
-Write-CrossPlatformLog "OS: $(if ($env.IsLinux) { 'Linux' } else { 'Windows' })" -LogFile "dashboard.log"
+Write-CrossPlatformLog "OS: $(if ($cpEnv.IsLinux) { 'Linux' } else { 'Windows' })" -LogFile "dashboard.log"
 
 # Validar credenciais
 if (-not (Test-CrossPlatformCredentials)) {
@@ -65,7 +65,7 @@ try {
     # Gerar HTML
     Write-CrossPlatformLog "--- GENERATING HTML ---" -LogFile "dashboard.log"
     
-    $dashboardPath = Join-Path $env.DashboardDir "index.html"
+    $dashboardPath = Join-Path $cpEnv.DashboardDir "index.html"
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss UTC"
     
     $positionsHtml = ""

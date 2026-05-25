@@ -1,6 +1,6 @@
-# short_scanner.ps1 -- SHORT signal scanner - CROSS-PLATFORM (Windows/Linux)
+﻿# short_scanner.ps1 -- SHORT signal scanner - CROSS-PLATFORM (Windows/Linux)
 # Tier 2 Block 1 D.1 (2026-05-23): habilita SHORT observatory.
-# Backtest T6 validou: 505 signals, EV +2.85pp, hit 60% — POSITIVE EDGE.
+# Backtest T6 validou: 505 signals, EV +2.85pp, hit 60% â€” POSITIVE EDGE.
 #
 # Universe: SHORT_TIER_A_LIVE + SHORT_TIER_B_PAPER do per_asset_whitelist v3.6+
 # Cadencia: HOURLY (mesma logica vol_climax)
@@ -30,10 +30,10 @@ $configLocal = Join-Path $agentsDir "config.local.ps1"
 if (Test-Path $configLocal) { . $configLocal }
 
 # Inicializar ambiente
-$env = Initialize-CrossPlatformEnvironment
+$cpEnv = Initialize-CrossPlatformEnvironment
 
 Write-CrossPlatformLog "=== SHORT SCANNER START ===" -LogFile "short_scanner.log"
-Write-CrossPlatformLog "OS: $(if ($env.IsLinux) { 'Linux' } else { 'Windows' })" -LogFile "short_scanner.log"
+Write-CrossPlatformLog "OS: $(if ($cpEnv.IsLinux) { 'Linux' } else { 'Windows' })" -LogFile "short_scanner.log"
 
 # ============================================================================
 # Validar Credenciais
@@ -72,11 +72,11 @@ function Log {
 # ============================================================================
 
 try {
-    $alertsPath = Join-Path $env.JournalDir "short_alerts.jsonl"
+    $alertsPath = Join-Path $cpEnv.JournalDir "short_alerts.jsonl"
 
     # Universe: SHORT tier markets
     $markets = @()
-    $wlFiles = Get-ChildItem $env.JournalDir -Filter "per_asset_whitelist_*.json" -ErrorAction SilentlyContinue |
+    $wlFiles = Get-ChildItem $cpEnv.JournalDir -Filter "per_asset_whitelist_*.json" -ErrorAction SilentlyContinue |
                 Sort-Object LastWriteTime -Descending | Select-Object -First 1
 if ($wlFiles) {
     try {
@@ -114,7 +114,7 @@ if ($wlFiles) {
         exit 0
     }
 
-    # WSS context — fetch BTC regime once
+    # WSS context â€” fetch BTC regime once
     function _FetchBtcRegime {
         foreach ($mtype in @("futures","spot")) {
             try {
@@ -144,7 +144,7 @@ if ($wlFiles) {
     $btcRegime = _FetchBtcRegime
     $wssQuality = @{}
     if (Get-Command Read-WyckoffMarketQuality -ErrorAction SilentlyContinue) {
-        $wssQuality = Read-WyckoffMarketQuality (Join-Path $env.JournalDir "wyckoff_market_quality.json")
+        $wssQuality = Read-WyckoffMarketQuality (Join-Path $cpEnv.JournalDir "wyckoff_market_quality.json")
     }
     $wssEnabled = ($null -ne $btcRegime) -and ($wssQuality.Count -gt 0)
     Log "  WSS context: BTC DD=$([math]::Round($btcRegime.drawdown_pct,1))% vol=$([math]::Round($btcRegime.vol_20d,2))% qt=$($wssQuality.Count)"
