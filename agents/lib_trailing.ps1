@@ -322,7 +322,15 @@ function Update-TrailingStops {
             }
 
             $calc = Get-TrailingNewStop -Pos $pos -CurrentPrice $price
-            $pos.peak    = $calc.newPeak
+            
+            # 2026-05-25 BUG FIX: peak deve persistir mesmo sem mudanca de fase.
+            # Antes: peak so era salvo se $calc.changed -> em mercado lateral o peak
+            # nunca subia, e quando trigger acontecia entre runs, o peak antigo
+            # bloqueava avanco de fase. Caso BNB: peak subiu para 672.89 mas peak
+            # registrado ainda 662.24, perdendo Phase 2.
+            $peakChanged = ($calc.newPeak -ne [double]$pos.peak)
+            $pos.peak = $calc.newPeak
+            if ($peakChanged) { $updated = $true }
 
             if ($calc.changed) {
                 $oldStop  = $pos.stopCurrent
