@@ -1,236 +1,378 @@
 # scripts\collect_dashboard_data.ps1
 # Dashboard Data Collector - CROSS-PLATFORM (Windows/Linux)
-# Coleta dados e gera dashboard HTML
-# 2026-05-24
+# Versao 2.0 - Dashboard completo com dados reais da CoinEx
+# 2026-05-25
 
 $ErrorActionPreference = "Stop"
 
-# Setup Cross-Platform
 $projectRoot = Split-Path -Parent $PSScriptRoot
-$agentsDir = Join-Path $projectRoot "agents"
-$crossPlatformLib = Join-Path $agentsDir "lib_cross_platform.ps1"
-. $crossPlatformLib
+$agentsDir   = Join-Path $projectRoot "agents"
 
-# Carregar config.local.ps1 se existir
+. (Join-Path $agentsDir "lib_cross_platform.ps1")
+
 $configLocal = Join-Path $agentsDir "config.local.ps1"
 if (Test-Path $configLocal) { . $configLocal }
 
-# Inicializar ambiente
 $cpEnv = Initialize-CrossPlatformEnvironment
 
-Write-CrossPlatformLog "=== DASHBOARD GENERATOR START ===" -LogFile "dashboard.log"
-Write-CrossPlatformLog "OS: $(if ($cpEnv.IsLinux) { 'Linux' } else { 'Windows' })" -LogFile "dashboard.log"
+Write-CrossPlatformLog "=== DASHBOARD v2 START ===" -LogFile "dashboard.log"
 
-# Validar credenciais
 if (-not (Test-CrossPlatformCredentials)) {
     Write-CrossPlatformLog "ERROR: Credentials not configured" -Level ERROR -LogFile "dashboard.log"
     exit 1
 }
 
-# Carregar bibliotecas
 try {
-    Write-CrossPlatformLog "Loading libraries..." -LogFile "dashboard.log"
     . (Join-Path $agentsDir "config.ps1")
     . (Join-Path $agentsDir "lib_coinex.ps1")
-    Write-CrossPlatformLog "Libraries loaded" -LogFile "dashboard.log"
 } catch {
-    Write-CrossPlatformLog "ERROR loading libraries: $_" -Level ERROR -LogFile "dashboard.log"
+    Write-CrossPlatformLog "ERROR loading libs: $_" -Level ERROR -LogFile "dashboard.log"
     exit 1
 }
 
-# Executar
 try {
-    Write-CrossPlatformLog "--- COLLECTING DATA ---" -LogFile "dashboard.log"
-    
-    # Buscar posições
-    $positions = @(CoinEx-GetPendingPositions)
-    Write-CrossPlatformLog "Positions: $($positions.Count)" -LogFile "dashboard.log"
-    
-    # Calcular métricas
-    $totalPnl = 0
+    # ── Dados da API ──────────────────────────────────────────────────────────
+    $positions   = @(CoinEx-GetPendingPositions)
+    $spotCap     = 0; $futuresCap = 0
+    try { $spotCap    = [math]::Round([double](CoinEx-GetSpotCapitalUSDT), 2)    } catch {}
+    try { $futuresCap = [math]::Round([double](CoinEx-GetFuturesCapitalUSDT), 2) } catch {}
+    $totalCap = [math]::Round($spotCap + $futuresCap, 2)
+
+    # ── Calcular métricas ─────────────────────────────────────────────────────
+    $totalPnl    = 0
     $totalMargin = 0
-    
+
+    $posData = @()
     foreach ($pos in $positions) {
-        $totalPnl += [double]$pos.unrealized_pnl
-        $totalMargin += [double]$pos.margin
+        $pnl      = [math]::Round([double]$pos.unrealized_pnl, 2)
+        $margin   = [math]::Round([double]$pos.margin, 2)
+        $leverage = [math]::Round([double]$pos.leverage, 0)
+        $entry    = [math]::Round([double]$pos.avg_entry_price, 4)
+        $side     = $pos.side.ToUpper()
+
+        # Preço atual via ticker
+        $currentPrice = 0
+        try {
+            $ticker = Invoke-RestMethod -Uri "https://api.coinex.com/v2/futures/ticker?market=$($pos.market)" -Method GET -ErrorAction Stop
+            if ($ticker.code -eq 0) { $currentPrice = [math]::Round([double]$ticker.data[0].last, 4) }
+        } catch {}
+
+        # PNL%
+        $pnlPct = if ($margin -gt 0) { [math]::Round(($pnl / $margin) * 100, 2) } else { 0 }
+
+        # Stop loss
+        $stopLoss = 0
+        try { $stopLoss = [math]::Round([double]$pos.stop_loss_price, 4) } catch {}
+
+        # Distancia do stop (%)
+        $stopDist = 0
+        if ($stopLoss -gt 0 -and $currentPrice -gt 0) {
+            $stopDist = [math]::Round([math]::Abs(($currentPrice - $stopLoss) / $currentPrice) * 100, 2)
+        }
+
+        $totalPnl    += $pnl
+        $totalMargin += $margin
+
+        $posData += [PSCustomObject]@{
+            market       = $pos.market
+            side         = $side
+            leverage     = $leverage
+            entry        = $entry
+            currentPrice = $currentPrice
+            pnl          = $pnl
+            pnlPct       = $pnlPct
+            margin       = $margin
+            stopLoss     = $stopLoss
+            stopDist     = $stopDist
+        }
     }
-    
-    $totalPnl = [math]::Round($totalPnl, 2)
+
+    $totalPnl    = [math]::Round($totalPnl, 2)
     $totalMargin = [math]::Round($totalMargin, 2)
-    $pnlPct = if ($totalMargin -gt 0) { [math]::Round(($totalPnl / $totalMargin) * 100, 2) } else { 0 }
-    
-    Write-CrossPlatformLog "Total PNL: `$$totalPnl ($pnlPct%)" -LogFile "dashboard.log"
-    Write-CrossPlatformLog "Total Margin: `$$totalMargin" -LogFile "dashboard.log"
-    
-    # Gerar HTML
-    Write-CrossPlatformLog "--- GENERATING HTML ---" -LogFile "dashboard.log"
-    
-    $dashboardPath = Join-Path $cpEnv.DashboardDir "index.html"
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss UTC"
-    
+    $totalPnlPct = if ($totalMargin -gt 0) { [math]::Round(($totalPnl / $totalMargin) * 100, 2) } else { 0 }
+
+    Write-CrossPlatformLog "Positions: $($posData.Count) | PNL: $totalPnl ($totalPnlPct%) | Capital: $totalCap" -LogFile "dashboard.log"
+
+    # ── Gerar cards de posição ────────────────────────────────────────────────
     $positionsHtml = ""
-    foreach ($pos in $positions) {
-        $pnl = [math]::Round([double]$pos.unrealized_pnl, 2)
-        $pnlClass = if ($pnl -ge 0) { "profit" } else { "loss" }
-        $side = $pos.side.ToUpper()
-        $leverage = [math]::Round([double]$pos.leverage, 1)
-        
+    if ($posData.Count -eq 0) {
+        $positionsHtml = '<div class="no-positions">Nenhuma posicao aberta</div>'
+    }
+
+    foreach ($p in $posData) {
+        $pnlClass    = if ($p.pnl -ge 0) { "profit" } else { "loss" }
+        $pnlSign     = if ($p.pnl -ge 0) { "+" } else { "" }
+        $sideClass   = if ($p.side -eq "LONG") { "side-long" } else { "side-short" }
+        $borderColor = if ($p.pnl -ge 0) { "#4caf50" } else { "#f44336" }
+        $stopHtml    = if ($p.stopLoss -gt 0) { "<span class='detail-item'><span class='detail-label'>Stop</span><span class='detail-val loss'>`$$($p.stopLoss) (-$($p.stopDist)%)</span></span>" } else { "<span class='detail-item'><span class='detail-label'>Stop</span><span class='detail-val loss'>SEM STOP</span></span>" }
+        $priceHtml   = if ($p.currentPrice -gt 0) { "`$$($p.currentPrice)" } else { "N/A" }
+
         $positionsHtml += @"
-        <div class="position">
-            <div class="position-header">
-                <strong>$($pos.market)</strong>
-                <span class="leverage">${leverage}x</span>
+        <div class="position-card" style="border-left-color: $borderColor">
+            <div class="pos-header">
+                <div class="pos-market">$($p.market -replace 'USDT$','')<span class="pos-quote">/USDT</span></div>
+                <div class="pos-badges">
+                    <span class="badge $sideClass">$($p.side)</span>
+                    <span class="badge badge-lev">${$p.leverage}x</span>
+                </div>
             </div>
-            <div class="position-details">
-                <span>$side</span> | 
-                <span>Entry: `$$($pos.avg_entry_price)</span> | 
-                <span class="$pnlClass">PNL: `$$pnl</span>
+            <div class="pos-pnl $pnlClass">${pnlSign}$($p.pnl) <span class="pnl-pct">(${pnlSign}$($p.pnlPct)%)</span></div>
+            <div class="pos-details">
+                <span class="detail-item"><span class="detail-label">Entry</span><span class="detail-val">`$$($p.entry)</span></span>
+                <span class="detail-item"><span class="detail-label">Atual</span><span class="detail-val">$priceHtml</span></span>
+                <span class="detail-item"><span class="detail-label">Margem</span><span class="detail-val">`$$($p.margin)</span></span>
+                $stopHtml
             </div>
         </div>
 "@
     }
-    
+
+    # ── Timestamp e status ────────────────────────────────────────────────────
+    $timestamp   = Get-Date -Format "yyyy-MM-dd HH:mm:ss UTC"
+    $pnlSummaryClass = if ($totalPnl -ge 0) { "profit" } else { "loss" }
+    $pnlSign     = if ($totalPnl -ge 0) { "+" } else { "" }
+
+    # ── HTML completo ─────────────────────────────────────────────────────────
     $html = @"
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-    <title>Trading Dashboard</title>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta http-equiv="refresh" content="300">
+    <title>ManuHeadFund | Dashboard</title>
     <style>
+        :root {
+            --bg:       #0d1117;
+            --bg2:      #161b22;
+            --bg3:      #21262d;
+            --border:   #30363d;
+            --text:     #e6edf3;
+            --muted:    #8b949e;
+            --green:    #3fb950;
+            --red:      #f85149;
+            --blue:     #58a6ff;
+            --yellow:   #d29922;
+            --purple:   #bc8cff;
+        }
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { 
-            font-family: 'Segoe UI', Arial, sans-serif; 
-            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
-            color: #fff; 
-            padding: 20px;
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            background: var(--bg);
+            color: var(--text);
             min-height: 100vh;
-        }
-        .container { max-width: 1200px; margin: 0 auto; }
-        .header { 
-            font-size: 32px; 
-            font-weight: bold;
-            margin-bottom: 10px;
-            background: linear-gradient(90deg, #00d4ff, #00ff88);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-        .timestamp { 
-            color: #888; 
-            font-size: 14px; 
-            margin-bottom: 30px;
-        }
-        .summary {
-            background: rgba(255,255,255,0.05);
-            border-radius: 10px;
             padding: 20px;
-            margin-bottom: 30px;
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
         }
-        .summary-item {
-            text-align: center;
+        .container { max-width: 1100px; margin: 0 auto; }
+
+        /* Header */
+        .header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 24px;
+            padding-bottom: 16px;
+            border-bottom: 1px solid var(--border);
+        }
+        .header-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--blue);
+            letter-spacing: -0.5px;
+        }
+        .header-title span { color: var(--muted); font-weight: 400; font-size: 14px; margin-left: 8px; }
+        .header-time { color: var(--muted); font-size: 12px; text-align: right; }
+        .live-dot {
+            display: inline-block;
+            width: 8px; height: 8px;
+            background: var(--green);
+            border-radius: 50%;
+            margin-right: 6px;
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+
+        /* Summary cards */
+        .summary {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+        .summary-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 16px;
         }
         .summary-label {
-            color: #888;
-            font-size: 12px;
+            font-size: 11px;
             text-transform: uppercase;
-            margin-bottom: 5px;
+            letter-spacing: 0.5px;
+            color: var(--muted);
+            margin-bottom: 8px;
         }
         .summary-value {
-            font-size: 24px;
-            font-weight: bold;
+            font-size: 26px;
+            font-weight: 700;
+            line-height: 1;
+        }
+        .summary-sub { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+        /* Positions */
+        .section-title {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
         }
         .positions-grid {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-            gap: 15px;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 12px;
         }
-        .position { 
-            background: rgba(255,255,255,0.05);
-            padding: 20px;
-            border-radius: 10px;
-            border-left: 3px solid #00d4ff;
-            transition: transform 0.2s;
+        .position-card {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-left: 3px solid var(--blue);
+            border-radius: 8px;
+            padding: 16px;
+            transition: background 0.15s;
         }
-        .position:hover {
-            transform: translateY(-2px);
-            background: rgba(255,255,255,0.08);
-        }
-        .position-header {
+        .position-card:hover { background: var(--bg3); }
+        .pos-header {
             display: flex;
             justify-content: space-between;
             align-items: center;
             margin-bottom: 10px;
         }
-        .position-header strong {
+        .pos-market {
             font-size: 18px;
+            font-weight: 700;
         }
-        .leverage {
-            background: rgba(255,255,255,0.1);
+        .pos-quote { font-size: 12px; color: var(--muted); font-weight: 400; }
+        .pos-badges { display: flex; gap: 6px; }
+        .badge {
+            font-size: 11px;
+            font-weight: 600;
             padding: 2px 8px;
             border-radius: 4px;
-            font-size: 12px;
         }
-        .position-details {
-            color: #aaa;
+        .side-long  { background: rgba(63,185,80,0.15);  color: var(--green); }
+        .side-short { background: rgba(248,81,73,0.15);  color: var(--red);   }
+        .badge-lev  { background: rgba(88,166,255,0.15); color: var(--blue);  }
+        .pos-pnl {
+            font-size: 22px;
+            font-weight: 700;
+            margin-bottom: 12px;
+        }
+        .pnl-pct { font-size: 14px; font-weight: 400; }
+        .pos-details {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        .detail-item { display: flex; flex-direction: column; }
+        .detail-label { font-size: 10px; color: var(--muted); text-transform: uppercase; margin-bottom: 2px; }
+        .detail-val { font-size: 13px; font-weight: 500; }
+
+        /* Colors */
+        .profit { color: var(--green); }
+        .loss   { color: var(--red);   }
+        .neutral { color: var(--muted); }
+
+        /* No positions */
+        .no-positions {
+            background: var(--bg2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 40px;
+            text-align: center;
+            color: var(--muted);
             font-size: 14px;
         }
-        .profit { color: #4caf50; font-weight: bold; }
-        .loss { color: #f44336; font-weight: bold; }
+
+        /* Footer */
         .footer {
-            margin-top: 30px;
-            text-align: center;
-            color: #666;
-            font-size: 12px;
+            margin-top: 32px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: var(--muted);
+            font-size: 11px;
+        }
+
+        /* Mobile */
+        @media (max-width: 600px) {
+            body { padding: 12px; }
+            .summary { grid-template-columns: repeat(2, 1fr); }
+            .positions-grid { grid-template-columns: 1fr; }
+            .header { flex-direction: column; align-items: flex-start; gap: 8px; }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <div class="header">📊 Trading Dashboard</div>
-        <div class="timestamp">Updated: $timestamp | Auto-refresh: 5min</div>
-        
-        <div class="summary">
-            <div class="summary-item">
-                <div class="summary-label">Positions</div>
-                <div class="summary-value">$($positions.Count)</div>
-            </div>
-            <div class="summary-item">
-                <div class="summary-label">Total PNL</div>
-                <div class="summary-value $(if ($totalPnl -ge 0) { 'profit' } else { 'loss' })">`$$totalPnl</div>
-            </div>
-            <div class="summary-item">
-                <div class="summary-label">PNL %</div>
-                <div class="summary-value $(if ($pnlPct -ge 0) { 'profit' } else { 'loss' })">${pnlPct}%</div>
-            </div>
-            <div class="summary-item">
-                <div class="summary-label">Total Margin</div>
-                <div class="summary-value">`$$totalMargin</div>
-            </div>
+<div class="container">
+
+    <div class="header">
+        <div>
+            <div class="header-title">ManuHeadFund <span>Trading Dashboard</span></div>
         </div>
-        
-        <div class="positions-grid">
-            $positionsHtml
-        </div>
-        
-        <div class="footer">
-            ManuHeadFund Trading System | Cross-Platform Dashboard
+        <div class="header-time">
+            <span class="live-dot"></span>Live via GitHub Actions<br>
+            $timestamp
         </div>
     </div>
+
+    <div class="summary">
+        <div class="summary-card">
+            <div class="summary-label">Posicoes Abertas</div>
+            <div class="summary-value">$($posData.Count)</div>
+            <div class="summary-sub">FUTURES</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-label">PNL Total</div>
+            <div class="summary-value $pnlSummaryClass">${pnlSign}$totalPnl</div>
+            <div class="summary-sub $pnlSummaryClass">${pnlSign}$totalPnlPct%</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-label">Margem Total</div>
+            <div class="summary-value">`$$totalMargin</div>
+            <div class="summary-sub">USDT em uso</div>
+        </div>
+        <div class="summary-card">
+            <div class="summary-label">Capital Futures</div>
+            <div class="summary-value">`$$futuresCap</div>
+            <div class="summary-sub">Spot: `$$spotCap</div>
+        </div>
+    </div>
+
+    <div class="section-title">Posicoes</div>
+    <div class="positions-grid">
+        $positionsHtml
+    </div>
+
+    <div class="footer">
+        <span>ManuHeadFund &copy; 2026</span>
+        <span>Atualiza a cada 5min | GitHub Actions 24/7</span>
+    </div>
+
+</div>
 </body>
 </html>
 "@
-    
+
+    $dashboardPath = Join-Path $cpEnv.DashboardDir "index.html"
     $html | Out-File -FilePath $dashboardPath -Encoding UTF8 -Force
-    Write-CrossPlatformLog "Dashboard created: $dashboardPath" -LogFile "dashboard.log"
-    
-    Write-CrossPlatformLog "=== DASHBOARD GENERATOR END ===" -LogFile "dashboard.log"
+    Write-CrossPlatformLog "Dashboard v2 gerado: $dashboardPath" -LogFile "dashboard.log"
+    Write-CrossPlatformLog "=== DASHBOARD v2 END ===" -LogFile "dashboard.log"
     exit 0
-    
+
 } catch {
     Write-CrossPlatformLog "CRITICAL ERROR: $_" -Level ERROR -LogFile "dashboard.log"
-    Write-CrossPlatformLog $_.ScriptStackTrace -Level ERROR -LogFile "dashboard.log"
     exit 1
 }
