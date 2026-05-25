@@ -18,7 +18,20 @@ $TRAILING_FILE = "$PSScriptRoot\..\journal\trailing_positions.json"
 
 function Get-TrailingPositions {
     if (-not (Test-Path $TRAILING_FILE)) { return @() }
-    try { return Get-Content $TRAILING_FILE -Raw | ConvertFrom-Json } catch { return @() }
+    try {
+        $json = Get-Content $TRAILING_FILE -Raw | ConvertFrom-Json
+        # Force flat array - fix corruption issues
+        $result = @()
+        foreach ($item in $json) {
+            # Skip corrupted nested objects
+            if ($item.PSObject.Properties['market']) {
+                $result += $item
+            }
+        }
+        return $result
+    } catch {
+        return @()
+    }
 }
 
 function Save-TrailingPositions {

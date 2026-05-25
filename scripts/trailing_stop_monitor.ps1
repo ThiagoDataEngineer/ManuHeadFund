@@ -10,6 +10,7 @@ $scriptRoot = Split-Path -Parent $PSScriptRoot
 . "$scriptRoot\agents\lib_trailing_stop_intelligent.ps1"
 . "$scriptRoot\agents\lib_trailing_stop_adaptive.ps1"
 . "$scriptRoot\agents\lib_order_validation.ps1"
+. "$scriptRoot\agents\lib_trailing_orphan_detection.ps1"
 
 # Log file
 $logFile = "$scriptRoot\logs\trailing_stop_monitor.log"
@@ -35,38 +36,74 @@ try {
         Write-Log "ERROR: Credenciais nao configuradas"
         exit 1
     }
-    
+
     Write-Log "Buscando posicoes abertas..."
-    
+
+    # AUTO-REGISTRO DE POSICOES ORFAS
+    Write-Log ""
+    Write-Log "=== ORPHAN DETECTION ==="
+
+    $orphanSync = Sync-OrphanPositions
+
+    if ($orphanSync.success) {
+        Write-Log "Exchange positions: $($orphanSync.total_exchange)"
+        Write-Log "Orphans detected: $($orphanSync.orphans_detected)"
+
+        if ($orphanSync.orphans_detected -gt 0) {
+            Write-Log "  Registered: $($orphanSync.registered)"
+            Write-Log "  Skipped (duplicates): $($orphanSync.skipped)"
+            Write-Log "  Errors: $($orphanSync.errors)"
+
+            foreach ($detail in $orphanSync.details) {
+                if ($detail.registered) {
+                    $stopType = if ($detail.stop_calculated) { "calculated" } else { "from exchange" }
+                    Write-Log "  ORPHAN REGISTERED: $($detail.market) | Entry: $($detail.entry) | Stop: $($detail.stop) ($stopType)"
+                }
+                elseif ($detail.error) {
+                    Write-Log "  ORPHAN ERROR: $($detail.error)"
+                }
+            }
+        }
+        else {
+            Write-Log "No orphans detected - all positions registered locally"
+        }
+    }
+    else {
+        Write-Log "ORPHAN DETECTION ERROR: $($orphanSync.error)"
+    }
+
+    Write-Log ""
+    Write-Log "=== TRAILING STOP UPDATE ==="
+
     # Atualizar trailing stops
     $result = Update-AllTrailingStops -DryRun $false
-    
+
     if (-not $result.success) {
         Write-Log "ERROR: $($result.error)"
         exit 1
     }
-    
+
     Write-Log "Total positions: $($result.total_positions)"
     Write-Log "Updated: $($result.updated)"
     Write-Log "No update needed: $($result.no_update)"
     Write-Log "Errors: $($result.errors)"
-    
+
     # VALIDACAO: Verificar posicoes sem stop loss
     Write-Log ""
     Write-Log "=== VALIDACAO DE STOP LOSS ==="
-    
+
     $positionsWithoutStop = @()
     $allPositions = CoinEx-GetPendingPositions
-    
+
     foreach ($pos in $allPositions) {
         $validation = Test-PositionHasStopLoss -Market $pos.market
-        
+
         if ($validation.success -and -not $validation.has_stop_loss) {
             $positionsWithoutStop += $pos
-            Write-Log "  ALERT: $($pos.market) WITHOUT STOP LOSS! Entry: `$$($pos.avg_entry_price), PNL: `$$($pos.unrealized_pnl)"
+            Write-Log "  ALERT: $($pos.market) WITHOUT STOP LOSS! Entry: $($pos.avg_entry_price), PNL: $($pos.unrealized_pnl)"
         }
     }
-    
+
     if ($positionsWithoutStop.Count -gt 0) {
         Write-Log ""
         Write-Log "CRITICAL: $($positionsWithoutStop.Count) position(s) WITHOUT STOP LOSS PROTECTION!"
@@ -74,15 +111,15 @@ try {
     } else {
         Write-Log "All positions have stop loss configured."
     }
-    
+
     Write-Log ""
     Write-Log "=== TRAILING STOP RESULTS ==="
-    
+
     # Log detalhado por posicao
     foreach ($posResult in $result.results) {
         if ($posResult.success) {
             if ($posResult.action -eq "updated") {
-                Write-Log "  $($posResult.market): UPDATED stop from `$$($posResult.old_stop) to `$$($posResult.new_stop) (trailing $($posResult.trailing_pct)%, PNL $($posResult.pnl_pct)%)"
+                Write-Log "  $($posResult.market): UPDATED stop from $($posResult.old_stop) to $($posResult.new_stop) (trailing $($posResult.trailing_pct)%, PNL $($posResult.pnl_pct)%)"
                 Write-Log "    Reason: $($posResult.reason)"
             }
             elseif ($posResult.action -eq "no_update") {
@@ -93,11 +130,11 @@ try {
             Write-Log "  $($posResult.market): ERROR - $($posResult.error)"
         }
     }
-    
+
     Write-Log "=== TRAILING STOP MONITOR END ==="
 }
 catch {
-    Write-Log "CRITICAL ERROR: $_"
+    Write-Log "CRITICAL ERROR: $($_.Exception.Message)"
     Write-Log $_.ScriptStackTrace
     exit 1
 }
