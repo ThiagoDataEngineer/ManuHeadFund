@@ -349,6 +349,168 @@ jobs:
           } else {
             Write-Host "Skipped (runs daily 02:55 UTC)" -ForegroundColor Yellow
           }
+
+  # ============================================================================
+  # JOB 11: TORI PROXIMITY SCANNER (a cada 15min)
+  # Estrategia validada: +77.6pp/ano median, p=0.0087
+  # ============================================================================
+  tori-scanner:
+    name: Tori Proximity Scanner
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
+          $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+      
+      - name: Run
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $minute = (Get-Date).Minute
+          # Roda a cada 15min (0, 15, 30, 45)
+          if ($minute % 15 -eq 0) {
+            Write-Host "=== TORI PROXIMITY SCANNER ===" -ForegroundColor Cyan
+            try {
+              & ./scripts/tori_proximity_scanner.ps1
+              Write-Host "OK" -ForegroundColor Green
+            } catch {
+              Write-Host "WARN: $_" -ForegroundColor Yellow
+            }
+          } else {
+            Write-Host "Skipped (runs every 15min)" -ForegroundColor Yellow
+          }
+
+  # ============================================================================
+  # JOB 12: VOL CLIMAX SCANNER (a cada hora)
+  # Detecta volume climax para reversoes
+  # ============================================================================
+  vol-climax:
+    name: Vol Climax Scanner
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
+          $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+      
+      - name: Run
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $minute = (Get-Date).Minute
+          # Roda 1x/hora no minuto 5
+          if ($minute -eq 5) {
+            Write-Host "=== VOL CLIMAX SCANNER ===" -ForegroundColor Cyan
+            try {
+              & ./scripts/vol_climax_scanner.ps1
+              Write-Host "OK" -ForegroundColor Green
+            } catch {
+              Write-Host "WARN: $_" -ForegroundColor Yellow
+            }
+          } else {
+            Write-Host "Skipped (runs hourly at :05)" -ForegroundColor Yellow
+          }
+
+  # ============================================================================
+  # JOB 13: WSS FORWARD RESOLVE (a cada hora)
+  # Resolve trades pendentes do WSS
+  # ============================================================================
+  wss-forward-resolve:
+    name: WSS Forward Resolve
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
+          $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+      
+      - name: Run
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $minute = (Get-Date).Minute
+          # Roda 1x/hora no minuto 10
+          if ($minute -eq 10) {
+            Write-Host "=== WSS FORWARD RESOLVE ===" -ForegroundColor Cyan
+            try {
+              & ./scripts/cron_wss_forward_resolve.ps1
+              Write-Host "OK" -ForegroundColor Green
+            } catch {
+              Write-Host "WARN: $_" -ForegroundColor Yellow
+            }
+          } else {
+            Write-Host "Skipped (runs hourly at :10)" -ForegroundColor Yellow
+          }
+
+  # ============================================================================
+  # JOB 14: WEEKLY DATA REFRESH (1x/semana - domingo)
+  # Atualiza dados historicos de mercado
+  # ============================================================================
+  weekly-data-refresh:
+    name: Weekly Data Refresh
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
+          $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+      
+      - name: Run
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $day = (Get-Date).DayOfWeek
+          $hour = (Get-Date).Hour
+          $minute = (Get-Date).Minute
+          # Roda Domingo as 03:00 UTC (sunday at 03:00 UTC = 00:00 BRT)
+          if ($day -eq 'Sunday' -and $hour -eq 3 -and $minute -eq 0) {
+            Write-Host "=== WEEKLY DATA REFRESH ===" -ForegroundColor Cyan
+            try {
+              & ./scripts/weekly_data_refresh.ps1
+              Write-Host "OK" -ForegroundColor Green
+            } catch {
+              Write-Host "WARN: $_" -ForegroundColor Yellow
+            }
+          } else {
+            Write-Host "Skipped (runs Sunday 03:00 UTC)" -ForegroundColor Yellow
+          }
   
   # ============================================================================
   # JOB 6: HEALTH CHECK

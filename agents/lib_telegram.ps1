@@ -252,3 +252,25 @@ function Telegram-SendDashboardSnapshot {
 
     Telegram-SendMessage -Message $message
 }
+
+
+# ============================================================================
+# Send-TelegramAlert - Alias para Telegram-SendMessage (compat retroativa)
+# Usado por: tori_proximity_scanner, lib_trailing, daily_summary_digest, etc
+# ============================================================================
+
+function Send-TelegramAlert {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Message,
+        
+        [Parameter(Mandatory=$false)]
+        [string]$BotToken = $env:TELEGRAM_BOT_TOKEN,
+        
+        [Parameter(Mandatory=$false)]
+        [string]$ChatId = $env:TELEGRAM_CHAT_ID
+    )
+    
+    return Telegram-SendMessage -Message $Message -BotToken $BotToken -ChatId $ChatId
+}
