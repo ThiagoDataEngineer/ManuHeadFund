@@ -140,9 +140,15 @@ function Invoke-OrchestratorAgent {
     $btc = Get-BtcTechRegime
     Write-Host "  BTC regime: $($btc.regime) | $($btc.reason)" -ForegroundColor DarkGray
 
+    # 2026-05-25: Em BEAR, sistema agora preferencia SHORTs em vez de bloquear.
+    # Anterior: BEAR -> ABORTAR (zero trades em mercado bear).
+    # Agora: BEAR -> bias SHORT, capital reduzido 50%, paper acumula historico.
+    # LIVE mode ainda exige confirmacao manual via Telegram.
+    $btcBiasOverride = $null
     if ($btc.regime -eq "BEAR") {
-        Write-Host "  ABORTAR: BTC abaixo SMA200 (BEAR). Pausando novas longs." -ForegroundColor Red
-        return
+        Write-Host "  BTC BEAR: prefereciando SHORTs, capital reduzido a 50%" -ForegroundColor Yellow
+        $capitalReal = [math]::Round($capitalReal * 0.50, 2)
+        $btcBiasOverride = "SHORT"
     }
     if ($btc.regime -eq "DISTRIBUICAO") {
         $capitalReal = [math]::Round($capitalReal * 0.25, 2)

@@ -35,8 +35,12 @@ $CAPITAL_TOTAL     = $CAPITAL_SPOT + $CAPITAL_FUTURES   # derivado $200 -- pure 
 # ── Parametros de Risco (Regra 1% — RISK_MANAGEMENT.md) ──────────────────────
 
 $RISCO_MAXIMO_PCT  = 0.01     # 1% do capital DO TIPO do trade — inviolavel
-$RR_MINIMO         = 5.0      # risco/retorno minimo (1:5) — alta exigencia, menos setups, mais upside
-$RR_PREFERIDO      = 5.0      # risco/retorno preferido (1:5)
+# 2026-05-25: RR reduzido de 5.0 para 3.0 para destravar paper trades.
+# Motivo: 0 trades executados em 12 dias com RR 1:5 (muito restritivo).
+# Math: EV positivo com win_rate > 25% em RR 1:3 (vs > 17% em 1:5).
+# Apos 30 trades de paper, calibrar baseado em win_rate observado.
+$RR_MINIMO         = 3.0      # risco/retorno minimo (1:3) — paper trade calibration
+$RR_PREFERIDO      = 3.0      # risco/retorno preferido (1:3) — paper trade calibration
 $SCORE_MINIMO      = 65.0     # score ponderado minimo — 55 era bar baixo para capital real
 $MAX_TRADES_DIA    = 5        # maximo de trades por dia
 $MAX_RISCO_ABERTO  = 0.03     # 3% do capital em risco simultaneamente
