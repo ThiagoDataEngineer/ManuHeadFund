@@ -180,7 +180,7 @@ function Invoke-Gemini {
     param(
         [string]$SystemPrompt,
         [string]$UserContent,
-        [string]$Model       = "gemini-2.0-flash",
+        [string]$Model       = "gemini-2.5-flash",
         [int]   $MaxTokens   = 2000,
         [double]$Temperature = 0.4,
         [string]$Agent       = "unknown"
@@ -189,10 +189,23 @@ function Invoke-Gemini {
     if (-not $env:GEMINI_API_KEY) { throw "GEMINI_API_KEY nao configurada" }
 
     $url = "https://generativelanguage.googleapis.com/v1beta/models/${Model}:generateContent?key=$($env:GEMINI_API_KEY)"
+    
+    # 2026-05-25: Gemini 2.5 Flash usa "thinking mode" por padrao que gasta
+    # tokens em raciocinio interno. Sem thinkingBudget=0, MaxTokens pequeno
+    # (ex: 5) gasta tudo em thoughts e devolve content vazio.
+    $genConfig = @{ 
+        temperature = $Temperature
+        maxOutputTokens = $MaxTokens
+    }
+    # Desabilitar thinking apenas em modelos 2.5+ (suportam thinkingConfig)
+    if ($Model -match "gemini-2\.5|gemini-3") {
+        $genConfig.thinkingConfig = @{ thinkingBudget = 0 }
+    }
+    
     $body = @{
         system_instruction = @{ parts = @(@{ text = $SystemPrompt }) }
         contents           = @(@{ role = "user"; parts = @(@{ text = $UserContent }) })
-        generationConfig   = @{ temperature = $Temperature; maxOutputTokens = $MaxTokens }
+        generationConfig   = $genConfig
     } | ConvertTo-Json -Depth 10 -Compress
 
     $start = Get-Date
@@ -224,7 +237,7 @@ function Invoke-GeminiJson {
     param(
         [string]$SystemPrompt,
         [string]$UserContent,
-        [string]$Model       = "gemini-2.0-flash",
+        [string]$Model       = "gemini-2.5-flash",
         [int]   $MaxTokens   = 2000,
         [double]$Temperature = 0.4,
         [int]   $MaxRetries  = 2,
@@ -295,7 +308,7 @@ function Invoke-MesaDroneCascade {
     if ($env:GEMINI_API_KEY) {
         try {
             return Invoke-Gemini -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model "gemini-2.0-flash" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+                -Model "gemini-2.5-flash" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
             Write-Host "  [$Agent] Gemini falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
@@ -356,7 +369,7 @@ function Invoke-MentorCascade {
     if ($env:GEMINI_API_KEY) {
         try {
             $r = Invoke-Gemini -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model "gemini-2.0-flash" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+                -Model "gemini-2.5-flash" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
             $script:LAST_CASCADE_PROVIDER = "gemini_2_flash"
             return $r
         } catch {
@@ -394,7 +407,7 @@ function Invoke-TriagemCascade {
     if ($env:GEMINI_API_KEY) {
         try {
             return Invoke-Gemini -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model "gemini-2.0-flash" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+                -Model "gemini-2.5-flash" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
             Write-Host "  [$Agent] Gemini falhou, fallback Groq: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
@@ -489,7 +502,7 @@ function Invoke-TechCascadeJson {
         if ($env:GEMINI_API_KEY) {
             try {
                 $raw = Invoke-Gemini -SystemPrompt $sysWithJson -UserContent $UserContent `
-                    -Model "gemini-2.0-flash" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+                    -Model "gemini-2.5-flash" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
                 $parsed = _ParseJsonResponse $raw
                 if ($parsed) { return $parsed }
             } catch { Write-Host "  [$Agent] Gemini falhou: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow }

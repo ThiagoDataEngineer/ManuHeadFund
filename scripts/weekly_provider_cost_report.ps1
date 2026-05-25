@@ -18,7 +18,7 @@ $pricing = @{
     "claude-sonnet-4"  = @{ in = 0.018; out = 0.075 }
     "claude-haiku-4"   = @{ in = 0.00025; out = 0.00125 }
     "groq:*"             = @{ in = 0.0; out = 0.0 }     # free tier
-    "gemini-2.0-flash"   = @{ in = 0.0; out = 0.0 }     # free tier
+    "gemini-2.5-flash"   = @{ in = 0.0; out = 0.0 }     # free tier
 }
 
 function Get-Pricing {

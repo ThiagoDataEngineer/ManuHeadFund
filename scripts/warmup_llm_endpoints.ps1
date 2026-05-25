@@ -64,7 +64,7 @@ try {
     $t0 = Get-Date
     if (Get-Command Invoke-Gemini -ErrorAction SilentlyContinue) {
         $r = Invoke-Gemini -SystemPrompt $payload.sys -UserContent $payload.usr `
-            -Model "gemini-2.0-flash" -MaxTokens 10 -Temperature 0 -Agent "warmup"
+            -Model "gemini-2.5-flash" -MaxTokens 10 -Temperature 0 -Agent "warmup"
         $dt = [math]::Round(((Get-Date) - $t0).TotalSeconds, 1)
         Log "  [Gemini] ${dt}s -> $($r.SubString(0, [Math]::Min(20, $r.Length)))"
     } else {
