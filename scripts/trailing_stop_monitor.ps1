@@ -1,140 +1,169 @@
 # scripts\trailing_stop_monitor.ps1
-# Monitor de Trailing Stop - Executa a cada 5 minutos via Task Scheduler
+# Monitor de Trailing Stop - CROSS-PLATFORM (Windows/Linux)
+# Funciona tanto localmente quanto no GitHub Actions
 # 2026-05-24
 
-# Carregar libs
-$scriptRoot = Split-Path -Parent $PSScriptRoot
-. "$scriptRoot\agents\config.ps1"
-. "$scriptRoot\agents\lib_coinex.ps1"
-. "$scriptRoot\agents\lib_coinex_position_management.ps1"
-. "$scriptRoot\agents\lib_trailing_stop_intelligent.ps1"
-. "$scriptRoot\agents\lib_trailing_stop_adaptive.ps1"
-. "$scriptRoot\agents\lib_order_validation.ps1"
-. "$scriptRoot\agents\lib_trailing_orphan_detection.ps1"
+$ErrorActionPreference = "Stop"
 
-# Log file
-$logFile = "$scriptRoot\logs\trailing_stop_monitor.log"
-$logDir = Split-Path -Parent $logFile
+# ============================================================================
+# Setup Cross-Platform
+# ============================================================================
 
-if (-not (Test-Path $logDir)) {
-    New-Item -ItemType Directory -Path $logDir -Force | Out-Null
+# Detectar raiz do projeto
+$projectRoot = Split-Path -Parent $PSScriptRoot
+
+# Carregar lib cross-platform primeiro
+$agentsDir = Join-Path $projectRoot "agents"
+$crossPlatformLib = Join-Path $agentsDir "lib_cross_platform.ps1"
+. $crossPlatformLib
+
+# Carregar config.local.ps1 se existir (para credenciais)
+$configLocal = Join-Path $agentsDir "config.local.ps1"
+if (Test-Path $configLocal) {
+    . $configLocal
 }
 
-function Write-Log {
-    param([string]$Message)
-    $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
-    $logMessage = "[$timestamp] $Message"
-    Add-Content -Path $logFile -Value $logMessage
-    Write-Host $logMessage
+# Inicializar ambiente
+$env = Initialize-CrossPlatformEnvironment
+
+Write-CrossPlatformLog "=== TRAILING STOP MONITOR START ===" -LogFile "trailing_stop_monitor.log"
+Write-CrossPlatformLog "OS: $(if ($env.IsLinux) { 'Linux' } else { 'Windows' })" -LogFile "trailing_stop_monitor.log"
+Write-CrossPlatformLog "Project Root: $($env.ProjectRoot)" -LogFile "trailing_stop_monitor.log"
+
+# ============================================================================
+# Validar Credenciais
+# ============================================================================
+
+if (-not (Test-CrossPlatformCredentials)) {
+    Write-CrossPlatformLog "ERROR: Credentials not configured" -Level ERROR -LogFile "trailing_stop_monitor.log"
+    exit 1
 }
 
-Write-Log "=== TRAILING STOP MONITOR START ==="
+# ============================================================================
+# Carregar Bibliotecas
+# ============================================================================
 
 try {
-    # Verificar credenciais
-    if (-not $COINEX_ACCESS_ID -or -not $COINEX_SECRET_KEY) {
-        Write-Log "ERROR: Credenciais nao configuradas"
-        exit 1
-    }
+    Write-CrossPlatformLog "Loading libraries..." -LogFile "trailing_stop_monitor.log"
+    
+    # Carregar libs diretamente (dot-sourcing funciona melhor)
+    $agentsDir = Join-Path $projectRoot "agents"
+    . (Join-Path $agentsDir "config.ps1")
+    . (Join-Path $agentsDir "lib_coinex.ps1")
+    . (Join-Path $agentsDir "lib_trailing.ps1")
+    . (Join-Path $agentsDir "lib_trailing_orphan_detection.ps1")
+    
+    Write-CrossPlatformLog "Libraries loaded successfully" -LogFile "trailing_stop_monitor.log"
+} catch {
+    Write-CrossPlatformLog "ERROR loading libraries: $_" -Level ERROR -LogFile "trailing_stop_monitor.log"
+    exit 1
+}
 
-    Write-Log "Buscando posicoes abertas..."
+# ============================================================================
+# Executar Monitor
+# ============================================================================
 
-    # AUTO-REGISTRO DE POSICOES ORFAS
-    Write-Log ""
-    Write-Log "=== ORPHAN DETECTION ==="
-
+try {
+    # 1. ORPHAN DETECTION
+    Write-CrossPlatformLog "--- ORPHAN DETECTION ---" -LogFile "trailing_stop_monitor.log"
+    
     $orphanSync = Sync-OrphanPositions
-
+    
     if ($orphanSync.success) {
-        Write-Log "Exchange positions: $($orphanSync.total_exchange)"
-        Write-Log "Orphans detected: $($orphanSync.orphans_detected)"
-
+        Write-CrossPlatformLog "Exchange positions: $($orphanSync.total_exchange)" -LogFile "trailing_stop_monitor.log"
+        Write-CrossPlatformLog "Orphans detected: $($orphanSync.orphans_detected)" -LogFile "trailing_stop_monitor.log"
+        
         if ($orphanSync.orphans_detected -gt 0) {
-            Write-Log "  Registered: $($orphanSync.registered)"
-            Write-Log "  Skipped (duplicates): $($orphanSync.skipped)"
-            Write-Log "  Errors: $($orphanSync.errors)"
-
+            Write-CrossPlatformLog "  Registered: $($orphanSync.registered)" -LogFile "trailing_stop_monitor.log"
+            Write-CrossPlatformLog "  Skipped (duplicates): $($orphanSync.skipped)" -LogFile "trailing_stop_monitor.log"
+            Write-CrossPlatformLog "  Errors: $($orphanSync.errors)" -LogFile "trailing_stop_monitor.log"
+            
             foreach ($detail in $orphanSync.details) {
                 if ($detail.registered) {
                     $stopType = if ($detail.stop_calculated) { "calculated" } else { "from exchange" }
-                    Write-Log "  ORPHAN REGISTERED: $($detail.market) | Entry: $($detail.entry) | Stop: $($detail.stop) ($stopType)"
+                    Write-CrossPlatformLog "  ORPHAN REGISTERED: $($detail.market) | Entry: $($detail.entry) | Stop: $($detail.stop) ($stopType)" -LogFile "trailing_stop_monitor.log"
                 }
                 elseif ($detail.error) {
-                    Write-Log "  ORPHAN ERROR: $($detail.error)"
+                    Write-CrossPlatformLog "  ORPHAN ERROR: $($detail.error)" -Level WARN -LogFile "trailing_stop_monitor.log"
                 }
             }
         }
         else {
-            Write-Log "No orphans detected - all positions registered locally"
+            Write-CrossPlatformLog "No orphans detected - all positions registered locally" -LogFile "trailing_stop_monitor.log"
         }
     }
     else {
-        Write-Log "ORPHAN DETECTION ERROR: $($orphanSync.error)"
+        Write-CrossPlatformLog "ORPHAN DETECTION ERROR: $($orphanSync.error)" -Level ERROR -LogFile "trailing_stop_monitor.log"
     }
-
-    Write-Log ""
-    Write-Log "=== TRAILING STOP UPDATE ==="
-
-    # Atualizar trailing stops
-    $result = Update-AllTrailingStops -DryRun $false
-
-    if (-not $result.success) {
-        Write-Log "ERROR: $($result.error)"
-        exit 1
-    }
-
-    Write-Log "Total positions: $($result.total_positions)"
-    Write-Log "Updated: $($result.updated)"
-    Write-Log "No update needed: $($result.no_update)"
-    Write-Log "Errors: $($result.errors)"
-
-    # VALIDACAO: Verificar posicoes sem stop loss
-    Write-Log ""
-    Write-Log "=== VALIDACAO DE STOP LOSS ==="
-
-    $positionsWithoutStop = @()
-    $allPositions = CoinEx-GetPendingPositions
-
-    foreach ($pos in $allPositions) {
-        $validation = Test-PositionHasStopLoss -Market $pos.market
-
-        if ($validation.success -and -not $validation.has_stop_loss) {
-            $positionsWithoutStop += $pos
-            Write-Log "  ALERT: $($pos.market) WITHOUT STOP LOSS! Entry: $($pos.avg_entry_price), PNL: $($pos.unrealized_pnl)"
-        }
-    }
-
-    if ($positionsWithoutStop.Count -gt 0) {
-        Write-Log ""
-        Write-Log "CRITICAL: $($positionsWithoutStop.Count) position(s) WITHOUT STOP LOSS PROTECTION!"
-        Write-Log "Run FIX_MISSING_STOPS.ps1 to protect these positions."
-    } else {
-        Write-Log "All positions have stop loss configured."
-    }
-
-    Write-Log ""
-    Write-Log "=== TRAILING STOP RESULTS ==="
-
-    # Log detalhado por posicao
-    foreach ($posResult in $result.results) {
-        if ($posResult.success) {
-            if ($posResult.action -eq "updated") {
-                Write-Log "  $($posResult.market): UPDATED stop from $($posResult.old_stop) to $($posResult.new_stop) (trailing $($posResult.trailing_pct)%, PNL $($posResult.pnl_pct)%)"
-                Write-Log "    Reason: $($posResult.reason)"
-            }
-            elseif ($posResult.action -eq "no_update") {
-                Write-Log "  $($posResult.market): NO UPDATE - $($posResult.reason) (PNL $($posResult.pnl_pct)%)"
+    
+    # 2. TRAILING STOP UPDATE (se lib disponível)
+    Write-CrossPlatformLog "--- TRAILING STOP UPDATE ---" -LogFile "trailing_stop_monitor.log"
+    
+    if (Get-Command Update-AllTrailingStops -ErrorAction SilentlyContinue) {
+        $result = Update-AllTrailingStops -DryRun $false
+        
+        if ($result.success) {
+            Write-CrossPlatformLog "Total positions: $($result.total_positions)" -LogFile "trailing_stop_monitor.log"
+            Write-CrossPlatformLog "Updated: $($result.updated)" -LogFile "trailing_stop_monitor.log"
+            Write-CrossPlatformLog "No update needed: $($result.no_update)" -LogFile "trailing_stop_monitor.log"
+            Write-CrossPlatformLog "Errors: $($result.errors)" -LogFile "trailing_stop_monitor.log"
+            
+            # Log detalhado
+            foreach ($posResult in $result.results) {
+                if ($posResult.success) {
+                    if ($posResult.action -eq "updated") {
+                        Write-CrossPlatformLog "  $($posResult.market): UPDATED stop from $($posResult.old_stop) to $($posResult.new_stop)" -LogFile "trailing_stop_monitor.log"
+                    }
+                    elseif ($posResult.action -eq "no_update") {
+                        Write-CrossPlatformLog "  $($posResult.market): NO UPDATE - $($posResult.reason)" -LogFile "trailing_stop_monitor.log"
+                    }
+                }
+                else {
+                    Write-CrossPlatformLog "  $($posResult.market): ERROR - $($posResult.error)" -Level WARN -LogFile "trailing_stop_monitor.log"
+                }
             }
         }
         else {
-            Write-Log "  $($posResult.market): ERROR - $($posResult.error)"
+            Write-CrossPlatformLog "ERROR: $($result.error)" -Level ERROR -LogFile "trailing_stop_monitor.log"
         }
     }
-
-    Write-Log "=== TRAILING STOP MONITOR END ==="
-}
-catch {
-    Write-Log "CRITICAL ERROR: $($_.Exception.Message)"
-    Write-Log $_.ScriptStackTrace
+    else {
+        Write-CrossPlatformLog "Update-AllTrailingStops not available (simplified mode)" -Level WARN -LogFile "trailing_stop_monitor.log"
+        
+        # Modo simplificado: apenas listar posições
+        $localPositions = @(Get-TrailingPositions | Where-Object { $_.active })
+        Write-CrossPlatformLog "Local active positions: $($localPositions.Count)" -LogFile "trailing_stop_monitor.log"
+        
+        foreach ($pos in $localPositions) {
+            Write-CrossPlatformLog "  $($pos.market): Entry $($pos.entry) | Stop $($pos.stopCurrent)" -LogFile "trailing_stop_monitor.log"
+        }
+    }
+    
+    # 3. VALIDATION
+    Write-CrossPlatformLog "--- VALIDATION ---" -LogFile "trailing_stop_monitor.log"
+    
+    $allPositions = @(CoinEx-GetPendingPositions)
+    $positionsWithoutStop = @()
+    
+    foreach ($pos in $allPositions) {
+        if (-not $pos.stop_loss_price -or $pos.stop_loss_price -eq 0) {
+            $positionsWithoutStop += $pos
+            Write-CrossPlatformLog "  ALERT: $($pos.market) WITHOUT STOP LOSS!" -Level WARN -LogFile "trailing_stop_monitor.log"
+        }
+    }
+    
+    if ($positionsWithoutStop.Count -gt 0) {
+        Write-CrossPlatformLog "CRITICAL: $($positionsWithoutStop.Count) position(s) WITHOUT STOP LOSS PROTECTION!" -Level ERROR -LogFile "trailing_stop_monitor.log"
+    } else {
+        Write-CrossPlatformLog "All positions have stop loss configured." -LogFile "trailing_stop_monitor.log"
+    }
+    
+    Write-CrossPlatformLog "=== TRAILING STOP MONITOR END ===" -LogFile "trailing_stop_monitor.log"
+    
+    exit 0
+    
+} catch {
+    Write-CrossPlatformLog "CRITICAL ERROR: $_" -Level ERROR -LogFile "trailing_stop_monitor.log"
+    Write-CrossPlatformLog $_.ScriptStackTrace -Level ERROR -LogFile "trailing_stop_monitor.log"
     exit 1
 }

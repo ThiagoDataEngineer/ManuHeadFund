@@ -39,7 +39,7 @@ jobs:
         run: |
           try {
             Write-Host "=== TRAILING STOP ===" -ForegroundColor Cyan
-            & ./scripts/github_actions_runner.ps1 -Job trailing-stop
+            & ./scripts/trailing_stop_monitor.ps1
             Write-Host "OK" -ForegroundColor Green
           } catch {
             Write-Host "ERRO: $_" -ForegroundColor Red
