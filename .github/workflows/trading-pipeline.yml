@@ -164,6 +164,90 @@ jobs:
           publish_dir: ./dashboard
           publish_branch: gh-pages
 
+  trailing-stop-monitor:
+    name: Trailing Stop Monitor
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+      
+      - name: Setup PowerShell
+        shell: pwsh
+        run: |
+          Write-Host "PowerShell $($PSVersionTable.PSVersion) instalado"
+      
+      - name: Configurar credenciais
+        shell: pwsh
+        run: |
+          # Criar config.local.ps1 no formato correto
+          $configContent = @"
+# config.local.ps1 - GitHub Actions
+`$env:COINEX_ACCESS_ID = "${{ secrets.COINEX_ACCESS_ID }}"
+`$env:COINEX_SECRET_KEY = "${{ secrets.COINEX_SECRET_KEY }}"
+`$env:TELEGRAM_BOT_TOKEN = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
+`$env:TELEGRAM_CHAT_ID = "${{ secrets.TELEGRAM_CHAT_ID }}"
+"@
+          
+          # Salvar config
+          New-Item -ItemType Directory -Path "agents" -Force | Out-Null
+          $configContent | Out-File "agents/config.local.ps1" -Encoding UTF8 -Force
+          
+          Write-Host "Config criado com sucesso"
+      
+      - name: Executar Trailing Stop Monitor
+        shell: pwsh
+        run: |
+          try {
+            Write-Host "Iniciando Trailing Stop Monitor..."
+            
+            # Verificar se config existe
+            if (-not (Test-Path "agents/config.local.ps1")) {
+              throw "Config não encontrado"
+            }
+            
+            # Executar script
+            & ./scripts/trailing_stop_monitor.ps1
+            
+            Write-Host "✓ Trailing Stop Monitor executado com sucesso"
+          } catch {
+            $errorMsg = "Erro: $_`nStack: $($_.ScriptStackTrace)"
+            Write-Host $errorMsg
+            $errorMsg | Out-File "error_trailing.log" -Encoding UTF8
+            exit 1
+          }
+      
+      - name: Enviar alerta se falhar
+        if: failure()
+        shell: pwsh
+        run: |
+          try {
+            $token = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
+            $chatId = "${{ secrets.TELEGRAM_CHAT_ID }}"
+            
+            # Obter logs do erro
+            $errorLog = Get-Content "error_trailing.log" -ErrorAction SilentlyContinue
+            $errorMsg = if ($errorLog) { $errorLog -join "`n" } else { "Erro desconhecido" }
+            
+            $message = "==========================`n"
+            $message += ">> TRAILING STOP ERRO <<`n"
+            $message += "==========================`n`n"
+            $message += "Job: Trailing Stop Monitor`n"
+            $message += "Status: FALHOU`n`n"
+            $message += "Erro: $($errorMsg.Substring(0, [Math]::Min(200, $errorMsg.Length)))`n`n"
+            $message += "Verifique: https://github.com/ThiagoDataEngineer/ManuHeadFund/actions"
+            
+            $body = @{
+              chat_id = $chatId
+              text = $message
+            } | ConvertTo-Json
+            
+            Invoke-RestMethod -Uri "https://api.telegram.org/bot$token/sendMessage" `
+              -Method Post -Body $body -ContentType "application/json" | Out-Null
+          } catch {
+            Write-Host "Falha ao enviar alerta: $_"
+          }
+
   health-check:
     name: System Health Check
     runs-on: ubuntu-latest
