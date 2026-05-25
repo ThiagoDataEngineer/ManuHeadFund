@@ -15,19 +15,19 @@ param(
 $OutputEncoding             = [System.Text.Encoding]::UTF8
 $null = cmd /c chcp 65001 2`>nul
 
-. "$PSScriptRoot\config.ps1"
-. "$PSScriptRoot\lib_claude.ps1"
-. "$PSScriptRoot\lib_coinex.ps1"
-. "$PSScriptRoot\lib_macro.ps1"
-. "$PSScriptRoot\lib_indicators.ps1"
-. "$PSScriptRoot\lib_seasonality.ps1"
-. "$PSScriptRoot\tech_agent_ai.ps1"
-. "$PSScriptRoot\fund_agent.ps1"
-. "$PSScriptRoot\sent_agent.ps1"
-. "$PSScriptRoot\chain_agent.ps1"
-. "$PSScriptRoot\mentor_agent.ps1"
-. "$PSScriptRoot\position_sizer.ps1"
-. "$PSScriptRoot\lib_telegram.ps1"
+. (Join-Path $PSScriptRoot "config.ps1")
+. (Join-Path $PSScriptRoot "lib_claude.ps1")
+. (Join-Path $PSScriptRoot "lib_coinex.ps1")
+. (Join-Path $PSScriptRoot "lib_macro.ps1")
+. (Join-Path $PSScriptRoot "lib_indicators.ps1")
+. (Join-Path $PSScriptRoot "lib_seasonality.ps1")
+. (Join-Path $PSScriptRoot "tech_agent_ai.ps1")
+. (Join-Path $PSScriptRoot "fund_agent.ps1")
+. (Join-Path $PSScriptRoot "sent_agent.ps1")
+. (Join-Path $PSScriptRoot "chain_agent.ps1")
+. (Join-Path $PSScriptRoot "mentor_agent.ps1")
+. (Join-Path $PSScriptRoot "position_sizer.ps1")
+. (Join-Path $PSScriptRoot "lib_telegram.ps1")
 
 # Pesos ativos — selecionados por macro_bias em runtime (WEIGHTS_BULL/BEAR/NEUTRAL em config.ps1)
 # $w e definido apos Get-MacroContext; este bloco e apenas documentacao dos defaults

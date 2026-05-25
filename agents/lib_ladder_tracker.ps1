@@ -1,7 +1,7 @@
-# lib_ladder_tracker.ps1 -- Performance tracker para Exit Ladders
-# Registra entradas com ladder anexada e cada TP/SL hit; agrega por template_id × regime.
+﻿# lib_ladder_tracker.ps1 -- Performance tracker para Exit Ladders
+# Registra entradas com ladder anexada e cada TP/SL hit; agrega por template_id Ã— regime.
 # CSV InvariantCulture (sub-dollar safe, sem virgula PT-BR).
-# Dot-source: . "$PSScriptRoot\lib_ladder_tracker.ps1"
+# Dot-source: . (Join-Path $PSScriptRoot "lib_ladder_tracker.ps1")
 
 if (-not $global:JOURNAL_DIR) {
     $global:JOURNAL_DIR = Join-Path $PSScriptRoot "..\journal"
@@ -131,7 +131,7 @@ function Add-LadderHitRecord {
 }
 
 # Get-LadderPerformance --------------------------------------------------------
-# Agrega: por template_id × regime. Win rate, avg R, runner survival, drawdown.
+# Agrega: por template_id Ã— regime. Win rate, avg R, runner survival, drawdown.
 function Get-LadderPerformance {
     [CmdletBinding()]
     param(
@@ -182,7 +182,7 @@ function Get-LadderPerformance {
         $runners = @($tplHits | Where-Object { $_.hit_type -eq 'RUNNER_OUT' })
 
         $totalTrades = [int]$g.Count
-        $wins = $tpHits.Count  # cada TP é parcial win
+        $wins = $tpHits.Count  # cada TP Ã© parcial win
         $winRate = if ($totalTrades -gt 0) {
             [math]::Round(($wins / [math]::Max(1, $totalTrades)), 4)
         } else { 0 }
@@ -237,9 +237,9 @@ function _LadderTracker-WriteJson {
     return $out
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Get-LadderABReport — agrega A/B testing automatizado (template × regime)
-# ─────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# Get-LadderABReport â€” agrega A/B testing automatizado (template Ã— regime)
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function Get-LadderABReport {
     [CmdletBinding()]
     param(
@@ -343,9 +343,9 @@ function Get-LadderABReport {
     }
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Export-LadderABReport — exporta relatorio em formato MD humanamente legivel
-# ─────────────────────────────────────────────────────────────────────────────
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+# Export-LadderABReport â€” exporta relatorio em formato MD humanamente legivel
+# â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function Export-LadderABReport {
     [CmdletBinding()]
     param(
@@ -367,7 +367,7 @@ function Export-LadderABReport {
 # Ladder A/B Report
 
 **Gerado em:** $(Get-Date -Format "yyyy-MM-dd HH:mm:ss Z")
-**Período:** Últimos $WindowDays dias
+**PerÃ­odo:** Ãšltimos $WindowDays dias
 
 "@
 
@@ -375,7 +375,7 @@ function Export-LadderABReport {
         $md += @"
 ## Status
 
-Sem dados registrados no período.
+Sem dados registrados no perÃ­odo.
 "@
     } else {
         $md += @"

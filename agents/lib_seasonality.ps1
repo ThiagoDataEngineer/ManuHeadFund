@@ -1,6 +1,6 @@
 ﻿# lib_seasonality.ps1 — Contexto de sazonalidade para ajuste de threshold
 # NAO bloqueia o pipeline — apenas informa a qualidade do momento e ajusta o score minimo.
-# Dot-source: . "$PSScriptRoot\lib_seasonality.ps1"
+# Dot-source: . (Join-Path $PSScriptRoot "lib_seasonality.ps1")
 
 # ── Tabela de janelas horarias (BRT = UTC-3) ──────────────────────────────────
 # Baseado em: abertura NY (12h BRT), pico liquidez (12h-17h BRT),

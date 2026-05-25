@@ -1,8 +1,8 @@
-# execute_trade_1c.ps1 - Executa trade 1C: $50 BNBUSDT LONG
+﻿# execute_trade_1c.ps1 - Executa trade 1C: $50 BNBUSDT LONG
 # Com novos thresholds: ATR 1.5x, MinProfit 1%
 
 $ErrorActionPreference = "Stop"
-Set-Location $PSScriptRoot\..
+Set-Location (Split-Path $PSScriptRoot -Parent)
 
 . ".\agents\config.ps1"
 . ".\agents\lib_coinex.ps1"
@@ -131,7 +131,7 @@ try {
     Write-Host "`nEnviando alerta Telegram..." -ForegroundColor Yellow
     
     $alertMessage = @"
-🚀 TRADE EXECUTADO - LIVE
+ðŸš€ TRADE EXECUTADO - LIVE
 
 Market: $market
 Side: LONG
@@ -139,18 +139,18 @@ Entry: `$$price
 Size: `$$sizeUsd USD ($amount BNB)
 Leverage: $leverage`x
 
-📊 NOVOS THRESHOLDS:
+ðŸ“Š NOVOS THRESHOLDS:
 - ATR Multiplier: 1.5x
 - Min Profit: 1%
 - Trailing ativa em: `$$trailingActivation (+1%)
 
-🎯 Stops:
+ðŸŽ¯ Stops:
 - Stop Loss: `$$stopLoss (-3%)
 - Take Profit: `$$takeProfit (+5%)
 
 Order ID: $orderId
 
-Historico BNB: 100% WR! 🏆
+Historico BNB: 100% WR! ðŸ†
 "@
     
     $telegramSent = Send-TelegramAlert -Message $alertMessage
@@ -160,7 +160,7 @@ Historico BNB: 100% WR! 🏆
     
     # Atualizar dashboard
     Write-Host "`nAtualizando dashboard..." -ForegroundColor Yellow
-    & "$PSScriptRoot\generate_position_dashboard.ps1" | Out-Null
+    & (Join-Path $PSScriptRoot "generate_position_dashboard.ps1") | Out-Null
     Write-Host "Dashboard atualizado!" -ForegroundColor Green
     
     # Resumo final
@@ -179,7 +179,7 @@ Historico BNB: 100% WR! 🏆
     Write-Host "- Telegram: Alertas automaticos" -ForegroundColor White
     Write-Host "- Cron jobs: Rodando em background" -ForegroundColor White
     
-    Write-Host "`nBOA SORTE! 🍀" -ForegroundColor Green
+    Write-Host "`nBOA SORTE! ðŸ€" -ForegroundColor Green
     Write-Host "========================================`n" -ForegroundColor Cyan
     
 } catch {
@@ -187,7 +187,7 @@ Historico BNB: 100% WR! 🏆
     Write-Host $_.ScriptStackTrace -ForegroundColor DarkRed
     
     # Enviar alerta de erro
-    Send-TelegramAlert -Message "🚨 ERRO ao executar trade 1C: $_" | Out-Null
+    Send-TelegramAlert -Message "ðŸš¨ ERRO ao executar trade 1C: $_" | Out-Null
     
     exit 1
 }

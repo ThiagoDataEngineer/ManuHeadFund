@@ -20,7 +20,7 @@ $totalFiles = 0
 $totalReplacements = 0
 
 foreach ($pattern in $patterns) {
-    $files = Get-ChildItem "$PSScriptRoot\..\$pattern" -Recurse -ErrorAction SilentlyContinue
+    $files = Get-ChildItem (Join-Path $PSScriptRoot ".." "$pattern") -Recurse -ErrorAction SilentlyContinue
     
     foreach ($file in $files) {
         $content = Get-Content $file.FullName -Raw -ErrorAction SilentlyContinue

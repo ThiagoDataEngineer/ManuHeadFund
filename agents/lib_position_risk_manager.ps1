@@ -1,12 +1,12 @@
-# lib_position_risk_manager.ps1 - Gestao Dinamica de Risco de Posicoes
+﻿# lib_position_risk_manager.ps1 - Gestao Dinamica de Risco de Posicoes
 # Integra Position Management com agents para:
 # 1. Trailing stops dinamicos
 # 2. Ajuste de leverage por volatilidade
 # 3. Add/Remove margin para evitar liquidacao
 # 4. Gestao automatica de SL/TP
 
-. "$PSScriptRoot\lib_coinex.ps1"
-. "$PSScriptRoot\lib_coinex_position_management.ps1"
+. (Join-Path $PSScriptRoot "lib_coinex.ps1")
+. (Join-Path $PSScriptRoot "lib_coinex_position_management.ps1")
 
 # ============================================================================
 # Update-TrailingStop - Trailing stop dinamico baseado em ATR
@@ -409,7 +409,7 @@ function Protect-FromLiquidation {
         
         # 5. Enviar alerta
         if (Get-Command Send-TelegramAlert -ErrorAction SilentlyContinue) {
-            $msg = "⚠️ LIQUIDACAO PROXIMA: $Market`n" +
+            $msg = "âš ï¸ LIQUIDACAO PROXIMA: $Market`n" +
                    "Distancia: $([math]::Round($distancePct,2))%`n" +
                    "Liq Price: $liqPrice`n" +
                    "Margin adicionado: +$MarginToAdd USDT"

@@ -1,7 +1,7 @@
-# lib_macro_audit.ps1 -- Auditoria de pesos adaptativos runtime
+﻿# lib_macro_audit.ps1 -- Auditoria de pesos adaptativos runtime
 # Verifica se WEIGHTS_BULL/BEAR/NEUTRAL sao REALMENTE consumidos em decisao,
 # nao apenas declarados em config. Procura evidencia textual no orchestrator.
-# Uso: . "$PSScriptRoot\lib_macro_audit.ps1"; Test-AdaptiveWeightsRotation
+# Uso: . (Join-Path $PSScriptRoot "lib_macro_audit.ps1"); Test-AdaptiveWeightsRotation
 
 function Test-AdaptiveWeightsRotation {
     param(
@@ -10,7 +10,7 @@ function Test-AdaptiveWeightsRotation {
         [object]$ForceMacroBias    = $null     # injeta bias para teste; default = chama Get-MacroContext
     )
 
-    # ── 1. Carregar tabelas de pesos do config.ps1 ───────────────────────────
+    # â”€â”€ 1. Carregar tabelas de pesos do config.ps1 â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     $cfgRaw = Get-Content $ConfigPath -Raw -ErrorAction Stop
 
     $weightsByRegime = @{
@@ -41,7 +41,7 @@ function Test-AdaptiveWeightsRotation {
         }
     }
 
-    # ── 2. Detectar evidencia de USO REAL no orchestrator ─────────────────────
+    # â”€â”€ 2. Detectar evidencia de USO REAL no orchestrator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     $orchRaw = Get-Content $OrchestratorPath -Raw -ErrorAction Stop
 
     # Procura padroes "$w.Tech", "$w.Fund", etc multiplicando score
@@ -76,7 +76,7 @@ function Test-AdaptiveWeightsRotation {
     $switchPattern = '(?ms)switch\s*\(\s*\$macro\.macro_bias\s*\).*?WEIGHTS_BULL.*?WEIGHTS_BEAR'
     $hasSwitch = [regex]::IsMatch($orchRaw, $switchPattern)
 
-    # ── 3. Validar que pesos DIFEREM entre regimes ────────────────────────────
+    # â”€â”€ 3. Validar que pesos DIFEREM entre regimes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     $weightsActuallyDiffer = $false
     if ($weightsByRegime.BULL -and $weightsByRegime.BEAR) {
         foreach ($k in @('Tech','Chain','Sent','Fund')) {
@@ -87,7 +87,7 @@ function Test-AdaptiveWeightsRotation {
         }
     }
 
-    # ── 4. Determinar bias atual (cache 24h ou forced) ────────────────────────
+    # â”€â”€ 4. Determinar bias atual (cache 24h ou forced) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     $currentBias = "NEUTRAL"
     if ($ForceMacroBias) {
         $currentBias = $ForceMacroBias
@@ -110,7 +110,7 @@ function Test-AdaptiveWeightsRotation {
         default   { 'NEUTRAL' }
     }
 
-    # ── 5. Veredito ───────────────────────────────────────────────────────────
+    # â”€â”€ 5. Veredito â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     $adaptiveActive = (
         $rotationEvidence.Count -ge 4 -and
         $hasSwitch -and

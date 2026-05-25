@@ -1,9 +1,9 @@
-# generate_position_dashboard_v2.ps1 - Dashboard HTML com UTF-8 correto
+﻿# generate_position_dashboard_v2.ps1 - Dashboard HTML com UTF-8 correto
 # Rodar: .\scripts\generate_position_dashboard_v2.ps1
 # Output: .\dashboard\position_metrics.html
 
 $ErrorActionPreference = "Stop"
-Set-Location $PSScriptRoot\..
+Set-Location (Split-Path $PSScriptRoot -Parent)
 
 . ".\agents\config.ps1"
 . ".\agents\lib_coinex.ps1"

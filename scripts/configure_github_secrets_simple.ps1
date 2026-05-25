@@ -1,4 +1,4 @@
-# configure_github_secrets_simple.ps1 - TDD: Configurar secrets via GitHub API
+﻿# configure_github_secrets_simple.ps1 - TDD: Configurar secrets via GitHub API
 # RED: Script que falha sem token
 # GREEN: Script que cria secrets com sucesso
 # REFACTOR: Otimizar e validar
@@ -13,7 +13,7 @@ Write-Host "`n=== TDD: CONFIGURAR GITHUB SECRETS ===" -ForegroundColor Cyan
 
 Write-Host "[1/4] Carregando credenciais..." -ForegroundColor Yellow
 
-. "$PSScriptRoot\..\agents\config.local.ps1"
+. (Join-Path $PSScriptRoot "..\agents\config.local.ps1")
 
 $secrets = @{
     "COINEX_ACCESS_ID"    = $env:COINEX_ACCESS_ID
@@ -37,17 +37,17 @@ Write-Host "  Scopes: repo, workflow`n" -ForegroundColor Gray
 $token = Read-Host "Cole seu token aqui"
 
 if (-not $token) {
-    Write-Host "[ERRO] Token não fornecido" -ForegroundColor Red
+    Write-Host "[ERRO] Token nÃ£o fornecido" -ForegroundColor Red
     exit 1
 }
 
 Write-Host "[OK] Token recebido`n" -ForegroundColor Green
 
 # ============================================================================
-# STEP 3: Testar acesso ao repositório
+# STEP 3: Testar acesso ao repositÃ³rio
 # ============================================================================
 
-Write-Host "[3/4] Testando acesso ao repositório..." -ForegroundColor Yellow
+Write-Host "[3/4] Testando acesso ao repositÃ³rio..." -ForegroundColor Yellow
 
 $owner = "ThiagoDataEngineer"
 $repo = "ManuHeadFund"
@@ -60,26 +60,26 @@ $headers = @{
 try {
     $repoUrl = "https://api.github.com/repos/$owner/$repo"
     $repoInfo = Invoke-RestMethod -Uri $repoUrl -Headers $headers -Method Get
-    Write-Host "  Repositório: $($repoInfo.full_name)" -ForegroundColor Gray
+    Write-Host "  RepositÃ³rio: $($repoInfo.full_name)" -ForegroundColor Gray
     Write-Host "  Privado: $($repoInfo.private)" -ForegroundColor Gray
     Write-Host "[OK] Acesso confirmado`n" -ForegroundColor Green
 } catch {
-    Write-Host "[ERRO] Falha ao acessar repositório: $_" -ForegroundColor Red
-    Write-Host "Verifique se o token tem permissões corretas" -ForegroundColor Yellow
+    Write-Host "[ERRO] Falha ao acessar repositÃ³rio: $_" -ForegroundColor Red
+    Write-Host "Verifique se o token tem permissÃµes corretas" -ForegroundColor Yellow
     exit 1
 }
 
 # ============================================================================
-# STEP 4: Criar secrets (método simplificado via gh CLI simulation)
+# STEP 4: Criar secrets (mÃ©todo simplificado via gh CLI simulation)
 # ============================================================================
 
 Write-Host "[4/4] Criando secrets..." -ForegroundColor Yellow
 Write-Host "  NOTA: GitHub API requer criptografia com libsodium" -ForegroundColor Gray
 Write-Host "  Alternativa: usar interface web do GitHub`n" -ForegroundColor Gray
 
-# Mostrar instruções para configuração manual
+# Mostrar instruÃ§Ãµes para configuraÃ§Ã£o manual
 Write-Host "========================================" -ForegroundColor Cyan
-Write-Host "CONFIGURAÇÃO MANUAL DOS SECRETS" -ForegroundColor Cyan
+Write-Host "CONFIGURAÃ‡ÃƒO MANUAL DOS SECRETS" -ForegroundColor Cyan
 Write-Host "========================================`n" -ForegroundColor Cyan
 
 Write-Host "Acesse: https://github.com/$owner/$repo/settings/secrets/actions`n" -ForegroundColor Yellow
@@ -94,12 +94,12 @@ foreach ($secretName in $secrets.Keys) {
 }
 
 Write-Host "========================================" -ForegroundColor Yellow
-Write-Host "PRÓXIMOS PASSOS" -ForegroundColor Yellow
+Write-Host "PRÃ“XIMOS PASSOS" -ForegroundColor Yellow
 Write-Host "========================================" -ForegroundColor Yellow
 Write-Host "1. Copie cada secret acima" -ForegroundColor Gray
 Write-Host "2. Cole no GitHub (link acima)" -ForegroundColor Gray
 Write-Host "3. Habilite Actions: https://github.com/$owner/$repo/settings/actions" -ForegroundColor Gray
-Write-Host "4. Aguarde primeira execução (15min)`n" -ForegroundColor Gray
+Write-Host "4. Aguarde primeira execuÃ§Ã£o (15min)`n" -ForegroundColor Gray
 
 # Abrir navegador automaticamente
 Write-Host "Deseja abrir o GitHub no navegador? (S/N)" -ForegroundColor Yellow
@@ -110,4 +110,4 @@ if ($response -eq "S" -or $response -eq "s") {
     Write-Host "[OK] Navegador aberto" -ForegroundColor Green
 }
 
-Write-Host "`n=== CONFIGURAÇÃO PREPARADA ===" -ForegroundColor Green
+Write-Host "`n=== CONFIGURAÃ‡ÃƒO PREPARADA ===" -ForegroundColor Green

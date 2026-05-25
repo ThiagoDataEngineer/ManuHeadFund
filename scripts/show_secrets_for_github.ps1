@@ -1,4 +1,4 @@
-# show_secrets_for_github.ps1 - Mostra os secrets para copiar no GitHub
+﻿# show_secrets_for_github.ps1 - Mostra os secrets para copiar no GitHub
 
 $ErrorActionPreference = "Stop"
 
@@ -7,7 +7,7 @@ Write-Host "SECRETS PARA GITHUB ACTIONS" -ForegroundColor Cyan
 Write-Host "========================================`n" -ForegroundColor Cyan
 
 # Carregar credenciais
-. "$PSScriptRoot\..\agents\config.local.ps1"
+. (Join-Path $PSScriptRoot "..\agents\config.local.ps1")
 
 Write-Host "Acesse: https://github.com/ThiagoDataEngineer/ManuHeadFund/settings/secrets/actions" -ForegroundColor Yellow
 Write-Host "Clique em 'New repository secret' para cada um abaixo:`n" -ForegroundColor Yellow
@@ -37,7 +37,7 @@ Write-Host $env:TELEGRAM_CHAT_ID -ForegroundColor White
 Write-Host ""
 
 Write-Host "========================================" -ForegroundColor Yellow
-Write-Host "INSTRUÇÕES" -ForegroundColor Yellow
+Write-Host "INSTRUÃ‡Ã•ES" -ForegroundColor Yellow
 Write-Host "========================================" -ForegroundColor Yellow
 Write-Host "1. Copie cada valor acima" -ForegroundColor Gray
 Write-Host "2. No GitHub, clique 'New repository secret'" -ForegroundColor Gray
@@ -46,7 +46,7 @@ Write-Host "4. Cole o VALOR correspondente" -ForegroundColor Gray
 Write-Host "5. Clique 'Add secret'" -ForegroundColor Gray
 Write-Host "6. Repita para os 4 secrets`n" -ForegroundColor Gray
 
-Write-Host "Após configurar os secrets:" -ForegroundColor Yellow
+Write-Host "ApÃ³s configurar os secrets:" -ForegroundColor Yellow
 Write-Host "1. Habilite GitHub Actions: https://github.com/ThiagoDataEngineer/ManuHeadFund/settings/actions" -ForegroundColor Gray
 Write-Host "2. Selecione 'Allow all actions and reusable workflows'" -ForegroundColor Gray
 Write-Host "3. Selecione 'Read and write permissions'" -ForegroundColor Gray

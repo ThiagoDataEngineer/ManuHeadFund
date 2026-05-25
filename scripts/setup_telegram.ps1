@@ -1,32 +1,32 @@
-# setup_telegram.ps1 - Configurar Telegram Bot
+﻿# setup_telegram.ps1 - Configurar Telegram Bot
 # Rodar: .\scripts\setup_telegram.ps1
 
 $ErrorActionPreference = "Stop"
-Set-Location $PSScriptRoot\..
+Set-Location (Split-Path $PSScriptRoot -Parent)
 
-Write-Host "`n╔════════════════════════════════════════╗" -ForegroundColor Cyan
-Write-Host "║      TELEGRAM BOT SETUP - RAPIDO       ║" -ForegroundColor Cyan
-Write-Host "╚════════════════════════════════════════╝" -ForegroundColor Cyan
+Write-Host "`nâ•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—" -ForegroundColor Cyan
+Write-Host "â•‘      TELEGRAM BOT SETUP - RAPIDO       â•‘" -ForegroundColor Cyan
+Write-Host "â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•" -ForegroundColor Cyan
 
 Write-Host "`n[1/4] CRIAR BOT" -ForegroundColor Yellow
-Write-Host "→ Telegram: @BotFather" -ForegroundColor Gray
-Write-Host "→ Comando: /newbot" -ForegroundColor Gray
-Write-Host "→ Nome: ManuHeadFund Bot" -ForegroundColor Gray
-Write-Host "→ Username: manuheadfund_bot (ou similar)" -ForegroundColor Gray
+Write-Host "â†’ Telegram: @BotFather" -ForegroundColor Gray
+Write-Host "â†’ Comando: /newbot" -ForegroundColor Gray
+Write-Host "â†’ Nome: ManuHeadFund Bot" -ForegroundColor Gray
+Write-Host "â†’ Username: manuheadfund_bot (ou similar)" -ForegroundColor Gray
 
 Write-Host "`n[2/4] COLAR TOKEN" -ForegroundColor Yellow
 $botToken = Read-Host "Token"
 
 if (-not $botToken -or $botToken -eq "YOUR_BOT_TOKEN") {
-    Write-Host "✗ Token invalido!" -ForegroundColor Red
+    Write-Host "âœ— Token invalido!" -ForegroundColor Red
     exit 1
 }
 
-Write-Host "✓ Token recebido" -ForegroundColor Green
+Write-Host "âœ“ Token recebido" -ForegroundColor Green
 
 Write-Host "`n[3/4] OBTER CHAT ID" -ForegroundColor Yellow
-Write-Host "→ Envie qualquer mensagem para o bot no Telegram" -ForegroundColor Gray
-Write-Host "→ Aguardando 3 segundos..." -ForegroundColor Gray
+Write-Host "â†’ Envie qualquer mensagem para o bot no Telegram" -ForegroundColor Gray
+Write-Host "â†’ Aguardando 3 segundos..." -ForegroundColor Gray
 
 Start-Sleep -Seconds 3
 
@@ -36,7 +36,7 @@ try {
     
     if ($response.ok -and $response.result.Count -gt 0) {
         $chatId = $response.result[-1].message.chat.id
-        Write-Host "✓ Chat ID: $chatId" -ForegroundColor Green
+        Write-Host "âœ“ Chat ID: $chatId" -ForegroundColor Green
     } else {
         Write-Host "! Nenhuma mensagem encontrada" -ForegroundColor Yellow
         $chatId = Read-Host "Chat ID manual"
@@ -47,7 +47,7 @@ try {
 }
 
 if (-not $chatId) {
-    Write-Host "✗ Chat ID invalido!" -ForegroundColor Red
+    Write-Host "âœ— Chat ID invalido!" -ForegroundColor Red
     exit 1
 }
 
@@ -81,25 +81,25 @@ if (-not (Test-Path $configDir)) {
 $configPath = Join-Path $configDir "telegram.json"
 $config | ConvertTo-Json -Depth 10 | Out-File -FilePath $configPath -Encoding UTF8 -Force
 
-Write-Host "✓ Config salva" -ForegroundColor Green
+Write-Host "âœ“ Config salva" -ForegroundColor Green
 
 Write-Host "`n[TESTE] Enviando mensagem..." -ForegroundColor Yellow
 
 . ".\agents\lib_telegram.ps1"
 
-$testResult = Telegram-SendMessage -Message "✅ *ManuHeadFund* conectado!`n`nAlertas automáticos ativados."
+$testResult = Telegram-SendMessage -Message "âœ… *ManuHeadFund* conectado!`n`nAlertas automÃ¡ticos ativados."
 
 if ($testResult.success) {
-    Write-Host "✓ Mensagem enviada!" -ForegroundColor Green
-    Write-Host "`n╔════════════════════════════════════════╗" -ForegroundColor Green
-    Write-Host "║         TELEGRAM CONFIGURADO ✓         ║" -ForegroundColor Green
-    Write-Host "╚════════════════════════════════════════╝" -ForegroundColor Green
+    Write-Host "âœ“ Mensagem enviada!" -ForegroundColor Green
+    Write-Host "`nâ•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—" -ForegroundColor Green
+    Write-Host "â•‘         TELEGRAM CONFIGURADO âœ“         â•‘" -ForegroundColor Green
+    Write-Host "â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•" -ForegroundColor Green
     Write-Host "`nVerifique seu Telegram!" -ForegroundColor Cyan
 } else {
-    Write-Host "✗ Falha: $($testResult.error)" -ForegroundColor Red
+    Write-Host "âœ— Falha: $($testResult.error)" -ForegroundColor Red
 }
 
 Write-Host "`nAlertas ativos:" -ForegroundColor Gray
-Write-Host "  • Trailing stop ativado (lucro > 3%)" -ForegroundColor Gray
-Write-Host "  • Posição aberta/fechada" -ForegroundColor Gray
-Write-Host "  • Alertas de risco" -ForegroundColor Gray
+Write-Host "  â€¢ Trailing stop ativado (lucro > 3%)" -ForegroundColor Gray
+Write-Host "  â€¢ PosiÃ§Ã£o aberta/fechada" -ForegroundColor Gray
+Write-Host "  â€¢ Alertas de risco" -ForegroundColor Gray

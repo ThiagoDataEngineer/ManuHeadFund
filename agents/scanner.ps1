@@ -11,9 +11,9 @@ param(
     [int]     $IntervalMinutes = 15
 )
 
-. "$PSScriptRoot\config.ps1"
-. "$PSScriptRoot\lib_coinex.ps1"
-. "$PSScriptRoot\lib_claude.ps1"
+. (Join-Path $PSScriptRoot "config.ps1")
+. (Join-Path $PSScriptRoot "lib_coinex.ps1")
+. (Join-Path $PSScriptRoot "lib_claude.ps1")
 
 $SCANNER_SYSTEM_PROMPT = @'
 Voce e um scanner de mercado especializado em identificar os melhores setups
@@ -221,7 +221,7 @@ function Get-QuickTechScore {
 function Get-FullTechScore {
     param([string]$Market)
     # Roda tech_agent.ps1 completo para score detalhado
-    $techPath = "$PSScriptRoot\..\scripts\tech_agent.ps1"
+    $techPath = (Join-Path $PSScriptRoot ".." "scripts" "tech_agent.ps1")
     if (-not (Test-Path $techPath)) { return $null }
     try {
         $data = & $techPath -Market $Market -Once -Quiet

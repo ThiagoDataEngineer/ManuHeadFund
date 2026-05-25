@@ -1,4 +1,4 @@
-# setup_github_secrets.ps1 - Configura secrets no GitHub via API REST
+﻿# setup_github_secrets.ps1 - Configura secrets no GitHub via API REST
 # Requer: Personal Access Token com scope 'repo'
 
 $ErrorActionPreference = "Stop"
@@ -11,9 +11,9 @@ Write-Host "========================================`n" -ForegroundColor Cyan
 # 1. Solicitar Personal Access Token
 # ============================================================================
 
-Write-Host "Para configurar os secrets, você precisa de um Personal Access Token." -ForegroundColor Yellow
+Write-Host "Para configurar os secrets, vocÃª precisa de um Personal Access Token." -ForegroundColor Yellow
 Write-Host "Crie um em: https://github.com/settings/tokens" -ForegroundColor Yellow
-Write-Host "Scopes necessários: repo, workflow`n" -ForegroundColor Yellow
+Write-Host "Scopes necessÃ¡rios: repo, workflow`n" -ForegroundColor Yellow
 
 $token = Read-Host "Cole seu Personal Access Token aqui" -AsSecureString
 $tokenPlain = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto(
@@ -21,7 +21,7 @@ $tokenPlain = [System.Runtime.InteropServices.Marshal]::PtrToStringAuto(
 )
 
 if (-not $tokenPlain) {
-    Write-Host "[ERRO] Token não fornecido" -ForegroundColor Red
+    Write-Host "[ERRO] Token nÃ£o fornecido" -ForegroundColor Red
     exit 1
 }
 
@@ -31,7 +31,7 @@ if (-not $tokenPlain) {
 
 Write-Host "[1/5] Carregando credenciais locais..." -ForegroundColor Gray
 
-. "$PSScriptRoot\..\agents\config.local.ps1"
+. (Join-Path $PSScriptRoot "..\agents\config.local.ps1")
 
 $secrets = @{
     "COINEX_ACCESS_ID"    = $env:COINEX_ACCESS_ID
@@ -56,10 +56,10 @@ if ($missing.Count -gt 0) {
 Write-Host "[OK] Credenciais carregadas" -ForegroundColor Green
 
 # ============================================================================
-# 3. Obter Public Key do repositório
+# 3. Obter Public Key do repositÃ³rio
 # ============================================================================
 
-Write-Host "[2/5] Obtendo public key do repositório..." -ForegroundColor Gray
+Write-Host "[2/5] Obtendo public key do repositÃ³rio..." -ForegroundColor Gray
 
 $owner = "ThiagoDataEngineer"
 $repo = "ManuHeadFund"
@@ -79,12 +79,12 @@ try {
     Write-Host "[OK] Public key obtida (ID: $keyId)" -ForegroundColor Green
 } catch {
     Write-Host "[ERRO] Falha ao obter public key: $_" -ForegroundColor Red
-    Write-Host "Verifique se o token tem permissões corretas" -ForegroundColor Yellow
+    Write-Host "Verifique se o token tem permissÃµes corretas" -ForegroundColor Yellow
     exit 1
 }
 
 # ============================================================================
-# 4. Função para criptografar secret
+# 4. FunÃ§Ã£o para criptografar secret
 # ============================================================================
 
 function Encrypt-Secret {
@@ -99,7 +99,7 @@ function Encrypt-Secret {
     # Usar libsodium via .NET (requer Sodium.Core NuGet)
     # Alternativa: usar Python ou Node.js para criptografar
     
-    # NOTA: PowerShell não tem suporte nativo para libsodium
+    # NOTA: PowerShell nÃ£o tem suporte nativo para libsodium
     # Vamos usar uma abordagem alternativa via Python
     
     $pythonScript = @"
@@ -119,7 +119,7 @@ if __name__ == '__main__':
     print(encrypt(public_key, secret_value))
 "@
     
-    # Salvar script temporário
+    # Salvar script temporÃ¡rio
     $tempScript = Join-Path $env:TEMP "encrypt_secret.py"
     $pythonScript | Out-File -FilePath $tempScript -Encoding UTF8
     
@@ -138,16 +138,16 @@ if __name__ == '__main__':
 }
 
 # ============================================================================
-# 5. Verificar se Python e PyNaCl estão instalados
+# 5. Verificar se Python e PyNaCl estÃ£o instalados
 # ============================================================================
 
-Write-Host "[3/5] Verificando dependências..." -ForegroundColor Gray
+Write-Host "[3/5] Verificando dependÃªncias..." -ForegroundColor Gray
 
 try {
     $pythonVersion = python --version 2>&1
     Write-Host "  Python: $pythonVersion" -ForegroundColor Gray
 } catch {
-    Write-Host "[ERRO] Python não encontrado" -ForegroundColor Red
+    Write-Host "[ERRO] Python nÃ£o encontrado" -ForegroundColor Red
     Write-Host "Instale Python: https://www.python.org/downloads/" -ForegroundColor Yellow
     exit 1
 }
@@ -164,7 +164,7 @@ try {
     exit 1
 }
 
-Write-Host "[OK] Dependências verificadas" -ForegroundColor Green
+Write-Host "[OK] DependÃªncias verificadas" -ForegroundColor Green
 
 # ============================================================================
 # 6. Criar secrets no GitHub
@@ -214,10 +214,10 @@ if ($successCount -eq 4) {
     Write-Host "SECRETS CONFIGURADOS COM SUCESSO!" -ForegroundColor Green
     Write-Host "========================================`n" -ForegroundColor Green
     
-    Write-Host "Próximos passos:" -ForegroundColor Yellow
+    Write-Host "PrÃ³ximos passos:" -ForegroundColor Yellow
     Write-Host "1. Verifique os secrets em: https://github.com/$owner/$repo/settings/secrets/actions" -ForegroundColor Gray
     Write-Host "2. Habilite GitHub Actions em: https://github.com/$owner/$repo/settings/actions" -ForegroundColor Gray
-    Write-Host "3. Aguarde a primeira execução do workflow (15 minutos)" -ForegroundColor Gray
+    Write-Host "3. Aguarde a primeira execuÃ§Ã£o do workflow (15 minutos)" -ForegroundColor Gray
     Write-Host "4. Verifique mensagens no Telegram`n" -ForegroundColor Gray
 } else {
     Write-Host "`n========================================" -ForegroundColor Yellow

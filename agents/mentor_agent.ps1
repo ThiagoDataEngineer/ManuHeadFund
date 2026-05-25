@@ -3,23 +3,23 @@
 #          Dennis/Faith, Douglas, Schwartz, Darvas, Raschke, Hayes, Woo
 # Ver: knowledge/MENTOR.md e knowledge/MENTOR_PROMPT.md
 
-. "$PSScriptRoot\config.ps1"
-. "$PSScriptRoot\lib_claude.ps1"
+. (Join-Path $PSScriptRoot "config.ps1")
+. (Join-Path $PSScriptRoot "lib_claude.ps1")
 # E2 Grounded v2 (2026-05-22): structured GATE STATUS block + forbidden phrases guard
-if (Test-Path "$PSScriptRoot\lib_mentor_gate_block.ps1") {
-    . "$PSScriptRoot\lib_mentor_gate_block.ps1"
+if (Test-Path (Join-Path $PSScriptRoot "lib_mentor_gate_block.ps1")) {
+    . (Join-Path $PSScriptRoot "lib_mentor_gate_block.ps1")
 }
 # E3 Decision Reflection (2026-05-22): PRIOR RESOLVED block injection
-if (Test-Path "$PSScriptRoot\lib_decision_reflection.ps1") {
-    . "$PSScriptRoot\lib_decision_reflection.ps1"
+if (Test-Path (Join-Path $PSScriptRoot "lib_decision_reflection.ps1")) {
+    . (Join-Path $PSScriptRoot "lib_decision_reflection.ps1")
 }
 # E1 Schema 5-tier wire (2026-05-23): Get-SizingTiltMultiplier integration
-if (Test-Path "$PSScriptRoot\lib_mentor_schema.ps1") {
-    . "$PSScriptRoot\lib_mentor_schema.ps1"
+if (Test-Path (Join-Path $PSScriptRoot "lib_mentor_schema.ps1")) {
+    . (Join-Path $PSScriptRoot "lib_mentor_schema.ps1")
 }
 # E1 HARD_VETO mechanism (2026-05-23): blacklist 24h on extreme red flag
-if (Test-Path "$PSScriptRoot\lib_market_blacklist.ps1") {
-    . "$PSScriptRoot\lib_market_blacklist.ps1"
+if (Test-Path (Join-Path $PSScriptRoot "lib_market_blacklist.ps1")) {
+    . (Join-Path $PSScriptRoot "lib_market_blacklist.ps1")
 }
 
 $MENTOR_SYSTEM_PROMPT = @'

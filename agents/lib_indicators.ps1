@@ -1,8 +1,8 @@
 ﻿# lib_indicators.ps1 — Wrapper do TechAgent existente
 # Chama tech_agent.ps1 em modo silencioso e retorna dados estruturados
-# Dot-source: . "$PSScriptRoot\lib_indicators.ps1"
+# Dot-source: . (Join-Path $PSScriptRoot "lib_indicators.ps1")
 
-$_TECH_AGENT_PATH = "$PSScriptRoot\..\scripts\tech_agent.ps1"
+$_TECH_AGENT_PATH = (Join-Path $PSScriptRoot ".." "scripts" "tech_agent.ps1")
 
 function Get-TechData {
     param(

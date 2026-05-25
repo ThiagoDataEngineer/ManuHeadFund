@@ -1,4 +1,4 @@
-# update_knowledge.ps1
+﻿# update_knowledge.ps1
 # Atualiza e valida os arquivos de conhecimento de trading
 # Uso: .\update_knowledge.ps1 [-Check] [-Summary] [-AddNote "texto" -File "arquivo.md"]
 
@@ -9,8 +9,8 @@ param(
     [switch]$Summary
 )
 
-$KnowledgeDir = "$PSScriptRoot\knowledge"
-$ClaudeFile   = "$PSScriptRoot\CLAUDE.md"
+$KnowledgeDir = (Join-Path $PSScriptRoot "knowledge")
+$ClaudeFile   = (Join-Path $PSScriptRoot "CLAUDE.md")
 
 $KnowledgeFiles = @{
     "TECHNICAL_ANALYSIS.md"  = "Price action, padroes, tendencias, MTF"

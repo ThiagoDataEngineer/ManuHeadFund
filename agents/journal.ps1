@@ -1,8 +1,8 @@
 ﻿# journal.ps1 — Journal de trades: registro, revisao e estatisticas
 # Filosofia: Mark Douglas (Trading in the Zone) + Van Tharp (Trade Your Way to Financial Freedom)
-# Dot-source: . "$PSScriptRoot\journal.ps1"
+# Dot-source: . (Join-Path $PSScriptRoot "journal.ps1")
 
-. "$PSScriptRoot\config.ps1"
+. (Join-Path $PSScriptRoot "config.ps1")
 
 $JOURNAL_HEADERS = "id,timestamp,market,sinal,entry_price,stop_loss,alvo1,alvo2," +
                    "quantidade,risco_usd,rr_planejado,score_ponderado,qualidade_setup," +

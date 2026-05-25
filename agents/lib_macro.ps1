@@ -1,9 +1,9 @@
-# lib_macro.ps1 -- Macro Context Provider (FRED API, cache 24h, sem Claude)
-# Uso: . "$PSScriptRoot\lib_macro.ps1"; Get-MacroContext
+﻿# lib_macro.ps1 -- Macro Context Provider (FRED API, cache 24h, sem Claude)
+# Uso: . (Join-Path $PSScriptRoot "lib_macro.ps1"); Get-MacroContext
 # Design: utilitario puro, igual a lib_coinex.ps1 -- sem peso no orquestrador,
 #         sem chamada Claude. Dado macro muda 1x/dia; injetado nos prompts existentes.
 
-$MACRO_CACHE_PATH  = if ($env:TEMP) { "$env:TEMP\macro_cache.json" } else { "$PSScriptRoot\..\logs\macro_cache.json" }
+$MACRO_CACHE_PATH  = if ($env:TEMP) { "$env:TEMP\macro_cache.json" } else { (Join-Path $PSScriptRoot ".." "logs" "macro_cache.json") }
 $MACRO_CACHE_TTL_H = 24
 
 # Extrai o primeiro valor numerico valido de uma resposta FRED (ignora ".")
@@ -30,7 +30,7 @@ function Get-Trend {
     return "lateral"
 }
 
-# Calcula score macro (0-100) sem Claude, aritmética pura
+# Calcula score macro (0-100) sem Claude, aritmÃ©tica pura
 function Invoke-MacroScore {
     param(
         [string]$DxyTrend,
@@ -62,7 +62,7 @@ function Get-MacroContext {
         [int]$CacheTtlH   = $MACRO_CACHE_TTL_H
     )
 
-    # ── 1. Verificar cache ────────────────────────────────────────────────────
+    # â”€â”€ 1. Verificar cache â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     if (Test-Path $CachePath) {
         try {
             $raw   = Get-Content $CachePath -Raw -Encoding UTF8
@@ -88,7 +88,7 @@ function Get-MacroContext {
         } catch { <# cache corrompido -- refaz fetch #> }
     }
 
-    # ── 2. Fetch FRED API (5 series, timeout 10s cada) ───────────────────────
+    # â”€â”€ 2. Fetch FRED API (5 series, timeout 10s cada) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     # FRED exige api_key obrigatorio (sem ele retorna HTTP 400 silenciado pelo catch).
     # Key em $env:FRED_API_KEY (config.local.ps1, gitignored). Sem key -> fallback NEUTRAL.
     $fredBase = "https://api.stlouisfed.org/fred/series/observations"
@@ -123,7 +123,7 @@ function Get-MacroContext {
         }
     }
 
-    # ── 3. Extrair valores e calcular tendencias ──────────────────────────────
+    # â”€â”€ 3. Extrair valores e calcular tendencias â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     $dxyNow  = Get-FredValue $rDxy 0
     $dxyPrev = Get-FredValue $rDxy 1
     $dxyTrend = if ($dxyNow -and $dxyPrev) { Get-Trend $dxyNow $dxyPrev 0.005 } else { "lateral" }
@@ -145,12 +145,12 @@ function Get-MacroContext {
 
     $fedRate = Get-FredValue $rFed 0
 
-    # ── 4. Score e bias ───────────────────────────────────────────────────────
+    # â”€â”€ 4. Score e bias â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     $fedRateVal = if ($fedRate -ne $null) { $fedRate } else { 5.0 }
     $score = Invoke-MacroScore -DxyTrend $dxyTrend -M2Trend $m2TrendLabel -YieldCurve $yieldCurve -FedRate $fedRateVal
     $bias  = if ($score -ge 60) { "BULLISH" } elseif ($score -le 40) { "BEARISH" } else { "NEUTRAL" }
 
-    # ── 5. Resumo em texto (sem Claude) ──────────────────────────────────────
+    # â”€â”€ 5. Resumo em texto (sem Claude) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     $dxyStr  = if ($dxyNow)  { "DXY $dxyNow ($dxyTrend)" }  else { "DXY indisponivel" }
     $m2Str   = if ($m2Now)   { "M2 $($m2TrendLabel)" }      else { "M2 indisponivel" }
     $yStr    = if ($y10 -and $y2) { "curva $yieldCurve (10Y=$y10% / 2Y=$y2%)" } else { "curva indisponivel" }
@@ -171,7 +171,7 @@ function Get-MacroContext {
         source         = "FRED"
     }
 
-    # ── 6. Salvar cache ───────────────────────────────────────────────────────
+    # â”€â”€ 6. Salvar cache â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
     try {
         $cacheDir = Split-Path $CachePath -Parent
         if (-not (Test-Path $cacheDir)) { New-Item -ItemType Directory -Path $cacheDir -Force | Out-Null }
@@ -183,7 +183,7 @@ function Get-MacroContext {
     return $obj
 }
 
-# ── BTC Tech Regime (camada tecnica BTC, complementa macro FRED) ──────────────
+# â”€â”€ BTC Tech Regime (camada tecnica BTC, complementa macro FRED) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # Retorna: ACUMULACAO | TENDENCIA | DISTRIBUICAO | BEAR
 # - BEAR:         preco abaixo da SMA200 diaria
 # - DISTRIBUICAO: RSI > 70 + volume declinante > 15% vs media 20d

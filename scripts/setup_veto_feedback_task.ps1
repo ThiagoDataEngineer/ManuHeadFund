@@ -1,4 +1,4 @@
-# setup_veto_feedback_task.ps1
+﻿# setup_veto_feedback_task.ps1
 # Criar Task Scheduler para veto_feedback_processor.ps1
 # Executa a cada 30 minutos
 # 2026-05-24
@@ -10,7 +10,7 @@ Write-Host ""
 
 # Parametros
 $taskName = "CoinEx_VetoFeedback_Processor"
-$scriptPath = "$PSScriptRoot\veto_feedback_processor.ps1"
+$scriptPath = (Join-Path $PSScriptRoot "veto_feedback_processor.ps1")
 $workingDir = Split-Path -Parent $PSScriptRoot
 
 # Verificar se script existe

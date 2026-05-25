@@ -1,9 +1,9 @@
-# automated_backtest.ps1 - Sistema de Backtesting Automatizado
+﻿# automated_backtest.ps1 - Sistema de Backtesting Automatizado
 # Integra com backtest/ existente e compara configuracoes
 # Rodar: .\scripts\automated_backtest.ps1
 
 $ErrorActionPreference = "Stop"
-Set-Location $PSScriptRoot\..
+Set-Location (Split-Path $PSScriptRoot -Parent)
 
 . ".\agents\config.ps1"
 

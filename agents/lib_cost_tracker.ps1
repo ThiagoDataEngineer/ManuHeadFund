@@ -1,10 +1,10 @@
-# lib_cost_tracker.ps1 � Tracking de custos Claude API
+﻿# lib_cost_tracker.ps1 ï¿½ Tracking de custos Claude API
 # Persiste cada chamada em journal/claude_usage.csv para analise posterior.
-# Zero dependencia externa � apenas escrita CSV.
+# Zero dependencia externa ï¿½ apenas escrita CSV.
 
-$COST_USAGE_FILE = "$PSScriptRoot\..\journal\claude_usage.csv"
+$COST_USAGE_FILE = (Join-Path $PSScriptRoot ".." "journal" "claude_usage.csv")
 
-# Tabela de precos Anthropic (USD por 1M tokens) � Maio 2026
+# Tabela de precos Anthropic (USD por 1M tokens) ï¿½ Maio 2026
 # Atualizar se Anthropic mudar pricing
 $CLAUDE_PRICING = @{
     "claude-sonnet-4"        = @{ input=3.00;  output=15.00 }
@@ -13,7 +13,7 @@ $CLAUDE_PRICING = @{
 }
 
 # -----------------------------------------------------------------------------
-# Get-ClaudeCost � calcula custo USD a partir de tokens + modelo
+# Get-ClaudeCost ï¿½ calcula custo USD a partir de tokens + modelo
 # -----------------------------------------------------------------------------
 function Get-ClaudeCost {
     param(
@@ -33,7 +33,7 @@ function Get-ClaudeCost {
 }
 
 # -----------------------------------------------------------------------------
-# Track-ClaudeUsage � registra uma chamada Claude no CSV
+# Track-ClaudeUsage ï¿½ registra uma chamada Claude no CSV
 # -----------------------------------------------------------------------------
 function Track-ClaudeUsage {
     param(
@@ -68,7 +68,7 @@ function Track-ClaudeUsage {
 }
 
 # -----------------------------------------------------------------------------
-# Get-CostSummary � agrega custos por periodo
+# Get-CostSummary ï¿½ agrega custos por periodo
 # Retorna objeto com today, week, month, total + breakdown por agente
 # -----------------------------------------------------------------------------
 function Get-CostSummary {
@@ -126,7 +126,7 @@ function Get-CostSummary {
 }
 
 # -----------------------------------------------------------------------------
-# Format-TgCostReport � relatorio formatado para Telegram (HTML)
+# Format-TgCostReport ï¿½ relatorio formatado para Telegram (HTML)
 # -----------------------------------------------------------------------------
 function Format-TgCostReport {
     $s = Get-CostSummary
@@ -158,7 +158,7 @@ $sep
 }
 
 # -----------------------------------------------------------------------------
-# Test-CostThresholdExceeded � verifica se custo em janela excedeu threshold
+# Test-CostThresholdExceeded ï¿½ verifica se custo em janela excedeu threshold
 # -----------------------------------------------------------------------------
 function Test-CostThresholdExceeded {
     [CmdletBinding()]
@@ -200,7 +200,7 @@ function Test-CostThresholdExceeded {
 }
 
 # -----------------------------------------------------------------------------
-# Test-CostAlarmThreshold � valida limites de custo (per-trade e daily)
+# Test-CostAlarmThreshold ï¿½ valida limites de custo (per-trade e daily)
 # Retorna @{alarm_triggered, reason, current_metrics, suggested_action}
 # -----------------------------------------------------------------------------
 function Test-CostAlarmThreshold {
@@ -317,7 +317,7 @@ function Test-CostAlarmThreshold {
 }
 
 # -----------------------------------------------------------------------------
-# Get-DailyCostByAgent � agrega custos das ultimas 24h por agente
+# Get-DailyCostByAgent ï¿½ agrega custos das ultimas 24h por agente
 # -----------------------------------------------------------------------------
 function Get-DailyCostByAgent {
     [CmdletBinding()]
@@ -409,7 +409,7 @@ function Get-DailyCostByAgent {
 }
 
 # -----------------------------------------------------------------------------
-# Send-CostAlarmTelegram � envia alerta via Telegram se ativado
+# Send-CostAlarmTelegram ï¿½ envia alerta via Telegram se ativado
 # -----------------------------------------------------------------------------
 function Send-CostAlarmTelegram {
     [CmdletBinding()]

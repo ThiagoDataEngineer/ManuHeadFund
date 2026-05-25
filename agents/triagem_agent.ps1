@@ -1,5 +1,5 @@
 ﻿# triagem_agent.ps1 -- Drone Batedor (gratuito): classifica candidato em tier A/B/C/D
-# Dot-source: . "$PSScriptRoot\triagem_agent.ps1"
+# Dot-source: . (Join-Path $PSScriptRoot "triagem_agent.ps1")
 #
 # Contrato:
 #   Invoke-Triagem -Market <string> -Context <PSCustomObject>

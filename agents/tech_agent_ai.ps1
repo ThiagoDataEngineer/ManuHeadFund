@@ -1,9 +1,9 @@
 ﻿# tech_agent_ai.ps1 — TechAgent com Claude API
 # Personas: Al Brooks + Wyckoff + Stan Weinstein + ICT + Tori Trades (ver PERSONAS.md)
-# Uso: . "$PSScriptRoot\tech_agent_ai.ps1"; Invoke-TechAgent -Market "BTCUSDT"
+# Uso: . (Join-Path $PSScriptRoot "tech_agent_ai.ps1"); Invoke-TechAgent -Market "BTCUSDT"
 
-. "$PSScriptRoot\config.ps1"
-. "$PSScriptRoot\lib_claude.ps1"
+. (Join-Path $PSScriptRoot "config.ps1")
+. (Join-Path $PSScriptRoot "lib_claude.ps1")
 
 $TECH_SYSTEM_PROMPT = @'
 Voce e um analista tecnico de elite com 20 anos de experiencia em mercados financeiros,
@@ -173,7 +173,7 @@ function Invoke-TechAgent {
     Write-Host "  [TechAgent] Coletando dados: $Market..." -ForegroundColor DarkCyan
 
     # Chama tech_agent.ps1 existente em modo silencioso
-    $techPath = "$PSScriptRoot\..\scripts\tech_agent.ps1"
+    $techPath = (Join-Path $PSScriptRoot ".." "scripts" "tech_agent.ps1")
     $data = & $techPath -Market $Market -Once -Quiet
 
     if (-not $data) {

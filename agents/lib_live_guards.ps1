@@ -1,4 +1,4 @@
-# lib_live_guards.ps1 -- 4 guards de seguranca para Mode 2 LIVE
+﻿# lib_live_guards.ps1 -- 4 guards de seguranca para Mode 2 LIVE
 #
 # 1. SIZING CAP        -- max $X por trade (override do risk_pct)
 # 2. FREQUENCY CAP     -- max N trades/semana (circuit breaker)
@@ -10,7 +10,7 @@
 #
 # Estado persistido em journal/live_guards_state.json (trades/semana counter).
 
-$LIVE_GUARDS_FILE = "$PSScriptRoot\..\journal\live_guards_state.json"
+$LIVE_GUARDS_FILE = (Join-Path $PSScriptRoot ".." "journal" "live_guards_state.json")
 
 
 function Get-LiveGuardsState {
@@ -57,7 +57,7 @@ function Reset-LiveGuardsIfNewWeek {
 }
 
 
-# ── Guard 1: Sizing cap ───────────────────────────────────────────────────────
+# â”€â”€ Guard 1: Sizing cap â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function Test-SizingCap {
     [CmdletBinding()]
@@ -75,7 +75,7 @@ function Test-SizingCap {
 }
 
 
-# ── Guard 2: Frequency cap ────────────────────────────────────────────────────
+# â”€â”€ Guard 2: Frequency cap â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function Test-FrequencyCap {
     [CmdletBinding()]
@@ -104,13 +104,13 @@ function Register-LiveTrade {
 }
 
 
-# ── Guard 3: Tier filter ──────────────────────────────────────────────────────
+# â”€â”€ Guard 3: Tier filter â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function Test-TierGuard {
     [CmdletBinding()]
     param(
         [string]$Market,
-        [string]$AllowedMode = "LIVE"   # LIVE = só Tier A | PAPER = A+B
+        [string]$AllowedMode = "LIVE"   # LIVE = sÃ³ Tier A | PAPER = A+B
     )
     if (-not (Get-Command Get-QuantWhitelistMarkets -ErrorAction SilentlyContinue)) {
         return [PSCustomObject]@{ pass = $false; reason = "lib_quant_whitelist nao carregada" }
@@ -126,7 +126,7 @@ function Test-TierGuard {
 }
 
 
-# ── Guard 4: Custodial cap ────────────────────────────────────────────────────
+# â”€â”€ Guard 4: Custodial cap â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function Test-CustodialCap {
     # 2026-05-18: guard desativado por design (privacy + responsabilidade user).
@@ -145,7 +145,7 @@ function Test-CustodialCap {
 }
 
 
-# ── Master ────────────────────────────────────────────────────────────────────
+# â”€â”€ Master â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function Test-LiveTradeGuards {
     [CmdletBinding()]

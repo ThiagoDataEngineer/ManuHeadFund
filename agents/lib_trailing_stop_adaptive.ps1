@@ -1,8 +1,8 @@
-# lib_trailing_stop_adaptive.ps1
+﻿# lib_trailing_stop_adaptive.ps1
 # Trailing Stop Adaptativo baseado em volatilidade e momentum
 # 2026-05-24
 
-. "$PSScriptRoot\lib_coinex.ps1"
+. (Join-Path $PSScriptRoot "lib_coinex.ps1")
 
 function Calculate-ATR {
     [CmdletBinding()]
@@ -88,7 +88,7 @@ function Get-AdaptiveTrailingThreshold {
             threshold_pct = $threshold
             atr_pct = [Math]::Round($atrPct, 2)
             volatility_class = $volClass
-            reasoning = "ATR=$([Math]::Round($atrPct,2))% → $volClass → threshold=$threshold%"
+            reasoning = "ATR=$([Math]::Round($atrPct,2))% â†’ $volClass â†’ threshold=$threshold%"
             fallback = $false
         }
     }
@@ -156,7 +156,7 @@ function Get-MomentumScore {
         return @{
             strength = $strength
             score = [Math]::Round($rsi, 1)
-            reasoning = "RSI=$([Math]::Round($rsi,1)) → $strength"
+            reasoning = "RSI=$([Math]::Round($rsi,1)) â†’ $strength"
         }
     }
     catch {

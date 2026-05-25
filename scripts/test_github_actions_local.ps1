@@ -1,10 +1,10 @@
-# test_github_actions_local.ps1 - Simula GitHub Actions localmente
+﻿# test_github_actions_local.ps1 - Simula GitHub Actions localmente
 # Testa se os scripts funcionam no ambiente GitHub Actions
 
 $ErrorActionPreference = "Stop"
 
 Write-Host "`n========================================" -ForegroundColor Cyan
-Write-Host "TESTE GITHUB ACTIONS (SIMULAÇÃO LOCAL)" -ForegroundColor Cyan
+Write-Host "TESTE GITHUB ACTIONS (SIMULAÃ‡ÃƒO LOCAL)" -ForegroundColor Cyan
 Write-Host "========================================`n" -ForegroundColor Cyan
 
 $results = @{
@@ -21,17 +21,17 @@ $results = @{
 
 Write-Host "[SETUP] Simulando ambiente GitHub Actions..." -ForegroundColor Yellow
 
-# Definir variável que GitHub Actions usa
+# Definir variÃ¡vel que GitHub Actions usa
 $env:GITHUB_ACTIONS = "true"
 
-# Criar diretório temporário para teste
+# Criar diretÃ³rio temporÃ¡rio para teste
 $testDir = Join-Path $env:TEMP "github_actions_test"
 if (Test-Path $testDir) {
     Remove-Item $testDir -Recurse -Force
 }
 New-Item -ItemType Directory -Path $testDir -Force | Out-Null
 
-# Copiar arquivos necessários
+# Copiar arquivos necessÃ¡rios
 Write-Host "  Copiando arquivos..." -ForegroundColor Gray
 Copy-Item -Path ".\agents" -Destination $testDir -Recurse -Force
 Copy-Item -Path ".\scripts" -Destination $testDir -Recurse -Force
@@ -46,11 +46,11 @@ Write-Host "[OK] Ambiente preparado`n" -ForegroundColor Green
 # TESTE 1: Criar Config (como GitHub Actions faz)
 # ============================================================================
 
-Write-Host "[1/4] Testando criação de config..." -ForegroundColor Yellow
+Write-Host "[1/4] Testando criaÃ§Ã£o de config..." -ForegroundColor Yellow
 
 try {
     # Carregar credenciais reais
-    . "$PSScriptRoot\..\agents\config.local.ps1"
+    . (Join-Path $PSScriptRoot "..\agents\config.local.ps1")
     
     # Criar config no formato GitHub Actions
     $configContent = @"
@@ -68,17 +68,17 @@ try {
     if (Test-Path "agents/config.local.ps1") {
         Write-Host "  [OK] Config criado" -ForegroundColor Green
         
-        # Testar se config é válido
+        # Testar se config Ã© vÃ¡lido
         . ".\agents\config.local.ps1"
         
         if ($env:COINEX_ACCESS_ID -and $env:TELEGRAM_BOT_TOKEN) {
-            Write-Host "  [OK] Config válido (variáveis exportadas)" -ForegroundColor Green
+            Write-Host "  [OK] Config vÃ¡lido (variÃ¡veis exportadas)" -ForegroundColor Green
             $results.config_creation = $true
         } else {
-            throw "Config não exportou variáveis"
+            throw "Config nÃ£o exportou variÃ¡veis"
         }
     } else {
-        throw "Config não foi criado"
+        throw "Config nÃ£o foi criado"
     }
 } catch {
     $results.errors += "Config: $_"
@@ -94,7 +94,7 @@ Write-Host "`n[2/4] Testando Risk Manager..." -ForegroundColor Yellow
 try {
     # Verificar se config existe
     if (-not (Test-Path "agents/config.local.ps1")) {
-        throw "Config não encontrado"
+        throw "Config nÃ£o encontrado"
     }
     
     # Executar script
@@ -117,7 +117,7 @@ Write-Host "`n[3/4] Testando Dashboard Generator..." -ForegroundColor Yellow
 try {
     # Verificar se config existe
     if (-not (Test-Path "agents/config.local.ps1")) {
-        throw "Config não encontrado"
+        throw "Config nÃ£o encontrado"
     }
     
     # Executar script
@@ -128,7 +128,7 @@ try {
         Write-Host "  [OK] Dashboard gerado" -ForegroundColor Green
         $results.dashboard = $true
     } else {
-        throw "Dashboard não foi gerado"
+        throw "Dashboard nÃ£o foi gerado"
     }
 } catch {
     $results.errors += "Dashboard: $_"
@@ -163,10 +163,10 @@ try {
 # ============================================================================
 
 Write-Host "`n[CLEANUP] Limpando ambiente de teste..." -ForegroundColor Gray
-Set-Location $PSScriptRoot\..
+Set-Location (Split-Path $PSScriptRoot -Parent)
 Remove-Item $testDir -Recurse -Force -ErrorAction SilentlyContinue
 
-# Remover variável de ambiente
+# Remover variÃ¡vel de ambiente
 Remove-Item Env:\GITHUB_ACTIONS -ErrorAction SilentlyContinue
 
 # ============================================================================
@@ -221,11 +221,11 @@ if ($results.errors.Count -gt 0) {
 }
 
 if ($passed -eq $total) {
-    Write-Host "✅ GITHUB ACTIONS VAI FUNCIONAR!" -ForegroundColor Green
-    Write-Host "Todos os testes passaram. O sistema está pronto." -ForegroundColor Green
+    Write-Host "âœ… GITHUB ACTIONS VAI FUNCIONAR!" -ForegroundColor Green
+    Write-Host "Todos os testes passaram. O sistema estÃ¡ pronto." -ForegroundColor Green
     exit 0
 } else {
-    Write-Host "⚠️ ALGUNS TESTES FALHARAM" -ForegroundColor Yellow
+    Write-Host "âš ï¸ ALGUNS TESTES FALHARAM" -ForegroundColor Yellow
     Write-Host "Corrija os erros antes de confiar no GitHub Actions." -ForegroundColor Yellow
     exit 1
 }

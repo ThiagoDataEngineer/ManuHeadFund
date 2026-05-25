@@ -1,11 +1,11 @@
 ﻿# gem_executor.ps1 -- Execucao real de gems na CoinEx
 # Padrao: FUTURES (isolated margin). Fallback: SPOT quando par nao tem futuros.
-# Dot-source: . "$PSScriptRoot\gem_executor.ps1"
+# Dot-source: . (Join-Path $PSScriptRoot "gem_executor.ps1")
 
-. "$PSScriptRoot\lib_coinex.ps1"
-. "$PSScriptRoot\lib_journal.ps1"
-. "$PSScriptRoot\lib_telegram.ps1"
-. "$PSScriptRoot\lib_gem_safety.ps1"
+. (Join-Path $PSScriptRoot "lib_coinex.ps1")
+. (Join-Path $PSScriptRoot "lib_journal.ps1")
+. (Join-Path $PSScriptRoot "lib_telegram.ps1")
+. (Join-Path $PSScriptRoot "lib_gem_safety.ps1")
 # 2026-05-21: B9 cache TTL (Add-GemRejection + Test-GemRecentlyRejected).
 # Bug encontrado: scan_master dot-sourced gem_executor mas NAO lib_gem_decision_cache,
 # entao Get-Command Test-GemRecentlyRejected returnava null silently -> cache check

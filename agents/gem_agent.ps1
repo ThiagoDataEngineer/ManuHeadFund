@@ -2,8 +2,8 @@
 # R:R mínimo 1:20 | Alvo 1:200 | Sizing assimétrico 0.20-0.40%
 # Ver: knowledge/GEM_COINS.md, PUMP_FINGERPRINTS.md, MICRO_LIQUIDITY.md, NARRATIVE_CATALYSTS.md
 
-. "$PSScriptRoot\lib_journal.ps1"
-. "$PSScriptRoot\lib_telegram.ps1"
+. (Join-Path $PSScriptRoot "lib_journal.ps1")
+. (Join-Path $PSScriptRoot "lib_telegram.ps1")
 
 # Promove para global (lido de config.ps1 se disponivel, senao fallback hardcoded)
 $global:GEM_VOL_SPIKE_MIN    = if ($GEM_VOL_SPIKE_MIN)    { $GEM_VOL_SPIKE_MIN    } else { 2.0 }

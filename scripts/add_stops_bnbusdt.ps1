@@ -1,8 +1,8 @@
-# add_stops_bnbusdt.ps1 - Adiciona Stop Loss e Take Profit a posicao BNBUSDT
+﻿# add_stops_bnbusdt.ps1 - Adiciona Stop Loss e Take Profit a posicao BNBUSDT
 # Executa: .\scripts\add_stops_bnbusdt.ps1
 
 $ErrorActionPreference = "Stop"
-Set-Location $PSScriptRoot\..
+Set-Location (Split-Path $PSScriptRoot -Parent)
 
 . ".\agents\config.ps1"
 . ".\agents\lib_coinex.ps1"

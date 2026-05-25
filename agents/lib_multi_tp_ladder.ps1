@@ -1,5 +1,5 @@
-# lib_multi_tp_ladder.ps1 - Multi-TP Escalonado (Ladder Exits)
-# Implementa saídas escalonadas para maximizar lucros
+﻿# lib_multi_tp_ladder.ps1 - Multi-TP Escalonado (Ladder Exits)
+# Implementa saÃ­das escalonadas para maximizar lucros
 #
 # ESTRATEGIA:
 # - TP1 (25%): Recupera capital + pequeno lucro
@@ -8,40 +8,40 @@
 # - TP4 (15%): Runner (deixa correr)
 #
 # STOP LOSS DINAMICO:
-# - Após TP1: Move SL para breakeven
-# - Após TP2: Move SL para TP1
-# - Após TP3: Move SL para TP2
+# - ApÃ³s TP1: Move SL para breakeven
+# - ApÃ³s TP2: Move SL para TP1
+# - ApÃ³s TP3: Move SL para TP2
 
-. "$PSScriptRoot\lib_coinex.ps1"
-. "$PSScriptRoot\lib_coinex_position_management.ps1"
+. (Join-Path $PSScriptRoot "lib_coinex.ps1")
+. (Join-Path $PSScriptRoot "lib_coinex_position_management.ps1")
 
 # ============================================================================
-# Get-LadderExitLevels - Calcula níveis de TP escalonados
+# Get-LadderExitLevels - Calcula nÃ­veis de TP escalonados
 # ============================================================================
 
 function Get-LadderExitLevels {
     <#
     .SYNOPSIS
-        Calcula níveis de TP escalonados baseados em ATR
+        Calcula nÃ­veis de TP escalonados baseados em ATR
     
     .DESCRIPTION
-        Cria 4 níveis de TP com distribuição otimizada:
-        - TP1: 2x ATR (25% da posição)
-        - TP2: 4x ATR (35% da posição)
-        - TP3: 6x ATR (25% da posição)
+        Cria 4 nÃ­veis de TP com distribuiÃ§Ã£o otimizada:
+        - TP1: 2x ATR (25% da posiÃ§Ã£o)
+        - TP2: 4x ATR (35% da posiÃ§Ã£o)
+        - TP3: 6x ATR (25% da posiÃ§Ã£o)
         - TP4: 10x ATR (15% runner)
     
     .PARAMETER EntryPrice
-        Preço de entrada
+        PreÃ§o de entrada
     
     .PARAMETER Side
-        Lado da posição (long/short)
+        Lado da posiÃ§Ã£o (long/short)
     
     .PARAMETER AtrValue
         Valor do ATR
     
     .PARAMETER TotalQty
-        Quantidade total da posição
+        Quantidade total da posiÃ§Ã£o
     
     .EXAMPLE
         Get-LadderExitLevels -EntryPrice 100000 -Side "long" -AtrValue 800 -TotalQty 0.01
@@ -68,13 +68,13 @@ function Get-LadderExitLevels {
     $tp3Mult = 6.0
     $tp4Mult = 10.0
     
-    # Distribuição de quantidade (%)
+    # DistribuiÃ§Ã£o de quantidade (%)
     $tp1Pct = 0.25  # 25%
     $tp2Pct = 0.35  # 35%
     $tp3Pct = 0.25  # 25%
     $tp4Pct = 0.15  # 15% runner
     
-    # Calcular preços
+    # Calcular preÃ§os
     if ($Side -eq "long") {
         $tp1Price = $EntryPrice + ($AtrValue * $tp1Mult)
         $tp2Price = $EntryPrice + ($AtrValue * $tp2Mult)
@@ -131,17 +131,17 @@ function Place-LadderExitOrders {
         Coloca ordens de TP escalonadas na CoinEx
     
     .DESCRIPTION
-        Cria 4 ordens de take profit com quantidades distribuídas
-        Usa limit orders para garantir preços exatos
+        Cria 4 ordens de take profit com quantidades distribuÃ­das
+        Usa limit orders para garantir preÃ§os exatos
     
     .PARAMETER Market
         Par de trading (ex: BTCUSDT)
     
     .PARAMETER Side
-        Lado da posição (long/short)
+        Lado da posiÃ§Ã£o (long/short)
     
     .PARAMETER Ladder
-        Objeto com níveis de TP (de Get-LadderExitLevels)
+        Objeto com nÃ­veis de TP (de Get-LadderExitLevels)
     
     .PARAMETER DryRun
         Simular sem executar
@@ -219,31 +219,31 @@ function Place-LadderExitOrders {
 }
 
 # ============================================================================
-# Monitor-LadderExecution - Monitora execução e ajusta SL
+# Monitor-LadderExecution - Monitora execuÃ§Ã£o e ajusta SL
 # ============================================================================
 
 function Monitor-LadderExecution {
     <#
     .SYNOPSIS
-        Monitora execução de TPs e ajusta SL dinamicamente
+        Monitora execuÃ§Ã£o de TPs e ajusta SL dinamicamente
     
     .DESCRIPTION
         Verifica quais TPs foram executados e move SL:
-        - TP1 hit → SL para breakeven
-        - TP2 hit → SL para TP1
-        - TP3 hit → SL para TP2
+        - TP1 hit â†’ SL para breakeven
+        - TP2 hit â†’ SL para TP1
+        - TP3 hit â†’ SL para TP2
     
     .PARAMETER Market
         Par de trading (ex: BTCUSDT)
     
     .PARAMETER EntryPrice
-        Preço de entrada
+        PreÃ§o de entrada
     
     .PARAMETER Ladder
-        Objeto com níveis de TP
+        Objeto com nÃ­veis de TP
     
     .PARAMETER Side
-        Lado da posição (long/short)
+        Lado da posiÃ§Ã£o (long/short)
     
     .EXAMPLE
         Monitor-LadderExecution -Market "BTCUSDT" -EntryPrice 100000 -Ladder $ladder -Side "long"
@@ -265,10 +265,10 @@ function Monitor-LadderExecution {
     )
     
     try {
-        # Buscar posição atual
+        # Buscar posiÃ§Ã£o atual
         $positions = CoinEx-GetPendingPositions -Market $Market
         if (-not $positions -or $positions.Count -eq 0) {
-            Write-Host "  [LADDER] Posição fechada" -ForegroundColor DarkGray
+            Write-Host "  [LADDER] PosiÃ§Ã£o fechada" -ForegroundColor DarkGray
             return [PSCustomObject]@{ success = $false; reason = "position_closed" }
         }
         
@@ -302,19 +302,19 @@ function Monitor-LadderExecution {
         
         if ($tp3Hit) {
             $newSL = $Ladder.tp2.price
-            $slReason = "TP3 hit → SL para TP2"
+            $slReason = "TP3 hit â†’ SL para TP2"
         } elseif ($tp2Hit) {
             $newSL = $Ladder.tp1.price
-            $slReason = "TP2 hit → SL para TP1"
+            $slReason = "TP2 hit â†’ SL para TP1"
         } elseif ($tp1Hit) {
             $newSL = $EntryPrice
-            $slReason = "TP1 hit → SL para breakeven"
+            $slReason = "TP1 hit â†’ SL para breakeven"
         }
         
-        # Atualizar SL se necessário
+        # Atualizar SL se necessÃ¡rio
         if ($newSL -ne $currentSL -and $newSL -gt 0) {
             Write-Host "  [LADDER] $slReason" -ForegroundColor Yellow
-            Write-Host "    SL: $currentSL → $newSL" -ForegroundColor Cyan
+            Write-Host "    SL: $currentSL â†’ $newSL" -ForegroundColor Cyan
             
             $result = CoinEx-ModifyPositionStopLoss -Market $Market -Price $newSL
             
@@ -328,7 +328,7 @@ function Monitor-LadderExecution {
                 reason = $slReason
             }
         } else {
-            Write-Host "  [LADDER] SL já está otimizado ($currentSL)" -ForegroundColor DarkGray
+            Write-Host "  [LADDER] SL jÃ¡ estÃ¡ otimizado ($currentSL)" -ForegroundColor DarkGray
             return [PSCustomObject]@{
                 success = $false
                 reason = "sl_already_optimal"
@@ -346,33 +346,33 @@ function Monitor-LadderExecution {
 }
 
 # ============================================================================
-# Invoke-LadderExitStrategy - Estratégia completa de ladder exits
+# Invoke-LadderExitStrategy - EstratÃ©gia completa de ladder exits
 # ============================================================================
 
 function Invoke-LadderExitStrategy {
     <#
     .SYNOPSIS
-        Implementa estratégia completa de ladder exits
+        Implementa estratÃ©gia completa de ladder exits
     
     .DESCRIPTION
-        1. Calcula níveis de TP baseados em ATR
+        1. Calcula nÃ­veis de TP baseados em ATR
         2. Coloca ordens escalonadas
-        3. Monitora execução e ajusta SL
+        3. Monitora execuÃ§Ã£o e ajusta SL
     
     .PARAMETER Market
         Par de trading (ex: BTCUSDT)
     
     .PARAMETER EntryPrice
-        Preço de entrada
+        PreÃ§o de entrada
     
     .PARAMETER Side
-        Lado da posição (long/short)
+        Lado da posiÃ§Ã£o (long/short)
     
     .PARAMETER TotalQty
-        Quantidade total da posição
+        Quantidade total da posiÃ§Ã£o
     
     .PARAMETER AtrValue
-        Valor do ATR (opcional, calcula automaticamente se não fornecido)
+        Valor do ATR (opcional, calcula automaticamente se nÃ£o fornecido)
     
     .PARAMETER DryRun
         Simular sem executar
@@ -405,7 +405,7 @@ function Invoke-LadderExitStrategy {
     try {
         Write-Host "`n=== LADDER EXIT STRATEGY: $Market ===" -ForegroundColor Cyan
         
-        # 1. Calcular ATR se não fornecido
+        # 1. Calcular ATR se nÃ£o fornecido
         if ($AtrValue -le 0) {
             Write-Host "Calculando ATR..." -ForegroundColor Yellow
             $candles = CoinEx-GetFuturesCandles -Market $Market -Period "1hour" -Limit 15
@@ -431,8 +431,8 @@ function Invoke-LadderExitStrategy {
             Write-Host "  ATR: $([math]::Round($AtrValue, 2))" -ForegroundColor Gray
         }
         
-        # 2. Calcular níveis de TP
-        Write-Host "Calculando níveis de TP..." -ForegroundColor Yellow
+        # 2. Calcular nÃ­veis de TP
+        Write-Host "Calculando nÃ­veis de TP..." -ForegroundColor Yellow
         $ladder = Get-LadderExitLevels -EntryPrice $EntryPrice -Side $Side `
             -AtrValue $AtrValue -TotalQty $TotalQty
         
@@ -447,9 +447,9 @@ function Invoke-LadderExitStrategy {
         $orders = Place-LadderExitOrders -Market $Market -Side $Side -Ladder $ladder -DryRun:$DryRun
         
         if ($orders.success) {
-            Write-Host "✓ Ordens colocadas com sucesso" -ForegroundColor Green
+            Write-Host "âœ“ Ordens colocadas com sucesso" -ForegroundColor Green
         } else {
-            Write-Host "✗ Falha ao colocar ordens" -ForegroundColor Red
+            Write-Host "âœ— Falha ao colocar ordens" -ForegroundColor Red
         }
         
         Write-Host "`n=== LADDER CONFIGURADO ===" -ForegroundColor Cyan
@@ -467,7 +467,7 @@ function Invoke-LadderExitStrategy {
         }
     }
     catch {
-        Write-Host "`n✗ ERRO: $_" -ForegroundColor Red
+        Write-Host "`nâœ— ERRO: $_" -ForegroundColor Red
         return [PSCustomObject]@{
             success = $false
             error = $_.Exception.Message

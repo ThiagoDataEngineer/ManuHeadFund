@@ -1,4 +1,4 @@
-# dryrun_test.ps1 - Teste de Dry-Run do ManuHeadFund v6.6
+﻿# dryrun_test.ps1 - Teste de Dry-Run do ManuHeadFund v6.6
 # Testa pipeline completo sem executar trades reais
 $ErrorActionPreference = "Stop"
 
@@ -6,7 +6,7 @@ Write-Host "`n========================================" -ForegroundColor Cyan
 Write-Host "  MANUHEADFUND v6.6 - DRY-RUN TEST" -ForegroundColor White
 Write-Host "========================================" -ForegroundColor Cyan
 
-# ── STEP 1: Verificar Estrutura ──────────────────────────────────────────────
+# â”€â”€ STEP 1: Verificar Estrutura â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Write-Host "`n[1/6] Verificando estrutura do projeto..." -ForegroundColor Yellow
 
 $requiredFiles = @(
@@ -34,7 +34,7 @@ if ($missing.Count -gt 0) {
     exit 1
 }
 
-# ── STEP 2: Criar Pasta Journal ──────────────────────────────────────────────
+# â”€â”€ STEP 2: Criar Pasta Journal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Write-Host "`n[2/6] Criando pasta journal..." -ForegroundColor Yellow
 
 $journalPath = Join-Path $PSScriptRoot "..\journal"
@@ -45,11 +45,11 @@ if (-not (Test-Path $journalPath)) {
     Write-Host "  Ja existe: journal\" -ForegroundColor Cyan
 }
 
-# ── STEP 3: Carregar Configuracoes ───────────────────────────────────────────
+# â”€â”€ STEP 3: Carregar Configuracoes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Write-Host "`n[3/6] Carregando configuracoes..." -ForegroundColor Yellow
 
 try {
-    . "$PSScriptRoot\..\agents\config.ps1"
+    . (Join-Path $PSScriptRoot "..\agents\config.ps1")
     Write-Host "  Config carregado" -ForegroundColor Green
     
     # Verificar API keys (opcional para dry-run)
@@ -69,11 +69,11 @@ try {
     exit 1
 }
 
-# ── STEP 4: Testar Whale Detection ───────────────────────────────────────────
+# â”€â”€ STEP 4: Testar Whale Detection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Write-Host "`n[4/6] Testando Whale Detection..." -ForegroundColor Yellow
 
 try {
-    . "$PSScriptRoot\..\agents\lib_whale_detection.ps1"
+    . (Join-Path $PSScriptRoot "..\agents\lib_whale_detection.ps1")
     
     # Testar com dados mock (formato correto da API Blockchain.info)
     $mockTx = [PSCustomObject]@{
@@ -100,15 +100,15 @@ try {
     Write-Host "  Continuando sem whale detection..." -ForegroundColor Yellow
 }
 
-# ── STEP 5: Testar ChainAgent ────────────────────────────────────────────────
+# â”€â”€ STEP 5: Testar ChainAgent â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Write-Host "`n[5/6] Testando ChainAgent..." -ForegroundColor Yellow
 
 try {
-    . "$PSScriptRoot\..\agents\lib_claude.ps1"
-    . "$PSScriptRoot\..\agents\lib_coinex.ps1"
-    . "$PSScriptRoot\..\agents\lib_cycle_mocks.ps1"
-    . "$PSScriptRoot\..\agents\lib_cycle_context.ps1"
-    . "$PSScriptRoot\..\agents\chain_agent.ps1"
+    . (Join-Path $PSScriptRoot "..\agents\lib_claude.ps1")
+    . (Join-Path $PSScriptRoot "..\agents\lib_coinex.ps1")
+    . (Join-Path $PSScriptRoot "..\agents\lib_cycle_mocks.ps1")
+    . (Join-Path $PSScriptRoot "..\agents\lib_cycle_context.ps1")
+    . (Join-Path $PSScriptRoot "..\agents\chain_agent.ps1")
     
     Write-Host "  Chamando ChainAgent para BTCUSDT..." -ForegroundColor Cyan
     
@@ -130,7 +130,7 @@ try {
     Write-Host "  Stack: $($_.ScriptStackTrace)" -ForegroundColor Gray
 }
 
-# ── STEP 6: Resumo ────────────────────────────────────────────────────────────
+# â”€â”€ STEP 6: Resumo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Write-Host "`n[6/6] Resumo do Dry-Run" -ForegroundColor Yellow
 
 Write-Host "`n========================================" -ForegroundColor Cyan

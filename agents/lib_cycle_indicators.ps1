@@ -1,5 +1,5 @@
 ﻿# lib_cycle_indicators.ps1 -- Indicadores de ciclo PUROS (sem I/O)
-# Dot-source: . "$PSScriptRoot\lib_cycle_indicators.ps1"
+# Dot-source: . (Join-Path $PSScriptRoot "lib_cycle_indicators.ps1")
 #
 # Funcoes:
 #   Get-NUPLProxy    -- proxy de NUPL via F&G + distancia SMA200 + funding

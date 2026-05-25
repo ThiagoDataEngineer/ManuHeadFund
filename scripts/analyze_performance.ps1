@@ -1,9 +1,9 @@
-# analyze_performance.ps1 - Script de Analise de Performance
+﻿# analyze_performance.ps1 - Script de Analise de Performance
 # Rodar: .\scripts\analyze_performance.ps1
 # Output: Console + arquivo JSON
 
 $ErrorActionPreference = "Stop"
-Set-Location $PSScriptRoot\..
+Set-Location (Split-Path $PSScriptRoot -Parent)
 
 . ".\agents\config.ps1"
 . ".\agents\lib_performance_analyzer.ps1"

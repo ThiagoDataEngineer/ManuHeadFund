@@ -1,14 +1,14 @@
-# generate_dashboard_elite.ps1 - Dashboard Elite ManuHeadFund
+﻿# generate_dashboard_elite.ps1 - Dashboard Elite ManuHeadFund
 # Design inspirado em Bloomberg Terminal + Hedge Funds
 # Color Scheme: Amber on Black (profissional)
 
 $ErrorActionPreference = "Stop"
-Set-Location $PSScriptRoot\..
+Set-Location (Split-Path $PSScriptRoot -Parent)
 
-# Carregar proteção anti-duplicação
+# Carregar proteÃ§Ã£o anti-duplicaÃ§Ã£o
 . ".\scripts\check_execution_mode.ps1"
 
-# Executar com proteção (LOCAL ou GITHUB ACTIONS)
+# Executar com proteÃ§Ã£o (LOCAL ou GITHUB ACTIONS)
 Invoke-SafeJob -JobName "dashboard-generator" -PreferredMode "both" -ScriptBlock {
 
 . ".\agents\config.ps1"
@@ -319,7 +319,7 @@ $html = @"
         </div>
 "@
     
-    # Continue building HTML (não retornar ainda)
+    # Continue building HTML (nÃ£o retornar ainda)
     
     # Open Positions Table
         if ($Metrics.open_positions -gt 0) {
@@ -388,7 +388,7 @@ $html = @"
                             <td>`$$currentPrice</td>
                             <td class='$pnlClass'>$pnlPct%</td>
                             <td class='$pnlClass'>`$$unrealizedPnl</td>
-                            <td>$leverage×</td>
+                            <td>$leverageÃ—</td>
                             <td>$trailingHtml</td>
                         </tr>
 "@

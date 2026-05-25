@@ -1,9 +1,9 @@
-# generate_dashboard_ultimate.ps1 - Dashboard Ultimate ManuHeadFund
+﻿# generate_dashboard_ultimate.ps1 - Dashboard Ultimate ManuHeadFund
 # Design profissional + Charts + Historico + Telegram
 # Rodar: .\scripts\generate_dashboard_ultimate.ps1
 
 $ErrorActionPreference = "Stop"
-Set-Location $PSScriptRoot\..
+Set-Location (Split-Path $PSScriptRoot -Parent)
 
 . ".\agents\config.ps1"
 . ".\agents\lib_coinex.ps1"

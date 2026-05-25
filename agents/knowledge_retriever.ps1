@@ -1,5 +1,5 @@
 ﻿# knowledge_retriever.ps1 -- Retrieval simples de chunks de knowledge/*.md por tag
-# Dot-source: . "$PSScriptRoot\knowledge_retriever.ps1"
+# Dot-source: . (Join-Path $PSScriptRoot "knowledge_retriever.ps1")
 #
 # Contrato:
 #   Get-RelevantKnowledge -Tags @("livermore","wyckoff") [-MaxChunks 3]

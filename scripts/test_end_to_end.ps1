@@ -1,4 +1,4 @@
-# test_end_to_end.ps1 - Teste End-to-End Completo do Sistema
+﻿# test_end_to_end.ps1 - Teste End-to-End Completo do Sistema
 # Testa todo o fluxo: Scan -> Execucao -> Trailing Stop -> Risk Management -> Dashboard
 # Rodar: .\scripts\test_end_to_end.ps1 -DryRun
 
@@ -11,7 +11,7 @@ param(
 )
 
 $ErrorActionPreference = "Stop"
-Set-Location $PSScriptRoot\..
+Set-Location (Split-Path $PSScriptRoot -Parent)
 
 . ".\agents\config.ps1"
 . ".\agents\lib_coinex.ps1"
@@ -136,7 +136,7 @@ try {
     Write-Host "`n=== FASE 5: DASHBOARD UPDATE ===" -ForegroundColor Cyan
     Write-Host "Atualizando dashboard..." -ForegroundColor Yellow
     
-    $dashboardResult = & "$PSScriptRoot\generate_position_dashboard.ps1"
+    $dashboardResult = & (Join-Path $PSScriptRoot "generate_position_dashboard.ps1")
     if ($LASTEXITCODE -eq 0) {
         Write-Host "Dashboard atualizado com sucesso!" -ForegroundColor Green
         Write-Host "  Posicoes abertas: 1 (simulada)" -ForegroundColor White
@@ -153,7 +153,7 @@ try {
     Write-Host "Enviando alerta..." -ForegroundColor Yellow
     
     $alertMessage = @"
-🚀 TRADE EXECUTADO - $modeLabel
+ðŸš€ TRADE EXECUTADO - $modeLabel
 
 Market: $Market
 Side: $side LONG
@@ -161,12 +161,12 @@ Entry: `$$price
 Size: `$$sizeUsd USD
 Leverage: $leverage`x
 
-📊 Trailing Stop (NOVOS THRESHOLDS):
+ðŸ“Š Trailing Stop (NOVOS THRESHOLDS):
 - ATR Multiplier: 1.5x
 - Min Profit: 1%
 - Ativacao: +1% (`$$([math]::Round($price * 1.01, 2)))
 
-🎯 GEM Score: $gemScore/100
+ðŸŽ¯ GEM Score: $gemScore/100
 
 Order ID: $orderId
 "@

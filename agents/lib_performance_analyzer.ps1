@@ -1,9 +1,9 @@
-# lib_performance_analyzer.ps1 - Analise Avancada de Performance de Trading
+﻿# lib_performance_analyzer.ps1 - Analise Avancada de Performance de Trading
 # Metricas: Sharpe Ratio, Max Drawdown, Win Streaks, Performance por Market/Horario
 # TDD: Testes em tests/lib_performance_analyzer.Tests.ps1
 
-. "$PSScriptRoot\lib_coinex.ps1"
-. "$PSScriptRoot\lib_coinex_position_management.ps1"
+. (Join-Path $PSScriptRoot "lib_coinex.ps1")
+. (Join-Path $PSScriptRoot "lib_coinex_position_management.ps1")
 
 # ============================================================================
 # Calculate-SharpeRatio - Calcula Sharpe Ratio dos trades

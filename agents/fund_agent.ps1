@@ -2,9 +2,9 @@
 # Persona: Lyn Alden + Raoul Pal + Messari Research (ver PERSONAS.md)
 # APIs gratuitas: CoinGecko, alternative.me
 
-. "$PSScriptRoot\config.ps1"
-. "$PSScriptRoot\lib_claude.ps1"
-. "$PSScriptRoot\lib_coinex.ps1"
+. (Join-Path $PSScriptRoot "config.ps1")
+. (Join-Path $PSScriptRoot "lib_claude.ps1")
+. (Join-Path $PSScriptRoot "lib_coinex.ps1")
 
 $FUND_SYSTEM_PROMPT = @'
 Voce e um analista fundamentalista macro especializado em ativos digitais.

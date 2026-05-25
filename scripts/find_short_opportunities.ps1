@@ -1,8 +1,8 @@
-# find_short_opportunities.ps1 - Busca oportunidades de SHORT com bom Risk/Reward
+﻿# find_short_opportunities.ps1 - Busca oportunidades de SHORT com bom Risk/Reward
 # Analisa principais moedas e retorna candidatos com R:R >= 1:2
 
-. "$PSScriptRoot\..\agents\config.ps1"
-. "$PSScriptRoot\..\agents\lib_coinex.ps1"
+. (Join-Path $PSScriptRoot "..\agents\config.ps1")
+. (Join-Path $PSScriptRoot "..\agents\lib_coinex.ps1")
 
 function Get-ShortSetup {
     param(
@@ -34,13 +34,13 @@ function Get-ShortSetup {
         }
         $atr = $atrSum / 14
         
-        # Sinais técnicos para SHORT
+        # Sinais tÃ©cnicos para SHORT
         $belowSMA5  = $current -lt $sma5
         $belowSMA10 = $current -lt $sma10
         $downtrend  = $sma5 -lt $sma10
         $fromHigh   = (($high24h - $current) / $high24h) * 100
         
-        # Score técnico (0-4)
+        # Score tÃ©cnico (0-4)
         $techScore = 0
         if ($belowSMA5)  { $techScore++ }
         if ($belowSMA10) { $techScore++ }
@@ -52,9 +52,9 @@ function Get-ShortSetup {
         $stop  = $entry + (2 * $atr)  # Stop 2 ATR acima
         $target1 = $entry - (2 * $atr)  # Target 2 ATR abaixo
         $target2 = $entry - (3 * $atr)  # Target 3 ATR abaixo
-        $target3 = $low24h * 0.98       # Target próximo da mínima 24h
+        $target3 = $low24h * 0.98       # Target prÃ³ximo da mÃ­nima 24h
         
-        # Escolhe melhor target (mais próximo mas >= 2 ATR)
+        # Escolhe melhor target (mais prÃ³ximo mas >= 2 ATR)
         $target = $target1
         if ($target3 -gt $target1 -and $target3 -lt $entry) {
             $target = $target3
@@ -159,7 +159,7 @@ foreach ($opp in $top5) {
 }
 
 # Salva resultado completo
-$reportPath = "$PSScriptRoot\..\SHORT_OPPORTUNITIES_$(Get-Date -Format 'yyyy_MM_dd_HHmm').md"
+$reportPath = (Join-Path $PSScriptRoot ".." "SHORT_OPPORTUNITIES_$(Get-Date -Format 'yyyy_MM_dd_HHmm').md")
 $report = @"
 # SHORT OPPORTUNITIES - $(Get-Date -Format 'yyyy-MM-dd HH:mm')
 

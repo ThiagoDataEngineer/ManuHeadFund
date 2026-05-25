@@ -1,8 +1,8 @@
-# diagnose_dashboard.ps1 - Diagnosticar problemas do dashboard
+﻿# diagnose_dashboard.ps1 - Diagnosticar problemas do dashboard
 # Rodar: .\scripts\diagnose_dashboard.ps1
 
 $ErrorActionPreference = "Stop"
-Set-Location $PSScriptRoot\..
+Set-Location (Split-Path $PSScriptRoot -Parent)
 
 . ".\agents\config.ps1"
 . ".\agents\lib_coinex.ps1"
@@ -107,7 +107,7 @@ try {
         $content = Get-Content -Path $htmlPath -Raw -Encoding UTF8
         
         # Verificar caracteres corrompidos
-        if ($content -match 'ðŸ"Š' -or $content -match 'Ãšltima' -or $content -match 'PosiÃ§Ãµes') {
+        if ($content -match 'Ã°Å¸"Å ' -or $content -match 'ÃƒÅ¡ltima' -or $content -match 'PosiÃƒÂ§ÃƒÂµes') {
             Write-Host "  [PROBLEMA] HTML contem caracteres corrompidos" -ForegroundColor Red
             Write-Host "    Encontrado caracteres corrompidos no lugar de emojis e acentos" -ForegroundColor Red
         } else {

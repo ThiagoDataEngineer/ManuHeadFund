@@ -2,9 +2,9 @@
 # Persona: Willy Woo + Santiment + Glassnode Research (ver PERSONAS.md)
 # APIs gratuitas: alternative.me, CryptoCompare news, CoinGlass
 
-. "$PSScriptRoot\config.ps1"
-. "$PSScriptRoot\lib_claude.ps1"
-. "$PSScriptRoot\lib_coinex.ps1"
+. (Join-Path $PSScriptRoot "config.ps1")
+. (Join-Path $PSScriptRoot "lib_claude.ps1")
+. (Join-Path $PSScriptRoot "lib_coinex.ps1")
 
 $SENT_SYSTEM_PROMPT = @'
 Voce e especialista em psicologia de mercado e analise de sentimento em crypto.

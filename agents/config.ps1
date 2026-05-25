@@ -149,9 +149,9 @@ $TORI_SIGNALS_FILE = "$JOURNAL_DIR\tori_paper_signals.jsonl"
 
 # ── Diretorio de Journal ──────────────────────────────────────────────────────
 
-$JOURNAL_DIR  = "$PSScriptRoot\..\journal"
-$JOURNAL_FILE = "$JOURNAL_DIR\trades.csv"
-$LOG_DIR      = "$PSScriptRoot\..\logs"
+$JOURNAL_DIR  = (Join-Path $PSScriptRoot ".." "journal"
+$JOURNAL_FILE = "$JOURNAL_DIR" "trades.csv")
+$LOG_DIR      = (Join-Path $PSScriptRoot ".." "logs")
 
 # ── GemAgent — Micro-Caps Explosivos (SPOT, pipeline independente) ────────────
 

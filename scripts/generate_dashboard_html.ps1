@@ -1,4 +1,4 @@
-# generate_dashboard_html.ps1
+﻿# generate_dashboard_html.ps1
 # Gera HTML do dashboard a partir dos dados
 # 2026-05-24
 
@@ -10,11 +10,11 @@ param(
 )
 
 # Ler template HTML base
-$templatePath = "$PSScriptRoot\..\dashboard\template.html"
+$templatePath = (Join-Path $PSScriptRoot ".." "dashboard" "template.html")
 
 if (-not (Test-Path $templatePath)) {
     Write-Host "Template nao encontrado, usando dashboard atual como base" -ForegroundColor Yellow
-    $templatePath = "$PSScriptRoot\..\dashboard\index.html"
+    $templatePath = (Join-Path $PSScriptRoot ".." "dashboard" "index.html")
 }
 
 # Ler HTML base

@@ -3,16 +3,16 @@
 # APIs gratuitas: CoinGecko, CoinGlass, alternative.me, blockchain.info,
 #                 Whale Alert (free tier), mempool.space, Etherscan (free tier)
 
-. "$PSScriptRoot\config.ps1"
-. "$PSScriptRoot\lib_claude.ps1"
-. "$PSScriptRoot\lib_coinex.ps1"
-. "$PSScriptRoot\lib_whale_detection.ps1"
+. (Join-Path $PSScriptRoot "config.ps1")
+. (Join-Path $PSScriptRoot "lib_claude.ps1")
+. (Join-Path $PSScriptRoot "lib_coinex.ps1")
+. (Join-Path $PSScriptRoot "lib_whale_detection.ps1")
 
 # V6.5: cycle context (Pi/200WMA/ATH-DD/NUPL) -- mocks idempotentes + composicao.
 # Reais (lib_cycle_indicators*.ps1) devem ser dot-sourced ANTES no scan_master,
 # para que os ifs em lib_cycle_mocks vejam Get-Command e nao redefinam.
-. "$PSScriptRoot\lib_cycle_mocks.ps1"
-. "$PSScriptRoot\lib_cycle_context.ps1"
+. (Join-Path $PSScriptRoot "lib_cycle_mocks.ps1")
+. (Join-Path $PSScriptRoot "lib_cycle_context.ps1")
 
 $CHAIN_SYSTEM_PROMPT = @'
 Voce e um analista on-chain de elite, formado na intersecao entre Willy Woo,

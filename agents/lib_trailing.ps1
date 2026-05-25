@@ -1,5 +1,5 @@
 ﻿# lib_trailing.ps1 — Trailing stop em 3 fases para posicoes abertas
-# Dot-source: . "$PSScriptRoot\lib_trailing.ps1"
+# Dot-source: . (Join-Path $PSScriptRoot "lib_trailing.ps1")
 #
 # Fases (LONG):
 #   Fase 1 — preco atinge 33% do alvo → move stop para breakeven (+buffer)

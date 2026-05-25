@@ -1,5 +1,5 @@
 ﻿# lib_coinex.ps1 - CoinEx API V2: endpoints publicos e autenticados
-# Dot-source: . "$PSScriptRoot\lib_coinex.ps1"
+# Dot-source: . (Join-Path $PSScriptRoot "lib_coinex.ps1")
 #
 # INTEGRACAO: Rate Limiter + Retry (2026-05-23)
 # - Rate limiting automatico por categoria (spot_place: 30 req/s, futures_place: 20 req/s, etc.)

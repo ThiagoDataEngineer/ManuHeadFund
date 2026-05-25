@@ -1,4 +1,4 @@
-# run_orchestrator_dryrun.ps1 - Dry-Run Completo do Orchestrator v6
+﻿# run_orchestrator_dryrun.ps1 - Dry-Run Completo do Orchestrator v6
 # Testa pipeline completo sem executar trades reais
 param(
     [string]$Market = "BTCUSDT",
@@ -15,72 +15,72 @@ Write-Host "`nParametros:" -ForegroundColor Yellow
 Write-Host "  Market: $Market" -ForegroundColor White
 Write-Host "  Mode: $Mode (dry-run)" -ForegroundColor White
 
-# ── STEP 1: Carregar Dependencias ────────────────────────────────────────────
+# â”€â”€ STEP 1: Carregar Dependencias â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Write-Host "`n[1/5] Carregando dependencias..." -ForegroundColor Yellow
 
 try {
     # Config
-    . "$PSScriptRoot\..\agents\config.ps1"
+    . (Join-Path $PSScriptRoot "..\agents\config.ps1")
     Write-Host "  [x] config.ps1" -ForegroundColor Green
     
     # Libs basicas
-    . "$PSScriptRoot\..\agents\lib_coinex.ps1"
+    . (Join-Path $PSScriptRoot "..\agents\lib_coinex.ps1")
     Write-Host "  [x] lib_coinex.ps1" -ForegroundColor Green
     
-    . "$PSScriptRoot\..\agents\lib_claude.ps1"
+    . (Join-Path $PSScriptRoot "..\agents\lib_claude.ps1")
     Write-Host "  [x] lib_claude.ps1" -ForegroundColor Green
     
     # Whale Detection
-    . "$PSScriptRoot\..\agents\lib_whale_detection.ps1"
+    . (Join-Path $PSScriptRoot "..\agents\lib_whale_detection.ps1")
     Write-Host "  [x] lib_whale_detection.ps1" -ForegroundColor Green
     
     # Cycle Context
-    . "$PSScriptRoot\..\agents\lib_cycle_mocks.ps1"
-    . "$PSScriptRoot\..\agents\lib_cycle_context.ps1"
+    . (Join-Path $PSScriptRoot "..\agents\lib_cycle_mocks.ps1")
+    . (Join-Path $PSScriptRoot "..\agents\lib_cycle_context.ps1")
     Write-Host "  [x] lib_cycle_*.ps1" -ForegroundColor Green
     
     # Macro e Seasonal
-    if (Test-Path "$PSScriptRoot\..\agents\lib_macro.ps1") {
-        . "$PSScriptRoot\..\agents\lib_macro.ps1"
+    if (Test-Path (Join-Path $PSScriptRoot ".." "agents" "lib_macro.ps1")) {
+        . (Join-Path $PSScriptRoot "..\agents\lib_macro.ps1")
         Write-Host "  [x] lib_macro.ps1" -ForegroundColor Green
     }
-    if (Test-Path "$PSScriptRoot\..\agents\lib_seasonal.ps1") {
-        . "$PSScriptRoot\..\agents\lib_seasonal.ps1"
+    if (Test-Path (Join-Path $PSScriptRoot ".." "agents" "lib_seasonal.ps1")) {
+        . (Join-Path $PSScriptRoot "..\agents\lib_seasonal.ps1")
         Write-Host "  [x] lib_seasonal.ps1" -ForegroundColor Green
     }
     
     # Whitelist
-    if (Test-Path "$PSScriptRoot\..\agents\lib_operational_whitelist.ps1") {
-        . "$PSScriptRoot\..\agents\lib_operational_whitelist.ps1"
+    if (Test-Path (Join-Path $PSScriptRoot ".." "agents" "lib_operational_whitelist.ps1")) {
+        . (Join-Path $PSScriptRoot "..\agents\lib_operational_whitelist.ps1")
         Write-Host "  [x] lib_operational_whitelist.ps1" -ForegroundColor Green
     }
     
     # Agents (Triagem, Mesa, Mentor)
-    if (Test-Path "$PSScriptRoot\..\agents\triagem_agent.ps1") {
-        . "$PSScriptRoot\..\agents\triagem_agent.ps1"
+    if (Test-Path (Join-Path $PSScriptRoot ".." "agents" "triagem_agent.ps1")) {
+        . (Join-Path $PSScriptRoot "..\agents\triagem_agent.ps1")
         Write-Host "  [x] triagem_agent.ps1" -ForegroundColor Green
     }
-    if (Test-Path "$PSScriptRoot\..\agents\mesa_agent.ps1") {
-        . "$PSScriptRoot\..\agents\mesa_agent.ps1"
+    if (Test-Path (Join-Path $PSScriptRoot ".." "agents" "mesa_agent.ps1")) {
+        . (Join-Path $PSScriptRoot "..\agents\mesa_agent.ps1")
         Write-Host "  [x] mesa_agent.ps1" -ForegroundColor Green
     }
-    if (Test-Path "$PSScriptRoot\..\agents\mentor_agent.ps1") {
-        . "$PSScriptRoot\..\agents\mentor_agent.ps1"
+    if (Test-Path (Join-Path $PSScriptRoot ".." "agents" "mentor_agent.ps1")) {
+        . (Join-Path $PSScriptRoot "..\agents\mentor_agent.ps1")
         Write-Host "  [x] mentor_agent.ps1" -ForegroundColor Green
     }
     
     # Mocks (fallback se agents nao existirem)
-    if (Test-Path "$PSScriptRoot\..\agents\lib_esquadrao_mocks.ps1") {
-        . "$PSScriptRoot\..\agents\lib_esquadrao_mocks.ps1"
+    if (Test-Path (Join-Path $PSScriptRoot ".." "agents" "lib_esquadrao_mocks.ps1")) {
+        . (Join-Path $PSScriptRoot "..\agents\lib_esquadrao_mocks.ps1")
         Write-Host "  [x] lib_esquadrao_mocks.ps1 (fallback)" -ForegroundColor Yellow
     }
     
     # ChainAgent
-    . "$PSScriptRoot\..\agents\chain_agent.ps1"
+    . (Join-Path $PSScriptRoot "..\agents\chain_agent.ps1")
     Write-Host "  [x] chain_agent.ps1" -ForegroundColor Green
     
     # Orchestrator
-    . "$PSScriptRoot\..\agents\orchestrator_v6.ps1"
+    . (Join-Path $PSScriptRoot "..\agents\orchestrator_v6.ps1")
     Write-Host "  [x] orchestrator_v6.ps1" -ForegroundColor Green
     
 } catch {
@@ -89,7 +89,7 @@ try {
     exit 1
 }
 
-# ── STEP 2: Verificar Configuracoes ──────────────────────────────────────────
+# â”€â”€ STEP 2: Verificar Configuracoes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Write-Host "`n[2/5] Verificando configuracoes..." -ForegroundColor Yellow
 
 # API Keys
@@ -110,11 +110,11 @@ Write-Host "  Capital Spot: $CAPITAL_SPOT USDT" -ForegroundColor Cyan
 Write-Host "  Capital Futures: $CAPITAL_FUTURES USDT" -ForegroundColor Cyan
 Write-Host "  Capital Total: $CAPITAL_TOTAL USDT" -ForegroundColor Cyan
 
-# ── STEP 3: Preparar Ambiente ────────────────────────────────────────────────
+# â”€â”€ STEP 3: Preparar Ambiente â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Write-Host "`n[3/5] Preparando ambiente..." -ForegroundColor Yellow
 
 # Criar pasta journal se nao existir
-$journalPath = "$PSScriptRoot\..\journal"
+$journalPath = (Join-Path $PSScriptRoot ".." "journal"
 if (-not (Test-Path $journalPath)) {
     New-Item -ItemType Directory -Path $journalPath -Force | Out-Null
     Write-Host "  [x] Pasta journal criada" -ForegroundColor Green
@@ -124,11 +124,11 @@ if (-not (Test-Path $journalPath)) {
 
 # Timestamp para logs
 $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
-$logFile = "$journalPath\dryrun_$timestamp.log"
+$logFile = "$journalPath" "dryrun_$timestamp.log")
 
 Write-Host "  [x] Log: $logFile" -ForegroundColor Green
 
-# ── STEP 4: Rodar Orchestrator ───────────────────────────────────────────────
+# â”€â”€ STEP 4: Rodar Orchestrator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Write-Host "`n[4/5] Rodando Orchestrator v6..." -ForegroundColor Yellow
 Write-Host "  Market: $Market" -ForegroundColor Cyan
 Write-Host "  Mode: $Mode (DRY-RUN)" -ForegroundColor Cyan
@@ -206,7 +206,7 @@ try {
     exit 1
 }
 
-# ── STEP 5: Resumo ────────────────────────────────────────────────────────────
+# â”€â”€ STEP 5: Resumo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 Write-Host "`n[5/5] Resumo do Dry-Run" -ForegroundColor Yellow
 
 Write-Host "`n========================================" -ForegroundColor Cyan

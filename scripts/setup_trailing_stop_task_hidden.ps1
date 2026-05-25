@@ -1,10 +1,10 @@
-# scripts\setup_trailing_stop_task_hidden.ps1
+﻿# scripts\setup_trailing_stop_task_hidden.ps1
 # Configurar Task Scheduler para executar trailing stop monitor OCULTO (sem janela)
 # 2026-05-24
 # EXECUTAR COMO ADMINISTRADOR
 
 $taskName = "CoinEx_TrailingStop_Monitor"
-$scriptPath = "$PSScriptRoot\trailing_stop_monitor.ps1"
+$scriptPath = (Join-Path $PSScriptRoot "trailing_stop_monitor.ps1")
 $workingDir = Split-Path -Parent $PSScriptRoot
 
 Write-Host "=== CONFIGURAR TASK SCHEDULER (OCULTO) ===" -ForegroundColor Cyan
@@ -22,7 +22,7 @@ if (-not (Test-Path $scriptPath)) {
     exit 1
 }
 
-# Verificar se já existe
+# Verificar se jÃ¡ existe
 $existingTask = Get-ScheduledTask -TaskName $taskName -ErrorAction SilentlyContinue
 
 if ($existingTask) {

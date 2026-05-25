@@ -1,4 +1,4 @@
-# setup_cron_jobs.ps1 - Configura cron jobs no Windows Task Scheduler
+﻿# setup_cron_jobs.ps1 - Configura cron jobs no Windows Task Scheduler
 # Rodar como Administrador: .\scripts\setup_cron_jobs.ps1
 #
 # CRON JOBS CRIADOS:
@@ -15,11 +15,11 @@ $scriptsDir = Join-Path $baseDir "scripts"
 
 Write-Host @"
 
-╔════════════════════════════════════════════════════════╗
-║        SETUP CRON JOBS - TASK SCHEDULER                ║
-╚════════════════════════════════════════════════════════╝
+â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—
+â•‘        SETUP CRON JOBS - TASK SCHEDULER                â•‘
+â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
-Este script criará 3 tarefas agendadas:
+Este script criarÃ¡ 3 tarefas agendadas:
 1. Position Risk Manager (15min)
 2. Dashboard Generator (5min)
 3. Ladder Exit Monitor (10min)
@@ -27,7 +27,7 @@ Este script criará 3 tarefas agendadas:
 "@ -ForegroundColor Cyan
 
 # ============================================================================
-# Função auxiliar para criar tarefa
+# FunÃ§Ã£o auxiliar para criar tarefa
 # ============================================================================
 
 function New-CronTask {
@@ -39,14 +39,14 @@ function New-CronTask {
     )
     
     try {
-        # Verificar se tarefa já existe
+        # Verificar se tarefa jÃ¡ existe
         $existingTask = Get-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
         if ($existingTask) {
-            Write-Host "  ⚠️  Tarefa '$TaskName' já existe. Removendo..." -ForegroundColor Yellow
+            Write-Host "  âš ï¸  Tarefa '$TaskName' jÃ¡ existe. Removendo..." -ForegroundColor Yellow
             Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false
         }
         
-        # Criar ação
+        # Criar aÃ§Ã£o
         $action = New-ScheduledTaskAction `
             -Execute "powershell.exe" `
             -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`"" `
@@ -58,7 +58,7 @@ function New-CronTask {
             -At (Get-Date).AddMinutes(1) `
             -RepetitionInterval (New-TimeSpan -Minutes $IntervalMinutes)
         
-        # Configurações
+        # ConfiguraÃ§Ãµes
         $settings = New-ScheduledTaskSettingsSet `
             -AllowStartIfOnBatteries `
             -DontStopIfGoingOnBatteries `
@@ -76,11 +76,11 @@ function New-CronTask {
             -User $env:USERNAME `
             -RunLevel Limited | Out-Null
         
-        Write-Host "  ✓ Tarefa '$TaskName' criada (intervalo: ${IntervalMinutes}min)" -ForegroundColor Green
+        Write-Host "  âœ“ Tarefa '$TaskName' criada (intervalo: ${IntervalMinutes}min)" -ForegroundColor Green
         return $true
     }
     catch {
-        Write-Host "  ✗ Erro ao criar tarefa '$TaskName': $_" -ForegroundColor Red
+        Write-Host "  âœ— Erro ao criar tarefa '$TaskName': $_" -ForegroundColor Red
         return $false
     }
 }
@@ -93,13 +93,13 @@ Write-Host "`n=== TAREFA 1: Position Risk Manager ===" -ForegroundColor Yellow
 
 $task1Path = Join-Path $scriptsDir "position_risk_cron.ps1"
 if (-not (Test-Path $task1Path)) {
-    Write-Host "  ✗ Arquivo não encontrado: $task1Path" -ForegroundColor Red
+    Write-Host "  âœ— Arquivo nÃ£o encontrado: $task1Path" -ForegroundColor Red
 } else {
     $success1 = New-CronTask `
         -TaskName "CoinEx_PositionRiskManager" `
         -ScriptPath $task1Path `
         -IntervalMinutes 15 `
-        -Description "Monitora posições e aplica trailing stops, ajuste de leverage e proteção de liquidação"
+        -Description "Monitora posiÃ§Ãµes e aplica trailing stops, ajuste de leverage e proteÃ§Ã£o de liquidaÃ§Ã£o"
 }
 
 # ============================================================================
@@ -110,13 +110,13 @@ Write-Host "`n=== TAREFA 2: Dashboard Generator ===" -ForegroundColor Yellow
 
 $task2Path = Join-Path $scriptsDir "generate_position_dashboard.ps1"
 if (-not (Test-Path $task2Path)) {
-    Write-Host "  ✗ Arquivo não encontrado: $task2Path" -ForegroundColor Red
+    Write-Host "  âœ— Arquivo nÃ£o encontrado: $task2Path" -ForegroundColor Red
 } else {
     $success2 = New-CronTask `
         -TaskName "CoinEx_DashboardGenerator" `
         -ScriptPath $task2Path `
         -IntervalMinutes 5 `
-        -Description "Gera dashboard HTML com métricas de posições e performance"
+        -Description "Gera dashboard HTML com mÃ©tricas de posiÃ§Ãµes e performance"
 }
 
 # ============================================================================
@@ -128,11 +128,11 @@ Write-Host "`n=== TAREFA 3: Ladder Exit Monitor ===" -ForegroundColor Yellow
 # Criar script de monitoramento de ladder exits
 $task3Path = Join-Path $scriptsDir "ladder_exit_monitor_cron.ps1"
 $task3Content = @'
-# ladder_exit_monitor_cron.ps1 - Monitora execução de ladder exits
+# ladder_exit_monitor_cron.ps1 - Monitora execuÃ§Ã£o de ladder exits
 # Rodar automaticamente a cada 10 minutos
 
 $ErrorActionPreference = "Stop"
-Set-Location $PSScriptRoot\..
+Set-Location (Split-Path $PSScriptRoot -Parent)
 
 . ".\agents\config.ps1"
 . ".\agents\lib_coinex.ps1"
@@ -144,16 +144,16 @@ try {
     $timestamp = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
     Write-Host "`n=== LADDER EXIT MONITOR - $timestamp ===" -ForegroundColor Cyan
     
-    # Buscar posições abertas
+    # Buscar posiÃ§Ãµes abertas
     $positions = CoinEx-GetPendingPositions
     if (-not $positions -or $positions.Count -eq 0) {
-        Write-Host "Nenhuma posição aberta" -ForegroundColor DarkGray
+        Write-Host "Nenhuma posiÃ§Ã£o aberta" -ForegroundColor DarkGray
         exit 0
     }
     
-    Write-Host "Posições abertas: $($positions.Count)" -ForegroundColor White
+    Write-Host "PosiÃ§Ãµes abertas: $($positions.Count)" -ForegroundColor White
     
-    # Verificar se há ladder exits ativos (arquivo de estado)
+    # Verificar se hÃ¡ ladder exits ativos (arquivo de estado)
     $ladderStatePath = Join-Path $global:JOURNAL_DIR "ladder_exits_state.json"
     if (-not (Test-Path $ladderStatePath)) {
         Write-Host "Nenhum ladder exit ativo" -ForegroundColor DarkGray
@@ -166,16 +166,16 @@ try {
     foreach ($state in $ladderStates) {
         $market = $state.market
         
-        # Verificar se posição ainda existe
+        # Verificar se posiÃ§Ã£o ainda existe
         $pos = $positions | Where-Object { $_.market -eq $market } | Select-Object -First 1
         if (-not $pos) {
-            Write-Host "  $market: posição fechada (remover do estado)" -ForegroundColor DarkGray
+            Write-Host "  $market: posiÃ§Ã£o fechada (remover do estado)" -ForegroundColor DarkGray
             continue
         }
         
         Write-Host "`n  --- $market ---" -ForegroundColor Yellow
         
-        # Monitorar execução
+        # Monitorar execuÃ§Ã£o
         $result = Monitor-LadderExecution `
             -Market $market `
             -EntryPrice $state.entry_price `
@@ -183,29 +183,29 @@ try {
             -Side $state.side
         
         if ($result.success) {
-            Write-Host "  ✓ SL atualizado: $($result.old_sl) → $($result.new_sl)" -ForegroundColor Green
+            Write-Host "  âœ“ SL atualizado: $($result.old_sl) â†’ $($result.new_sl)" -ForegroundColor Green
             Write-Host "    Motivo: $($result.reason)" -ForegroundColor Gray
             $updates++
             
             # Enviar alerta
-            $msg = "📊 Ladder Exit Update: $market`n`n" +
+            $msg = "ðŸ“Š Ladder Exit Update: $market`n`n" +
                    "$($result.reason)`n" +
-                   "SL: $($result.old_sl) → $($result.new_sl)"
+                   "SL: $($result.old_sl) â†’ $($result.new_sl)"
             Send-TelegramAlert -Message $msg | Out-Null
         }
     }
     
     if ($updates -gt 0) {
-        Write-Host "`n✓ $updates SLs atualizados" -ForegroundColor Green
+        Write-Host "`nâœ“ $updates SLs atualizados" -ForegroundColor Green
     } else {
-        Write-Host "`n✓ Nenhuma atualização necessária" -ForegroundColor DarkGray
+        Write-Host "`nâœ“ Nenhuma atualizaÃ§Ã£o necessÃ¡ria" -ForegroundColor DarkGray
     }
     
 } catch {
-    Write-Host "`n✗ ERRO: $_" -ForegroundColor Red
+    Write-Host "`nâœ— ERRO: $_" -ForegroundColor Red
     
     if (Get-Command Send-TelegramAlert -ErrorAction SilentlyContinue) {
-        Send-TelegramAlert -Message "🚨 ERRO Ladder Exit Monitor:`n$_" | Out-Null
+        Send-TelegramAlert -Message "ðŸš¨ ERRO Ladder Exit Monitor:`n$_" | Out-Null
     }
     
     exit 1
@@ -218,7 +218,7 @@ $success3 = New-CronTask `
     -TaskName "CoinEx_LadderExitMonitor" `
     -ScriptPath $task3Path `
     -IntervalMinutes 10 `
-    -Description "Monitora execução de ladder exits e ajusta stop loss dinamicamente"
+    -Description "Monitora execuÃ§Ã£o de ladder exits e ajusta stop loss dinamicamente"
 
 # ============================================================================
 # RESUMO
@@ -226,9 +226,9 @@ $success3 = New-CronTask `
 
 Write-Host @"
 
-╔════════════════════════════════════════════════════════╗
-║                      RESUMO                            ║
-╚════════════════════════════════════════════════════════╝
+â•”â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•—
+â•‘                      RESUMO                            â•‘
+â•šâ•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•
 
 "@ -ForegroundColor Cyan
 
@@ -242,14 +242,14 @@ Write-Host "Tarefas criadas: $totalSuccess/3" -ForegroundColor $(if($totalSucces
 if ($totalSuccess -eq 3) {
     Write-Host @"
 
-✅ TODAS AS TAREFAS CONFIGURADAS COM SUCESSO!
+âœ… TODAS AS TAREFAS CONFIGURADAS COM SUCESSO!
 
-Próximos passos:
+PrÃ³ximos passos:
 1. Verificar tarefas: Get-ScheduledTask | Where-Object { `$_.TaskName -like "CoinEx_*" }
 2. Testar manualmente: Start-ScheduledTask -TaskName "CoinEx_PositionRiskManager"
 3. Ver logs: Get-ScheduledTaskInfo -TaskName "CoinEx_PositionRiskManager"
 
-As tarefas começarão a rodar automaticamente em:
+As tarefas comeÃ§arÃ£o a rodar automaticamente em:
 - Position Risk Manager: 15 minutos
 - Dashboard Generator: 5 minutos
 - Ladder Exit Monitor: 10 minutos
@@ -259,7 +259,7 @@ Para remover: Unregister-ScheduledTask -TaskName "CoinEx_*" -Confirm:`$false
 
 "@ -ForegroundColor Green
 } else {
-    Write-Host "`n⚠️  Algumas tarefas falharam. Verifique os erros acima." -ForegroundColor Yellow
+    Write-Host "`nâš ï¸  Algumas tarefas falharam. Verifique os erros acima." -ForegroundColor Yellow
 }
 
 Write-Host "Pressione ENTER para sair..." -ForegroundColor DarkGray

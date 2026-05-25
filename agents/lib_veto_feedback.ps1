@@ -1,4 +1,4 @@
-# lib_veto_feedback.ps1
+﻿# lib_veto_feedback.ps1
 # Sistema de Feedback Loop Inteligente
 # Registra vetos e executa acoes corretivas automaticas
 # 2026-05-24
@@ -42,7 +42,7 @@ function Register-VetoFeedback {
         [Parameter(Mandatory)] [hashtable] $Context
     )
     
-    $feedbackFile = "$PSScriptRoot\..\journal\veto_feedback.jsonl"
+    $feedbackFile = (Join-Path $PSScriptRoot ".." "journal" "veto_feedback.jsonl")
     
     # Criar diretorio se nao existir
     $dir = Split-Path -Parent $feedbackFile
@@ -87,7 +87,7 @@ function Get-PendingVetoFeedbacks {
         [int] $MaxAge = 24  # horas
     )
     
-    $feedbackFile = "$PSScriptRoot\..\journal\veto_feedback.jsonl"
+    $feedbackFile = (Join-Path $PSScriptRoot ".." "journal" "veto_feedback.jsonl")
     
     if (-not (Test-Path $feedbackFile)) {
         return @()
@@ -208,7 +208,7 @@ function Update-VetoFeedbackStatus {
         [string] $Note = ""
     )
     
-    $feedbackFile = "$PSScriptRoot\..\journal\veto_feedback.jsonl"
+    $feedbackFile = (Join-Path $PSScriptRoot ".." "journal" "veto_feedback.jsonl")
     
     if (-not (Test-Path $feedbackFile)) {
         return

@@ -1,8 +1,8 @@
 ﻿# position_sizer.ps1 - Calculo de tamanho de posicao com regra dos 1%
 # Baseado em: Tudor Jones (1% rule), Kelly Criterion, ATR-based sizing
-# Dot-source: . "$PSScriptRoot\position_sizer.ps1"
+# Dot-source: . (Join-Path $PSScriptRoot "position_sizer.ps1")
 
-. "$PSScriptRoot\config.ps1"
+. (Join-Path $PSScriptRoot "config.ps1")
 
 # R:R efetivo descontando round-trip de taxas (maker+taker do round trip)
 # Sem FeeContext usa fallback 0.08% round-trip (0.03% maker + 0.05% taker — confirmado API live)

@@ -1,8 +1,8 @@
-# test_all_flows.ps1 - Teste profundo de todos os fluxos do sistema
-# Valida: Dashboard, Telegram, Risk Manager, Proteção Anti-Duplicação
+﻿# test_all_flows.ps1 - Teste profundo de todos os fluxos do sistema
+# Valida: Dashboard, Telegram, Risk Manager, ProteÃ§Ã£o Anti-DuplicaÃ§Ã£o
 
 $ErrorActionPreference = "Stop"
-Set-Location $PSScriptRoot\..
+Set-Location (Split-Path $PSScriptRoot -Parent)
 
 Write-Host "`n========================================" -ForegroundColor Cyan
 Write-Host "TESTE COMPLETO DE TODOS OS FLUXOS" -ForegroundColor Cyan
@@ -46,8 +46,8 @@ try {
             Write-Host "  [ERRO] Dashboard incompleto" -ForegroundColor Red
         }
     } else {
-        $results.errors += "Dashboard: arquivo não gerado"
-        Write-Host "  [ERRO] Dashboard não foi gerado" -ForegroundColor Red
+        $results.errors += "Dashboard: arquivo nÃ£o gerado"
+        Write-Host "  [ERRO] Dashboard nÃ£o foi gerado" -ForegroundColor Red
     }
 } catch {
     $results.errors += "Dashboard: $_"
@@ -141,10 +141,10 @@ try {
 }
 
 # ============================================================================
-# TESTE 4: Proteção Anti-Duplicação
+# TESTE 4: ProteÃ§Ã£o Anti-DuplicaÃ§Ã£o
 # ============================================================================
 
-Write-Host "`n[4/4] Testando Proteção Anti-Duplicação..." -ForegroundColor Yellow
+Write-Host "`n[4/4] Testando ProteÃ§Ã£o Anti-DuplicaÃ§Ã£o..." -ForegroundColor Yellow
 
 try {
     . ".\scripts\check_execution_mode.ps1"
@@ -162,8 +162,8 @@ try {
     if ($isRunning) {
         Write-Host "  [OK] Lock criado e detectado" -ForegroundColor Green
     } else {
-        $results.errors += "Proteção: lock não detectado"
-        Write-Host "  [ERRO] Lock não foi detectado" -ForegroundColor Red
+        $results.errors += "ProteÃ§Ã£o: lock nÃ£o detectado"
+        Write-Host "  [ERRO] Lock nÃ£o foi detectado" -ForegroundColor Red
     }
     
     # Teste 4: Remover lock
@@ -175,11 +175,11 @@ try {
         Write-Host "  [OK] Lock removido com sucesso" -ForegroundColor Green
         $results.protection = $true
     } else {
-        $results.errors += "Proteção: lock não foi removido"
-        Write-Host "  [ERRO] Lock não foi removido" -ForegroundColor Red
+        $results.errors += "ProteÃ§Ã£o: lock nÃ£o foi removido"
+        Write-Host "  [ERRO] Lock nÃ£o foi removido" -ForegroundColor Red
     }
 } catch {
-    $results.errors += "Proteção: $_"
+    $results.errors += "ProteÃ§Ã£o: $_"
     Write-Host "  [ERRO] $($_)" -ForegroundColor Red
 }
 
@@ -216,10 +216,10 @@ if ($results.risk_manager) {
 }
 
 if ($results.protection) { 
-    Write-Host "[OK] Proteção Anti-Duplicação" -ForegroundColor Green
+    Write-Host "[OK] ProteÃ§Ã£o Anti-DuplicaÃ§Ã£o" -ForegroundColor Green
     $passed++
 } else {
-    Write-Host "[FALHOU] Proteção Anti-Duplicação" -ForegroundColor Red
+    Write-Host "[FALHOU] ProteÃ§Ã£o Anti-DuplicaÃ§Ã£o" -ForegroundColor Red
 }
 
 Write-Host "`n========================================" -ForegroundColor Cyan

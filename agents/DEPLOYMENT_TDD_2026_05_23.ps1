@@ -1,11 +1,11 @@
-# DEPLOYMENT_TDD_2026_05_23.ps1 -- Deploy validated patterns em PAPER mode
+﻿# DEPLOYMENT_TDD_2026_05_23.ps1 -- Deploy validated patterns em PAPER mode
 #
 # VALIDATED PATTERNS (TDD 2026-05-23):
 # 1. signal_generator SHORT (bear markets only): +1.53% edge, 48% win rate
 # 2. vol_climax LONG (rejection=0.5): +3.63% edge, 61.1% win rate
 #
 # DEPLOYMENT STRATEGY:
-# - PAPER mode only (30-60 dias validação live)
+# - PAPER mode only (30-60 dias validaÃ§Ã£o live)
 # - Monitor performance vs backtest
 # - Migrate to LIVE se edge se mantiver
 
@@ -17,7 +17,7 @@ $DEPLOYMENT_CONFIG = @{
     # Deployment metadata
     deployment_date = "2026-05-23"
     deployment_version = "v1.0_tdd"
-    mode = "PAPER"  # PAPER only (não executar trades reais)
+    mode = "PAPER"  # PAPER only (nÃ£o executar trades reais)
     
     # signal_generator SHORT
     signal_generator_short = @{
@@ -27,7 +27,7 @@ $DEPLOYMENT_CONFIG = @{
         frequency_expected = 200  # signals/ano (em bear years)
         allowed_years = @(2018, 2022, 2025, 2026)  # Bear market years
         score_threshold = 65.0  # Minimum score para gerar sinal
-        validation_period_days = 30  # Dias de validação em PAPER
+        validation_period_days = 30  # Dias de validaÃ§Ã£o em PAPER
     }
     
     # vol_climax LONG (optimized)
@@ -39,7 +39,7 @@ $DEPLOYMENT_CONFIG = @{
         climax_mult = 2.5  # Volume spike threshold
         rejection_min = 0.5  # CRITICAL: rejection >= 50%
         lookback = 20  # Lookback period
-        validation_period_days = 60  # Dias de validação em PAPER (sample size pequeno)
+        validation_period_days = 60  # Dias de validaÃ§Ã£o em PAPER (sample size pequeno)
     }
     
     # Monitoring thresholds
@@ -55,7 +55,7 @@ $DEPLOYMENT_CONFIG = @{
         enabled = $true
         alert_on_signal = $true  # Alertar quando sinal detectado
         alert_on_threshold_breach = $true  # Alertar quando threshold violado
-        daily_summary = $true  # Enviar resumo diário
+        daily_summary = $true  # Enviar resumo diÃ¡rio
     }
 }
 
@@ -71,7 +71,7 @@ function Initialize-TDDDeployment {
     
     .DESCRIPTION
     - Carrega libraries
-    - Valida configuração
+    - Valida configuraÃ§Ã£o
     - Cria logs de deployment
     #>
     
@@ -86,18 +86,18 @@ function Initialize-TDDDeployment {
     Write-Host "`nLoading libraries..." -ForegroundColor White
     
     try {
-        . "$PSScriptRoot\lib_signal_generator_short.ps1"
-        Write-Host "  ✓ lib_signal_generator_short.ps1" -ForegroundColor Green
+        . (Join-Path $PSScriptRoot "lib_signal_generator_short.ps1")
+        Write-Host "  âœ“ lib_signal_generator_short.ps1" -ForegroundColor Green
     } catch {
-        Write-Host "  ✗ lib_signal_generator_short.ps1: $_" -ForegroundColor Red
+        Write-Host "  âœ— lib_signal_generator_short.ps1: $_" -ForegroundColor Red
         return $false
     }
     
     try {
-        . "$PSScriptRoot\lib_vol_climax_optimized.ps1"
-        Write-Host "  ✓ lib_vol_climax_optimized.ps1" -ForegroundColor Green
+        . (Join-Path $PSScriptRoot "lib_vol_climax_optimized.ps1")
+        Write-Host "  âœ“ lib_vol_climax_optimized.ps1" -ForegroundColor Green
     } catch {
-        Write-Host "  ✗ lib_vol_climax_optimized.ps1: $_" -ForegroundColor Red
+        Write-Host "  âœ— lib_vol_climax_optimized.ps1: $_" -ForegroundColor Red
         return $false
     }
     
@@ -105,32 +105,32 @@ function Initialize-TDDDeployment {
     Write-Host "`nValidating configuration..." -ForegroundColor White
     
     if ($DEPLOYMENT_CONFIG.mode -ne "PAPER") {
-        Write-Host "  ✗ Mode must be PAPER for initial deployment" -ForegroundColor Red
+        Write-Host "  âœ— Mode must be PAPER for initial deployment" -ForegroundColor Red
         return $false
     }
-    Write-Host "  ✓ Mode: PAPER" -ForegroundColor Green
+    Write-Host "  âœ“ Mode: PAPER" -ForegroundColor Green
     
     if ($DEPLOYMENT_CONFIG.signal_generator_short.enabled) {
-        Write-Host "  ✓ signal_generator SHORT: ENABLED" -ForegroundColor Green
+        Write-Host "  âœ“ signal_generator SHORT: ENABLED" -ForegroundColor Green
         Write-Host "    Expected edge: $($DEPLOYMENT_CONFIG.signal_generator_short.edge_expected)%" -ForegroundColor Gray
         Write-Host "    Expected win rate: $($DEPLOYMENT_CONFIG.signal_generator_short.win_rate_expected)%" -ForegroundColor Gray
     }
     
     if ($DEPLOYMENT_CONFIG.vol_climax_optimized.enabled) {
-        Write-Host "  ✓ vol_climax LONG: ENABLED" -ForegroundColor Green
+        Write-Host "  âœ“ vol_climax LONG: ENABLED" -ForegroundColor Green
         Write-Host "    Expected edge: $($DEPLOYMENT_CONFIG.vol_climax_optimized.edge_expected)%" -ForegroundColor Gray
         Write-Host "    Expected win rate: $($DEPLOYMENT_CONFIG.vol_climax_optimized.win_rate_expected)%" -ForegroundColor Gray
         Write-Host "    CRITICAL: rejection_min = $($DEPLOYMENT_CONFIG.vol_climax_optimized.rejection_min)" -ForegroundColor Yellow
     }
     
     # Create deployment log
-    $log_dir = "$PSScriptRoot\..\journal"
+    $log_dir = (Join-Path $PSScriptRoot ".." "journal"
     if (-not (Test-Path $log_dir)) {
         New-Item -ItemType Directory -Path $log_dir -Force | Out-Null
     }
     
     $timestamp = Get-Date -Format "yyyyMMdd_HHmmss"
-    $log_file = "$log_dir\deployment_tdd_$timestamp.json"
+    $log_file = "$log_dir" "deployment_tdd_$timestamp.json")
     
     $deployment_log = @{
         timestamp = (Get-Date).ToString("o")
@@ -144,9 +144,9 @@ function Initialize-TDDDeployment {
     }
     
     $deployment_log | ConvertTo-Json -Depth 10 | Out-File -FilePath $log_file -Encoding UTF8
-    Write-Host "`n  ✓ Deployment log: $log_file" -ForegroundColor Green
+    Write-Host "`n  âœ“ Deployment log: $log_file" -ForegroundColor Green
     
-    Write-Host "`n✅ Deployment initialized successfully" -ForegroundColor Green
+    Write-Host "`nâœ… Deployment initialized successfully" -ForegroundColor Green
     Write-Host "   Mode: PAPER (no real trades)" -ForegroundColor Yellow
     Write-Host "   Validation period: 30-60 days" -ForegroundColor Yellow
     Write-Host "   Monitor performance vs backtest expectations" -ForegroundColor Yellow
@@ -203,7 +203,7 @@ function Test-TDDPatterns {
                 }
             }
         } catch {
-            Write-Host "  ✗ signal_generator error: $_" -ForegroundColor Red
+            Write-Host "  âœ— signal_generator error: $_" -ForegroundColor Red
         }
     }
     
@@ -225,7 +225,7 @@ function Test-TDDPatterns {
                 }
             }
         } catch {
-            Write-Host "  ✗ vol_climax error: $_" -ForegroundColor Red
+            Write-Host "  âœ— vol_climax error: $_" -ForegroundColor Red
         }
     }
     
@@ -267,12 +267,12 @@ function Send-TDDDeploymentAlert {
     
     $full_message = "$emoji TDD DEPLOYMENT ($($DEPLOYMENT_CONFIG.mode))`n`n$Message"
     
-    # Send via Telegram (usar função existente do sistema)
+    # Send via Telegram (usar funÃ§Ã£o existente do sistema)
     if (Get-Command Send-TelegramMessage -ErrorAction SilentlyContinue) {
         try {
             Send-TelegramMessage -Message $full_message
         } catch {
-            Write-Host "  ✗ Telegram alert failed: $_" -ForegroundColor Red
+            Write-Host "  âœ— Telegram alert failed: $_" -ForegroundColor Red
         }
     }
 }

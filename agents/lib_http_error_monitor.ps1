@@ -1,4 +1,4 @@
-# lib_http_error_monitor.ps1 -- Monitora erros HTTP LLM (400/429/503) com
+﻿# lib_http_error_monitor.ps1 -- Monitora erros HTTP LLM (400/429/503) com
 # circuit breaker + Telegram alert se > threshold em janela rolling.
 #
 # Memory: feedback_monitor_400_errors.md (sem isso, bugs invisiveis tipo Mesa CAOS
@@ -13,7 +13,7 @@
 #
 # State persistido em journal/llm_http_errors.json (rolling 24h window).
 
-$LLM_ERROR_FILE = "$PSScriptRoot\..\journal\llm_http_errors.json"
+$LLM_ERROR_FILE = (Join-Path $PSScriptRoot ".." "journal" "llm_http_errors.json")
 
 
 function Get-LlmErrorState {
