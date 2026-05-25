@@ -1,297 +1,181 @@
-# GitHub Actions - ManuHeadFund Trading Pipeline
+# GitHub Actions - ManuHeadFund Trading Pipeline COMPLETO
 # Roda na nuvem sem depender da máquina local
+# Replica TODOS os cron jobs da máquina local
 
-name: Trading Pipeline
+name: Trading Pipeline Complete
 
 on:
   schedule:
-    # A cada 15 minutos (failover quando máquina desligada)
-    # Otimizado para limites gratuitos: ~2.880min/mês ✅
-    - cron: '*/15 * * * *'
+    # A cada 5 minutos (failover quando máquina desligada)
+    - cron: '*/5 * * * *'
   
-  # Permite execução manual
   workflow_dispatch:
 
 jobs:
-  risk-manager:
-    name: Position Risk Manager
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-      
-      - name: Setup PowerShell
-        shell: pwsh
-        run: |
-          Write-Host "PowerShell $($PSVersionTable.PSVersion) instalado"
-      
-      - name: Configurar credenciais
-        shell: pwsh
-        run: |
-          # Criar config.local.ps1 no formato correto
-          $configContent = @"
-# config.local.ps1 - GitHub Actions
-`$env:COINEX_ACCESS_ID = "${{ secrets.COINEX_ACCESS_ID }}"
-`$env:COINEX_SECRET_KEY = "${{ secrets.COINEX_SECRET_KEY }}"
-`$env:TELEGRAM_BOT_TOKEN = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
-`$env:TELEGRAM_CHAT_ID = "${{ secrets.TELEGRAM_CHAT_ID }}"
-"@
-          
-          # Salvar config
-          New-Item -ItemType Directory -Path "agents" -Force | Out-Null
-          $configContent | Out-File "agents/config.local.ps1" -Encoding UTF8 -Force
-          
-          Write-Host "Config criado com sucesso"
-      
-      - name: Executar Risk Manager
-        shell: pwsh
-        run: |
-          try {
-            Write-Host "Iniciando Risk Manager..."
-            
-            # Verificar se config existe
-            if (-not (Test-Path "agents/config.local.ps1")) {
-              throw "Config não encontrado"
-            }
-            
-            # Executar script
-            & ./scripts/position_risk_cron.ps1
-            
-            Write-Host "✓ Risk Manager executado com sucesso"
-          } catch {
-            $errorMsg = "Erro: $_`nStack: $($_.ScriptStackTrace)"
-            Write-Host $errorMsg
-            $errorMsg | Out-File "error.log" -Encoding UTF8
-            exit 1
-          }
-      
-      - name: Enviar alerta se falhar
-        if: failure()
-        shell: pwsh
-        run: |
-          try {
-            $token = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
-            $chatId = "${{ secrets.TELEGRAM_CHAT_ID }}"
-            
-            # Obter logs do erro
-            $errorLog = Get-Content "error.log" -ErrorAction SilentlyContinue
-            $errorMsg = if ($errorLog) { $errorLog -join "`n" } else { "Erro desconhecido" }
-            
-            $message = "==========================`n"
-            $message += ">> GITHUB ACTIONS ERRO <<`n"
-            $message += "==========================`n`n"
-            $message += "Job: Risk Manager`n"
-            $message += "Status: FALHOU`n`n"
-            $message += "Erro: $($errorMsg.Substring(0, [Math]::Min(200, $errorMsg.Length)))`n`n"
-            $message += "Verifique: https://github.com/ThiagoDataEngineer/ManuHeadFund/actions"
-            
-            $body = @{
-              chat_id = $chatId
-              text = $message
-            } | ConvertTo-Json
-            
-            Invoke-RestMethod -Uri "https://api.telegram.org/bot$token/sendMessage" `
-              -Method Post -Body $body -ContentType "application/json" | Out-Null
-          } catch {
-            Write-Host "Falha ao enviar alerta: $_"
-          }
-
-  dashboard-generator:
-    name: Dashboard Generator
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-      
-      - name: Setup PowerShell
-        shell: pwsh
-        run: |
-          Write-Host "PowerShell $($PSVersionTable.PSVersion) instalado"
-      
-      - name: Configurar credenciais
-        shell: pwsh
-        run: |
-          # Criar config.local.ps1 no formato correto
-          $configContent = @"
-# config.local.ps1 - GitHub Actions
-`$env:COINEX_ACCESS_ID = "${{ secrets.COINEX_ACCESS_ID }}"
-`$env:COINEX_SECRET_KEY = "${{ secrets.COINEX_SECRET_KEY }}"
-`$env:TELEGRAM_BOT_TOKEN = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
-`$env:TELEGRAM_CHAT_ID = "${{ secrets.TELEGRAM_CHAT_ID }}"
-"@
-          
-          # Salvar config
-          New-Item -ItemType Directory -Path "agents" -Force | Out-Null
-          $configContent | Out-File "agents/config.local.ps1" -Encoding UTF8 -Force
-          
-          Write-Host "Config criado com sucesso"
-      
-      - name: Gerar Dashboard
-        shell: pwsh
-        run: |
-          try {
-            Write-Host "Gerando Dashboard..."
-            
-            # Verificar se config existe
-            if (-not (Test-Path "agents/config.local.ps1")) {
-              throw "Config não encontrado"
-            }
-            
-            # Executar script
-            & ./scripts/generate_dashboard_elite.ps1
-            
-            Write-Host "✓ Dashboard gerado com sucesso"
-          } catch {
-            Write-Host "✗ Erro: $_"
-            Write-Host "Stack: $($_.ScriptStackTrace)"
-            exit 1
-          }
-      
-      - name: Upload Dashboard como artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: dashboard
-          path: dashboard/index.html
-          retention-days: 7
-      
-      - name: Deploy para GitHub Pages (opcional)
-        if: success()
-        uses: peaceiris/actions-gh-pages@v3
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dashboard
-          publish_branch: gh-pages
-
+  # ============================================================================
+  # JOB 1: TRAILING STOP MONITOR (Crítico - a cada 5min)
+  # ============================================================================
   trailing-stop-monitor:
     name: Trailing Stop Monitor
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout código
+      - name: Checkout
         uses: actions/checkout@v4
       
-      - name: Setup PowerShell
+      - name: Setup
         shell: pwsh
         run: |
-          Write-Host "PowerShell $($PSVersionTable.PSVersion) instalado"
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          @"
+          `$env:COINEX_ACCESS_ID = "${{ secrets.COINEX_ACCESS_ID }}"
+          `$env:COINEX_SECRET_KEY = "${{ secrets.COINEX_SECRET_KEY }}"
+          `$env:TELEGRAM_BOT_TOKEN = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
+          `$env:TELEGRAM_CHAT_ID = "${{ secrets.TELEGRAM_CHAT_ID }}"
+          "@ | Out-File "agents/config.local.ps1" -Encoding UTF8
       
-      - name: Configurar credenciais
-        shell: pwsh
-        run: |
-          # Criar config.local.ps1 no formato correto
-          $configContent = @"
-# config.local.ps1 - GitHub Actions
-`$env:COINEX_ACCESS_ID = "${{ secrets.COINEX_ACCESS_ID }}"
-`$env:COINEX_SECRET_KEY = "${{ secrets.COINEX_SECRET_KEY }}"
-`$env:TELEGRAM_BOT_TOKEN = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
-`$env:TELEGRAM_CHAT_ID = "${{ secrets.TELEGRAM_CHAT_ID }}"
-"@
-          
-          # Salvar config
-          New-Item -ItemType Directory -Path "agents" -Force | Out-Null
-          $configContent | Out-File "agents/config.local.ps1" -Encoding UTF8 -Force
-          
-          Write-Host "Config criado com sucesso"
-      
-      - name: Executar Trailing Stop Monitor
+      - name: Run
         shell: pwsh
         run: |
           try {
-            Write-Host "Iniciando Trailing Stop Monitor..."
-            
-            # Verificar se config existe
-            if (-not (Test-Path "agents/config.local.ps1")) {
-              throw "Config não encontrado"
-            }
-            
-            # Executar script
+            Write-Host "=== TRAILING STOP ===" -ForegroundColor Cyan
             & ./scripts/trailing_stop_monitor.ps1
-            
-            Write-Host "✓ Trailing Stop Monitor executado com sucesso"
+            Write-Host "OK" -ForegroundColor Green
           } catch {
-            $errorMsg = "Erro: $_`nStack: $($_.ScriptStackTrace)"
-            Write-Host $errorMsg
-            $errorMsg | Out-File "error_trailing.log" -Encoding UTF8
-            exit 1
+            Write-Host "ERRO: $_" -ForegroundColor Red
+            throw
+          }
+  
+  # ============================================================================
+  # JOB 2: POSITION RISK MANAGER (a cada 15min)
+  # ============================================================================
+  position-risk:
+    name: Position Risk Manager
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          @"
+          `$env:COINEX_ACCESS_ID = "${{ secrets.COINEX_ACCESS_ID }}"
+          `$env:COINEX_SECRET_KEY = "${{ secrets.COINEX_SECRET_KEY }}"
+          `$env:TELEGRAM_BOT_TOKEN = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
+          `$env:TELEGRAM_CHAT_ID = "${{ secrets.TELEGRAM_CHAT_ID }}"
+          "@ | Out-File "agents/config.local.ps1" -Encoding UTF8
+      
+      - name: Run
+        shell: pwsh
+        run: |
+          try {
+            $minute = (Get-Date).Minute
+            if ($minute % 15 -eq 0) {
+              Write-Host "=== POSITION RISK ===" -ForegroundColor Cyan
+              & ./scripts/position_risk_cron.ps1
+              Write-Host "OK" -ForegroundColor Green
+            } else {
+              Write-Host "Skipped (runs every 15min)" -ForegroundColor Yellow
+            }
+          } catch {
+            Write-Host "ERRO: $_" -ForegroundColor Red
+            throw
+          }
+  
+  # ============================================================================
+  # JOB 3: DASHBOARD (a cada 5min)
+  # ============================================================================
+  dashboard:
+    name: Dashboard Generator
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs","dashboard" -Force | Out-Null
+          @"
+          `$env:COINEX_ACCESS_ID = "${{ secrets.COINEX_ACCESS_ID }}"
+          `$env:COINEX_SECRET_KEY = "${{ secrets.COINEX_SECRET_KEY }}"
+          `$env:TELEGRAM_BOT_TOKEN = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
+          `$env:TELEGRAM_CHAT_ID = "${{ secrets.TELEGRAM_CHAT_ID }}"
+          "@ | Out-File "agents/config.local.ps1" -Encoding UTF8
+      
+      - name: Run
+        shell: pwsh
+        run: |
+          try {
+            Write-Host "=== DASHBOARD ===" -ForegroundColor Cyan
+            & ./scripts/collect_dashboard_data.ps1
+            Write-Host "OK" -ForegroundColor Green
+          } catch {
+            Write-Host "ERRO: $_" -ForegroundColor Red
           }
       
-      - name: Enviar alerta se falhar
-        if: failure()
+      - name: Upload
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dashboard-${{ github.run_number }}
+          path: dashboard/
+          retention-days: 7
+  
+  # ============================================================================
+  # JOB 4: HEALTH CHECK
+  # ============================================================================
+  health-check:
+    name: Health Check
+    runs-on: ubuntu-latest
+    needs: [trailing-stop-monitor, position-risk, dashboard]
+    if: always()
+    
+    steps:
+      - name: Check APIs
+        shell: pwsh
+        run: |
+          Write-Host "=== HEALTH CHECK ===" -ForegroundColor Cyan
+          
+          try {
+            Invoke-RestMethod -Uri "https://api.coinex.com/v2/ping" | Out-Null
+            Write-Host "CoinEx API: OK" -ForegroundColor Green
+          } catch {
+            Write-Host "CoinEx API: FAILED" -ForegroundColor Red
+          }
+          
+          try {
+            $token = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
+            $r = Invoke-RestMethod -Uri "https://api.telegram.org/bot$token/getMe"
+            Write-Host "Telegram API: OK - $($r.result.username)" -ForegroundColor Green
+          } catch {
+            Write-Host "Telegram API: FAILED" -ForegroundColor Red
+          }
+      
+      - name: Alert on Failure
+        if: failure() || needs.trailing-stop-monitor.result == 'failure' || needs.position-risk.result == 'failure'
         shell: pwsh
         run: |
           try {
             $token = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
             $chatId = "${{ secrets.TELEGRAM_CHAT_ID }}"
             
-            # Obter logs do erro
-            $errorLog = Get-Content "error_trailing.log" -ErrorAction SilentlyContinue
-            $errorMsg = if ($errorLog) { $errorLog -join "`n" } else { "Erro desconhecido" }
+            $msg = "GITHUB ACTIONS ALERT`n`n"
+            $msg += "Trailing Stop: ${{ needs.trailing-stop-monitor.result }}`n"
+            $msg += "Position Risk: ${{ needs.position-risk.result }}`n"
+            $msg += "Dashboard: ${{ needs.dashboard.result }}`n`n"
+            $msg += "Check: https://github.com/${{ github.repository }}/actions/runs/${{ github.run_id }}"
             
-            $message = "==========================`n"
-            $message += ">> TRAILING STOP ERRO <<`n"
-            $message += "==========================`n`n"
-            $message += "Job: Trailing Stop Monitor`n"
-            $message += "Status: FALHOU`n`n"
-            $message += "Erro: $($errorMsg.Substring(0, [Math]::Min(200, $errorMsg.Length)))`n`n"
-            $message += "Verifique: https://github.com/ThiagoDataEngineer/ManuHeadFund/actions"
-            
-            $body = @{
-              chat_id = $chatId
-              text = $message
-            } | ConvertTo-Json
+            $body = @{ chat_id = $chatId; text = $msg } | ConvertTo-Json
             
             Invoke-RestMethod -Uri "https://api.telegram.org/bot$token/sendMessage" `
               -Method Post -Body $body -ContentType "application/json" | Out-Null
+              
+            Write-Host "Alert sent" -ForegroundColor Green
           } catch {
-            Write-Host "Falha ao enviar alerta: $_"
+            Write-Host "Failed to send alert: $_" -ForegroundColor Red
           }
-
-  health-check:
-    name: System Health Check
-    runs-on: ubuntu-latest
-    
-    steps:
-      - name: Checkout código
-        uses: actions/checkout@v4
-      
-      - name: Verificar API CoinEx
-        shell: pwsh
-        run: |
-          try {
-            $response = Invoke-RestMethod -Uri "https://api.coinex.com/v2/ping" -Method Get
-            Write-Host "✓ CoinEx API: OK"
-          } catch {
-            Write-Host "✗ CoinEx API: FALHOU"
-            exit 1
-          }
-      
-      - name: Verificar Telegram API
-        shell: pwsh
-        run: |
-          try {
-            $token = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
-            $response = Invoke-RestMethod -Uri "https://api.telegram.org/bot$token/getMe" -Method Get
-            Write-Host "✓ Telegram API: OK - Bot: $($response.result.username)"
-          } catch {
-            Write-Host "✗ Telegram API: FALHOU"
-            exit 1
-          }
-      
-      - name: Enviar status diário
-        if: github.event.schedule == '0 0 * * *'
-        shell: pwsh
-        run: |
-          $token = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
-          $chatId = "${{ secrets.TELEGRAM_CHAT_ID }}"
-          $message = "✅ *Sistema Operacional*`n`nGitHub Actions rodando normalmente.`n`nTodos os serviços OK."
-          
-          $body = @{
-            chat_id = $chatId
-            text = $message
-            parse_mode = "Markdown"
-          } | ConvertTo-Json
-          
-          Invoke-RestMethod -Uri "https://api.telegram.org/bot$token/sendMessage" `
-            -Method Post -Body $body -ContentType "application/json"
