@@ -3,14 +3,20 @@
 # Phase 0a (2026-05-23): foundation pra eliminar bias por capital antigo em todos
 # backtests/calibrations downstream. Lib + cache JSON + drift detection.
 #
+# Etapa 2.1 (2026-05-26): refatorado pra usar state_store quando disponivel.
+# Backend: STATE_STORE_BACKEND=local (default, JSON) ou supabase (24/7).
+# Tabela: 'capital_context' (single-row, id=1).
+#
 # Funcoes:
 #   - Get-CapitalContext: snapshot current (spot + futures + total) com cache fresh
 #   - Set-CapitalBaseline: registra baseline (referencia pra drift calc)
 #   - Get-CapitalDrift: drift_pct = (current - baseline) / baseline * 100
 #   - Test-CapitalStale: true se drift > threshold OR cache older than max_age
 #
-# Storage: journal/capital_context.json (overwritten per refresh).
-# Storage: journal/capital_baseline.json (set manualmente OR primeira call).
+# Storage:
+#   - Backend local: journal/capital_context.json (overwritten per refresh)
+#   - Backend supabase: manuheadfund.capital_context (id=1)
+# Storage baseline: journal/capital_baseline.json (set manualmente OR primeira call).
 #
 # Fail-soft: CoinEx fetch falha -> usa cached. Cache miss -> usa fallback config.
 #
@@ -19,6 +25,12 @@
 
 $script:CAPITAL_CONTEXT_PATH = $null
 $script:CAPITAL_BASELINE_PATH = $null
+
+# Lazy load state_store (sibling lib). Skip se nao disponivel (caller direto sem stack).
+$_ccStateStorePath = Join-Path $PSScriptRoot "lib_state_store.ps1"
+if (Test-Path $_ccStateStorePath) {
+    . $_ccStateStorePath
+}
 
 
 function _Init-CapitalPaths {
@@ -60,22 +72,43 @@ function Get-CapitalContext {
     _Init-CapitalPaths
     $path = $script:CAPITAL_CONTEXT_PATH
 
+    # Determina se usa state_store (preferido) ou path legacy direto.
+    # Se ContextPath foi passado explicitamente, mantemos legacy path (back-compat
+    # com tests + callers que setam path custom).
+    $useStateStore = $false
+    if (-not $ContextPath) {
+        $useStateStore = (Get-Command Get-StateRecords -ErrorAction SilentlyContinue) -ne $null
+    }
+
     # Check cache freshness
-    if (-not $Force -and (Test-Path $path)) {
-        try {
-            $cached = Get-Content $path -Raw -Encoding UTF8 | ConvertFrom-Json
-            $cachedTs = [System.DateTimeOffset]::Parse($cached.snapshot_ts).UtcDateTime
-            $ageMin = ((Get-Date).ToUniversalTime() - $cachedTs).TotalMinutes
-            if ($ageMin -le $MaxAgeMinutes) {
-                return [PSCustomObject]@{
-                    spot = [double]$cached.spot
-                    futures = [double]$cached.futures
-                    total = [double]$cached.total
-                    snapshot_ts = $cached.snapshot_ts
-                    source = "cached"
+    if (-not $Force) {
+        $cached = $null
+        if ($useStateStore) {
+            try {
+                $rows = @(Get-StateRecords -Table "capital_context")
+                if ($rows.Count -gt 0) { $cached = $rows[0] }
+            } catch { $cached = $null }
+        } elseif (Test-Path $path) {
+            try {
+                $cached = Get-Content $path -Raw -Encoding UTF8 | ConvertFrom-Json
+            } catch { $cached = $null }
+        }
+
+        if ($cached -and $cached.snapshot_ts) {
+            try {
+                $cachedTs = [System.DateTimeOffset]::Parse($cached.snapshot_ts).UtcDateTime
+                $ageMin = ((Get-Date).ToUniversalTime() - $cachedTs).TotalMinutes
+                if ($ageMin -le $MaxAgeMinutes) {
+                    return [PSCustomObject]@{
+                        spot = [double]$cached.spot
+                        futures = [double]$cached.futures
+                        total = [double]$cached.total
+                        snapshot_ts = $cached.snapshot_ts
+                        source = "cached"
+                    }
                 }
-            }
-        } catch {}
+            } catch { }
+        }
     }
 
     # Fresh fetch via CoinEx (se libs disponiveis)
@@ -128,12 +161,28 @@ function Get-CapitalContext {
         source = $source
     }
 
-    # Persist (atomic write)
-    $dir = Split-Path $path -Parent
-    if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-    try {
-        $ctx | ConvertTo-Json | Out-File -FilePath $path -Encoding utf8 -Force
-    } catch {}
+    # Persist via state_store (preferido) ou path legacy direto
+    if ($useStateStore) {
+        try {
+            $record = [PSCustomObject]@{
+                id          = 1
+                spot        = $spot
+                futures     = $futures
+                total       = $total
+                snapshot_ts = $ctx.snapshot_ts
+                source      = $source
+            }
+            Save-StateRecords -Table "capital_context" -Records @($record) -PrimaryKey "id"
+        } catch {
+            Write-Warning "[capital_context] state_store save failed: $_"
+        }
+    } else {
+        $dir = Split-Path $path -Parent
+        if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+        try {
+            $ctx | ConvertTo-Json | Out-File -FilePath $path -Encoding utf8 -Force
+        } catch {}
+    }
 
     return $ctx
 }
