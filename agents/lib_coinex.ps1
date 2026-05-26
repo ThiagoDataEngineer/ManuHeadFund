@@ -397,6 +397,14 @@ function CoinEx-GetSpotCapitalUSDT() {
 
 # Retorna capital FUTURES disponível em USDT — base para GemAgent e Orchestrator
 # Atualiza $global:CAPITAL_FUTURES a cada conexão bem-sucedida (fallback sempre fresco)
+# Retorna capital FUTURES disponível em USDT — base para GemAgent e Orchestrator
+# Atualiza $global:CAPITAL_FUTURES a cada conexão bem-sucedida (fallback sempre fresco)
+#
+# 2026-05-26 (Etapa 6): retorna EQUITY total da conta (available + margin + unrealized_pnl)
+# em vez de apenas available. Antes:
+#   - Layer 1 sizing 1% sobre $1655 = $16.55 por trade (subalocava)
+# Agora:
+#   - Layer 1 sizing 1% sobre $2668 (equity real) = $26.68 por trade
 function CoinEx-GetFuturesCapitalUSDT() {
     if (-not $COINEX_ACCESS_ID -or -not $COINEX_SECRET_KEY) {
         Write-Warning "CoinEx-GetFuturesCapitalUSDT: credenciais ausentes, usando bootstrap `$$($global:CAPITAL_FUTURES)"
@@ -404,12 +412,21 @@ function CoinEx-GetFuturesCapitalUSDT() {
     }
     try {
         $r = CoinEx-Get "/v2/assets/futures/balance"
-        $val = if ($r.code -eq 0) { ($r.data | Where-Object { $_.ccy -eq "USDT" } | Measure-Object -Property available -Sum).Sum } else { 0 }
-        $val = [math]::Round([double]$val, 2)
-        if ($val -gt 0) {
-            $global:CAPITAL_FUTURES = $val
-            $global:CAPITAL_FUTURES_LAST_REFRESH = Get-Date
-            return $val
+        if ($r.code -eq 0) {
+            # Equity = sum(available + margin + unrealized_pnl) por moeda USDT
+            $usdtRow = $r.data | Where-Object { $_.ccy -eq "USDT" } | Select-Object -First 1
+            if ($usdtRow) {
+                $available = if ($null -ne $usdtRow.available) { [double]$usdtRow.available } else { 0.0 }
+                $margin    = if ($null -ne $usdtRow.margin) { [double]$usdtRow.margin } else { 0.0 }
+                $upnl      = if ($null -ne $usdtRow.unrealized_pnl) { [double]$usdtRow.unrealized_pnl } else { 0.0 }
+                $equity    = $available + $margin + $upnl
+                $val       = [math]::Round($equity, 2)
+                if ($val -gt 0) {
+                    $global:CAPITAL_FUTURES = $val
+                    $global:CAPITAL_FUTURES_LAST_REFRESH = Get-Date
+                    return $val
+                }
+            }
         }
     } catch {
         Write-Warning "CoinEx-GetFuturesCapitalUSDT: API erro, usando ultimo valor conhecido `$$($global:CAPITAL_FUTURES) (last_refresh=$($global:CAPITAL_FUTURES_LAST_REFRESH))"
