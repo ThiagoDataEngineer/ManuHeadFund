@@ -251,7 +251,17 @@ function Update-Layer4Review {
     }
 
     # Modo: ADVISORY (default) ou AUTO_EXECUTE (opt-in explícito)
-    $autoExec = $AutoExecute.IsPresent -or ($global:LAYER4_AUTO_EXECUTE -eq $true)
+    # Prioridade: global var > arquivo flag > default false
+    $autoExec = $false
+    if ($AutoExecute.IsPresent) {
+        $autoExec = $true
+    } elseif ($null -ne $global:LAYER4_AUTO_EXECUTE) {
+        $autoExec = [bool]$global:LAYER4_AUTO_EXECUTE
+    } else {
+        # Filesystem flag (persiste entre runs GitHub Actions)
+        $flagFile = Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "journal") "LAYER4_AUTO_EXECUTE.flag"
+        if (Test-Path $flagFile) { $autoExec = $true }
+    }
     $modeLabel = if ($autoExec) { "AUTO_EXECUTE" } else { "ADVISORY" }
 
     $positions = @(Get-TrailingPositions)
