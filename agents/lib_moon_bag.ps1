@@ -255,25 +255,6 @@ function Add-MoonBagPair {
     $pairId = [guid]::NewGuid().ToString("N").Substring(0, 12)
     $now    = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
 
-    # Carrega journal existente
-    $existing = @()
-    if (Test-Path $JournalPath) {
-        try {
-            $raw = Get-Content $JournalPath -Raw
-            if ($raw -and $raw.Trim().Length -gt 0) {
-                $parsed = $raw | ConvertFrom-Json
-                if ($parsed) { $existing = @($parsed) }
-            }
-        } catch {
-            $existing = @()
-        }
-    } else {
-        $dir = Split-Path $JournalPath
-        if ($dir -and -not (Test-Path $dir)) {
-            New-Item -ItemType Directory -Path $dir -Force | Out-Null
-        }
-    }
-
     # Constrói as duas pernas como objetos compatíveis com lib_trailing schema
     $harvestLeg = [PSCustomObject]@{
         market         = $Market
@@ -319,8 +300,49 @@ function Add-MoonBagPair {
         moonBagKind    = "moon"
     }
 
-    $combined = @($existing) + @($harvestLeg) + @($moonLeg)
-    $combined | ConvertTo-Json -Depth 5 | Set-Content $JournalPath -Encoding utf8
+    # Branch path: state_store (preferido quando flag ativa + JournalPath default)
+    # vs legacy file path (sempre que JournalPath foi explicitamente passado).
+    $isDefaultPath = ($JournalPath -eq $MOON_BAG_DEFAULT_FILE)
+    $hasStateStore = (Get-Command Save-TrailingPositions -ErrorAction SilentlyContinue) -ne $null
+
+    if ($isDefaultPath -and $hasStateStore) {
+        # Usa Save-TrailingPositions que respeita TRAILING_USE_STATE_STORE flag.
+        # Se flag OFF: escreve em journal/trailing_positions.json (legacy).
+        # Se flag ON: escreve em state_store backend (local OR supabase).
+        # Importante: precisamos preservar legs existentes (lib_trailing faz upsert
+        # por pk_id, e harvest/moon tem pk_ids diferentes mesmo no mesmo market).
+
+        # Garantir que outras posicoes nao-Moon-Bag (e outros pairs) sao preservadas
+        $existing = @()
+        if (Get-Command Get-TrailingPositions -ErrorAction SilentlyContinue) {
+            try { $existing = @(Get-TrailingPositions) } catch { $existing = @() }
+        }
+        $combined = @($existing) + @($harvestLeg) + @($moonLeg)
+        Save-TrailingPositions -Positions $combined
+
+    } else {
+        # Legacy file path (back-compat tests + custom JournalPath callers)
+        $existing = @()
+        if (Test-Path $JournalPath) {
+            try {
+                $raw = Get-Content $JournalPath -Raw
+                if ($raw -and $raw.Trim().Length -gt 0) {
+                    $parsed = $raw | ConvertFrom-Json
+                    if ($parsed) { $existing = @($parsed) }
+                }
+            } catch {
+                $existing = @()
+            }
+        } else {
+            $dir = Split-Path $JournalPath
+            if ($dir -and -not (Test-Path $dir)) {
+                New-Item -ItemType Directory -Path $dir -Force | Out-Null
+            }
+        }
+
+        $combined = @($existing) + @($harvestLeg) + @($moonLeg)
+        $combined | ConvertTo-Json -Depth 5 | Set-Content $JournalPath -Encoding utf8
+    }
 
     return [PSCustomObject]@{
         pairId  = $pairId
@@ -340,21 +362,34 @@ function Get-MoonBagPositions {
         [switch]$ActiveOnly
     )
 
-    if (-not (Test-Path $JournalPath)) { return @() }
+    # Branch path: state_store (preferido) vs legacy file
+    $isDefaultPath = ($JournalPath -eq $MOON_BAG_DEFAULT_FILE)
+    $hasStateStore = (Get-Command Get-TrailingPositions -ErrorAction SilentlyContinue) -ne $null
 
-    try {
-        $raw = Get-Content $JournalPath -Raw
-        if (-not $raw -or $raw.Trim().Length -eq 0) { return @() }
-        $all = @($raw | ConvertFrom-Json)
-    } catch {
-        return @()
+    $all = @()
+    if ($isDefaultPath -and $hasStateStore) {
+        try {
+            $all = @(Get-TrailingPositions)
+        } catch {
+            $all = @()
+        }
+    }
+
+    # Fallback / legacy path: ler direto do arquivo
+    if (@($all).Count -eq 0 -and (Test-Path $JournalPath)) {
+        try {
+            $raw = Get-Content $JournalPath -Raw
+            if ($raw -and $raw.Trim().Length -gt 0) {
+                $all = @($raw | ConvertFrom-Json)
+            }
+        } catch {
+            $all = @()
+        }
     }
 
     # Flatten qualquer wrapper aninhado: PS 5.1 ConvertFrom-Json pode devolver
-    # arrays aninhados ou wrappers {value=[...], Count=N} dependendo de como o
-    # JSON foi escrito. Achatamos recursivamente até obter objetos individuais.
+    # arrays aninhados ou wrappers {value=[...], Count=N}.
     $flat = New-Object System.Collections.ArrayList
-
     $stack = New-Object System.Collections.Stack
     foreach ($x in $all) { $stack.Push($x) }
 
