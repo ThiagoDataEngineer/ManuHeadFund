@@ -604,6 +604,157 @@ jobs:
           }
   
   # ============================================================================
+  # JOB 17-20: LAYERS REVIEW (state_store em Supabase)
+  # Usa lib_state_store + schema manuheadfund. Sem dependencia de journal/*.json.
+  # Nao executa scan_master nem gem_loop (esses precisam de aprovacao manual TG).
+  # ============================================================================
+
+  # ----------------------------------------------------------------------------
+  # JOB 17: LAYER 1 — Adaptive Trailing (cada 5min)
+  # ----------------------------------------------------------------------------
+  layer1-trailing-adaptive:
+    name: Layer 1 - Adaptive Trailing
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
+          $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
+          $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run Layer 1
+        shell: pwsh
+        run: |
+          try {
+            Write-Host "=== LAYER 1 (Adaptive Trailing) ===" -ForegroundColor Cyan
+            & ./scripts/layers_review_runner.ps1 -Layer 1
+            Write-Host "OK" -ForegroundColor Green
+          } catch {
+            Write-Host "WARN: $_" -ForegroundColor Yellow
+          }
+
+  # ----------------------------------------------------------------------------
+  # JOB 18: LAYER 2 — Mentor Reflection (cada 30min)
+  # ----------------------------------------------------------------------------
+  layer2-mentor-review:
+    name: Layer 2 - Mentor 6h Reflection
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
+          $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
+          $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run Layer 2 (every 30min)
+        shell: pwsh
+        run: |
+          try {
+            $minute = (Get-Date).Minute
+            if ($minute % 30 -eq 0) {
+              Write-Host "=== LAYER 2 (Mentor Reflection) ===" -ForegroundColor Cyan
+              & ./scripts/layers_review_runner.ps1 -Layer 2
+              Write-Host "OK" -ForegroundColor Green
+            } else {
+              Write-Host "Skipped (runs every 30min)" -ForegroundColor Yellow
+            }
+          } catch {
+            Write-Host "WARN: $_" -ForegroundColor Yellow
+          }
+
+  # ----------------------------------------------------------------------------
+  # JOB 19: LAYER 4 — Tori + Time Stops (cada 5min)
+  # ----------------------------------------------------------------------------
+  layer4-tori-timestop:
+    name: Layer 4 - Tori + TimeStop
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
+          $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
+          $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run Layer 4
+        shell: pwsh
+        run: |
+          try {
+            Write-Host "=== LAYER 4 (Tori + TimeStop) ===" -ForegroundColor Cyan
+            & ./scripts/layers_review_runner.ps1 -Layer 4
+            Write-Host "OK" -ForegroundColor Green
+          } catch {
+            Write-Host "WARN: $_" -ForegroundColor Yellow
+          }
+
+  # ----------------------------------------------------------------------------
+  # JOB 20: LAYER 5 — Moon Bag Review (cada 5min)
+  # ----------------------------------------------------------------------------
+  layer5-moonbag-review:
+    name: Layer 5 - Moon Bag Review
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
+          $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
+          $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run Layer 5
+        shell: pwsh
+        run: |
+          try {
+            Write-Host "=== LAYER 5 (Moon Bag) ===" -ForegroundColor Cyan
+            & ./scripts/layers_review_runner.ps1 -Layer 5
+            Write-Host "OK" -ForegroundColor Green
+          } catch {
+            Write-Host "WARN: $_" -ForegroundColor Yellow
+          }
+
+  # ============================================================================
   # JOB 6: HEALTH CHECK
   # ============================================================================
   health-check:
