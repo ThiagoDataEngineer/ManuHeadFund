@@ -14,9 +14,53 @@
 
 $TRAILING_FILE = Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "journal") "trailing_positions.json"
 
+# Lazy load state_store (sibling lib). Skip se nao disponivel.
+$_trailingStateStorePath = Join-Path $PSScriptRoot "lib_state_store.ps1"
+if (Test-Path $_trailingStateStorePath) {
+    . $_trailingStateStorePath
+}
+
+# Helper: decide if trailing should use state_store (opt-in)
+function _Test-TrailingUsesStateStore {
+    if ($null -ne $global:TRAILING_USE_STATE_STORE) {
+        return [bool]$global:TRAILING_USE_STATE_STORE
+    }
+    # Filesystem flag fallback
+    $flagPath = Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "journal") "USE_SUPABASE_STATE.flag"
+    return (Test-Path $flagPath)
+}
+
+# Helper: compute pk_id for a position (Moon Bag has 2 legs per market)
+function _Get-TrailingPkId {
+    param([PSCustomObject]$Position)
+    $market = [string]$Position.market
+    if ($Position.PSObject.Properties['moonBagKind'] -and $Position.moonBagKind) {
+        return "$market`:$($Position.moonBagKind)"
+    }
+    return $market
+}
+
 # ── Persistencia ──────────────────────────────────────────────────────────────
 
 function Get-TrailingPositions {
+    # state_store path (opt-in)
+    if ((_Test-TrailingUsesStateStore) -and (Get-Command Get-StateRecords -ErrorAction SilentlyContinue)) {
+        try {
+            $rows = @(Get-StateRecords -Table "trailing_positions")
+            $result = @()
+            foreach ($item in $rows) {
+                if ($null -ne $item -and $item.PSObject.Properties['market']) {
+                    $result += $item
+                }
+            }
+            return $result
+        } catch {
+            Write-Warning "[trailing] state_store read failed, falling back to file: $_"
+            # fall through to legacy
+        }
+    }
+
+    # Legacy file path (default)
     if (-not (Test-Path $TRAILING_FILE)) { return @() }
     try {
         $json = Get-Content $TRAILING_FILE -Raw | ConvertFrom-Json
@@ -36,6 +80,35 @@ function Get-TrailingPositions {
 
 function Save-TrailingPositions {
     param([object[]]$Positions)
+
+    # state_store path (opt-in)
+    if ((_Test-TrailingUsesStateStore) -and (Get-Command Save-StateRecords -ErrorAction SilentlyContinue)) {
+        try {
+            # Anota pk_id em cada posicao para upsert correto
+            $augmented = @()
+            foreach ($p in $Positions) {
+                if ($null -eq $p) { continue }
+                if (-not $p.PSObject.Properties['market']) { continue }
+                $pkId = _Get-TrailingPkId -Position $p
+                # Force pk_id property (override se ja existir)
+                $copy = [PSCustomObject]@{}
+                foreach ($prop in $p.PSObject.Properties) {
+                    $copy | Add-Member -NotePropertyName $prop.Name -NotePropertyValue $prop.Value -Force
+                }
+                $copy | Add-Member -NotePropertyName "pk_id" -NotePropertyValue $pkId -Force
+                $augmented += $copy
+            }
+            if (@($augmented).Count -gt 0) {
+                Save-StateRecords -Table "trailing_positions" -Records $augmented -PrimaryKey "pk_id"
+            }
+            return
+        } catch {
+            Write-Warning "[trailing] state_store write failed, falling back to file: $_"
+            # fall through to legacy
+        }
+    }
+
+    # Legacy file path (default)
     $dir = Split-Path $TRAILING_FILE
     if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
     $Positions | ConvertTo-Json -Depth 5 | Set-Content $TRAILING_FILE -Encoding utf8
