@@ -317,8 +317,8 @@ function Update-TrailingStopsAdaptive {
                     try { Send-TelegramAlert -Message $msg | Out-Null } catch { }
                 }
                 $pos.active = $false
-                $pos.closedAt = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
-                $pos.closeReason = "stop_atingido"
+                $pos | Add-Member -NotePropertyName "closedAt" -NotePropertyValue (Get-Date -Format "yyyy-MM-dd HH:mm:ss") -Force
+                $pos | Add-Member -NotePropertyName "closeReason" -NotePropertyValue "stop_atingido" -Force
                 $updated = $true
                 return $pos
             }

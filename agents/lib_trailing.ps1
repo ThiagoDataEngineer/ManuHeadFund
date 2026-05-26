@@ -381,8 +381,8 @@ function Update-TrailingStops {
                 Write-Host "  [Trailing] MAX_DAYS $($pos.market) mode=$($pos.mode) - force close" -ForegroundColor DarkYellow
                 try { Send-TelegramAlert -Message $msg | Out-Null } catch {}
                 $pos.active     = $false
-                $pos.closedAt   = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
-                $pos.closeReason = "max_days_exceeded"
+                $pos | Add-Member -NotePropertyName "closedAt" -NotePropertyValue (Get-Date -Format "yyyy-MM-dd HH:mm:ss") -Force
+                $pos | Add-Member -NotePropertyName "closeReason" -NotePropertyValue "max_days_exceeded" -Force
                 $updated = $true
                 return $pos
             }
@@ -396,8 +396,8 @@ function Update-TrailingStops {
                 Write-Host "  [Trailing] STOP $($pos.market) fase=$($pos.phase) preco=$price" -ForegroundColor Red
                 Send-TelegramAlert -Message $msg | Out-Null
                 $pos.active     = $false
-                $pos.closedAt   = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
-                $pos.closeReason = "stop_atingido"
+                $pos | Add-Member -NotePropertyName "closedAt" -NotePropertyValue (Get-Date -Format "yyyy-MM-dd HH:mm:ss") -Force
+                $pos | Add-Member -NotePropertyName "closeReason" -NotePropertyValue "stop_atingido" -Force
                 $updated = $true
                 return $pos
             }
