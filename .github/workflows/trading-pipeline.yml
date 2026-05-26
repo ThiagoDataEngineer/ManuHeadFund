@@ -1,12 +1,12 @@
-# GitHub Actions - ManuHeadFund Trading Pipeline COMPLETO
-# Sistema 100% independente da máquina local
+﻿# GitHub Actions - ManuHeadFund Trading Pipeline COMPLETO
+# Sistema 100% independente da mÃ¡quina local
 # Roda na nuvem 24/7
 
 name: Trading Pipeline Complete
 
 on:
   schedule:
-    # A cada 5 minutos (crítico)
+    # A cada 5 minutos (crÃ­tico)
     - cron: '*/5 * * * *'
   
   workflow_dispatch:
@@ -16,7 +16,7 @@ env:
 
 jobs:
   # ============================================================================
-  # JOB 1: TRAILING STOP MONITOR (Crítico - a cada 5min)
+  # JOB 1: TRAILING STOP MONITOR (CrÃ­tico - a cada 5min)
   # ============================================================================
   trailing-stop-monitor:
     name: Trailing Stop Monitor
@@ -604,13 +604,53 @@ jobs:
           }
   
   # ============================================================================
-  # JOB 17-20: LAYERS REVIEW (state_store em Supabase)
+  # JOB 17-21: LAYERS REVIEW + CAPITAL SNAPSHOT (state_store em Supabase)
   # Usa lib_state_store + schema manuheadfund. Sem dependencia de journal/*.json.
   # Nao executa scan_master nem gem_loop (esses precisam de aprovacao manual TG).
   # ============================================================================
 
   # ----------------------------------------------------------------------------
-  # JOB 17: LAYER 1 — Adaptive Trailing (cada 5min)
+  # JOB 17: CAPITAL SNAPSHOT (cada 15min) - mantem manuheadfund.capital_context fresh
+  # ----------------------------------------------------------------------------
+  capital-snapshot:
+    name: Capital Snapshot (Supabase)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
+          $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
+          $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run Capital Snapshot (every 15min)
+        shell: pwsh
+        run: |
+          try {
+            $minute = (Get-Date).Minute
+            if ($minute % 15 -eq 0) {
+              Write-Host "=== CAPITAL SNAPSHOT ===" -ForegroundColor Cyan
+              & ./scripts/capital_snapshot_runner.ps1
+              Write-Host "OK" -ForegroundColor Green
+            } else {
+              Write-Host "Skipped (runs every 15min)" -ForegroundColor Yellow
+            }
+          } catch {
+            Write-Host "WARN: $_" -ForegroundColor Yellow
+          }
+
+  # ----------------------------------------------------------------------------
+  # JOB 18: LAYER 1 â€” Adaptive Trailing (cada 5min)
   # ----------------------------------------------------------------------------
   layer1-trailing-adaptive:
     name: Layer 1 - Adaptive Trailing
@@ -645,7 +685,7 @@ jobs:
           }
 
   # ----------------------------------------------------------------------------
-  # JOB 18: LAYER 2 — Mentor Reflection (cada 30min)
+  # JOB 19: LAYER 2 â€” Mentor Reflection (cada 30min)
   # ----------------------------------------------------------------------------
   layer2-mentor-review:
     name: Layer 2 - Mentor 6h Reflection
@@ -685,7 +725,7 @@ jobs:
           }
 
   # ----------------------------------------------------------------------------
-  # JOB 19: LAYER 4 — Tori + Time Stops (cada 5min)
+  # JOB 20: LAYER 4 â€” Tori + Time Stops (cada 5min)
   # ----------------------------------------------------------------------------
   layer4-tori-timestop:
     name: Layer 4 - Tori + TimeStop
@@ -720,7 +760,7 @@ jobs:
           }
 
   # ----------------------------------------------------------------------------
-  # JOB 20: LAYER 5 — Moon Bag Review (cada 5min)
+  # JOB 21: LAYER 5 â€” Moon Bag Review (cada 5min)
   # ----------------------------------------------------------------------------
   layer5-moonbag-review:
     name: Layer 5 - Moon Bag Review
@@ -792,7 +832,7 @@ jobs:
             $token = "${{ secrets.TELEGRAM_BOT_TOKEN }}"
             $chatId = "${{ secrets.TELEGRAM_CHAT_ID }}"
             
-            $msg = "🚨 GITHUB ACTIONS ALERT`n`n"
+            $msg = "ðŸš¨ GITHUB ACTIONS ALERT`n`n"
             $msg += "Trailing Stop: ${{ needs.trailing-stop-monitor.result }}`n"
             $msg += "Position Risk: ${{ needs.position-risk.result }}`n"
             $msg += "Dashboard: ${{ needs.dashboard.result }}`n"
@@ -809,3 +849,4 @@ jobs:
           } catch {
             Write-Host "Failed to send alert: $_" -ForegroundColor Red
           }
+
