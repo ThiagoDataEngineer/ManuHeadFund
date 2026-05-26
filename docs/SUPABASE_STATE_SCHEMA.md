@@ -1,36 +1,51 @@
-# Supabase State Store — Schema (prefixo `mhf_` para isolar)
+# Supabase State Store — Schema `manuheadfund` (isolamento total)
 
-**Status:** Ready to apply (Fase 1 TDD complete, 14/14 PASS).
+**Status:** Ready to apply (Etapa 1 TDD complete: 23/23 PASS).
 
-## ⚠️ Por que prefixo `mhf_`
+## Estratégia de isolamento
 
-O projeto Supabase compartilha tabelas com outros apps:
-- ✅ Suas (ManuHeadFund): `backtest_*`, `candles`, `agent_events`
-- ❌ De outros apps: `payments`, `shares`, `pro_access`, `lnurl_*`, `pro_codes`, etc.
+Todas as tabelas do ManuHeadFund vivem dentro do schema dedicado `manuheadfund`,
+**fora** do schema `public` onde estão as tabelas dos seus outros apps.
 
-Para evitar qualquer chance de conflito ou colisão de nomes futura, **TODAS** as tabelas
-novas usam prefixo `mhf_` (ManuHeadFund).
+| Schema | Conteúdo | Quem mexe |
+|---|---|---|
+| `public` | `payments`, `shares`, `pro_access`, `lnurl_*`, `events`, `api_registry`, etc. | **Outros apps** |
+| `manuheadfund` | Tudo do ManuHeadFund (existentes migradas + novas) | **Apenas este projeto** |
+
+Isso significa que mesmo com `service_role` key, é impossível um bug no nosso código
+tocar acidentalmente em `payments` (schema diferente, queries direcionadas).
 
 ---
 
-## Como aplicar
+## Aplicação em 2 passos
 
-1. Abra https://urcqtpklpfyvizcgcsia.supabase.co/project/_/sql
-2. Cole **TODO** o bloco SQL abaixo
-3. Run (vai criar 6 tabelas com prefixo `mhf_` + RLS policies)
-4. Volte aqui e roda smoke: `powershell.exe -File scripts/smoke_supabase_state.ps1`
-5. Se passar tudo: ativar flag `journal/USE_SUPABASE_STATE.flag`
+**Passo 1**: Rodar SQL abaixo no SQL Editor (cria schema + 6 tabelas novas + RLS).
 
-## SQL (copiar inteiro)
+**Passo 2** (manual — não tem API): Habilitar o schema na API REST do Supabase:
+1. Acesse: https://urcqtpklpfyvizcgcsia.supabase.co/project/_/settings/api
+2. Procure **"Exposed schemas"**
+3. Adicione `manuheadfund` na lista (provavelmente já tem `public` lá)
+4. Clique **Save**
+
+> Sem o Passo 2, o PostgREST **não expõe** o schema novo via REST e nosso código falha
+> com erro `42P01: relation "manuheadfund.trailing_positions" does not exist`.
+
+---
+
+## Etapa 1 — Schema + 6 tabelas novas (NÃO mexe nas existentes)
 
 ```sql
 -- ============================================================================
--- ManuHeadFund State Store — 6 tabelas com prefixo mhf_ (isolamento)
+-- ManuHeadFund Etapa 1: schema dedicado + 6 tabelas novas
 -- Apply once via Supabase SQL Editor
 -- ============================================================================
 
+CREATE SCHEMA IF NOT EXISTS manuheadfund;
+GRANT USAGE ON SCHEMA manuheadfund TO anon, authenticated, service_role;
+ALTER DEFAULT PRIVILEGES IN SCHEMA manuheadfund GRANT ALL ON TABLES TO anon, authenticated, service_role;
+
 -- 1. Tabela smoke (apaga depois se quiser)
-CREATE TABLE IF NOT EXISTS mhf_state_smoke (
+CREATE TABLE IF NOT EXISTS manuheadfund.state_smoke (
     market   TEXT PRIMARY KEY,
     side     TEXT,
     entry    NUMERIC,
@@ -39,10 +54,9 @@ CREATE TABLE IF NOT EXISTS mhf_state_smoke (
     snapshot TEXT
 );
 
--- 2. mhf_trailing_positions: estado das posições trailing/Moon Bag
--- pk_id permite múltiplas legs por market (Moon Bag tem harvest+moon)
-CREATE TABLE IF NOT EXISTS mhf_trailing_positions (
-    pk_id            TEXT PRIMARY KEY,        -- "{market}" ou "{market}:{moonBagKind}"
+-- 2. trailing_positions: estado das posições trailing/Moon Bag
+CREATE TABLE IF NOT EXISTS manuheadfund.trailing_positions (
+    pk_id            TEXT PRIMARY KEY,
     market           TEXT NOT NULL,
     side             TEXT NOT NULL,
     entry            NUMERIC NOT NULL,
@@ -62,7 +76,7 @@ CREATE TABLE IF NOT EXISTS mhf_trailing_positions (
     "updatedAt"      TEXT,
     "currentPrice"   NUMERIC,
     "moonBagPairId"  TEXT,
-    "moonBagKind"    TEXT,                    -- 'harvest' | 'moon' | NULL (legacy)
+    "moonBagKind"    TEXT,
     "layer4Advisory" TEXT,
     "layer4AdvisoryReason" TEXT,
     "lastLayer4Review"     TEXT,
@@ -72,11 +86,11 @@ CREATE TABLE IF NOT EXISTS mhf_trailing_positions (
     "lastMentorReview"     TEXT,
     "entryRegime"          TEXT
 );
-CREATE INDEX IF NOT EXISTS idx_mhf_trailing_market ON mhf_trailing_positions (market);
-CREATE INDEX IF NOT EXISTS idx_mhf_trailing_active ON mhf_trailing_positions (active) WHERE active = TRUE;
+CREATE INDEX IF NOT EXISTS idx_trailing_market ON manuheadfund.trailing_positions (market);
+CREATE INDEX IF NOT EXISTS idx_trailing_active ON manuheadfund.trailing_positions (active) WHERE active = TRUE;
 
--- 3. mhf_capital_context: snapshot atual do capital (1 row)
-CREATE TABLE IF NOT EXISTS mhf_capital_context (
+-- 3. capital_context: snapshot atual do capital (1 row)
+CREATE TABLE IF NOT EXISTS manuheadfund.capital_context (
     id          INTEGER PRIMARY KEY DEFAULT 1,
     spot        NUMERIC NOT NULL,
     futures     NUMERIC NOT NULL,
@@ -85,18 +99,18 @@ CREATE TABLE IF NOT EXISTS mhf_capital_context (
     source      TEXT NOT NULL
 );
 
--- 4. mhf_validation_snapshots: append-only log de cada ciclo
-CREATE TABLE IF NOT EXISTS mhf_validation_snapshots (
+-- 4. validation_snapshots: append-only log de cada ciclo do scan_master
+CREATE TABLE IF NOT EXISTS manuheadfund.validation_snapshots (
     id           BIGSERIAL PRIMARY KEY,
     snapshot_ts  TEXT NOT NULL,
     cycle        INTEGER,
     positions_n  INTEGER,
     payload      JSONB
 );
-CREATE INDEX IF NOT EXISTS idx_mhf_validation_ts ON mhf_validation_snapshots (snapshot_ts DESC);
+CREATE INDEX IF NOT EXISTS idx_validation_ts ON manuheadfund.validation_snapshots (snapshot_ts DESC);
 
--- 5. mhf_mentor_reviews: log de Layer 2 6h checkpoint reviews
-CREATE TABLE IF NOT EXISTS mhf_mentor_reviews (
+-- 5. mentor_reviews: log de Layer 2 6h checkpoint reviews
+CREATE TABLE IF NOT EXISTS manuheadfund.mentor_reviews (
     id           BIGSERIAL PRIMARY KEY,
     market       TEXT NOT NULL,
     review_ts    TEXT NOT NULL,
@@ -106,10 +120,10 @@ CREATE TABLE IF NOT EXISTS mhf_mentor_reviews (
     new_stop     NUMERIC,
     payload      JSONB
 );
-CREATE INDEX IF NOT EXISTS idx_mhf_mentor_market_ts ON mhf_mentor_reviews (market, review_ts DESC);
+CREATE INDEX IF NOT EXISTS idx_mentor_market_ts ON manuheadfund.mentor_reviews (market, review_ts DESC);
 
--- 6. mhf_trade_outcomes: trades fechados (necessário pra Kelly Layer 3)
-CREATE TABLE IF NOT EXISTS mhf_trade_outcomes (
+-- 6. trade_outcomes: trades fechados (Kelly Layer 3)
+CREATE TABLE IF NOT EXISTS manuheadfund.trade_outcomes (
     id            BIGSERIAL PRIMARY KEY,
     market        TEXT NOT NULL,
     side          TEXT NOT NULL,
@@ -125,80 +139,93 @@ CREATE TABLE IF NOT EXISTS mhf_trade_outcomes (
     mode          TEXT,
     payload       JSONB
 );
-CREATE INDEX IF NOT EXISTS idx_mhf_outcomes_closed ON mhf_trade_outcomes (closed_at DESC);
-CREATE INDEX IF NOT EXISTS idx_mhf_outcomes_market ON mhf_trade_outcomes (market);
+CREATE INDEX IF NOT EXISTS idx_outcomes_closed ON manuheadfund.trade_outcomes (closed_at DESC);
+CREATE INDEX IF NOT EXISTS idx_outcomes_market ON manuheadfund.trade_outcomes (market);
 
 -- ============================================================================
--- Row Level Security (RLS): tudo permitido para anon + service_role
--- (mesmo padrão das outras tabelas suas; ajustar depois se quiser restringir)
+-- RLS: tudo permitido para anon + service_role
 -- ============================================================================
 
-ALTER TABLE mhf_state_smoke           ENABLE ROW LEVEL SECURITY;
-ALTER TABLE mhf_trailing_positions    ENABLE ROW LEVEL SECURITY;
-ALTER TABLE mhf_capital_context       ENABLE ROW LEVEL SECURITY;
-ALTER TABLE mhf_validation_snapshots  ENABLE ROW LEVEL SECURITY;
-ALTER TABLE mhf_mentor_reviews        ENABLE ROW LEVEL SECURITY;
-ALTER TABLE mhf_trade_outcomes        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE manuheadfund.state_smoke           ENABLE ROW LEVEL SECURITY;
+ALTER TABLE manuheadfund.trailing_positions    ENABLE ROW LEVEL SECURITY;
+ALTER TABLE manuheadfund.capital_context       ENABLE ROW LEVEL SECURITY;
+ALTER TABLE manuheadfund.validation_snapshots  ENABLE ROW LEVEL SECURITY;
+ALTER TABLE manuheadfund.mentor_reviews        ENABLE ROW LEVEL SECURITY;
+ALTER TABLE manuheadfund.trade_outcomes        ENABLE ROW LEVEL SECURITY;
 
--- Drop existing policies (idempotente: posso rodar SQL de novo sem erro)
-DROP POLICY IF EXISTS anon_all       ON mhf_state_smoke;
-DROP POLICY IF EXISTS anon_all       ON mhf_trailing_positions;
-DROP POLICY IF EXISTS anon_all       ON mhf_capital_context;
-DROP POLICY IF EXISTS anon_all       ON mhf_validation_snapshots;
-DROP POLICY IF EXISTS anon_all       ON mhf_mentor_reviews;
-DROP POLICY IF EXISTS anon_all       ON mhf_trade_outcomes;
-DROP POLICY IF EXISTS service_all    ON mhf_state_smoke;
-DROP POLICY IF EXISTS service_all    ON mhf_trailing_positions;
-DROP POLICY IF EXISTS service_all    ON mhf_capital_context;
-DROP POLICY IF EXISTS service_all    ON mhf_validation_snapshots;
-DROP POLICY IF EXISTS service_all    ON mhf_mentor_reviews;
-DROP POLICY IF EXISTS service_all    ON mhf_trade_outcomes;
+DROP POLICY IF EXISTS anon_all    ON manuheadfund.state_smoke;
+DROP POLICY IF EXISTS anon_all    ON manuheadfund.trailing_positions;
+DROP POLICY IF EXISTS anon_all    ON manuheadfund.capital_context;
+DROP POLICY IF EXISTS anon_all    ON manuheadfund.validation_snapshots;
+DROP POLICY IF EXISTS anon_all    ON manuheadfund.mentor_reviews;
+DROP POLICY IF EXISTS anon_all    ON manuheadfund.trade_outcomes;
+DROP POLICY IF EXISTS service_all ON manuheadfund.state_smoke;
+DROP POLICY IF EXISTS service_all ON manuheadfund.trailing_positions;
+DROP POLICY IF EXISTS service_all ON manuheadfund.capital_context;
+DROP POLICY IF EXISTS service_all ON manuheadfund.validation_snapshots;
+DROP POLICY IF EXISTS service_all ON manuheadfund.mentor_reviews;
+DROP POLICY IF EXISTS service_all ON manuheadfund.trade_outcomes;
 
-CREATE POLICY anon_all ON mhf_state_smoke           FOR ALL TO anon USING (true) WITH CHECK (true);
-CREATE POLICY anon_all ON mhf_trailing_positions    FOR ALL TO anon USING (true) WITH CHECK (true);
-CREATE POLICY anon_all ON mhf_capital_context       FOR ALL TO anon USING (true) WITH CHECK (true);
-CREATE POLICY anon_all ON mhf_validation_snapshots  FOR ALL TO anon USING (true) WITH CHECK (true);
-CREATE POLICY anon_all ON mhf_mentor_reviews        FOR ALL TO anon USING (true) WITH CHECK (true);
-CREATE POLICY anon_all ON mhf_trade_outcomes        FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE POLICY anon_all ON manuheadfund.state_smoke           FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE POLICY anon_all ON manuheadfund.trailing_positions    FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE POLICY anon_all ON manuheadfund.capital_context       FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE POLICY anon_all ON manuheadfund.validation_snapshots  FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE POLICY anon_all ON manuheadfund.mentor_reviews        FOR ALL TO anon USING (true) WITH CHECK (true);
+CREATE POLICY anon_all ON manuheadfund.trade_outcomes        FOR ALL TO anon USING (true) WITH CHECK (true);
 
-CREATE POLICY service_all ON mhf_state_smoke           FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY service_all ON mhf_trailing_positions    FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY service_all ON mhf_capital_context       FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY service_all ON mhf_validation_snapshots  FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY service_all ON mhf_mentor_reviews        FOR ALL TO service_role USING (true) WITH CHECK (true);
-CREATE POLICY service_all ON mhf_trade_outcomes        FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY service_all ON manuheadfund.state_smoke           FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY service_all ON manuheadfund.trailing_positions    FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY service_all ON manuheadfund.capital_context       FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY service_all ON manuheadfund.validation_snapshots  FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY service_all ON manuheadfund.mentor_reviews        FOR ALL TO service_role USING (true) WITH CHECK (true);
+CREATE POLICY service_all ON manuheadfund.trade_outcomes        FOR ALL TO service_role USING (true) WITH CHECK (true);
 ```
 
 ---
 
-## Convenção de nomes (importante)
+## Etapa 2 — Migrar 4 tabelas existentes (DEPOIS da Etapa 1 validada)
 
-| Tabela criada | Conteúdo |
-|---|---|
-| `mhf_trailing_positions` | Estado das posições trailing + Moon Bag |
-| `mhf_capital_context` | Snapshot atual de capital (spot + futures + total) |
-| `mhf_validation_snapshots` | Log append-only de cada ciclo do scan_master |
-| `mhf_mentor_reviews` | Layer 2: 6h checkpoint reviews |
-| `mhf_trade_outcomes` | Trades fechados (Kelly Layer 3) |
-| `mhf_state_smoke` | Tabela de teste (pode dropar depois) |
+**⚠️ NÃO RODAR AGORA.** Só rodar quando Etapa 1 estiver 100% funcional.
 
-## Tabelas existentes que NÃO vamos tocar
+Mover tabelas grandes (`candles` tem 282k rows, `backtest_signals`/`backtest_trades`
+têm 26k cada) para o schema `manuheadfund`. `ALTER TABLE SET SCHEMA` é atomic e
+instantâneo (não copia dados, só renomeia metadado).
 
-**Suas (ManuHeadFund original):**
-- `backtest_runs`, `backtest_signals`, `backtest_trades`, `candles`, `agent_events`, `api_registry`, `events`, `idem_store`, `trials`
+```sql
+-- ============================================================================
+-- Etapa 2: migrar tabelas existentes ManuHeadFund para schema dedicado
+-- ROLLBACK: ALTER TABLE manuheadfund.candles SET SCHEMA public;
+-- ============================================================================
 
-**De outros apps (não tocar):**
-- `payments`, `shares`, `pending_splits`, `lnurl_challenges`, `preimage_claims`
-- `pro_access`, `promo_codes`, `waitlist`
+ALTER TABLE public.candles           SET SCHEMA manuheadfund;
+ALTER TABLE public.backtest_runs     SET SCHEMA manuheadfund;
+ALTER TABLE public.backtest_signals  SET SCHEMA manuheadfund;
+ALTER TABLE public.backtest_trades   SET SCHEMA manuheadfund;
+```
+
+**Após esta operação**:
+- `backtest/db.py` precisa receber update para passar `Accept-Profile: manuheadfund`
+- Mesma coisa para qualquer caller de `agent_events` se você descobrir que é nosso
 
 ---
 
-## O que vem depois
+## Plano completo (4 etapas)
 
-Quando o smoke passar:
+```
+Etapa 1 — SQL atual + Settings UI   →  Schema criado + tabelas novas + REST exposto
+Etapa 2 — Smoke validation real      →  Roda smoke_supabase_state.ps1
+Etapa 3 — Migrate JSON → Supabase    →  Posicoes atuais migradas
+Etapa 4 — Refactor 3 libs + 4 jobs   →  Layers 1-5 24/7 GitHub Actions
+Etapa 5 — Migrar candles/backtest    →  ALTER TABLE SET SCHEMA + db.py update
+```
 
-1. **Migrar dados existentes**: `migrate_state_to_supabase.ps1` lê `journal/*.json` atual e escreve em `mhf_*`. Mantém JSON local intocado.
-2. **Refactor libs** (`lib_trailing.ps1`, `lib_moon_bag.ps1`, `lib_capital_context.ps1`).
-3. **Ativar flag**: `New-Item journal/USE_SUPABASE_STATE.flag`
-4. **Adicionar 4 jobs no GitHub Actions** (Layers 1, 2, 4, 5)
-5. **24h paper validation**
+---
+
+## Tabelas que continuam fora (outros apps)
+
+`payments`, `shares`, `pending_splits`, `lnurl_challenges`, `preimage_claims`,
+`pro_access`, `promo_codes`, `waitlist`, `events`, `api_registry`, `agent_events`,
+`idem_store`, `trials`.
+
+Estas pertencem aos seus outros apps (sistema de trials/pagamentos/Lightning) —
+ficam intocadas no schema `public`.

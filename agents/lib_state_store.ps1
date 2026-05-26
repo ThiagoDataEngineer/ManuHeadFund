@@ -58,6 +58,81 @@ function Test-StateBackend {
 }
 
 # ─────────────────────────────────────────────────────────────────────
+# Schema selection (public default; manuheadfund for isolated tables)
+# ─────────────────────────────────────────────────────────────────────
+
+function Get-StateStoreSchema {
+    <#
+    .SYNOPSIS
+    Returns the active Postgres schema for Supabase requests.
+
+    Priority:
+      1. $global:STATE_STORE_SCHEMA (test override)
+      2. $env:STATE_STORE_SCHEMA
+      3. "public" (default)
+    #>
+    [CmdletBinding()]
+    [OutputType([string])]
+    param()
+
+    if ($global:STATE_STORE_SCHEMA) {
+        return [string]$global:STATE_STORE_SCHEMA
+    }
+    if ($env:STATE_STORE_SCHEMA) {
+        return [string]$env:STATE_STORE_SCHEMA
+    }
+    return "public"
+}
+
+function Get-SupabaseRequestHeaders {
+    <#
+    .SYNOPSIS
+    Build Supabase REST headers including schema-aware profile headers.
+
+    .PARAMETER Method
+    HTTP method: GET, POST, PATCH, DELETE
+    GET/HEAD use Accept-Profile; POST/PATCH/PUT/DELETE use Content-Profile.
+
+    .OUTPUTS
+    @{ url=<base>; headers=<hashtable> }
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [ValidateSet("GET","POST","PATCH","PUT","DELETE","HEAD")]
+        [string]$Method
+    )
+
+    $url = $env:SUPABASE_URL
+    $key = if ($env:SUPABASE_SERVICE_KEY) { $env:SUPABASE_SERVICE_KEY } else { $env:SUPABASE_ANON_KEY }
+    if (-not $url -or -not $key) {
+        throw "Supabase backend requires SUPABASE_URL + SUPABASE_(SERVICE|ANON)_KEY env vars"
+    }
+
+    $headers = @{
+        "apikey"        = $key
+        "Authorization" = "Bearer $key"
+        "Content-Type"  = "application/json"
+    }
+
+    # Schema-aware profile headers (only when not public)
+    $schema = Get-StateStoreSchema
+    if ($schema -and $schema -ne "public") {
+        if ($Method -in @("GET", "HEAD")) {
+            $headers["Accept-Profile"] = $schema
+        } else {
+            # POST, PATCH, PUT, DELETE
+            $headers["Content-Profile"] = $schema
+        }
+    }
+
+    return @{
+        url     = $url.TrimEnd("/")
+        headers = $headers
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────
 # Local backend (legacy back-compat: JSON file per table)
 # ─────────────────────────────────────────────────────────────────────
 
@@ -185,33 +260,16 @@ function _Local-Remove {
 }
 
 # ─────────────────────────────────────────────────────────────────────
-# Supabase backend (REST PostgREST)
+# Supabase backend (REST PostgREST + schema-aware via Accept/Content-Profile)
 # ─────────────────────────────────────────────────────────────────────
-
-function _Supabase-Headers {
-    $url = $env:SUPABASE_URL
-    $key = if ($env:SUPABASE_SERVICE_KEY) { $env:SUPABASE_SERVICE_KEY } else { $env:SUPABASE_ANON_KEY }
-    if (-not $url -or -not $key) {
-        throw "Supabase backend requires SUPABASE_URL + SUPABASE_(SERVICE|ANON)_KEY env vars"
-    }
-    return @{
-        url = $url.TrimEnd("/")
-        headers = @{
-            "apikey"        = $key
-            "Authorization" = "Bearer $key"
-            "Content-Type"  = "application/json"
-        }
-    }
-}
 
 function _Supabase-Get {
     param([string]$Table, [hashtable]$Filter)
-    $cfg = _Supabase-Headers
+    $cfg = Get-SupabaseRequestHeaders -Method "GET"
     $params = "select=*"
     if ($Filter -and $Filter.Count -gt 0) {
         foreach ($k in $Filter.Keys) {
             $v = $Filter[$k]
-            # PostgREST eq operator
             $params += "&${k}=eq.$v"
         }
     }
@@ -228,7 +286,7 @@ function _Supabase-Get {
 function _Supabase-Save {
     param([string]$Table, [object[]]$Records, [string]$PrimaryKey)
     if ($null -eq $Records -or @($Records).Count -eq 0) { return }
-    $cfg = _Supabase-Headers
+    $cfg = Get-SupabaseRequestHeaders -Method "POST"
     $headers = @{} + $cfg.headers
     $headers["Prefer"] = "return=representation,resolution=merge-duplicates"
 
@@ -263,7 +321,7 @@ function _Supabase-Save {
 
 function _Supabase-Remove {
     param([string]$Table, [string]$PrimaryKey, [string]$Value)
-    $cfg = _Supabase-Headers
+    $cfg = Get-SupabaseRequestHeaders -Method "DELETE"
     $url = "$($cfg.url)/rest/v1/${Table}?${PrimaryKey}=eq.${Value}"
     try {
         Invoke-RestMethod -Uri $url -Method DELETE -Headers $cfg.headers -TimeoutSec 30 | Out-Null
@@ -321,6 +379,8 @@ function Remove-StateRecord {
 
 # Functions exported:
 # - Test-StateBackend
+# - Get-StateStoreSchema
+# - Get-SupabaseRequestHeaders
 # - Get-StateRecords
 # - Save-StateRecords
 # - Remove-StateRecord

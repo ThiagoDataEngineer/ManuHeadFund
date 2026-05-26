@@ -14,12 +14,14 @@ $agentsDir = Join-Path $root "agents"
 . (Join-Path $agentsDir "config.local.ps1")
 . (Join-Path $agentsDir "lib_state_store.ps1")
 
-Write-Host "=== Supabase State Store Smoke Test ===" -ForegroundColor Cyan
+Write-Host "=== Supabase State Store Smoke Test (schema=manuheadfund) ===" -ForegroundColor Cyan
 Write-Host ""
 
-# Force supabase backend for this smoke
+# Force supabase backend + manuheadfund schema for this smoke
 $global:STATE_STORE_BACKEND = "supabase"
+$global:STATE_STORE_SCHEMA  = "manuheadfund"
 Write-Host "Backend: $(Test-StateBackend)" -ForegroundColor Yellow
+Write-Host "Schema:  $(Get-StateStoreSchema)" -ForegroundColor Yellow
 Write-Host "URL: $env:SUPABASE_URL" -ForegroundColor DarkGray
 Write-Host ""
 
@@ -34,11 +36,11 @@ $testRecord = [PSCustomObject]@{
 
 try {
     Write-Host "[1/4] Save record..." -ForegroundColor Cyan
-    Save-StateRecords -Table "mhf_state_smoke" -Records @($testRecord) -PrimaryKey "market"
+    Save-StateRecords -Table "state_smoke" -Records @($testRecord) -PrimaryKey "market"
     Write-Host "      OK" -ForegroundColor Green
 
     Write-Host "[2/4] Get records back..." -ForegroundColor Cyan
-    $rows = @(Get-StateRecords -Table "mhf_state_smoke" -Filter @{ market = $testRecord.market })
+    $rows = @(Get-StateRecords -Table "state_smoke" -Filter @{ market = $testRecord.market })
     Write-Host "      Found: $($rows.Count) rows" -ForegroundColor Green
     if ($rows.Count -gt 0) {
         Write-Host "      Sample: market=$($rows[0].market) entry=$($rows[0].entry)" -ForegroundColor DarkGray
@@ -46,8 +48,8 @@ try {
 
     Write-Host "[3/4] Update record (upsert with same PK)..." -ForegroundColor Cyan
     $testRecord.entry = 200.0
-    Save-StateRecords -Table "mhf_state_smoke" -Records @($testRecord) -PrimaryKey "market"
-    $rows2 = @(Get-StateRecords -Table "mhf_state_smoke" -Filter @{ market = $testRecord.market })
+    Save-StateRecords -Table "state_smoke" -Records @($testRecord) -PrimaryKey "market"
+    $rows2 = @(Get-StateRecords -Table "state_smoke" -Filter @{ market = $testRecord.market })
     if ($rows2[0].entry -eq 200.0) {
         Write-Host "      OK (entry updated to 200)" -ForegroundColor Green
     } else {
@@ -55,8 +57,8 @@ try {
     }
 
     Write-Host "[4/4] Cleanup..." -ForegroundColor Cyan
-    Remove-StateRecord -Table "mhf_state_smoke" -PrimaryKey "market" -Value $testRecord.market
-    $rowsFinal = @(Get-StateRecords -Table "mhf_state_smoke" -Filter @{ market = $testRecord.market })
+    Remove-StateRecord -Table "state_smoke" -PrimaryKey "market" -Value $testRecord.market
+    $rowsFinal = @(Get-StateRecords -Table "state_smoke" -Filter @{ market = $testRecord.market })
     Write-Host "      Remaining: $($rowsFinal.Count) rows" -ForegroundColor Green
 
     Write-Host ""
@@ -67,7 +69,10 @@ catch {
     Write-Host "=== FAILED ===" -ForegroundColor Red
     Write-Host $_ -ForegroundColor Red
     Write-Host ""
-    Write-Host "Hint: tabela mhf_state_smoke pode nao existir." -ForegroundColor Yellow
-    Write-Host "Aplique o SQL completo de docs/SUPABASE_STATE_SCHEMA.md no Supabase SQL Editor." -ForegroundColor Yellow
+    Write-Host "Hint: schema 'manuheadfund' ou tabela 'state_smoke' nao acessivel via REST." -ForegroundColor Yellow
+    Write-Host "Checklist:" -ForegroundColor Yellow
+    Write-Host "  1. SQL aplicado? (docs/SUPABASE_STATE_SCHEMA.md - Etapa 1)" -ForegroundColor DarkGray
+    Write-Host "  2. Schema 'manuheadfund' adicionado em Settings -> API -> Exposed schemas?" -ForegroundColor DarkGray
+    Write-Host "     Link: https://urcqtpklpfyvizcgcsia.supabase.co/project/_/settings/api" -ForegroundColor DarkGray
     exit 1
 }
