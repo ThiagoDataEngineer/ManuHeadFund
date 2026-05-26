@@ -633,18 +633,13 @@ jobs:
           $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
           $content | Out-File "agents/config.local.ps1" -Encoding UTF8
 
-      - name: Run Capital Snapshot (every 15min)
+      - name: Run Capital Snapshot (every cycle)
         shell: pwsh
         run: |
           try {
-            $minute = (Get-Date).Minute
-            if ($minute % 15 -eq 0) {
-              Write-Host "=== CAPITAL SNAPSHOT ===" -ForegroundColor Cyan
-              & ./scripts/capital_snapshot_runner.ps1
-              Write-Host "OK" -ForegroundColor Green
-            } else {
-              Write-Host "Skipped (runs every 15min)" -ForegroundColor Yellow
-            }
+            Write-Host "=== CAPITAL SNAPSHOT ===" -ForegroundColor Cyan
+            & ./scripts/capital_snapshot_runner.ps1
+            Write-Host "OK" -ForegroundColor Green
           } catch {
             Write-Host "WARN: $_" -ForegroundColor Yellow
           }
