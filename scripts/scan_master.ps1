@@ -76,6 +76,7 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 . (Join-Path $agentsDir "lib_mentor_reflection.ps1")  # Layer 2 TDD: 6h checkpoint reviews + early warnings
 . (Join-Path $agentsDir "lib_layer4_tori_timestop.ps1")  # Layer 4 TDD: Tori proximity + time-based stops
 . (Join-Path $agentsDir "lib_moon_bag.ps1")  # Layer 5 TDD: Moon Bag (50/50 harvest + upside)
+. (Join-Path $agentsDir "lib_position_register.ps1")  # Layer 5 wire: wrapper opt-in via MOON_BAG_ENABLED.flag
 . (Join-Path $agentsDir "lib_validation_logger.ps1")  # 2026-05-25: Validação Opção 2 (até 1ª pos fechar)
 . (Join-Path $agentsDir "lib_trade_logger.ps1")
 # Universe Sweep + Hit-Rate -- ZERO API extra; reusa cache da chamada CoinEx
@@ -496,7 +497,11 @@ function Invoke-GemCycle {
                             } else {
                                 Write-MasterLog "GEM EXECUTADA: $($g.market) ordem=$($execResult.order_id)" "GEM"
                                 Send-TelegramAlert -Message (Format-TgGemExecuted -ExecResult $execResult -Gem $g) | Out-Null
-                                Add-TrailingPosition -Market $g.market -Side "LONG" -Entry $execResult.price -Stop $execResult.stop -Target $execResult.target -OrderId $execResult.order_id -Source "gem"
+                                # Layer 5 wire (opt-in via journal/MOON_BAG_ENABLED.flag)
+                                # Quando flag OFF: trailing classico (back-compat).
+                                # Quando flag ON e Size>0: Moon Bag split harvest+moon.
+                                $gemSize = if ($execResult.sizing_usd) { [double]$execResult.sizing_usd } else { 0 }
+                                Register-PositionTrailing -Market $g.market -Side "LONG" -Entry $execResult.price -Stop $execResult.stop -Target $execResult.target -OrderId $execResult.order_id -Source "gem" -Size $gemSize
                                 # Auto-approve audit log (se foi auto)
                                 if ($autoApprove -and (Get-Command Add-GemAutoApproveLog -ErrorAction SilentlyContinue)) {
                                     try { Add-GemAutoApproveLog -Gem $gemForAuto -ApprovalResult $autoApprovalResult -OrderId $execResult.order_id } catch {}
@@ -943,14 +948,26 @@ function Invoke-MasterCycle {
                     Write-MasterLog $payload "TRADE"
                     $orchResults += $result
                     if ($result.decisao -eq "EXECUTAR" -and $result.ordemId) {
-                        Add-TrailingPosition `
+                        # Layer 5 wire (opt-in via journal/MOON_BAG_ENABLED.flag)
+                        # Orchestrator nao retorna sizing_usd direto - inferimos
+                        # de capital * sizing_pct se disponivel, senao usa 0
+                        # (fallback trailing classico).
+                        $orchSize = 0.0
+                        if ($result.PSObject.Properties['sizing_usd'] -and $result.sizing_usd) {
+                            $orchSize = [double]$result.sizing_usd
+                        } elseif ($result.capital -and $result.capital -gt 0) {
+                            # 1% default sizing, conservador pra Moon Bag opt-in
+                            $orchSize = [double]$result.capital * 0.01
+                        }
+                        Register-PositionTrailing `
                             -Market  $result.market `
                             -Side    $result.sinalTech `
                             -Entry   $result.entryPrice `
                             -Stop    $result.stopLoss `
                             -Target  $result.alvo1 `
                             -OrderId $result.ordemId `
-                            -Source  "orchestrator"
+                            -Source  "orchestrator" `
+                            -Size    $orchSize
                     }
                 } catch {
                     $errMsg = "$_"

@@ -78,18 +78,35 @@ function Get-CapitalContext {
         } catch {}
     }
 
-    # Fresh fetch via CoinEx (se lib disponivel)
+    # Fresh fetch via CoinEx (se libs disponiveis)
+    # Bug fix 2026-05-25: CoinEx-GetTotalCapitalUSDT retorna escalar (soma), nao
+    # objeto. Chamamos os 2 fetchers individuais que populam $global:CAPITAL_SPOT
+    # e $global:CAPITAL_FUTURES como side effect.
     $spot = 0.0; $futures = 0.0
     $source = "fallback"
-    if (Get-Command CoinEx-GetTotalCapitalUSDT -ErrorAction SilentlyContinue) {
-        try {
-            $r = CoinEx-GetTotalCapitalUSDT
-            if ($r -and $r.spot -ne $null) {
-                $spot = [double]$r.spot
-                $futures = [double]$r.futures
-                $source = "fresh"
-            }
-        } catch {}
+
+    $hasSpot = Get-Command CoinEx-GetSpotCapitalUSDT -ErrorAction SilentlyContinue
+    $hasFut  = Get-Command CoinEx-GetFuturesCapitalUSDT -ErrorAction SilentlyContinue
+
+    if ($hasSpot -or $hasFut) {
+        $okSpot = $false; $okFut = $false
+        if ($hasSpot) {
+            try {
+                $sVal = [double](CoinEx-GetSpotCapitalUSDT)
+                if ($sVal -ge 0) { $spot = $sVal; $okSpot = $true }
+            } catch {}
+        }
+        if ($hasFut) {
+            try {
+                $fVal = [double](CoinEx-GetFuturesCapitalUSDT)
+                if ($fVal -ge 0) { $futures = $fVal; $okFut = $true }
+            } catch {}
+        }
+        # source = fresh apenas se ao menos uma chamada deu certo E o resultado
+        # nao e exclusivamente o fallback global (i.e., total real > 0)
+        if (($okSpot -or $okFut) -and ($spot + $futures) -gt 0) {
+            $source = "fresh"
+        }
     }
     # Fallback global vars (set by orchestrator on successful fetches)
     if ($source -eq "fallback") {
