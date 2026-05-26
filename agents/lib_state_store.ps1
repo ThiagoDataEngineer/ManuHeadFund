@@ -293,16 +293,32 @@ function _Supabase-Save {
     $url = "$($cfg.url)/rest/v1/${Table}"
     if ($PrimaryKey) { $url += "?on_conflict=${PrimaryKey}" }
 
-    # Convert PSCustomObjects to plain hashtables for JSON
+    # PostgREST exige keys uniformes em batch (PGRST102 "All object keys must match").
+    # Normalizar: colhe union de todas as keys, preenche null nas faltantes.
+    $allKeys = New-Object System.Collections.Generic.HashSet[string]
+    foreach ($r in $Records) {
+        if ($null -eq $r) { continue }
+        if ($r -is [hashtable]) {
+            foreach ($k in $r.Keys) { [void]$allKeys.Add([string]$k) }
+        } else {
+            foreach ($p in $r.PSObject.Properties) { [void]$allKeys.Add([string]$p.Name) }
+        }
+    }
+
+    # Convert PSCustomObjects to plain hashtables com todas as keys
     $payload = @()
     foreach ($r in $Records) {
-        if ($r -is [hashtable]) {
-            $payload += $r
-        } else {
-            $h = @{}
-            foreach ($p in $r.PSObject.Properties) { $h[$p.Name] = $p.Value }
-            $payload += $h
+        $h = @{}
+        foreach ($k in $allKeys) {
+            $val = $null
+            if ($r -is [hashtable]) {
+                if ($r.ContainsKey($k)) { $val = $r[$k] }
+            } else {
+                if ($r.PSObject.Properties[$k]) { $val = $r.$k }
+            }
+            $h[$k] = $val
         }
+        $payload += $h
     }
 
     $body = $payload | ConvertTo-Json -Depth 8 -Compress

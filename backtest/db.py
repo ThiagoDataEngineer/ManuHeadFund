@@ -2,6 +2,11 @@
 db.py — Abstração do banco de dados via Supabase REST API (PostgREST)
 Usa requests diretamente — sem dependência da supabase-py que trava em alguns ambientes.
 Trocar banco = trocar apenas este arquivo.
+
+Schema-aware (Etapa 5, 2026-05-26):
+  Tabelas candles/backtest_* movidas para schema 'manuheadfund'.
+  Cliente envia Accept-Profile (GET) e Content-Profile (POST/DELETE) headers.
+  Fallback para 'public' via env SUPABASE_SCHEMA=public (rollback).
 """
 import os
 import json
@@ -9,10 +14,22 @@ import requests
 from typing import List, Dict, Optional
 
 
+# Tabelas do ManuHeadFund que vivem no schema dedicado
+MANUHEADFUND_TABLES = {
+    "candles", "backtest_runs", "backtest_signals", "backtest_trades",
+    "trailing_positions", "capital_context", "validation_snapshots",
+    "mentor_reviews", "trade_outcomes", "state_smoke",
+}
+
+
 class Database:
-    def __init__(self, url: Optional[str] = None, key: Optional[str] = None):
+    def __init__(self, url: Optional[str] = None, key: Optional[str] = None,
+                 schema: Optional[str] = None):
         self.url = (url or os.environ["SUPABASE_URL"]).rstrip("/")
         self.key = key or os.environ.get("SUPABASE_SERVICE_KEY") or os.environ["SUPABASE_ANON_KEY"]
+        # Schema padrao 'manuheadfund' para tabelas listadas em MANUHEADFUND_TABLES.
+        # Override via env SUPABASE_SCHEMA (e.g., "public" para rollback).
+        self.schema = schema or os.environ.get("SUPABASE_SCHEMA", "manuheadfund")
         self.headers = {
             "apikey": self.key,
             "Authorization": f"Bearer {self.key}",
@@ -21,8 +38,22 @@ class Database:
         # Alias para compatibilidade com testes que verificam self.client
         self.client = self
 
+    def _table_headers(self, table: str, method: str) -> Dict[str, str]:
+        """Build per-request headers, adding Accept-Profile/Content-Profile when
+        accessing manuheadfund tables in non-public schema."""
+        headers = dict(self.headers)
+        # Strip table_name leading 'rest/v1/' if caller already adds prefix
+        bare = table.split("/")[-1].split("?")[0]
+        if bare in MANUHEADFUND_TABLES and self.schema and self.schema != "public":
+            if method.upper() in ("GET", "HEAD"):
+                headers["Accept-Profile"] = self.schema
+            else:
+                headers["Content-Profile"] = self.schema
+        return headers
+
     def _get(self, table: str, params: str = "") -> List[Dict]:
-        r = requests.get(f"{self.url}/rest/v1/{table}?{params}", headers=self.headers, timeout=15)
+        h = self._table_headers(table, "GET")
+        r = requests.get(f"{self.url}/rest/v1/{table}?{params}", headers=h, timeout=15)
         r.raise_for_status()
         return r.json()
 
@@ -30,8 +61,9 @@ class Database:
         url = f"{self.url}/rest/v1/{table}"
         if on_conflict:
             url += f"?on_conflict={on_conflict}"
-        headers = {**self.headers, "Prefer": "return=representation,resolution=merge-duplicates"}
-        r = requests.post(url, headers=headers, data=json.dumps(data), timeout=30)
+        h = self._table_headers(table, "POST")
+        h["Prefer"] = "return=representation,resolution=merge-duplicates"
+        r = requests.post(url, headers=h, data=json.dumps(data), timeout=30)
         r.raise_for_status()
         return r.json() if r.text else []
 
@@ -105,11 +137,13 @@ class Database:
         # trades primeiro (FK), depois signals
         self.clear_trades(market, period)
         url = f"{self.url}/rest/v1/backtest_signals?market=eq.{market}&period=eq.{period}"
-        requests.delete(url, headers=self.headers, timeout=30).raise_for_status()
+        h = self._table_headers("backtest_signals", "DELETE")
+        requests.delete(url, headers=h, timeout=30).raise_for_status()
 
     def clear_trades(self, market: str, period: str = "") -> None:
         url = f"{self.url}/rest/v1/backtest_trades?market=eq.{market}"
-        requests.delete(url, headers=self.headers, timeout=30).raise_for_status()
+        h = self._table_headers("backtest_trades", "DELETE")
+        requests.delete(url, headers=h, timeout=30).raise_for_status()
 
     # ── Trades ────────────────────────────────────────────────────────────────
 
