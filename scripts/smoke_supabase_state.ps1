@@ -34,11 +34,11 @@ $testRecord = [PSCustomObject]@{
 
 try {
     Write-Host "[1/4] Save record..." -ForegroundColor Cyan
-    Save-StateRecords -Table "state_smoke_test" -Records @($testRecord) -PrimaryKey "market"
+    Save-StateRecords -Table "mhf_state_smoke" -Records @($testRecord) -PrimaryKey "market"
     Write-Host "      OK" -ForegroundColor Green
 
     Write-Host "[2/4] Get records back..." -ForegroundColor Cyan
-    $rows = @(Get-StateRecords -Table "state_smoke_test" -Filter @{ market = $testRecord.market })
+    $rows = @(Get-StateRecords -Table "mhf_state_smoke" -Filter @{ market = $testRecord.market })
     Write-Host "      Found: $($rows.Count) rows" -ForegroundColor Green
     if ($rows.Count -gt 0) {
         Write-Host "      Sample: market=$($rows[0].market) entry=$($rows[0].entry)" -ForegroundColor DarkGray
@@ -46,8 +46,8 @@ try {
 
     Write-Host "[3/4] Update record (upsert with same PK)..." -ForegroundColor Cyan
     $testRecord.entry = 200.0
-    Save-StateRecords -Table "state_smoke_test" -Records @($testRecord) -PrimaryKey "market"
-    $rows2 = @(Get-StateRecords -Table "state_smoke_test" -Filter @{ market = $testRecord.market })
+    Save-StateRecords -Table "mhf_state_smoke" -Records @($testRecord) -PrimaryKey "market"
+    $rows2 = @(Get-StateRecords -Table "mhf_state_smoke" -Filter @{ market = $testRecord.market })
     if ($rows2[0].entry -eq 200.0) {
         Write-Host "      OK (entry updated to 200)" -ForegroundColor Green
     } else {
@@ -55,8 +55,8 @@ try {
     }
 
     Write-Host "[4/4] Cleanup..." -ForegroundColor Cyan
-    Remove-StateRecord -Table "state_smoke_test" -PrimaryKey "market" -Value $testRecord.market
-    $rowsFinal = @(Get-StateRecords -Table "state_smoke_test" -Filter @{ market = $testRecord.market })
+    Remove-StateRecord -Table "mhf_state_smoke" -PrimaryKey "market" -Value $testRecord.market
+    $rowsFinal = @(Get-StateRecords -Table "mhf_state_smoke" -Filter @{ market = $testRecord.market })
     Write-Host "      Remaining: $($rowsFinal.Count) rows" -ForegroundColor Green
 
     Write-Host ""
@@ -67,20 +67,7 @@ catch {
     Write-Host "=== FAILED ===" -ForegroundColor Red
     Write-Host $_ -ForegroundColor Red
     Write-Host ""
-    Write-Host "Hint: tabela state_smoke_test pode nao existir." -ForegroundColor Yellow
-    Write-Host "Cria via SQL Editor no Supabase Dashboard:" -ForegroundColor Yellow
-    Write-Host @"
-  CREATE TABLE IF NOT EXISTS state_smoke_test (
-    market TEXT PRIMARY KEY,
-    side TEXT,
-    entry NUMERIC,
-    stop NUMERIC,
-    target NUMERIC,
-    snapshot TEXT
-  );
-  -- Allow anon writes for dev (ajustar pra service_role em prod)
-  ALTER TABLE state_smoke_test ENABLE ROW LEVEL SECURITY;
-  CREATE POLICY anon_all ON state_smoke_test FOR ALL TO anon USING (true) WITH CHECK (true);
-"@ -ForegroundColor DarkGray
+    Write-Host "Hint: tabela mhf_state_smoke pode nao existir." -ForegroundColor Yellow
+    Write-Host "Aplique o SQL completo de docs/SUPABASE_STATE_SCHEMA.md no Supabase SQL Editor." -ForegroundColor Yellow
     exit 1
 }
