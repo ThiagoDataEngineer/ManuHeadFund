@@ -28,6 +28,7 @@ $global:TRAILING_FILE = "$tmpDir\trailing_positions.json"
 . "$PSScriptRoot\..\agents\config.ps1"
 . "$PSScriptRoot\..\agents\lib_coinex.ps1"
 . "$PSScriptRoot\..\agents\lib_trailing.ps1"
+. "$PSScriptRoot\..\agents\lib_trailing_orphan_detection.ps1"
 
 # Mock CoinEx-GetPendingPositions para testes
 function Mock-CoinExPositions {

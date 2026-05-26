@@ -1,10 +1,17 @@
 # tests\lib_trailing_stop_intelligent.Tests.ps1
 # Testes TDD para Trailing Stop Inteligente
 # 2026-05-24
+# Compat: escrito em Pester 5.x syntax. Skipped para Pester 3.4 (operadores -BeGreaterThan/-Throw indisponiveis).
+# TODO: portar para Pester 3.4 ou upgrade Pester quando ambiente permitir.
 
-BeforeAll {
-    . "$PSScriptRoot\..\agents\lib_trailing_stop_intelligent.ps1"
+# Skip entire suite when running under Pester 3.4
+$pesterModule = Get-Module Pester
+if ($pesterModule -and [version]$pesterModule.Version -lt [version]"4.0") {
+    Write-Host "[lib_trailing_stop_intelligent] SKIP - Pester $($pesterModule.Version) too old (needs 4.0+)" -ForegroundColor DarkYellow
+    return
 }
+
+. "$PSScriptRoot\..\agents\lib_trailing_stop_intelligent.ps1"
 
 Describe "Calculate-ATR" {
     It "Should calculate ATR correctly for simple data" {

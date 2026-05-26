@@ -23,8 +23,18 @@ $src = Get-Content (Join-Path $agentsDir "lib_trailing.ps1") -Raw
 $src = $src -replace '\.\s*"\$PSScriptRoot\\config\.ps1"', ''
 $src = $src -replace '\.\s*"\$PSScriptRoot\\lib_coinex\.ps1"', ''
 $src = $src -replace '\.\s*"\$PSScriptRoot\\lib_telegram\.ps1"', ''
+$src = $src -replace '\.\s*\(Join-Path\s+\$PSScriptRoot\s+"config\.ps1"\)', ''
+$src = $src -replace '\.\s*\(Join-Path\s+\$PSScriptRoot\s+"lib_coinex\.ps1"\)', ''
+$src = $src -replace '\.\s*\(Join-Path\s+\$PSScriptRoot\s+"lib_telegram\.ps1"\)', ''
+# Stub state_store path (PSScriptRoot vazio em Invoke-Expression)
+$src = $src -replace '(?m)^\s*\$_trailingStateStorePath\s*=.*$', '$$_trailingStateStorePath = $null'
+$src = $src -replace '(?ms)if\s*\(Test-Path\s+\$_trailingStateStorePath\).*?\}', '# state_store stubbed'
+# Stub flagPath dentro de _Test-TrailingUsesStateStore (PSScriptRoot vazio em Invoke-Expression)
+$src = $src -replace '(?m)^\s*\$flagPath\s*=.*$', '    $flagPath = "__nope_state_store_stubbed__"'
 # Substitui o $TRAILING_FILE path por tmpDir
-$src = $src -replace '\$TRAILING_FILE\s*=\s*"\$PSScriptRoot\\\.\.\\journal\\trailing_positions\.json"', "`$TRAILING_FILE = `"$tmpDir\trailing_positions.json`""
+$tmpFile = Join-Path $tmpDir "trailing_positions.json"
+$tmpFileEsc = $tmpFile -replace '\\','\\'
+$src = $src -replace '(?m)^\$TRAILING_FILE\s*=.*$', "`$TRAILING_FILE = `"$tmpFileEsc`""
 Invoke-Expression $src
 
 

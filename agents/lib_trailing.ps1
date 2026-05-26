@@ -14,6 +14,12 @@
 
 $TRAILING_FILE = Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "journal") "trailing_positions.json"
 
+# Helper: resolve TRAILING_FILE com override de $global:TRAILING_FILE (para tests)
+function _Get-TrailingFile {
+    if ($global:TRAILING_FILE) { return [string]$global:TRAILING_FILE }
+    return $TRAILING_FILE
+}
+
 # Lazy load state_store (sibling lib). Skip se nao disponivel.
 $_trailingStateStorePath = Join-Path $PSScriptRoot "lib_state_store.ps1"
 if (Test-Path $_trailingStateStorePath) {
@@ -61,9 +67,10 @@ function Get-TrailingPositions {
     }
 
     # Legacy file path (default)
-    if (-not (Test-Path $TRAILING_FILE)) { return @() }
+    $tf = _Get-TrailingFile
+    if (-not (Test-Path $tf)) { return @() }
     try {
-        $json = Get-Content $TRAILING_FILE -Raw | ConvertFrom-Json
+        $json = Get-Content $tf -Raw | ConvertFrom-Json
         # Force flat array - fix corruption issues
         $result = @()
         foreach ($item in $json) {
@@ -109,9 +116,10 @@ function Save-TrailingPositions {
     }
 
     # Legacy file path (default)
-    $dir = Split-Path $TRAILING_FILE
+    $tf = _Get-TrailingFile
+    $dir = Split-Path $tf
     if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-    $Positions | ConvertTo-Json -Depth 5 | Set-Content $TRAILING_FILE -Encoding utf8
+    $Positions | ConvertTo-Json -Depth 5 | Set-Content $tf -Encoding utf8
 }
 
 # ── Registrar posicao nova ─────────────────────────────────────────────────────
