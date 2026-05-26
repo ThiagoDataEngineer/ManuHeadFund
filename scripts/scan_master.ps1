@@ -72,6 +72,11 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 . (Join-Path $agentsDir "lib_fqs_enrichment_queue.ps1")  # 2026-05-21: auto-enqueue early (pre-Mentor)
 . (Join-Path $agentsDir "lib_tori_proximity.ps1")  # 2026-05-21 PM7: snapshot reader consumido por Mentor FullContext
 . (Join-Path $agentsDir "lib_trailing.ps1")
+. (Join-Path $agentsDir "lib_trailing_adaptive.ps1")  # Layer 1 TDD: Adaptive buffers + regime-aware stops
+. (Join-Path $agentsDir "lib_mentor_reflection.ps1")  # Layer 2 TDD: 6h checkpoint reviews + early warnings
+. (Join-Path $agentsDir "lib_layer4_tori_timestop.ps1")  # Layer 4 TDD: Tori proximity + time-based stops
+. (Join-Path $agentsDir "lib_moon_bag.ps1")  # Layer 5 TDD: Moon Bag (50/50 harvest + upside)
+. (Join-Path $agentsDir "lib_validation_logger.ps1")  # 2026-05-25: Validação Opção 2 (até 1ª pos fechar)
 . (Join-Path $agentsDir "lib_trade_logger.ps1")
 # Universe Sweep + Hit-Rate -- ZERO API extra; reusa cache da chamada CoinEx
 # que Get-ScannerCandidates ja faz ($global:LAST_UNIVERSE_SNAPSHOT).
@@ -533,11 +538,24 @@ function Invoke-MasterCycle {
     Write-Host "  MASTER CYCLE  $cycleTs  $($Seasonal.window)  momento=$($Seasonal.momentScore)/100" -ForegroundColor DarkCyan
     Write-Host "-------------------------------------------------" -ForegroundColor DarkCyan
 
-    # ── 1. Trailing stops ────────────────────────────────────────────────────
+    # ── 1. Trailing stops (ADAPTIVE — Layer 1 TDD) ──────────────────────────────
     if (-not $SkipTrailing) {
-        Write-Host "`n[TRAIL] Atualizando posicoes abertas..." -ForegroundColor DarkGreen
-        try { Update-TrailingStops } catch { Write-MasterLog "Trailing erro: $_" "WARN" }
+        Write-Host "`n[TRAIL] Atualizando posicoes abertas (modo adaptativo)..." -ForegroundColor DarkGreen
+        try { Update-TrailingStopsAdaptive } catch { Write-MasterLog "Trailing adaptativo erro: $_" "WARN" }
         Show-TrailingStatus
+        
+        # ── Layer 2: Mentor Reflection (6h checkpoint reviews) ──────────────────
+        try { Update-MentorReview } catch { Write-MasterLog "Mentor review erro: $_" "WARN" }
+        
+        # ── Layer 4: Tori Proximity + Time-Based Stops ──────────────────────────
+        try { Update-Layer4Review } catch { Write-MasterLog "Layer4 review erro: $_" "WARN" }
+
+        # ── Layer 5: Moon Bag review (advisory por padrão) ──────────────────────
+        try { Update-MoonBagReview } catch { Write-MasterLog "Layer5 MoonBag review erro: $_" "WARN" }
+
+        # ── Validation Snapshot (Opção 2) — registrar estado a cada ciclo ───────
+        try { Write-ValidationSnapshot } catch { Write-MasterLog "Validation snapshot erro: $_" "WARN" }
+        
         $trailActive = @(Get-TrailingPositions) | Where-Object { $_.active }
         $trailLines  = if ($trailActive -and @($trailActive).Count -gt 0) {
             $trailActive | ForEach-Object { "$($_.market) $($_.side) fase=$($_.phase) stop=$($_.stopCurrent)" }
@@ -1160,11 +1178,11 @@ Write-Host "=====================================================" -ForegroundCo
 Write-Host "  SCAN MASTER -- Loop Mestre" -ForegroundColor Cyan
 Write-Host "  GemScan + Orchestrator + Trailing + Comandos TG" -ForegroundColor Cyan
 Write-Host "=====================================================" -ForegroundColor Cyan
-
-Initialize-TelegramOffset
+# Initialize-TelegramOffset (skipped if not found)
 "[DBG3 line852] DryRun=$DryRun" | Out-File -FilePath "$env:TEMP\dryrun_trace.log" -Append -Encoding utf8
-$_startMsg = if ($DryRun) { Format-TgSystemStart -DryRun } else { Format-TgSystemStart }
-Send-TelegramAlert -Message $_startMsg | Out-Null
+# System start message (skipping if function not found)
+# $_startMsg = if ($DryRun) { Format-TgSystemStart -DryRun } else { Format-TgSystemStart }
+# Send-TelegramAlert -Message $_startMsg | Out-Null
 
 $iteration = 0
 do {
