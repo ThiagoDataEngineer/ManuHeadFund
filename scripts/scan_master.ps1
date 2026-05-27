@@ -472,7 +472,7 @@ function Invoke-GemCycle {
                     $tgResult = if ($autoApprove) {
                         [PSCustomObject]@{ decision = 'approve'; source = 'auto' }
                     } else {
-                        Wait-TgCallbackApproval -Gem $g -GemId $g.market -TimeoutSeconds 300
+                        Wait-TgCallbackApproval -GemMarket $g.market -TimeoutSeconds 300
                     }
                     if ($tgResult.decision -eq 'approve') {
                         try {
