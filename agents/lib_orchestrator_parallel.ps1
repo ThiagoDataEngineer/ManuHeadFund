@@ -40,7 +40,7 @@ function Invoke-OrchestratorCandidatesParallel {
             # Re-dot-source libs minimas necessarias pro orchestrator_v6 + sub-agentes.
             # Ordem importa: knowledge_retriever ANTES de triagem (mock idempotente).
             $libs = @(
-                "config.ps1","lib_coinex.ps1","lib_cost_tracker.ps1","lib_claude.ps1",
+                "config.ps1","config.local.ps1","lib_coinex.ps1","lib_cost_tracker.ps1","lib_claude.ps1",
                 "lib_macro.ps1","lib_indicators.ps1","lib_seasonality.ps1","lib_telegram.ps1",
                 "lib_observation_logger.ps1","lib_market_context.ps1","lib_market_context_engine.ps1",
                 "lib_operational_whitelist.ps1","lib_pump_buy_gate.ps1","lib_promotion_gates.ps1",
