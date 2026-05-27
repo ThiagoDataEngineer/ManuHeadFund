@@ -24,6 +24,9 @@ function Invoke-Claude {
     $apiKey = if ($env:ANTHROPIC_API_KEY) { $env:ANTHROPIC_API_KEY } else { $ANTHROPIC_API_KEY }
     if (-not $apiKey) { throw "ANTHROPIC_API_KEY nao configurada. Ver agents/config.ps1" }
 
+    # Garantir TLS 1.2 no runspace atual (runspaces paralelos nao herdam do parent)
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13
+
     $body = @{
         model       = $Model
         max_tokens  = $MaxTokens
@@ -92,6 +95,9 @@ function Invoke-Groq {
     )
 
     if (-not $env:GROQ_API_KEY) { throw "GROQ_API_KEY nao configurada" }
+
+    # Garantir TLS 1.2 no runspace atual (runspaces paralelos nao herdam do parent)
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13
 
     $body = @{
         model       = $Model
