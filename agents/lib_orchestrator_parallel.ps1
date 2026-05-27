@@ -98,6 +98,11 @@ function Invoke-OrchestratorCandidatesParallel {
                 $results += [PSCustomObject]@{ ok = $false; market = $inv.market; error = "timeout_$($PerCandidateTimeoutSec)s" }
             } else {
                 $out = $inv.ps.EndInvoke($inv.handle)
+                # Capturar erros do runspace para diagnostico
+                if ($inv.ps.Streams.Error.Count -gt 0) {
+                    $errMsg = ($inv.ps.Streams.Error | ForEach-Object { $_.ToString() }) -join "; "
+                    Write-Warning "[PARALLEL] $($inv.market) runspace errors: $($errMsg.Substring(0,[Math]::Min(200,$errMsg.Length)))"
+                }
                 # EndInvoke retorna PSDataCollection; pega ultimo
                 $final = $null
                 foreach ($x in $out) { $final = $x }
