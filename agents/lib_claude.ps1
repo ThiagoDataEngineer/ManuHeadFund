@@ -340,51 +340,49 @@ function Invoke-MentorCascade {
         [double]$Temperature    = 0.3,
         [string]$Agent          = "mentor"
     )
-    # 2026-05-20 PM: provider trace -- script:LAST_CASCADE_PROVIDER captura qual LLM
-    # respondeu pra logar em decisions.csv. Permite analise "qual modelo erra mais".
+    # 2026-05-27: cascade invertida — Groq/Gemini primeiro (gratis), Sonnet so fallback.
+    # Antes: Sonnet primary = $8/call x 465 calls = $3.88/dia sem trades.
+    # Agora: Groq primary (gratis) -> Gemini (gratis) -> Haiku -> Sonnet ultimo recurso.
     $script:LAST_CASCADE_PROVIDER = $null
-    # 1. Anthropic Sonnet (primary, quality)
-    if ($env:ANTHROPIC_API_KEY) {
-        try {
-            $r = Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model $AnthropicModel -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
-            $script:LAST_CASCADE_PROVIDER = "anthropic_sonnet"
-            return $r
-        } catch {
-            Write-Host "  [$Agent] Anthropic falhou, fallback Groq: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
-        }
-    }
-    # 2. Groq llama-70b (fallback 1, gratis)
+
+    # 1. Groq llama-70b (primary, gratis)
     if ($env:GROQ_API_KEY) {
         try {
             $r = Invoke-Groq -SystemPrompt $SystemPrompt -UserContent $UserContent `
                 -Model "llama-3.3-70b-versatile" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
-            $script:LAST_CASCADE_PROVIDER = "groq_llama70b"
-            return $r
+            if ($r) { $script:LAST_CASCADE_PROVIDER = "groq_llama70b"; return $r }
         } catch {
             Write-Host "  [$Agent] Groq falhou, fallback Gemini: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
-    # 3. Gemini (fallback 2, gratis)
+    # 2. Gemini (fallback 1, gratis)
     if ($env:GEMINI_API_KEY) {
         try {
             $r = Invoke-Gemini -SystemPrompt $SystemPrompt -UserContent $UserContent `
                 -Model "gemini-2.5-flash" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
-            $script:LAST_CASCADE_PROVIDER = "gemini_2_flash"
-            return $r
+            if ($r) { $script:LAST_CASCADE_PROVIDER = "gemini_2_flash"; return $r }
         } catch {
             Write-Host "  [$Agent] Gemini falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
-    # 4. Claude Haiku (fallback final, pago ~$0.005/call)
+    # 3. Claude Haiku (fallback 2, pago ~$0.005/call)
     if ($env:ANTHROPIC_API_KEY) {
         try {
             $r = Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
                 -Model "claude-haiku-4-5" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
-            $script:LAST_CASCADE_PROVIDER = "anthropic_haiku"
-            return $r
+            if ($r) { $script:LAST_CASCADE_PROVIDER = "anthropic_haiku"; return $r }
         } catch {
-            Write-Warning "  [$Agent] Haiku final falhou: $($_.Exception.Message)"
+            Write-Host "  [$Agent] Haiku falhou, fallback Sonnet: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+        }
+    }
+    # 4. Anthropic Sonnet (ultimo recurso, pago ~$0.008/call)
+    if ($env:ANTHROPIC_API_KEY) {
+        try {
+            $r = Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
+                -Model $AnthropicModel -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+            if ($r) { $script:LAST_CASCADE_PROVIDER = "anthropic_sonnet"; return $r }
+        } catch {
+            Write-Warning "  [$Agent] Sonnet final falhou: $($_.Exception.Message)"
         }
     }
     return $null
