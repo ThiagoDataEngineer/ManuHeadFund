@@ -1,0 +1,7 @@
+﻿# Layer 4 AUTO_EXECUTE flag
+# Created: 2026-05-26 09:16:49
+# Effect: Update-Layer4Review fecha posicoes automaticamente na exchange
+#         quando decisao = CLOSE_TIME_STOP ou CLOSE_NOW
+#         HARVEST_PARTIAL continua sendo advisory (requer partial close API)
+# Thresholds SIDEWAYS: SOFT=18h MEDIUM=24h HARD=36h
+# Para desativar: Remove-Item journal/LAYER4_AUTO_EXECUTE.flag -Force

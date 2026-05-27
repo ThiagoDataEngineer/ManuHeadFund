@@ -1,0 +1,19 @@
+# PAPER_CALIBRATION_MODE.flag
+# Ativado em 2026-05-26 para destravar sistema.
+# Objetivo: gerar n>=30 amostras de paper trade em 7 dias para validar edge real.
+#
+# Comportamento:
+# 1. SCORE_MINIMO reduzido: 65 → 55
+# 2. MAX_TRADES_DIA aumentado: 5 → 10 (durante calibração apenas)
+# 3. Todas as trades são PAPER (sem capital real afetado)
+# 4. journal/paper_calibration_trades.jsonl coleta todas as decisões
+#
+# Timeline:
+# Início: 2026-05-26 12:00 BRT
+# Alvo: 30 trades até 2026-06-02 18:00 BRT (7 dias)
+# Review: Win rate real vs teórico (~25%) + decisão para LIVE após validação
+#
+# Desativar: remover este arquivo quando alvo (30 trades) atingido
+# Validação: ./scripts/paper_calibration_report.ps1
+
+ACTIVE

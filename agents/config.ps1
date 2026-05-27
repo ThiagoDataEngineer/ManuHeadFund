@@ -41,8 +41,14 @@ $RISCO_MAXIMO_PCT  = 0.01     # 1% do capital DO TIPO do trade — inviolavel
 # Apos 30 trades de paper, calibrar baseado em win_rate observado.
 $RR_MINIMO         = 3.0      # risco/retorno minimo (1:3) — paper trade calibration
 $RR_PREFERIDO      = 3.0      # risco/retorno preferido (1:3) — paper trade calibration
-$SCORE_MINIMO      = 65.0     # score ponderado minimo — 55 era bar baixo para capital real
-$MAX_TRADES_DIA    = 5        # maximo de trades por dia
+
+# === PAPER TRADE CALIBRATION MODE (2026-05-26) ===
+# Reduzido de 65 para 55 temporariamente para gerar amostras (n>=30).
+# Sem dados suficientes (0 trades em 12 dias), impossível validar edges.
+# Flag: journal/PAPER_CALIBRATION_MODE.flag ativa scoring reduzido.
+# Alvo: 30 paper trades em 7 dias -> re-avaliar win_rate real vs teórico.
+$SCORE_MINIMO      = 55.0     # score ponderado minimo — REDUZIDO para calibração
+$MAX_TRADES_DIA    = 5        # maximo de trades por dia (aumentar para 10 durante calibração)
 $MAX_RISCO_ABERTO  = 0.03     # 3% do capital em risco simultaneamente
 $ALAVANCAGEM_MAX   = 5.0      # alavancagem maxima global
 
@@ -201,6 +207,18 @@ $GEM_WICK_RATIO_MAX   = 2.5    # max ratio sombra/corpo (pressao vendedora)
 
 # Range minimo para pre-filtro (Gate 1 complementar)
 $GEM_RANGE_MIN_PCT    = 0.15   # variacao minima de 15% no dia
+
+# ── LLM Quota Optimization (2026-05-26) ──────────────────────────────────────
+# Groq free tier: 14.4K reqs/dia (muito restritivo com 3 drones Mesa).
+# Solução: aumentar intervalo scan_master 5min → 30min (6x redução de ciclos).
+# + rate limiter agressivo: skip trivial momentum (SMA flat) sem chamar Mesa.
+# Resultado: ~2.4K reqs/dia (sustentável 14 dias com Groq free).
+
+$LLM_QUOTA_MODE        = "OPTIMIZED"    # "OPTIMIZED" | "AGGRESSIVE"
+$SCAN_MASTER_INTERVAL_MIN = 30          # Intervalo padrão (5min → 30min)
+$MESA_SKIP_FLATLINE_SMA = $true        # Skip Mesa se SMA flat (<2% mudança)
+$MESA_RATE_LIMIT_MS    = 2000           # Min 2s entre drones (reduz burst)
+$RATE_LIMIT_ENABLED    = $true          # Master toggle para rate limiting
 
 # ── Criar diretorios se nao existirem ────────────────────────────────────────
 

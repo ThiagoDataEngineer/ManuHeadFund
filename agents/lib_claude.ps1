@@ -118,7 +118,7 @@ function Invoke-Groq {
             } `
             -Body ([System.Text.Encoding]::UTF8.GetBytes($body)) `
             -UseBasicParsing `
-            -TimeoutSec 10 `
+            -TimeoutSec 30 `
             -ErrorAction Stop
 
         $latencyMs = ((Get-Date) - $start).TotalMilliseconds

@@ -1,6 +1,15 @@
-# CoinEx AI Trading System
+# 🚀 CoinEx AI Trading System
 
 Sistema automatizado de trading com IA para CoinEx Futures.
+
+---
+
+## 📋 Índice Rápido
+
+- **[Setup Rápido](#-setup-rápido)** — Começar em 1 minuto
+- **[Documentação](#-documentação)** — Guias completos
+- **[Scripts](#-scripts)** — Utilitários
+- **[Estrutura](#-estrutura-do-projeto)** — Organização
 
 ---
 
@@ -8,7 +17,7 @@ Sistema automatizado de trading com IA para CoinEx Futures.
 
 ### Clique direito → Executar com PowerShell:
 ```
-SETUP_COMPLETO_OCULTO_ADMIN.ps1
+.\scripts\setup\SETUP_COMPLETO_OCULTO_ADMIN.ps1
 ```
 
 Isso vai:
@@ -150,14 +159,83 @@ Unregister-ScheduledTask -TaskName "CoinEx_Update_Dashboard_HTML" -Confirm:$fals
 
 ## 📚 Documentação
 
-### Guias
-- `COMECE_AQUI.md` - Setup rápido
-- `docs/guides/TASK_OCULTA_GUIA.md` - Tasks ocultas
-- `docs/guides/QUICK_START_VALIDACAO.md` - Sistema de validação
+### Começar
+- **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)** — Primeiros passos (5 min)
+- **[docs/SETUP.md](docs/SETUP.md)** — Configuração completa (10 min)
 
-### Documentação Técnica
-- `docs/current/` - Documentação atual (2026-05-24)
-- `docs/archive/` - Documentação antiga
+### Usar
+- **[docs/DASHBOARD.md](docs/DASHBOARD.md)** — Guia do Dashboard (10 min)
+- **[docs/TRADING.md](docs/TRADING.md)** — Guia de Trading (15 min)
+
+### Telegram V2 (Novo!)
+- **[docs/telegram/README.md](docs/telegram/README.md)** — Índice de Telegram
+- **[docs/telegram/TELEGRAM_V2_QUICK_START.md](docs/telegram/TELEGRAM_V2_QUICK_START.md)** — Exemplos práticos
+
+### Troubleshooting
+- **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** — Solução de problemas
+
+### Índice Completo
+- **[docs/README.md](docs/README.md)** — Índice de toda documentação
+
+---
+
+## 🔧 Scripts
+
+Todos os scripts foram organizados em `scripts/`:
+
+### Setup
+```powershell
+.\scripts\setup\SETUP_COMPLETO_OCULTO_ADMIN.ps1
+```
+
+### Dashboard
+```powershell
+.\scripts\dashboard\BUILD_DASHBOARD_ELITE.ps1
+.\scripts\dashboard\ABRIR_DASHBOARD_ELITE.ps1
+```
+
+### Manutenção
+```powershell
+.\scripts\maintenance\PROTECT_NEAR_NOW.ps1
+.\scripts\maintenance\STATUS_TASKS.ps1
+```
+
+### Testes
+```powershell
+.\scripts\test\TEST_ADAPTIVE_TRAILING.ps1
+```
+
+**Índice completo**: [scripts/README.md](scripts/README.md)
+
+---
+
+## 📁 Estrutura do Projeto
+
+```
+Coinex_AI_USER_API/
+├── 📁 agents/              (agentes de trading)
+├── 📁 scripts/             (scripts utilitários)
+│   ├── setup/              (configuração)
+│   ├── dashboard/          (dashboard)
+│   ├── maintenance/        (manutenção)
+│   └── test/               (testes)
+├── 📁 docs/                (documentação)
+│   ├── telegram/           (Telegram V2)
+│   ├── analysis/           (análises)
+│   └── archive/            (documentação antiga)
+├── 📁 backtest/            (backtesting)
+├── 📁 config/              (configurações)
+├── 📁 journal/             (dados de execução)
+├── 📁 logs/                (logs)
+├── 📁 dashboard/           (dashboard HTML)
+├── 📁 .github/             (GitHub Actions)
+├── 📄 README.md            (este arquivo)
+└── 📄 .gitignore
+```
+
+---
+
+## 📚 Documentação
 
 ---
 
@@ -246,10 +324,23 @@ Get-ScheduledTask | Where-Object { $_.TaskName -like "*CoinEx*" }
 
 ## 🚀 Próximos Passos
 
-1. ⚡ **AGORA**: Execute `SETUP_COMPLETO_OCULTO_ADMIN.ps1`
-2. ⚠️ **URGENTE**: Execute `PROTECT_NEAR_NOW.ps1`
-3. 📊 **DIÁRIO**: Abra dashboard HTML (atalho na área de trabalho)
+1. **Leia**: [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) (5 min)
+2. **Execute**: `.\scripts\setup\SETUP_COMPLETO_OCULTO_ADMIN.ps1`
+3. **Proteja**: `.\scripts\maintenance\PROTECT_NEAR_NOW.ps1`
+4. **Abra**: Dashboard no navegador
+5. **Comece**: A tradear!
 
 ---
 
-**COMECE AGORA: `SETUP_COMPLETO_OCULTO_ADMIN.ps1`** 🚀
+## 📝 Changelog
+
+### 2026-05-26
+- ✅ Telegram V2 implementado (63% mais compacto)
+- ✅ Projeto reorganizado (129 arquivos organizados)
+- ✅ Documentação centralizada em `docs/`
+- ✅ Scripts organizados em `scripts/`
+
+---
+
+**Última atualização**: 2026-05-26  
+**Status**: ✅ Pronto para usar

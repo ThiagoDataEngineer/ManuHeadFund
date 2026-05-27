@@ -1,0 +1,6 @@
+﻿# Moon Bag (Layer 5) opt-in flag
+# Created: 2026-05-25 22:23:30
+# Effect: Register-PositionTrailing usa Add-MoonBagPair em vez de Add-TrailingPosition
+#         para entradas novas (GEM + Orchestrator). Orphans NAO afetados.
+# Defaults: GEM 4%/50% | Orchestrator 5%/30% (harvest/moon)
+# Para desativar: Remove-Item journal/MOON_BAG_ENABLED.flag -Force

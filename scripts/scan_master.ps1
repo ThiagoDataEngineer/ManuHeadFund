@@ -116,6 +116,7 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 . (Join-Path $agentsDir "lib_live_guards.ps1")
 . (Join-Path $agentsDir "lib_promotion_gates.ps1")
 . (Join-Path $agentsDir "lib_orchestrator_parallel.ps1")
+. (Join-Path $agentsDir "lib_llm_quota_optimizer.ps1")  # 2026-05-26: Rate limiting + quota tracking
 
 # 2026-05-19 PM: Kelly sizing flag (auto-activated via cron quando 10+ outcomes graduate criteria)
 # Le journal/USE_KELLY_SIZING.flag se presente -> seta $global:USE_KELLY_SIZING=$true
@@ -1169,7 +1170,10 @@ function Wait-WithCommands {
     while ($global:MASTER_PAUSED -or (Get-Date) -lt $endTime) {
         Start-Sleep -Seconds $chunkSec
 
-        $cmds = @(Get-TelegramCommands)
+        $cmds = @()
+        if (Get-Command Get-TelegramCommands -ErrorAction SilentlyContinue) {
+            $cmds = @(Get-TelegramCommands)
+        }
         foreach ($cmd in $cmds) {
             $remaining = [int](($endTime - (Get-Date)).TotalMinutes)
             if ($remaining -lt 0) { $remaining = 0 }

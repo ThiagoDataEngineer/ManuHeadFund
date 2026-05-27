@@ -165,7 +165,10 @@
       "PowerShell(. 'c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\agents\\\\lib_mentor_gate_block.ps1')",
       "PowerShell(Build-GateStatusBlock -FullContext $ctx)",
       "PowerShell(& 'c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\scripts\\\\daily_daemon_restart.ps1' 2>&1 | Tee-Object -FilePath \"c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\logs\\\\daemon_restart_$\\(\\(Get-Date\\).ToString\\('yyyyMMdd_HHmm'\\)\\).log\")",
-      "PowerShell(& 'c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\scripts\\\\daily_daemon_restart.ps1' 2>&1)"
+      "PowerShell(& 'c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\scripts\\\\daily_daemon_restart.ps1' 2>&1)",
+      "PowerShell(Get-Date; \"---\"; Get-Process | Where-Object {$_.ProcessName -match \"pwsh|powershell|python\"} | Select-Object Id,ProcessName,StartTime,CPU | Format-Table -AutoSize)",
+      "PowerShell(Get-ChildItem c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\journal\\\\ -File | Sort-Object LastWriteTime -Descending | Select-Object -First 25 Name,LastWriteTime,@{n='KB';e={[math]::Round\\($_.Length/1KB,1\\)}} | Format-Table -AutoSize)",
+      "PowerShell(\"=== DECIS�ES recentes \\(�ltimas 25\\) ===\")"
     ],
     "additionalDirectories": [
       "C:\\Users\\thiag\\Diagram_Forge\\scripts",

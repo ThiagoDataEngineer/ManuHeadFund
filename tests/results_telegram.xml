@@ -1,0 +1,348 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<test-results xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="nunit_schema_2.5.xsd" name="Pester" total="51" errors="0" failures="45" not-run="0" inconclusive="0" ignored="0" skipped="0" invalid="0" date="2026-05-26" time="11:22:22">
+  <environment machine-name="CASA" cwd="C:\Users\thiag\Coinex_AI_USER_API" nunit-version="2.5.8.0" clr-version="" platform="Microsoft Windows 11 Pro|C:\Windows|\Device\Harddisk0\Partition3" os-version="10.0.26200" user-domain="CASA" user="thiag" />
+  <culture-info current-culture="pt-BR" current-uiculture="pt-BR" />
+  <test-suite type="Powershell" name="Pester" executed="True" result="Failure" success="False" time="3.6444" asserts="0">
+    <results>
+      <test-suite type="TestFixture" name="Format-TelegramMessage -- conteudo basico" executed="True" result="Failure" success="False" time="0.8871" asserts="0" description="Format-TelegramMessage -- conteudo basico">
+        <results>
+          <test-case description="retorna string com market e score" name="Format-TelegramMessage -- conteudo basico.retorna string com market e score" time="0.3962" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Format-TelegramMessage' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 26 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="DISCOVERY inclui mode e sizing" name="Format-TelegramMessage -- conteudo basico.DISCOVERY inclui mode e sizing" time="0.1805" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Format-TelegramMessage' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 33 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="MOMENTUM inclui mode correto" name="Format-TelegramMessage -- conteudo basico.MOMENTUM inclui mode correto" time="0.051" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Format-TelegramMessage' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 40 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="inclui MarketType FUTURES por padrao" name="Format-TelegramMessage -- conteudo basico.inclui MarketType FUTURES por padrao" time="0.048" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Format-TelegramMessage' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 46 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="inclui MarketType SPOT quando passado" name="Format-TelegramMessage -- conteudo basico.inclui MarketType SPOT quando passado" time="0.0515" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Format-TelegramMessage' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 52 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="com campos ausentes nao quebra" name="Format-TelegramMessage -- conteudo basico.com campos ausentes nao quebra" time="0.1153" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="retorna string nao vazia" name="Format-TelegramMessage -- conteudo basico.retorna string nao vazia" time="0.0445" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Format-TelegramMessage' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 63 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+        </results>
+      </test-suite>
+      <test-suite type="TestFixture" name="Format-TgGemApproval -- novo layout com TLDR e CONTEXTO" executed="True" result="Success" success="True" time="0.152" asserts="0" description="Format-TgGemApproval -- novo layout com TLDR e CONTEXTO">
+        <results>
+          <test-case description="Gem completo inclui APROVAR no output" name="Format-TgGemApproval -- novo layout com TLDR e CONTEXTO.Gem completo inclui APROVAR no output" time="0.0949" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="mcap_usd=1200000 aparece formatado como 1.2 ou 1.20" name="Format-TgGemApproval -- novo layout com TLDR e CONTEXTO.mcap_usd=1200000 aparece formatado como 1.2 ou 1.20" time="0.0168" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="backward-compat: Gem minimal sem novos campos retorna string nao vazia" name="Format-TgGemApproval -- novo layout com TLDR e CONTEXTO.backward-compat: Gem minimal sem novos campos retorna string nao vazia" time="0.0235" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="gates_passed @(G1,G2,G3) aparece como G1 G2 G3" name="Format-TgGemApproval -- novo layout com TLDR e CONTEXTO.gates_passed @(G1,G2,G3) aparece como G1 G2 G3" time="0.0168" asserts="0" success="True" result="Success" executed="True" />
+        </results>
+      </test-suite>
+      <test-suite type="TestFixture" name="Send-GemAlertWithLogo -- envio com logo e fallback" executed="True" result="Failure" success="False" time="0.2062" asserts="0" description="Send-GemAlertWithLogo -- envio com logo e fallback">
+        <results>
+          <test-case description="retorna false quando Enabled != true" name="Send-GemAlertWithLogo -- envio com logo e fallback.retorna false quando Enabled != true" time="0.1004" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Send-GemAlertWithLogo' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 180 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="sem logo_url chama sendMessage (texto), nao sendPhoto" name="Send-GemAlertWithLogo -- envio com logo e fallback.sem logo_url chama sendMessage (texto), nao sendPhoto" time="0.0546" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Send-GemAlertWithLogo' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 194 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="com logo_url chama sendPhoto" name="Send-GemAlertWithLogo -- envio com logo e fallback.com logo_url chama sendPhoto" time="0.0513" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Send-GemAlertWithLogo' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 208 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+        </results>
+      </test-suite>
+      <test-suite type="TestFixture" name="Send-TelegramAlert -- validacoes e envio" executed="True" result="Failure" success="False" time="0.2851" asserts="0" description="Send-TelegramAlert -- validacoes e envio">
+        <results>
+          <test-case description="retorna false se TELEGRAM_ENABLED nao e true" name="Send-TelegramAlert -- validacoes e envio.retorna false se TELEGRAM_ENABLED nao e true" time="0.1874" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>A parameter cannot be found that matches parameter name 'Token'.</message>
+              <stack-trace>at line: 71 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="retorna false se token vazio" name="Send-TelegramAlert -- validacoes e envio.retorna false se token vazio" time="0.0263" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>A parameter cannot be found that matches parameter name 'Token'.</message>
+              <stack-trace>at line: 76 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="retorna false se chat_id vazio" name="Send-TelegramAlert -- validacoes e envio.retorna false se chat_id vazio" time="0.0225" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>A parameter cannot be found that matches parameter name 'Token'.</message>
+              <stack-trace>at line: 81 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="retorna true quando mock ok=true" name="Send-TelegramAlert -- validacoes e envio.retorna true quando mock ok=true" time="0.0269" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>A parameter cannot be found that matches parameter name 'Token'.</message>
+              <stack-trace>at line: 86 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="retorna false em erro HTTP" name="Send-TelegramAlert -- validacoes e envio.retorna false em erro HTTP" time="0.0219" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>A parameter cannot be found that matches parameter name 'Token'.</message>
+              <stack-trace>at line: 95 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+        </results>
+      </test-suite>
+      <test-suite type="TestFixture" name="Stage 3 - Inline Keyboard Callbacks" executed="True" result="Failure" success="False" time="1.9943" asserts="0" description="Stage 3 - Inline Keyboard Callbacks">
+        <results>
+          <test-case description="retorna Hashtable com chave inline_keyboard" name="Stage 3 - Inline Keyboard Callbacks.retorna Hashtable com chave inline_keyboard" time="0.1668" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'New-TgApprovalKeyboard' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 231 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="inline_keyboard e array de arrays (linhas de botoes)" name="Stage 3 - Inline Keyboard Callbacks.inline_keyboard e array de arrays (linhas de botoes)" time="0.0538" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'New-TgApprovalKeyboard' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 237 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="primeira linha contem 2 botoes com textos EXECUTAR e CANCELAR" name="Stage 3 - Inline Keyboard Callbacks.primeira linha contem 2 botoes com textos EXECUTAR e CANCELAR" time="0.0488" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'New-TgApprovalKeyboard' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 246 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="botao EXECUTAR tem callback_data approve:TESTGEM" name="Stage 3 - Inline Keyboard Callbacks.botao EXECUTAR tem callback_data approve:TESTGEM" time="0.058" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'New-TgApprovalKeyboard' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 256 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="botao CANCELAR tem callback_data reject:TESTGEM" name="Stage 3 - Inline Keyboard Callbacks.botao CANCELAR tem callback_data reject:TESTGEM" time="0.0552" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'New-TgApprovalKeyboard' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 264 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="retorna ok=false quando Enabled != true" name="Stage 3 - Inline Keyboard Callbacks.retorna ok=false quando Enabled != true" time="0.1186" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Send-TgApprovalRequest' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 276 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="com logo_url chama /sendPhoto" name="Stage 3 - Inline Keyboard Callbacks.com logo_url chama /sendPhoto" time="0.0592" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Send-TgApprovalRequest' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 288 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="sem logo_url chama /sendMessage" name="Stage 3 - Inline Keyboard Callbacks.sem logo_url chama /sendMessage" time="0.0555" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Send-TgApprovalRequest' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 302 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="fallback para /sendMessage se /sendPhoto falhar" name="Stage 3 - Inline Keyboard Callbacks.fallback para /sendMessage se /sendPhoto falhar" time="0.0577" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Send-TgApprovalRequest' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 320 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="retorna message_id da resposta da API em sucesso" name="Stage 3 - Inline Keyboard Callbacks.retorna message_id da resposta da API em sucesso" time="0.0562" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Send-TgApprovalRequest' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 330 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="retorna false quando Token vazio" name="Stage 3 - Inline Keyboard Callbacks.retorna false quando Token vazio" time="0.1438" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Confirm-TgCallback' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 339 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="chama /answerCallbackQuery" name="Stage 3 - Inline Keyboard Callbacks.chama /answerCallbackQuery" time="0.0756" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Confirm-TgCallback' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 350 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="inclui callback_query_id no body" name="Stage 3 - Inline Keyboard Callbacks.inclui callback_query_id no body" time="0.0527" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Confirm-TgCallback' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 361 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="retorna true quando API responde ok=true" name="Stage 3 - Inline Keyboard Callbacks.retorna true quando API responde ok=true" time="0.0455" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Confirm-TgCallback' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 377 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="retorna false quando API responde ok=false (sem throw)" name="Stage 3 - Inline Keyboard Callbacks.retorna false quando API responde ok=false (sem throw)" time="0.0876" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Confirm-TgCallback' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 387 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="retorna false quando Token vazio" name="Stage 3 - Inline Keyboard Callbacks.retorna false quando Token vazio" time="0.106" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Update-TgCaption' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 395 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="retorna false quando ChatId vazio" name="Stage 3 - Inline Keyboard Callbacks.retorna false quando ChatId vazio" time="0.0483" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Update-TgCaption' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 400 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="chama /editMessageCaption quando -WasPhoto" name="Stage 3 - Inline Keyboard Callbacks.chama /editMessageCaption quando -WasPhoto" time="0.0564" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Update-TgCaption' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 411 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="chama /editMessageText quando NAO -WasPhoto" name="Stage 3 - Inline Keyboard Callbacks.chama /editMessageText quando NAO -WasPhoto" time="0.0523" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Update-TgCaption' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 422 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="retorna true quando ok=true" name="Stage 3 - Inline Keyboard Callbacks.retorna true quando ok=true" time="0.056" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Update-TgCaption' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 432 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="retorna false quando Invoke-RestMethod lanca excecao" name="Stage 3 - Inline Keyboard Callbacks.retorna false quando Invoke-RestMethod lanca excecao" time="0.0481" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Update-TgCaption' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 441 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="retorna decision=error quando Send-TgApprovalRequest falha" name="Stage 3 - Inline Keyboard Callbacks.retorna decision=error quando Send-TgApprovalRequest falha" time="0.1136" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Wait-TgCallbackApproval' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 461 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="retorna decision=approve quando callback_query data=approve:GEM123" name="Stage 3 - Inline Keyboard Callbacks.retorna decision=approve quando callback_query data=approve:GEM123" time="0.0522" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Wait-TgCallbackApproval' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 483 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="retorna decision=reject quando callback_query data=reject:GEM123" name="Stage 3 - Inline Keyboard Callbacks.retorna decision=reject quando callback_query data=reject:GEM123" time="0.0514" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Wait-TgCallbackApproval' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 505 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="ignora callback_query com GemId diferente (replay protection)" name="Stage 3 - Inline Keyboard Callbacks.ignora callback_query com GemId diferente (replay protection)" time="0.0517" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Wait-TgCallbackApproval' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 527 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="retorna decision=timeout quando nao recebe callback dentro do prazo" name="Stage 3 - Inline Keyboard Callbacks.retorna decision=timeout quando nao recebe callback dentro do prazo" time="0.0499" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Wait-TgCallbackApproval' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 539 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="retorna from=first_name do callback_query.from" name="Stage 3 - Inline Keyboard Callbacks.retorna from=first_name do callback_query.from" time="0.0624" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Wait-TgCallbackApproval' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 561 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="chama Confirm-TgCallback ao receber approve" name="Stage 3 - Inline Keyboard Callbacks.chama Confirm-TgCallback ao receber approve" time="0.0569" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Wait-TgCallbackApproval' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 588 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="chama Update-TgCaption ao receber approve" name="Stage 3 - Inline Keyboard Callbacks.chama Update-TgCaption ao receber approve" time="0.0543" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>The term 'Wait-TgCallbackApproval' is not recognized as a name of a cmdlet, function, script file, or executable program.
+Check the spelling of the name, or if a path was included, verify that the path is correct and try again.</message>
+              <stack-trace>at line: 615 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+        </results>
+      </test-suite>
+      <test-suite type="TestFixture" name="TG_EMOJI -- hashtable global de emojis" executed="True" result="Failure" success="False" time="0.1198" asserts="0" description="TG_EMOJI -- hashtable global de emojis">
+        <results>
+          <test-case description="TG_EMOJI esta definido como Hashtable" name="TG_EMOJI -- hashtable global de emojis.TG_EMOJI esta definido como Hashtable" time="0.0736" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>Expected: value to not be empty</message>
+              <stack-trace>at line: 109 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1
+109:         $global:TG_EMOJI | Should Not BeNullOrEmpty</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="TG_EMOJI contem todas as chaves esperadas" name="TG_EMOJI -- hashtable global de emojis.TG_EMOJI contem todas as chaves esperadas" time="0.0251" asserts="0" success="False" result="Failure" executed="True">
+            <failure>
+              <message>You cannot call a method on a null-valued expression.</message>
+              <stack-trace>at line: 116 in C:\Users\thiag\Coinex_AI_USER_API\tests\lib_telegram.Tests.ps1</stack-trace>
+            </failure>
+          </test-case>
+          <test-case description="cada emoji tem Length &gt;= 1" name="TG_EMOJI -- hashtable global de emojis.cada emoji tem Length &gt;= 1" time="0.0211" asserts="0" success="True" result="Success" executed="True" />
+        </results>
+      </test-suite>
+    </results>
+  </test-suite>
+</test-results>

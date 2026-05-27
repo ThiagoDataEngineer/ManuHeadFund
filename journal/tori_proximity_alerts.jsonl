@@ -4,3 +4,14 @@
 {"ts_utc":"2026-05-23T13:37:15.9965580Z","market":"INJUSDT","price":5.0548,"action_line":5.033984,"proximity_pct":0.41,"touches":22,"slope_deg":7.63,"rsi":null,"vol_drying":null}
 {"ts_utc":"2026-05-23T14:22:15.2360474Z","market":"ZECUSDT","price":588.74,"action_line":595.168593,"proximity_pct":-1.08,"touches":7,"slope_deg":9.48,"rsi":null,"vol_drying":null}
 {"ts_utc":"2026-05-25T04:14:12.8296737Z","market":"ZECUSDT","price":653.85,"action_line":632.672231,"proximity_pct":3.35,"touches":17,"slope_deg":16.38,"rsi":null,"vol_drying":null}
+{"ts_utc":"2026-05-25T12:01:05.4190359Z","market":"ZECUSDT","price":668.1,"action_line":641.257194,"proximity_pct":4.19,"touches":17,"slope_deg":17.63,"rsi":null,"vol_drying":null}
+{"ts_utc":"2026-05-25T12:01:09.5321412Z","market":"CFGUSDT","price":0.302192,"action_line":0.289357,"proximity_pct":4.44,"touches":18,"slope_deg":5.47,"rsi":null,"vol_drying":null}
+{"ts_utc":"2026-05-25T16:07:13.2972176Z","market":"ZECUSDT","price":672.51,"action_line":645.497824,"proximity_pct":4.18,"touches":16,"slope_deg":18.19,"rsi":null,"vol_drying":null}
+{"ts_utc":"2026-05-25T16:07:14.4532492Z","market":"CFGUSDT","price":0.298375,"action_line":0.290103,"proximity_pct":2.85,"touches":18,"slope_deg":5.73,"rsi":null,"vol_drying":null}
+{"ts_utc":"2026-05-25T20:52:11.7103211Z","market":"ZECUSDT","price":648.42,"action_line":647.741574,"proximity_pct":0.1,"touches":18,"slope_deg":18.42,"rsi":null,"vol_drying":null}
+{"ts_utc":"2026-05-25T20:52:12.3842553Z","market":"CFGUSDT","price":0.294053,"action_line":0.290604,"proximity_pct":1.19,"touches":18,"slope_deg":5.89,"rsi":null,"vol_drying":null}
+{"ts_utc":"2026-05-26T00:52:14.2409353Z","market":"ZECUSDT","price":634.62,"action_line":649.98337,"proximity_pct":-2.36,"touches":15,"slope_deg":18.64,"rsi":null,"vol_drying":null}
+{"ts_utc":"2026-05-26T00:52:15.5244139Z","market":"CFGUSDT","price":0.287422,"action_line":0.29083,"proximity_pct":-1.17,"touches":20,"slope_deg":5.94,"rsi":null,"vol_drying":null}
+{"ts_utc":"2026-05-26T12:13:06.6674107Z","market":"CFGUSDT","price":0.301384,"action_line":0.293043,"proximity_pct":2.85,"touches":17,"slope_deg":7.01,"rsi":null,"vol_drying":null}
+{"ts_utc":"2026-05-26T17:30:26.3390808Z","market":"CFGUSDT","price":0.288904,"action_line":0.293312,"proximity_pct":-1.5,"touches":19,"slope_deg":7.2,"rsi":null,"vol_drying":null}
+{"ts_utc":"2026-05-26T22:13:31.2937490Z","market":"CFGUSDT","price":0.28903,"action_line":0.293609,"proximity_pct":-1.56,"touches":19,"slope_deg":7.25,"rsi":null,"vol_drying":null}

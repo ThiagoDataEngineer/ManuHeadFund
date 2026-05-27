@@ -1,5 +1,5 @@
 ﻿{
-    "audit_ts":  "2026-05-25T04:06:36.5865890Z",
+    "audit_ts":  "2026-05-25T12:00:39.1458271Z",
     "drift_pct":  -100,
     "capital_snapshot":  {
                              "futures":  0,
@@ -35,18 +35,9 @@
                                         ],
                             "rerun_cmd":  "python backtest/wyckoff_spring_score.py --rebuild-quality",
                             "auto_safe":  true
-                        },
-                        {
-                            "name":  "beta_vs_btc",
-                            "priority":  "LOW",
-                            "reasons":  [
-                                            "source_data_changed"
-                                        ],
-                            "rerun_cmd":  "powershell -File scripts/build_beta_cache.ps1",
-                            "auto_safe":  true
                         }
                     ],
-    "n_stale":  4,
+    "n_stale":  3,
     "n_high":  2,
-    "n_auto_safe":  3
+    "n_auto_safe":  2
 }
