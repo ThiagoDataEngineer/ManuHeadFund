@@ -99,7 +99,9 @@ journal/trailing_positions.json
 # ============================================================
 dashboard/*.html
 !dashboard/index.html
+!dashboard/manu.html
 dashboard/*.json
+!dashboard/dashboard_data.json
 dashboard/*.js
 TEST_*.ps1
 *_FIXED.ps1

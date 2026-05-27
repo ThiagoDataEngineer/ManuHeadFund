@@ -1,0 +1,414 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ManuHeadFund — Dashboard</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0d1117; color: #e6edf3; font-family: 'Segoe UI', monospace; font-size: 13px; }
+  
+  header { background: #161b22; border-bottom: 1px solid #30363d; padding: 12px 20px; display: flex; align-items: center; justify-content: space-between; }
+  header h1 { font-size: 16px; color: #58a6ff; font-weight: 600; }
+  #last-update { color: #8b949e; font-size: 11px; }
+  #status-dot { width: 8px; height: 8px; border-radius: 50%; background: #3fb950; display: inline-block; margin-right: 6px; animation: pulse 2s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 12px; padding: 16px; }
+  .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 14px; }
+  .card h2 { font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: #8b949e; margin-bottom: 10px; border-bottom: 1px solid #21262d; padding-bottom: 6px; }
+  
+  .metric { display: flex; justify-content: space-between; align-items: center; padding: 4px 0; border-bottom: 1px solid #21262d; }
+  .metric:last-child { border-bottom: none; }
+  .metric-label { color: #8b949e; }
+  .metric-value { font-weight: 600; color: #e6edf3; }
+  
+  .green { color: #3fb950; }
+  .red { color: #f85149; }
+  .yellow { color: #d29922; }
+  .blue { color: #58a6ff; }
+  .gray { color: #8b949e; }
+
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .badge-green { background: #1a3a1a; color: #3fb950; border: 1px solid #3fb950; }
+  .badge-red { background: #3a1a1a; color: #f85149; border: 1px solid #f85149; }
+  .badge-yellow { background: #3a2a0a; color: #d29922; border: 1px solid #d29922; }
+  .badge-blue { background: #0d2a4a; color: #58a6ff; border: 1px solid #58a6ff; }
+  .badge-gray { background: #21262d; color: #8b949e; border: 1px solid #30363d; }
+
+  .position-row { background: #0d1117; border: 1px solid #21262d; border-radius: 6px; padding: 8px 10px; margin-bottom: 6px; }
+  .position-row:last-child { margin-bottom: 0; }
+  .pos-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+  .pos-market { font-weight: 700; font-size: 14px; }
+  .pos-details { display: flex; gap: 12px; color: #8b949e; font-size: 11px; }
+
+  .tier-row { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-bottom: 1px solid #21262d; }
+  .tier-row:last-child { border-bottom: none; }
+  .tier-market { flex: 1; font-weight: 600; }
+  .tier-info { color: #8b949e; font-size: 11px; }
+
+  .log-line { font-size: 11px; padding: 3px 0; border-bottom: 1px solid #21262d; color: #8b949e; }
+  .log-line:last-child { border-bottom: none; }
+  .log-line.error { color: #f85149; }
+  .log-line.trade { color: #e6edf3; }
+  .log-line.gem { color: #d29922; }
+  .log-line.info { color: #8b949e; }
+
+  .progress-bar { background: #21262d; border-radius: 4px; height: 6px; margin-top: 4px; }
+  .progress-fill { height: 100%; border-radius: 4px; background: #58a6ff; }
+
+  .full-width { grid-column: 1 / -1; }
+  
+  .no-data { color: #8b949e; font-style: italic; text-align: center; padding: 20px 0; }
+
+  .refresh-btn { background: #21262d; border: 1px solid #30363d; color: #e6edf3; padding: 4px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+  .refresh-btn:hover { background: #30363d; }
+</style>
+</head>
+<body>
+
+<header>
+  <h1><span id="status-dot"></span>ManuHeadFund Dashboard</h1>
+  <div style="display:flex;align-items:center;gap:12px">
+    <span id="last-update">Carregando...</span>
+    <button class="refresh-btn" onclick="loadAll()">↻ Atualizar</button>
+  </div>
+</header>
+
+<div class="grid">
+
+  <!-- CAPITAL -->
+  <div class="card">
+    <h2>💰 Capital</h2>
+    <div id="capital-content"><div class="no-data">Carregando...</div></div>
+  </div>
+
+  <!-- POSIÇÕES ABERTAS -->
+  <div class="card">
+    <h2>📊 Posições Abertas</h2>
+    <div id="positions-content"><div class="no-data">Carregando...</div></div>
+  </div>
+
+  <!-- REGIME & MERCADO -->
+  <div class="card">
+    <h2>🌡️ Regime de Mercado</h2>
+    <div id="regime-content"><div class="no-data">Carregando...</div></div>
+  </div>
+
+  <!-- TRADING METRICS -->
+  <div class="card">
+    <h2>📈 Performance</h2>
+    <div id="trading-content"><div class="no-data">Carregando...</div></div>
+  </div>
+
+  <!-- TIER A/B/C -->
+  <div class="card">
+    <h2>🏆 Whitelist Tier A/B</h2>
+    <div id="tier-content"><div class="no-data">Carregando...</div></div>
+  </div>
+
+  <!-- TRAILING STOPS -->
+  <div class="card">
+    <h2>🛡️ Trailing Stops</h2>
+    <div id="trailing-content"><div class="no-data">Carregando...</div></div>
+  </div>
+
+  <!-- CUSTOS LLM -->
+  <div class="card">
+    <h2>💸 Custos LLM</h2>
+    <div id="costs-content"><div class="no-data">Carregando...</div></div>
+  </div>
+
+  <!-- PIPELINE PROMOÇÃO -->
+  <div class="card">
+    <h2>🔄 Pipeline Promoção</h2>
+    <div id="pipeline-content"><div class="no-data">Carregando...</div></div>
+  </div>
+
+  <!-- LOG RECENTE (full width) -->
+  <div class="card full-width">
+    <h2>📋 Log Recente (últimas decisões)</h2>
+    <div id="log-content"><div class="no-data">Carregando...</div></div>
+  </div>
+
+</div>
+
+<script>
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+function fmt(v, decimals=2) {
+  if (v === null || v === undefined || v === '') return '—';
+  const n = parseFloat(v);
+  if (isNaN(n)) return v;
+  return n.toFixed(decimals);
+}
+function fmtUSD(v) { return v ? '$' + fmt(v) : '—'; }
+function fmtPct(v) { return v ? fmt(v) + '%' : '—'; }
+function colorPnl(v) {
+  const n = parseFloat(v);
+  if (isNaN(n)) return 'gray';
+  return n > 0 ? 'green' : n < 0 ? 'red' : 'gray';
+}
+function badge(text, color) { return `<span class="badge badge-${color}">${text}</span>`; }
+function metric(label, value, cls='') {
+  return `<div class="metric"><span class="metric-label">${label}</span><span class="metric-value ${cls}">${value}</span></div>`;
+}
+
+// ─── Carregar dashboard_data.json ────────────────────────────────────────────
+async function loadDashboardData() {
+  try {
+    const r = await fetch('dashboard_data.json?t=' + Date.now());
+    return await r.json();
+  } catch(e) { return null; }
+}
+
+// ─── Capital ─────────────────────────────────────────────────────────────────
+function renderCapital(data) {
+  const el = document.getElementById('capital-content');
+  const pm = data?.portfolio_metrics;
+  if (!pm) { el.innerHTML = '<div class="no-data">Sem dados de capital</div>'; return; }
+  
+  const total = pm.exposure_total || 0;
+  const beta = pm.beta || 0;
+  const betaColor = beta > 1.4 ? 'red' : beta > 1.1 ? 'yellow' : 'green';
+  
+  el.innerHTML = `
+    ${metric('Capital Total', fmtUSD(total))}
+    ${metric('Exposição', fmtUSD(total))}
+    ${metric('Beta Portfolio', fmt(beta, 3), betaColor)}
+    ${metric('Diversificação', pm.diversification || '—')}
+  `;
+}
+
+// ─── Posições ────────────────────────────────────────────────────────────────
+function renderPositions(data) {
+  const el = document.getElementById('positions-content');
+  const trailing = data?.trailing_stop;
+  
+  if (!trailing || trailing.length === 0) {
+    el.innerHTML = '<div class="no-data">Nenhuma posição aberta</div>';
+    return;
+  }
+  
+  let html = '';
+  for (const pos of trailing) {
+    const pnlColor = colorPnl(pos.distance_pct);
+    html += `
+      <div class="position-row">
+        <div class="pos-header">
+          <span class="pos-market">${pos.market}</span>
+          <span class="${pnlColor}">${fmtPct(pos.distance_pct)}</span>
+        </div>
+        <div class="pos-details">
+          <span>Vol: ${pos.volatility_class || '—'}</span>
+          <span>Momentum: ${pos.momentum || '—'} (${fmt(pos.momentum_score,0)})</span>
+          <span>Stop: ${fmtPct(pos.threshold_pct)}</span>
+        </div>
+      </div>`;
+  }
+  el.innerHTML = html;
+}
+
+// ─── Regime ──────────────────────────────────────────────────────────────────
+function renderRegime(data) {
+  const el = document.getElementById('regime-content');
+  const r = data?.market_regime;
+  if (!r) { el.innerHTML = '<div class="no-data">Sem dados de regime</div>'; return; }
+  
+  const regimeColor = r.regime?.includes('BULL') ? 'green' : r.regime?.includes('BEAR') ? 'red' : 'yellow';
+  const mceColor = r.mce_score > 0.7 ? 'green' : r.mce_score > 0.4 ? 'yellow' : 'red';
+  
+  el.innerHTML = `
+    ${metric('Regime', badge(r.regime || '—', regimeColor))}
+    ${metric('MCE Score', fmt(r.mce_score, 4), mceColor)}
+    ${metric('TORI Proximity', fmtPct(r.tori_proximity))}
+    ${metric('Ciclo', r.cycle || '—')}
+  `;
+}
+
+// ─── Performance ─────────────────────────────────────────────────────────────
+function renderTrading(data) {
+  const el = document.getElementById('trading-content');
+  const t = data?.trading_metrics;
+  if (!t) { el.innerHTML = '<div class="no-data">Sem dados de performance</div>'; return; }
+  
+  const wrColor = t.win_rate > 50 ? 'green' : t.win_rate > 30 ? 'yellow' : 'red';
+  
+  el.innerHTML = `
+    ${metric('Trades 24h', t.trades_24h || 0)}
+    ${metric('Trades 7d', t.trades_7d || 0)}
+    ${metric('Trades 30d', t.trades_30d || 0)}
+    ${metric('Win Rate', fmtPct(t.win_rate), wrColor)}
+    ${metric('Sharpe', fmt(t.sharpe_ratio, 2))}
+    ${metric('Max Drawdown', fmtPct(t.max_drawdown), 'red')}
+    ${metric('Profit Factor', fmt(t.profit_factor, 2))}
+  `;
+}
+
+// ─── Tier A/B/C ──────────────────────────────────────────────────────────────
+function renderTier(data) {
+  const el = document.getElementById('tier-content');
+  const pp = data?.promotion_pipeline;
+  const fqs = data?.fqs_distribution;
+  
+  if (!pp && !fqs) { el.innerHTML = '<div class="no-data">Sem dados de tier</div>'; return; }
+  
+  let html = '';
+  if (pp) {
+    html += `
+      <div class="metric"><span class="metric-label">Tier A LIVE</span><span class="metric-value green">${pp.tier_a || 0}</span></div>
+      <div class="metric"><span class="metric-label">Tier B PAPER</span><span class="metric-value yellow">${pp.tier_b || 0}</span></div>
+      <div class="metric"><span class="metric-label">Discovery</span><span class="metric-value blue">${pp.discovery || 0}</span></div>
+      <div class="metric"><span class="metric-label">Gem Track</span><span class="metric-value">${pp.gem_track || 0}</span></div>
+    `;
+  }
+  if (fqs) {
+    html += `<div style="margin-top:8px;padding-top:8px;border-top:1px solid #21262d;font-size:11px;color:#8b949e;margin-bottom:4px">FQS Distribution</div>`;
+    html += `
+      <div class="metric"><span class="metric-label">🔵 Blue Chip</span><span class="metric-value green">${fqs.blue_chip || 0}</span></div>
+      <div class="metric"><span class="metric-label">🟢 Quality</span><span class="metric-value green">${fqs.quality || 0}</span></div>
+      <div class="metric"><span class="metric-label">🟡 Speculative</span><span class="metric-value yellow">${fqs.speculative || 0}</span></div>
+      <div class="metric"><span class="metric-label">🔴 Avoid</span><span class="metric-value red">${fqs.avoid || 0}</span></div>
+      <div class="metric"><span class="metric-label">⚪ Missing</span><span class="metric-value gray">${fqs.missing || 0}</span></div>
+    `;
+  }
+  el.innerHTML = html;
+}
+
+// ─── Trailing Stops ──────────────────────────────────────────────────────────
+function renderTrailing(data) {
+  const el = document.getElementById('trailing-content');
+  const trailing = data?.trailing_stop;
+  
+  if (!trailing || trailing.length === 0) {
+    el.innerHTML = '<div class="no-data">Nenhum trailing ativo</div>';
+    return;
+  }
+  
+  let html = '';
+  for (const t of trailing) {
+    html += `
+      <div class="tier-row">
+        <span class="tier-market">${t.market}</span>
+        <span class="tier-info">${t.volatility_class}</span>
+        <span class="badge badge-${t.momentum === 'STRONG' ? 'green' : 'yellow'}">${t.momentum}</span>
+      </div>`;
+  }
+  el.innerHTML = html;
+}
+
+// ─── Custos LLM ──────────────────────────────────────────────────────────────
+function renderCosts(data) {
+  const el = document.getElementById('costs-content');
+  const c = data?.llm_costs;
+  if (!c) { el.innerHTML = '<div class="no-data">Sem dados de custo</div>'; return; }
+  
+  const total24h = c.total_24h || 0;
+  const total30d = c.total_30d || 0;
+  const costColor = total24h > 5 ? 'red' : total24h > 2 ? 'yellow' : 'green';
+  
+  el.innerHTML = `
+    ${metric('Custo 24h', fmtUSD(total24h), costColor)}
+    ${metric('Custo 7d', fmtUSD(c.total_7d || 0))}
+    ${metric('Custo 30d', fmtUSD(total30d))}
+    ${metric('Anthropic', fmtUSD(c.anthropic || 0))}
+    ${metric('Groq', fmtUSD(c.groq || 0))}
+    ${metric('Tokens 24h', (c.tokens_24h || 0).toLocaleString())}
+    ${metric('Custo/Decisão', fmtUSD(c.cost_per_decision || 0))}
+  `;
+}
+
+// ─── Pipeline ────────────────────────────────────────────────────────────────
+function renderPipeline(data) {
+  const el = document.getElementById('pipeline-content');
+  const pp = data?.promotion_pipeline;
+  const md = data?.mentor_decisions;
+  
+  let html = '';
+  if (md) {
+    const approvalColor = md.approval_rate > 30 ? 'green' : md.approval_rate > 10 ? 'yellow' : 'red';
+    html += `
+      ${metric('Decisões 24h', md.total_24h || 0)}
+      ${metric('Taxa Aprovação', fmtPct(md.approval_rate), approvalColor)}
+      ${metric('Taxa Veto', fmtPct(md.veto_rate), 'red')}
+    `;
+  }
+  if (pp?.recent_promotions?.length > 0) {
+    html += `<div style="margin-top:8px;color:#8b949e;font-size:11px">Promoções recentes:</div>`;
+    for (const p of pp.recent_promotions.slice(0,3)) {
+      html += `<div class="tier-row"><span class="tier-market">${p.market || p}</span></div>`;
+    }
+  }
+  if (!html) html = '<div class="no-data">Sem dados de pipeline</div>';
+  el.innerHTML = html;
+}
+
+// ─── Log Recente ─────────────────────────────────────────────────────────────
+async function renderLog() {
+  const el = document.getElementById('log-content');
+  // Tentar ler decisions.csv via fetch (só funciona se servido localmente)
+  // Fallback: mostrar mesa_consensus
+  try {
+    const r = await fetch('../journal/decisions.csv?t=' + Date.now());
+    const text = await r.text();
+    const lines = text.trim().split('\n').slice(-15).reverse();
+    let html = '';
+    for (const line of lines) {
+      const parts = line.split(',');
+      if (parts.length < 3) continue;
+      const ts = parts[0]?.substring(0,16) || '';
+      const market = parts[1] || '';
+      const decision = parts[2] || '';
+      const cls = decision.includes('EXECUTAR') ? 'trade' : decision.includes('GEM') ? 'gem' : 'info';
+      const color = decision.includes('EXECUTAR') ? 'green' : decision.includes('ABORTAR') ? 'red' : 'gray';
+      html += `<div class="log-line ${cls}"><span class="gray">${ts}</span> <span class="${color}">${decision}</span> <span>${market}</span></div>`;
+    }
+    el.innerHTML = html || '<div class="no-data">Sem decisões recentes</div>';
+  } catch(e) {
+    // Fallback: mesa consensus
+    const data = window._dashData;
+    const mesa = data?.mesa_consensus?.recent_analyses;
+    if (mesa?.length > 0) {
+      let html = '';
+      for (const m of mesa.slice(0,10)) {
+        const cls = m.consensus === 'FORTE_3' ? 'trade' : m.consensus === 'CAOS' ? 'error' : 'info';
+        html += `<div class="log-line ${cls}">${m.market} — ${m.consensus} (score: ${m.score})</div>`;
+      }
+      el.innerHTML = html;
+    } else {
+      el.innerHTML = '<div class="no-data">Log não disponível (abrir via servidor local)</div>';
+    }
+  }
+}
+
+// ─── Load All ────────────────────────────────────────────────────────────────
+async function loadAll() {
+  document.getElementById('last-update').textContent = 'Atualizando...';
+  
+  const data = await loadDashboardData();
+  window._dashData = data;
+  
+  if (!data) {
+    document.getElementById('last-update').textContent = 'Erro ao carregar dados';
+    return;
+  }
+  
+  renderCapital(data);
+  renderPositions(data);
+  renderRegime(data);
+  renderTrading(data);
+  renderTier(data);
+  renderTrailing(data);
+  renderCosts(data);
+  renderPipeline(data);
+  await renderLog();
+  
+  const ts = data.timestamp || new Date().toLocaleString('pt-BR');
+  document.getElementById('last-update').textContent = 'Atualizado: ' + ts;
+}
+
+// Auto-refresh a cada 60s
+loadAll();
+setInterval(loadAll, 60000);
+</script>
+</body>
+</html>

@@ -1,0 +1,64 @@
+﻿{
+    "timestamp":  "2026-05-27 14:55:19",
+    "capital":  {
+                    "futures":  2715.79,
+                    "total":  3715.79,
+                    "spot":  1000
+                },
+    "positions":  [
+
+                  ],
+    "trading_metrics":  {
+                            "trades_30d":  4,
+                            "profit_factor":  0,
+                            "trades_24h":  0,
+                            "max_drawdown":  0,
+                            "sharpe_ratio":  0,
+                            "win_rate":  0,
+                            "trades_7d":  4
+                        },
+    "trailing_stop":  null,
+    "market_regime":  {
+                          "phase":  null,
+                          "updated_at":  null,
+                          "regime":  null,
+                          "bias":  null
+                      },
+    "promotion_pipeline":  {
+                               "tier_a":  4,
+                               "tier_b":  8,
+                               "tier_b_markets":  "ZECUSDT, CFGUSDT, PENDLEUSDT, SKYUSDT, XRPUSDT, BTCUSDT, BCHUSDT, SUIUSDT",
+                               "tier_a_markets":  "RENDERUSDT, BTCUSDT, INJUSDT, XMRUSDT",
+                               "gem_track":  0,
+                               "recent_promotions":  [
+
+                                                     ],
+                               "discovery":  0
+                           },
+    "fqs_distribution":  {
+
+                         },
+    "llm_costs":  {
+                      "anthropic":  0,
+                      "groq":  0.1381,
+                      "total_24h":  4.1627,
+                      "cost_per_decision":  0.00884,
+                      "total_30d":  12.5264,
+                      "total_7d":  9.6314,
+                      "calls_24h":  471
+                  },
+    "mentor_decisions":  {
+                             "total_24h":  209,
+                             "veto_rate":  100,
+                             "approval_rate":  0
+                         },
+    "mesa_consensus":  {
+
+                       },
+    "alerts":  {
+
+               },
+    "feedback_loop":  {
+
+                      }
+}
