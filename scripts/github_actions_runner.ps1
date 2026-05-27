@@ -76,7 +76,21 @@ try {
             } else {
                 Write-Host "Orphan detection error: $($orphanSync.error)" -ForegroundColor Red
             }
-            
+
+            # Phantom reconciliation: posicoes locais active mas nao na exchange
+            # (oposto de orphan - fecha posicoes ghost que ficam stuck no trailing)
+            if (Get-Command Reconcile-PhantomPositions -ErrorAction SilentlyContinue) {
+                Write-Host "Reconciling phantoms..." -ForegroundColor Gray
+                $phantomSync = Reconcile-PhantomPositions
+                if ($phantomSync.phantoms_detected -gt 0) {
+                    Write-Host "Phantoms detected: $($phantomSync.phantoms_detected) closed: $($phantomSync.closed)" -ForegroundColor Yellow
+                    foreach ($d in $phantomSync.details) {
+                        $sym = if ($d.closed) { "OK" } else { "FAIL" }
+                        Write-Host "  $sym $($d.market) exit=$($d.exitPrice)" -ForegroundColor $(if ($d.closed) { "Green" } else { "Red" })
+                    }
+                }
+            }
+
             # Verificar trailing positions
             $localPositions = @(Get-TrailingPositions | Where-Object { $_.active })
             Write-Host "Local active positions: $($localPositions.Count)" -ForegroundColor White

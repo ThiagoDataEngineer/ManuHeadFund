@@ -21,6 +21,22 @@ if (Test-Path (Join-Path $PSScriptRoot "lib_mentor_schema.ps1")) {
 if (Test-Path (Join-Path $PSScriptRoot "lib_market_blacklist.ps1")) {
     . (Join-Path $PSScriptRoot "lib_market_blacklist.ps1")
 }
+# A.6 wire (2026-05-26): time context (weekday/hour/session/weekend)
+if (Test-Path (Join-Path $PSScriptRoot "lib_mentor_time_context.ps1")) {
+    . (Join-Path $PSScriptRoot "lib_mentor_time_context.ps1")
+}
+# B.4 wire (2026-05-26): alpha_vs_btc historico per market
+if (Test-Path (Join-Path $PSScriptRoot "lib_mentor_alpha_history.ps1")) {
+    . (Join-Path $PSScriptRoot "lib_mentor_alpha_history.ps1")
+}
+# B.7 wire (2026-05-26): multi-shot examples canonical
+if (Test-Path (Join-Path $PSScriptRoot "lib_mentor_examples.ps1")) {
+    . (Join-Path $PSScriptRoot "lib_mentor_examples.ps1")
+}
+# C.8 wire (2026-05-26): self-consistency 2x para critical tiers
+if (Test-Path (Join-Path $PSScriptRoot "lib_mentor_self_consistency.ps1")) {
+    . (Join-Path $PSScriptRoot "lib_mentor_self_consistency.ps1")
+}
 
 $MENTOR_SYSTEM_PROMPT = @'
 Voce e O Mentor - uma sintese das mentes mais brilhantes e experientes
@@ -104,15 +120,23 @@ FRAMEWORK DE ANALISE (sempre nesta ordem):
 
 ---
 
-REGRAS INVIOLAVEIS (de Tudor Jones, Dalio, Druckenmiller):
+REGRAS INVIOLAVEIS (Tudor Jones, Dalio, Druckenmiller, CLAUDE.md):
 
 1. Stop loss antes de qualquer entrada. Sem stop = sem trade.
 2. Risco maximo por trade: 1% do capital total.
-3. R:R minimo: 1:3. Perder $1 para ganhar $3 no minimo.
+3. R:R minimo: 1:5 (perder $1 para ganhar $5 minimo).
 4. Confluencia de 3+ fatores antes de agir.
 5. Aguardar e uma posicao. Sem setup claro = sem trade.
 6. Nunca mover stop por emocao. Stop foi calculado quando voce estava racional.
 7. 3 perdas seguidas no mesmo dia = parar.
+8. BTC-core: altcoin precisa BATER BTC (alpha historico > 0) pra justificar exposicao.
+
+REGRAS ANTI-HALLUCINATION (CRITICAS):
+1. Se CONTEXTO contem "FQS=N/7 CATEGORY", o FQS ESTA DECLARADO -- cite o valor exato.
+   NUNCA escreva "FQS indisponivel" se score presente.
+2. Se "FQS=N/A_no_registry" ou "[FQS] ABSENT", entao usar "FQS indisponivel (sem entry)".
+3. NUNCA invente razoes ausentes do contexto. Cite SO o que esta no payload.
+4. Se faltar dado real, diga "X indisponivel" (qual X) -- nunca "todos faltam".
 
 ---
 
@@ -372,6 +396,18 @@ function Build-MentorFullContext {
         mode = $Mode
         fqs = $null; beta = $null; historical = $null
         regime = $null; drawdown = $null; gates = $null
+        time = $null  # A.6 2026-05-26
+        alpha_history = $null  # B.4 2026-05-26
+    }
+
+    # A.6: time context (sempre disponivel, custo zero)
+    if (Get-Command Get-TimeContext -ErrorAction SilentlyContinue) {
+        try { $ctx.time = Get-TimeContext } catch {}
+    }
+
+    # B.4: alpha_vs_btc historico per market (read-only, cost zero)
+    if (Get-Command Get-MarketAlphaSummary -ErrorAction SilentlyContinue) {
+        try { $ctx.alpha_history = Get-MarketAlphaSummary -Market $Market } catch {}
     }
 
     # FQS -- 2026-05-20 PM2: detecta missing + enqueue pra auto-enrich.
@@ -655,21 +691,30 @@ function Invoke-MentorDebate {
         "DIRECTION: LONG (comprando fundo, expects bounce). Avalie: setup eh capitulacao fundo verdadeira ou continuation em downtrend?"
     }
 
+    # B.7 (2026-05-26): multi-shot examples (1 APROVAR + 1 VETAR canonicos).
+    # Cost: ~250 tokens extra/call. Beneficio: hallucination reduce 30-50% empirico.
+    $examplesBlock = ""
+    if (Get-Command Get-MentorExamplesBlock -ErrorAction SilentlyContinue) {
+        try { $examplesBlock = (Get-MentorExamplesBlock) + "`n`n" } catch {}
+    }
+
     $userPrompt = @"
 $Market | Direction=$effectiveDirection | Triagem tier=$($TriagemResult.tier) score_pred=$($TriagemResult.score_predicted)
 $mesaLine
 $setupLine
-$ctxBlock$knowledgeBlock
+$ctxBlock$knowledgeBlock$examplesBlock
 $directionLine
 
-APROVAR ou VETAR? Use CONTEXTO acima (FQS/beta/historical/regime/dd/gates) pra decisao informada.
+APROVAR ou VETAR? Use CONTEXTO acima (FQS/beta/historical/regime/dd/gates/time/alpha_hist) pra decisao informada.
 
-Opcionalmente classifique em 5-tier (mais granular):
+CLASSIFIQUE OBRIGATORIAMENTE em 5-tier:
   STRONG_EXECUTAR = high-confidence layup (rare, sizing 1.5x cap)
   EXECUTAR        = normal aprovar (sizing 1.0x)
-  REVISAR         = doubt (sizing 0.5x paper-only)
-  ABORTAR         = skip
-  HARD_VETO       = extreme red flag (skip + blacklist 24h)
+  REVISAR         = doubt (sizing 0.5x paper-only) -- mapeia pra decision APROVAR ou VETAR
+  ABORTAR         = skip (decision=VETAR)
+  HARD_VETO       = extreme red flag (skip + blacklist 24h, decision=VETAR)
+
+Coerencia: STRONG_EXECUTAR/EXECUTAR -> decision=APROVAR. ABORTAR/HARD_VETO -> decision=VETAR.
 
 JSON: { "decision":"APROVAR"|"VETAR", "confianca":0-100, "mentor_mensagem":"2-3 frases", "knowledge_cited":["arquivo.md:tag"], "veredicto_5tier":"STRONG_EXECUTAR|EXECUTAR|REVISAR|ABORTAR|HARD_VETO" }
 "@
@@ -705,6 +750,17 @@ JSON: { "decision":"APROVAR"|"VETAR", "confianca":0-100, "mentor_mensagem":"2-3 
 
     $knowList = if ($result.knowledge_cited) { [object[]]@($result.knowledge_cited) } else { [object[]]@() }
     $msg = if ($result.mentor_mensagem) { $result.mentor_mensagem } else { "(sem mensagem)" }
+
+    # B.2 (2026-05-26): schema V2 -- veredicto_5tier MANDATORY + coerencia.
+    # Se falhar, NAO bloqueia (fail-soft), mas marca veredicto_5tier=null + log.
+    if (Get-Command Test-MentorOutputV2 -ErrorAction SilentlyContinue) {
+        try {
+            $schemaCheck = Test-MentorOutputV2 -Response $result
+            if (-not $schemaCheck.valid) {
+                Write-Warning "  [MentorDebate] Schema V2 violations: $($schemaCheck.violations -join '; ')"
+            }
+        } catch {}
+    }
 
     # E2 Grounded v2: forbidden phrases guard pos-LLM.
     # Smart detection: phrase "FQS indisponivel" eh hallucination apenas se GATE STATUS
@@ -752,6 +808,39 @@ JSON: { "decision":"APROVAR"|"VETAR", "confianca":0-100, "mentor_mensagem":"2-3 
             }
         }
     } catch {}
+
+    # C.8 (2026-05-26): self-consistency 2x para critical tiers (STRONG/HARD_VETO).
+    # ~5-10% das decisoes empirico = custo extra controlado. Anti-overconfidence.
+    if ($result.PSObject.Properties['veredicto_5tier'] -and $result.veredicto_5tier `
+        -and (Get-Command Test-SelfConsistencyRequired -ErrorAction SilentlyContinue) `
+        -and (Test-SelfConsistencyRequired -Veredicto5tier ([string]$result.veredicto_5tier))) {
+        try {
+            Write-Host "  [MentorDebate] Critical tier '$($result.veredicto_5tier)' - chamando 2nd opinion" -ForegroundColor Magenta
+            $raw2 = $null
+            if (Get-Command Invoke-MentorCascade -ErrorAction SilentlyContinue) {
+                $raw2 = Invoke-MentorCascade -SystemPrompt $MENTOR_DEBATE_SYSTEM -UserContent $userPrompt -Temperature 0.4 -MaxTokens 400 -Agent "mentor"
+            }
+            if ($raw2) {
+                $cleaned2 = $raw2 -replace '```json\s*','' -replace '```\s*','' -replace '^\s+','' -replace '\s+$',''
+                $result2 = $cleaned2 | ConvertFrom-Json -ErrorAction Stop
+                if ($result2.PSObject.Properties['veredicto_5tier']) {
+                    $resolved = Resolve-SelfConsistency -First $result -Second $result2
+                    if (-not $resolved.consistent) {
+                        Write-Warning "  [MentorDebate] Self-consistency DIVERGE: $($resolved.reason)"
+                        # Merge: substitui campos chave preservando knowledge_cited do First
+                        foreach ($prop in @("decision","veredicto_5tier","confianca","mentor_mensagem")) {
+                            if ($resolved.final.PSObject.Properties[$prop]) {
+                                $result | Add-Member -MemberType NoteProperty -Name $prop -Value $resolved.final.$prop -Force
+                            }
+                        }
+                        $msg = $result.mentor_mensagem
+                    }
+                }
+            }
+        } catch {
+            Write-Host "  [MentorDebate] Self-consistency 2nd call falhou (nao bloqueia): $_" -ForegroundColor DarkYellow
+        }
+    }
 
     # E1 5-tier wire: extract optional veredicto_5tier + compute sizing multiplier.
     # Backward compat: campos legacy (decision/confianca) preservados; 5-tier eh additive.

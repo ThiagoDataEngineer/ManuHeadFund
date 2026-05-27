@@ -303,8 +303,9 @@ Describe "Invoke-MentorDebate FullContext" {
         $null = Invoke-MentorDebate -Market "BTCUSDT" -TriagemResult (New-Triagem) `
             -MesaResult (New-Mesa) -Setup (New-Setup) -FullContext (New-FullContext) `
             -KnowledgeContext "short rag text"
-        # ~4 chars/token => 1500 chars ~ 375 tokens prompt. Permite +400 output. Total ~775 in+out.
-        ($global:LAST_MENTOR_PROMPT.Length -le 1500) | Should Be $true
+        # 2026-05-26 bumped to 2700 apos waves A.6 (time) + B.4 (alpha_hist) + B.7 (examples ~800 chars).
+        # Medido empiricamente: ~2551 chars. Threshold 2700 da folga sem inflar.
+        ($global:LAST_MENTOR_PROMPT.Length -le 2700) | Should Be $true
     }
 
     It "Mesa.confluencias agregadas das 3 drones aparecem no prompt (root cause veto 2026-05-20)" {
@@ -422,8 +423,8 @@ Describe "Invoke-MentorDebate FullContext" {
         $ctx = New-FullContext -Fqs 5 -FqsCategory "QUALITY"
         $null = Invoke-MentorDebate -Market "DYDXUSDT" -TriagemResult (New-Triagem -Tier "B") `
             -MesaResult (New-Mesa) -Setup (New-Setup) -FullContext $ctx
-        # FQS deve estar no prompt em formato facil de ver
-        ($global:LAST_MENTOR_PROMPT -match "FQS=5/7\s*QUALITY|FQS=5") | Should Be $true
+        # FQS deve estar no prompt em formato facil de ver (legacy FQS=5/7 ou GATE STATUS [FQS] score=5)
+        ($global:LAST_MENTOR_PROMPT -match "FQS=5/7\s*QUALITY|FQS=5|\[FQS\].*score=5") | Should Be $true
     }
 
     It "FQS=N/A_no_registry quando market nao no registry (em vez de skipar field)" {
@@ -437,7 +438,7 @@ Describe "Invoke-MentorDebate FullContext" {
         }
         $null = Invoke-MentorDebate -Market "XCHUSDT" -TriagemResult (New-Triagem -Tier "B") `
             -MesaResult (New-Mesa) -Setup (New-Setup) -FullContext $ctx
-        ($global:LAST_MENTOR_PROMPT -match "FQS=N/A_no_registry|fqs.*indispon") | Should Be $true
+        ($global:LAST_MENTOR_PROMPT -match "FQS=N/A_no_registry|fqs.*indispon|\[FQS\].*ABSENT") | Should Be $true
     }
 
     It "System prompt proibe explicitamente 'FQS nao declarado' quando ctx tem FQS" {

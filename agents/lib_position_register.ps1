@@ -79,7 +79,13 @@ function Register-PositionTrailing {
         [string]$Mode     = "",
         [int]   $MaxDays  = 0,
         [double]$DdThresholdPct = 0,
-        [double]$Size = 0
+        [double]$Size = 0,
+        # A.1 wire pass-through pra reflection ledger
+        [string]$MentorVeredicto = "",
+        [int]   $MentorConfidence = 0,
+        [string]$MentorMensagem = "",
+        [string]$MesaSinal = "",
+        [string]$Tier = ""
     )
 
     $useMoonBag = $false
@@ -143,7 +149,12 @@ function Register-PositionTrailing {
         -Source $Source `
         -Mode $Mode `
         -MaxDays $MaxDays `
-        -DdThresholdPct $DdThresholdPct
+        -DdThresholdPct $DdThresholdPct `
+        -MentorVeredicto $MentorVeredicto `
+        -MentorConfidence $MentorConfidence `
+        -MentorMensagem $MentorMensagem `
+        -MesaSinal $MesaSinal `
+        -Tier $Tier
 }
 
 # Functions exported:

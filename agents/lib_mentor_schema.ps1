@@ -128,6 +128,57 @@ function Test-MentorOutput {
 }
 
 
+function Test-MentorOutputV2 {
+    <#
+    .SYNOPSIS
+    B.2 (2026-05-26): valida resposta debate compact com veredicto_5tier MANDATORY.
+
+    Schema mais leve do que Test-MentorOutput (usa decision+confianca+mentor_mensagem
+    do Invoke-MentorDebate), mas exige veredicto_5tier coerente.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory)] $Response)
+
+    $obj = $Response
+    if ($obj -is [string]) {
+        try { $obj = $Response | ConvertFrom-Json -ErrorAction Stop }
+        catch { return [PSCustomObject]@{ valid = $false; violations = @("invalid_json") } }
+    }
+
+    $violations = @()
+
+    # decision required + enum
+    if (-not $obj.PSObject.Properties['decision']) {
+        $violations += "decision_missing"
+    } elseif ($obj.decision -notin @("APROVAR","VETAR")) {
+        $violations += "decision_invalid"
+    }
+
+    # veredicto_5tier MANDATORY (B.2)
+    if (-not $obj.PSObject.Properties['veredicto_5tier'] -or [string]::IsNullOrWhiteSpace($obj.veredicto_5tier)) {
+        $violations += "veredicto_5tier_missing"
+    } elseif ($script:MENTOR_VEREDICTO_VALID -notcontains $obj.veredicto_5tier) {
+        $violations += "5tier_invalid: '$($obj.veredicto_5tier)'"
+    } else {
+        # Coerencia: decision vs 5tier
+        $v = $obj.veredicto_5tier
+        $d = $obj.decision
+        if ($v -in @("STRONG_EXECUTAR","EXECUTAR") -and $d -eq "VETAR") {
+            $violations += "5tier_decision_inconsistent: $v expects APROVAR got $d"
+        }
+        if ($v -in @("ABORTAR","HARD_VETO") -and $d -eq "APROVAR") {
+            $violations += "5tier_decision_inconsistent: $v expects VETAR got $d"
+        }
+        # REVISAR is intermediate - either decision ok
+    }
+
+    return [PSCustomObject]@{
+        valid = ($violations.Count -eq 0)
+        violations = @($violations)
+    }
+}
+
+
 function Get-StrongOutcomesCount {
     <#
     .SYNOPSIS

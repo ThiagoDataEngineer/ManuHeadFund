@@ -11,6 +11,10 @@
 . (Join-Path $PSScriptRoot "config.ps1")
 . (Join-Path $PSScriptRoot "lib_coinex.ps1")
 . (Join-Path $PSScriptRoot "lib_telegram.ps1")
+# 2026-05-26 A.1 wire: reflection ledger E3 (graceful se lib ausente)
+if (Test-Path (Join-Path $PSScriptRoot "lib_decision_reflection.ps1")) {
+    . (Join-Path $PSScriptRoot "lib_decision_reflection.ps1")
+}
 
 $TRAILING_FILE = Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "journal") "trailing_positions.json"
 
@@ -130,6 +134,8 @@ function Add-TrailingPosition {
     # Mode "GEM"     -> wide stop 20% + moon bag + max_days enforced
     # Mode "TIER_A"  -> ATR stop progressivo, DD threshold conservador
     # Mode "STANDARD"-> orchestrator legacy
+    # 2026-05-26 A.1: Mentor* params opt-in -- se presentes, escreve pending
+    # reflection (E3 ledger). Se ausentes, comportamento legacy preservado.
     param(
         [string]$Market,
         [string]$Side,          # "LONG" | "SHORT"
@@ -140,7 +146,13 @@ function Add-TrailingPosition {
         [string]$Source   = "orchestrator",   # "orchestrator" | "gem" | "tier_a"
         [string]$Mode     = "",               # "STANDARD" | "GEM" | "TIER_A" (auto-deriv se vazio)
         [int]   $MaxDays  = 0,                # 0 = sem limite. GEM costuma ter 5-30 dias.
-        [double]$DdThresholdPct = 0           # 0 = global default. GEM=40%, TIER_A=25%.
+        [double]$DdThresholdPct = 0,          # 0 = global default. GEM=40%, TIER_A=25%.
+        # A.1 wire (opt-in)
+        [string]$MentorVeredicto = "",
+        [int]   $MentorConfidence = 0,
+        [string]$MentorMensagem = "",
+        [string]$MesaSinal = "",
+        [string]$Tier = ""
     )
 
     $positions = @(Get-TrailingPositions)
@@ -190,6 +202,22 @@ function Add-TrailingPosition {
     $positions += $pos
     Save-TrailingPositions $positions
     Write-Host "  [Trailing] Registrado: $Market $Side mode=$Mode entry=$Entry stop=$Stop target=$Target max_days=$MaxDays dd_cap=${DdThresholdPct}%" -ForegroundColor Green
+
+    # A.1 wire: pending reflection (E3 ledger). Opt-in via MentorVeredicto.
+    # trade_id = market + openedAt ts (sufice como unique pair pra Close lookup)
+    if ($MentorVeredicto -and (Get-Command Add-PendingReflection -ErrorAction SilentlyContinue)) {
+        try {
+            $tradeId = "$Market@$($pos.openedAt -replace ' |:','')"
+            $entryDateUtc = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
+            $reflPath = if ($global:REFLECTIONS_PATH_OVERRIDE) { $global:REFLECTIONS_PATH_OVERRIDE } else { "" }
+            Add-PendingReflection -TradeId $tradeId -Market $Market -EntryDateUtc $entryDateUtc `
+                -MentorVeredicto $MentorVeredicto -MentorConfidence $MentorConfidence `
+                -MentorMensagem $MentorMensagem -MesaSinal $MesaSinal -Tier $Tier `
+                -ReflectionsPath $reflPath
+        } catch {
+            Write-Host "  [Trailing] Add-PendingReflection falhou (nao bloqueia): $_" -ForegroundColor DarkYellow
+        }
+    }
 }
 
 # ── Fechar posicao ────────────────────────────────────────────────────────────
@@ -250,6 +278,37 @@ function Close-TrailingPosition {
             Add-TradeOutcome @kwargs
         } catch {
             Write-Host "  [Trailing] Add-TradeOutcome falhou (nao bloqueia): $_" -ForegroundColor DarkYellow
+        }
+    }
+
+    # A.1 wire: resolved reflection (E3). Procura pending pra mesmo market,
+    # computa pnl_pct (ExitPrice vs entry), escreve resolved entry.
+    if ($script:closedPos -and $ExitPrice -gt 0 -and (Get-Command Get-PendingReflections -ErrorAction SilentlyContinue)) {
+        try {
+            $entry = [double]$script:closedPos.entry
+            $side = [string]$script:closedPos.side
+            $pnlPct = if ($side -eq "LONG") {
+                (($ExitPrice - $entry) / $entry) * 100
+            } else {
+                (($entry - $ExitPrice) / $entry) * 100
+            }
+            $reflPath = if ($global:REFLECTIONS_PATH_OVERRIDE) { $global:REFLECTIONS_PATH_OVERRIDE } else { "" }
+            $pendingAll = @(Get-PendingReflections -ReflectionsPath $reflPath)
+            $pendingMatch = @($pendingAll | Where-Object { $_.market -eq $Market }) | Select-Object -First 1
+            if ($pendingMatch) {
+                $exitDateUtc = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
+                $holdingDays = 0
+                try {
+                    $entryDt = [DateTime]::Parse($pendingMatch.entry_date_utc)
+                    $holdingDays = [Math]::Max(0, [int]((Get-Date).ToUniversalTime() - $entryDt).TotalDays)
+                } catch {}
+                $reflText = "[$Reason] pnl=$([Math]::Round($pnlPct,2))% in ${holdingDays}d (entry=$entry exit=$ExitPrice)"
+                Add-ResolvedReflection -TradeId $pendingMatch.trade_id -ExitDateUtc $exitDateUtc `
+                    -PnlPct $pnlPct -HoldingDays $holdingDays -Reflection $reflText `
+                    -ReflectionsPath $reflPath
+            }
+        } catch {
+            Write-Host "  [Trailing] Add-ResolvedReflection falhou (nao bloqueia): $_" -ForegroundColor DarkYellow
         }
     }
 }

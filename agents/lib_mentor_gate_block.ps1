@@ -127,6 +127,22 @@ function Build-GateStatusBlock {
         $lines += "[MODE]         $($FullContext.mode)"
     }
 
+    # TIME (A.6 2026-05-26) -- weekday/hour/session, weekend warning
+    if ($FullContext.PSObject.Properties['time'] -and $FullContext.time -and (Get-Command Format-TimeContextLine -ErrorAction SilentlyContinue)) {
+        try {
+            $tline = Format-TimeContextLine -TimeContext $FullContext.time
+            $lines += "[TIME]         $tline"
+        } catch {}
+    }
+
+    # ALPHA_HISTORY (B.4 2026-05-26) -- avg alpha vs BTC + LOSING_TO_BTC flag
+    if ($FullContext.PSObject.Properties['alpha_history'] -and $FullContext.alpha_history -and (Get-Command Format-AlphaHistoryLine -ErrorAction SilentlyContinue)) {
+        try {
+            $aline = Format-AlphaHistoryLine -Summary $FullContext.alpha_history
+            $lines += "[ALPHA_HIST]   $aline"
+        } catch {}
+    }
+
     $lines += "=== END GATE STATUS ==="
 
     return ($lines -join "`n")

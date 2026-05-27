@@ -297,6 +297,79 @@ function Sync-OrphanPositions {
 }
 
 # ============================================================================
+# Detect-PhantomPositions - Detecta phantom: local active mas nao na exchange
+# (oposto de orphan: posicao fechada externamente sem o sistema saber)
+# Adicionado 2026-05-26 — fix dessincronizacao trailing_positions <-> CoinEx
+# ============================================================================
+
+function Detect-PhantomPositions {
+    [CmdletBinding()]
+    param()
+    try {
+        $exchangePositions = @(CoinEx-GetPendingPositions)
+        $exchangeMarkets = @($exchangePositions | ForEach-Object { $_.market })
+
+        $localActive = @(Get-TrailingPositions | Where-Object { $_.active })
+
+        $phantoms = @()
+        foreach ($pos in $localActive) {
+            if ($exchangeMarkets -notcontains $pos.market) {
+                $phantoms += $pos
+            }
+        }
+        return $phantoms
+    } catch {
+        Write-Warning "Detect-PhantomPositions: erro: $_"
+        return @()
+    }
+}
+
+# ============================================================================
+# Reconcile-PhantomPositions - Fecha phantoms via Close-TrailingPosition
+# ============================================================================
+
+function Reconcile-PhantomPositions {
+    [CmdletBinding()]
+    param()
+    $closed = 0
+    $errors = 0
+    $details = @()
+    try {
+        $phantoms = @(Detect-PhantomPositions)
+        foreach ($p in $phantoms) {
+            try {
+                $exitPrice = 0
+                try {
+                    $tick = CoinEx-GetTicker $p.market
+                    if ($tick -and $tick.last) { $exitPrice = [double]$tick.last }
+                } catch {}
+
+                Close-TrailingPosition -Market $p.market -Reason "phantom_reconciliation" -ExitPrice $exitPrice
+                $closed++
+                $details += [PSCustomObject]@{ market = $p.market; closed = $true; exitPrice = $exitPrice }
+            } catch {
+                $errors++
+                $details += [PSCustomObject]@{ market = $p.market; closed = $false; error = $_.Exception.Message }
+            }
+        }
+        return [PSCustomObject]@{
+            phantoms_detected = $phantoms.Count
+            closed = $closed
+            errors = $errors
+            details = $details
+        }
+    } catch {
+        return [PSCustomObject]@{
+            phantoms_detected = 0
+            closed = 0
+            errors = 1
+            details = @()
+            error = $_.Exception.Message
+        }
+    }
+}
+
+# ============================================================================
 # Export functions (commented out - not needed for dot-sourced scripts)
 # ============================================================================
 
