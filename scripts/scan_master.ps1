@@ -513,7 +513,7 @@ function Invoke-GemCycle {
                         }
                     } else {
                         Write-MasterLog "GEM rejeitada: $($g.market)" "GEM"
-                        Send-TelegramAlert -Message (Format-TgGemRejected -Market $g.market -Reason "timeout ou usuario cancelou") | Out-Null
+                        Send-TelegramAlert -Message "❌ GEM rejeitada: $($g.market) (timeout ou usuario cancelou)" | Out-Null
                     }
                 }
             }
@@ -1028,17 +1028,8 @@ function Invoke-MasterCycle {
         } else { $true }
 
         if ($hasNews) {
-            $msg = Format-TgCycleSummary `
-                -Window       $Seasonal.window `
-                -MomentScore  $Seasonal.momentScore `
-                -TrailSummary $trailSummary `
-                -GemSummary   $gemSummary `
-                -ScanSummary  $scanSummary `
-                -OrchSummary  $orchSummary `
-                -NextMin      $Seasonal.scanIntervalMin `
-                -NextTime     $nextTs `
-                -ElapsedSec   ([int]$elapsed) `
-                -DryRun:$DryRun
+            $dryTag = if ($DryRun) { " [DRYRUN]" } else { "" }
+            $msg = "📊 CICLO$dryTag | janela=$($Seasonal.window) | $nextTs`ngems=$($gems.Count) scan=$scanSummary orch=$orchSummary trail=$trailSummary`nProximo: ${($Seasonal.scanIntervalMin)}min"
             Send-TelegramAlert -Message $msg | Out-Null
         } else {
             Write-MasterLog "Cycle filter: nenhuma news (gems=0 mesa=0 trail=0 exec=0) -- TG silencioso"
@@ -1075,7 +1066,7 @@ function Invoke-TelegramCommand {
     switch ($Cmd.command) {
 
         { $_ -in "ajuda","help" } {
-            Send-TelegramAlert -Message (Format-TgHelp) | Out-Null
+            Send-TelegramAlert -Message "Comandos: /status /scan /gem /pausar /retomar /fechar PAR /ajuda" | Out-Null
         }
 
         { $_ -in "custos","cost" } {
@@ -1089,13 +1080,8 @@ function Invoke-TelegramCommand {
 
         "status" {
             $positions = @(Get-TrailingPositions) | Where-Object { $_.active }
-            $msg = Format-TgStatusReport `
-                -Positions    $positions `
-                -Window       $Seasonal.window `
-                -MomentScore  $Seasonal.momentScore `
-                -NextMin      $RemainingMin `
-                -NextTime     $NextTime `
-                -Paused:$global:MASTER_PAUSED
+            $posStr = if ($positions.Count -gt 0) { ($positions | ForEach-Object { "$($_.market) $($_.side)" }) -join ", " } else { "nenhuma" }
+            $msg = "📊 STATUS | janela=$($Seasonal.window) | proximo=${RemainingMin}min ($NextTime)`nPosicoes: $posStr`nPausado: $global:MASTER_PAUSED"
             Send-TelegramAlert -Message $msg | Out-Null
         }
 
@@ -1244,4 +1230,4 @@ do {
 } while ($true)
 
 Write-Host "ScanMaster encerrado." -ForegroundColor Yellow
-Send-TelegramAlert -Message (Format-TgSystemStop) | Out-Null
+Send-TelegramAlert -Message "🛑 ScanMaster encerrado." | Out-Null
