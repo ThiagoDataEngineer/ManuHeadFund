@@ -210,8 +210,14 @@ try {
     }
 } catch {}
 
-# ── Salvar JSON ───────────────────────────────────────────────────────────────
+# ── Salvar JSON e data.js (para uso no browser sem CORS) ─────────────────────
 $outFile = Join-Path $dashDir "dashboard_data.json"
-$data | ConvertTo-Json -Depth 5 | Out-File $outFile -Encoding UTF8 -Force
+$jsonStr = $data | ConvertTo-Json -Depth 5
+$jsonStr | Out-File $outFile -Encoding UTF8 -Force
+
+# Escrever data.js com os dados reais (carregado pelo manu.html via <script src>)
+$dataJs = "const MANU_DATA = $jsonStr;"
+$dataJs | Out-File (Join-Path $dashDir "manu_data.js") -Encoding UTF8 -Force
+
 Write-Host "Dashboard data atualizado: $outFile"
 Write-Host "Capital: `$$($data.capital.total) | Posicoes: $($data.positions.Count) | Trades 24h: $($data.trading_metrics.trades_24h)"

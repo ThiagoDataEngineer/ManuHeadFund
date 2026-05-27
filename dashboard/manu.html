@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="refresh" content="300">
 <title>ManuHeadFund — Dashboard</title>
+<script src="manu_data.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #0d1117; color: #e6edf3; font-family: 'Segoe UI', monospace; font-size: 13px; }
@@ -155,6 +157,9 @@ function metric(label, value, cls='') {
 
 // ─── Carregar dashboard_data.json ────────────────────────────────────────────
 async function loadDashboardData() {
+  // Usa dados embutidos via manu_data.js (sem CORS em file://)
+  if (typeof MANU_DATA !== 'undefined') return MANU_DATA;
+  // Fallback: fetch (funciona em servidor HTTP)
   try {
     const r = await fetch('dashboard_data.json?t=' + Date.now());
     return await r.json();
