@@ -92,6 +92,18 @@ try {
             Write-CrossPlatformLog "No orphans detected - all positions registered locally" -LogFile "trailing_stop_monitor.log"
         }
     }
+
+    # 1.5 PHANTOM RECONCILIATION (2026-05-26 A.0): fecha posicoes locais active=true
+    # que nao existem na exchange (oposto de orphan - position fechada externamente).
+    if (Get-Command Reconcile-PhantomPositions -ErrorAction SilentlyContinue) {
+        Write-CrossPlatformLog "--- PHANTOM RECONCILIATION ---" -LogFile "trailing_stop_monitor.log"
+        $phantomSync = Reconcile-PhantomPositions
+        Write-CrossPlatformLog "Phantoms detected: $($phantomSync.phantoms_detected) closed: $($phantomSync.closed) errors: $($phantomSync.errors)" -LogFile "trailing_stop_monitor.log"
+        foreach ($d in $phantomSync.details) {
+            $level = if ($d.closed) { "INFO" } else { "WARN" }
+            Write-CrossPlatformLog "  PHANTOM: $($d.market) closed=$($d.closed) exit=$($d.exitPrice)" -Level $level -LogFile "trailing_stop_monitor.log"
+        }
+    }
     else {
         Write-CrossPlatformLog "ORPHAN DETECTION ERROR: $($orphanSync.error)" -Level ERROR -LogFile "trailing_stop_monitor.log"
     }

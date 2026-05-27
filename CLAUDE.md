@@ -74,7 +74,24 @@ Esses nenhum livro resolve sozinho.
 - **⚡ Parallel toggle**: [docs/PARALLEL_ORCHESTRATOR_TOGGLE.md](docs/PARALLEL_ORCHESTRATOR_TOGGLE.md)
 - Demais: [BLUEPRINT.md](docs/BLUEPRINT.md), [AGENTS.md](docs/AGENTS.md), [PERSONAS.md](docs/PERSONAS.md)
 
-### Estado atual (2026-05-23 03:00 BRT — Mentor evolutions 5/5 entregues, 217/217 TDD pass)
+### Estado atual (2026-05-26 21:50 BRT — Mentor evolutions A+B+C entregues, +65/65 TDD novos, smoke E2E 22/22, commit 33a304b)
+
+- **9 features novas em TDD** (Onda A foundation + B sinal + C calibração):
+  - **A.0** Phantom reconciliation — `Detect/Reconcile-PhantomPositions` em `lib_trailing_orphan_detection.ps1`; fecha posições locais active=true ausentes na CoinEx; wire em `github_actions_runner` + `trailing_stop_monitor`; **2 phantoms reais fechadas** (LINK, SOL)
+  - **A.1** Reflection wire E3 — `Add-TrailingPosition` opt-in MentorVeredicto/etc → `Add-PendingReflection`; `Close-TrailingPosition` → `Add-ResolvedReflection`; ledger `decision_reflections.jsonl` agora alimenta automaticamente
+  - **A.6** `lib_mentor_time_context.ps1` — weekday/UTC hour/session/weekend no GATE STATUS `[TIME]`
+  - **B.4** `lib_mentor_alpha_history.ps1` — alpha vs BTC histórico per market, flag `LOSING_TO_BTC` no GATE STATUS `[ALPHA_HIST]`
+  - **B.2** `Test-MentorOutputV2` — `veredicto_5tier` obrigatório + coerência decision↔tier
+  - **B.7** `lib_mentor_examples.ps1` — 2 multi-shot canonicos (APROVAR + HARD_VETO) no prompt
+  - **C.5** `lib_mentor_calibration.ps1` + CLI `scripts/mentor_calibration_report.ps1` — win_rate por (veredicto × provider × regime)
+  - **C.3** `lib_mentor_rules.ps1` SSoT; MENTOR_SYSTEM_PROMPT legado R:R 1:3→**1:5** + BTC-core regra #8 + anti-hallucination
+  - **C.8** `lib_mentor_self_consistency.ps1` — 2x LLM call só em STRONG/HARD_VETO (~5-10%), divergência → downgrade
+- **Doc completa**: [docs/mentor/EVOLUTIONS_2026_05_26.md](docs/mentor/EVOLUTIONS_2026_05_26.md)
+- **DNS Cisco Umbrella** bypass aplicado via `CONSERTAR_DNS_LLM.ps1` — Mentor voltou (era 64/76 "Mentor indisponivel")
+- **4 daemons restartados 21:46 BRT**: gem_loop 22684 / scan_master 12936 / tg_listener 5712 / watchdog 23960
+- **Custo extra**: ~$5-8/mês (multi-shot ~$3-5 + self-consistency ~$2-3)
+
+### Estado anterior (2026-05-23 03:00 BRT — Mentor evolutions 5/5 entregues, 217/217 TDD pass)
 
 - **Mentor pipeline reforçado** via 5 evolutions (Tauric-inspired):
   - **E5**: LLM mocks infra (`tests/_helpers/llm_mocks.ps1`, 19 TDD)
