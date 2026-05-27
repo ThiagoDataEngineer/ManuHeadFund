@@ -315,10 +315,31 @@ function Invoke-V6Cascade {
     if ((Get-Command Test-ContextAllowsTrade -ErrorAction SilentlyContinue) -and $mentor.decision -eq "APROVAR") {
         try {
             $regimeForMce = if ($wlRegime) { [string]$wlRegime } else { "SIDEWAYS" }
-            $mceResult = Test-ContextAllowsTrade -DateBrt (Get-Date) -Regime $regimeForMce
+
+            # Fatores dinamicos: Fear&Greed, FundingRate, ETF Flow, DXY
+            # Cache por ciclo em journal/mce_dynamic_cache.json (evita chamadas repetidas)
+            $dynData = $null
+            if (Get-Command Get-DynamicContextData -ErrorAction SilentlyContinue) {
+                try {
+                    $cacheFile = Join-Path $global:JOURNAL_DIR "mce_dynamic_cache.json"
+                    $cacheValid = $false
+                    if (Test-Path $cacheFile) {
+                        $cached = Get-Content $cacheFile -Raw | ConvertFrom-Json -ErrorAction SilentlyContinue
+                        if ($cached -and $cached.fetched_at) {
+                            $age = ((Get-Date).ToUniversalTime() - [datetime]$cached.fetched_at).TotalMinutes
+                            if ($age -lt 30) { $dynData = $cached; $cacheValid = $true }
+                        }
+                    }
+                    if (-not $cacheValid) {
+                        $dynData = Get-DynamicContextData -CacheFile $cacheFile
+                    }
+                } catch { $dynData = $null }
+            }
+
+            $mceResult = Test-ContextAllowsTrade -DateBrt (Get-Date) -Regime $regimeForMce -DynamicData $dynData
             if ($mceResult.action -eq "BLOCK") {
                 $decisao = "ABORTAR"
-                $motivo = "MCE_BLOCK score=$($mceResult.score) (contexto desfavoravel)"
+                $motivo = "MCE_BLOCK score=$($mceResult.score) static=$($mceResult.static_score) dynamic=$($mceResult.dynamic_score) (contexto desfavoravel)"
                 $mentor.decision = "VETAR_MCE"
             } elseif ($mceResult.action -eq "PAPER_ONLY") {
                 $paperOnly = $true
