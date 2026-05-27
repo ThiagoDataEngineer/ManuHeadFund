@@ -119,3 +119,5 @@ DASHBOARD_FINAL.ps1
 # Locks
 # ============================================================
 locks/*.lock
+
+!scripts/update_dashboard_json.ps1
