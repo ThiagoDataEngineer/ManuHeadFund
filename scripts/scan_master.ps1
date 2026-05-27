@@ -1157,8 +1157,16 @@ function Wait-WithCommands {
         Start-Sleep -Seconds $chunkSec
 
         $cmds = @()
-        if (Get-Command Get-TelegramCommands -ErrorAction SilentlyContinue) {
-            $cmds = @(Get-TelegramCommands)
+        # Ler comandos do arquivo de fila (escrito pelo telegram_listener.ps1)
+        $cmdQueueFile = Join-Path $PSScriptRoot "..\journal\scan_master_cmd_queue.jsonl"
+        if (Test-Path $cmdQueueFile) {
+            try {
+                $lines = Get-Content $cmdQueueFile -Encoding UTF8 -ErrorAction SilentlyContinue
+                if ($lines) {
+                    $cmds = @($lines | ForEach-Object { $_ | ConvertFrom-Json -ErrorAction SilentlyContinue } | Where-Object { $_ })
+                    Remove-Item $cmdQueueFile -Force -ErrorAction SilentlyContinue
+                }
+            } catch {}
         }
         foreach ($cmd in $cmds) {
             $remaining = [int](($endTime - (Get-Date)).TotalMinutes)

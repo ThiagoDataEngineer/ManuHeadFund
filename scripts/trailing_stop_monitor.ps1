@@ -51,6 +51,7 @@ try {
     . (Join-Path $agentsDir "lib_coinex.ps1")
     . (Join-Path $agentsDir "lib_telegram.ps1")
     . (Join-Path $agentsDir "lib_trailing.ps1")
+    . (Join-Path $agentsDir "lib_trailing_stop_intelligent.ps1")
     . (Join-Path $agentsDir "lib_trailing_orphan_detection.ps1")
     
     Write-CrossPlatformLog "Libraries loaded successfully" -LogFile "trailing_stop_monitor.log"

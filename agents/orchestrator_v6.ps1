@@ -491,9 +491,10 @@ function Invoke-V6PostMentorExecution {
     # Aprovacao manual via Telegram (timeout 5min)
     $approvalMsg = "V6 EXEC $Market $Side $Amount entry=$($Setup.entry) stop=$($Setup.stop) target=$($Setup.target) mentor=$($Mentor.confianca)"
     $approved = $false
-    if (Get-Command Wait-TelegramApproval -ErrorAction SilentlyContinue) {
+    if (Get-Command Wait-TgCallbackApproval -ErrorAction SilentlyContinue) {
         try {
-            $approved = Wait-TelegramApproval -Message $approvalMsg -TimeoutSeconds 300
+            $tgResult = Wait-TgCallbackApproval -GemMarket $Market -TimeoutSeconds 300
+            $approved = ($tgResult.decision -eq "approve")
         } catch {
             $result.decisaoFinal = "ERRO_APPROVAL"
             $result.reason = "approval_threw"

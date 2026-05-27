@@ -650,14 +650,19 @@ function Invoke-GemExecute {
             Write-Host "  [TRAILING STOP] Agendando ativacao automatica em 60s..." -ForegroundColor DarkCyan
             # Agendar trailing stop para 60s depois (tempo para posicao aparecer na API)
             $trailingJob = Start-Job -ScriptBlock {
-                param($Market, $ScriptRoot)
+                param($Market, $ScriptRoot, $AccessId, $SecretKey, $BaseUrl)
                 Start-Sleep -Seconds 60
+                # Carregar credenciais no job (nao herdam do processo pai)
+                $env:COINEX_ACCESS_ID  = $AccessId
+                $env:COINEX_SECRET_KEY = $SecretKey
+                if ($BaseUrl) { $global:COINEX_BASE_URL = $BaseUrl }
+                . "$ScriptRoot\config.ps1"
                 . "$ScriptRoot\lib_coinex.ps1"
                 . "$ScriptRoot\lib_coinex_position_management.ps1"
                 . "$ScriptRoot\lib_position_risk_manager.ps1"
                 $result = Update-TrailingStop -Market $Market -AtrMultiplier 2.0 -MinProfitPct 2.0
                 return $result
-            } -ArgumentList $mkt, $PSScriptRoot
+            } -ArgumentList $mkt, $PSScriptRoot, $env:COINEX_ACCESS_ID, $env:COINEX_SECRET_KEY, $global:COINEX_BASE_URL
             
             Write-Host "  [TRAILING STOP] Job ID: $($trailingJob.Id) (rodando em background)" -ForegroundColor DarkGray
         } catch {
