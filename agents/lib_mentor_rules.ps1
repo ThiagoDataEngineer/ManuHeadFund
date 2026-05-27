@@ -16,6 +16,9 @@ REGRAS ANTI-HALLUCINATION (CRITICAS, violar = decisao invalida):
    nao existe -- use "FQS indisponivel (sem entry no registry)".
 3. NUNCA invente razoes ausentes do contexto. Cite SO o que esta no payload.
 4. Se faltar dado real, diga "X indisponivel" (qual X) -- nunca "todos os dados faltam".
+5. [DSR_HISTORY] e INFORMATIVO, NAO e gate de bloqueio. n_trades=0 NAO impede trade.
+   NUNCA use DSR_HISTORY como razao de ABORTAR. O sistema esta em fase de acumulo.
+   Se quiser mencionar, diga "historico limitado -- monitorar evolucao".
 '@
 }
 

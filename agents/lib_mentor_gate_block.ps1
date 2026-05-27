@@ -82,12 +82,12 @@ function Build-GateStatusBlock {
         $lines += "[BETA]         ABSENT (no beta_vs_btc.json entry)"
     }
 
-    # DSR_HISTORY
+    # DSR_HISTORY -- INFORMATIVO apenas, nao e gate de bloqueio
     if ($FullContext.PSObject.Properties['historical'] -and $FullContext.historical) {
         $h = $FullContext.historical
-        $lines += "[DSR_HISTORY]  n_trades=$($h.n_trades) dsr=$($h.dsr) sharpe_30d=$($h.sharpe_30d)"
+        $lines += "[DSR_HISTORY]  n_trades=$($h.n_trades) dsr=$($h.dsr) sharpe_30d=$($h.sharpe_30d) [INFO-ONLY: nao bloqueia]"
     } else {
-        $lines += "[DSR_HISTORY]  ABSENT (no per_market entry in dsr_global.json)"
+        $lines += "[DSR_HISTORY]  ABSENT [INFO-ONLY: nao bloqueia -- sistema em fase de acumulo de historico]"
     }
 
     # REGIME
