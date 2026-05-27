@@ -20,3 +20,6 @@
 {"ts_utc":"2026-05-27T06:37:41.7400123Z","market":"CFGUSDT","price":0.30079,"action_line":0.294713,"proximity_pct":2.06,"touches":20,"slope_deg":7.49,"rsi":null,"vol_drying":null}
 {"ts_utc":"2026-05-27T09:52:13.3641091Z","market":"INJUSDT","price":5.6465,"action_line":5.382698,"proximity_pct":4.9,"touches":25,"slope_deg":10.84,"rsi":null,"vol_drying":null}
 {"ts_utc":"2026-05-27T11:46:54.5869429Z","market":"CFGUSDT","price":0.30475,"action_line":0.295396,"proximity_pct":3.17,"touches":19,"slope_deg":7.62,"rsi":null,"vol_drying":null}
+{"ts_utc":"2026-05-27T16:44:24.3111001Z","market":"RENDERUSDT","price":2.2085,"action_line":2.111141,"proximity_pct":4.61,"touches":14,"slope_deg":14.17,"rsi":null,"vol_drying":null}
+{"ts_utc":"2026-05-27T16:44:28.0665014Z","market":"CFGUSDT","price":0.304649,"action_line":0.297338,"proximity_pct":2.46,"touches":22,"slope_deg":8.23,"rsi":null,"vol_drying":null}
+{"ts_utc":"2026-05-27T17:07:41.8168829Z","market":"INJUSDT","price":5.6909,"action_line":5.439435,"proximity_pct":4.62,"touches":24,"slope_deg":11.9,"rsi":null,"vol_drying":null}
