@@ -346,19 +346,19 @@ function Invoke-MentorCascade {
         [double]$Temperature    = 0.3,
         [string]$Agent          = "mentor"
     )
-    # 2026-05-27 fix: Mentor precisa JSON estruturado — Haiku-first (5x mais barato que Sonnet).
-    # Groq/Gemini nao seguem JSON format do system prompt confiavelmente -> parse falha silencioso.
-    # Cascade: Haiku (~$0.005) -> Groq (gratis, fallback) -> Gemini (gratis) -> Sonnet (ultimo).
+    # Mentor precisa JSON estruturado complexo — Sonnet primary (unico confiavel para JSON).
+    # Haiku/Groq/Gemini geram campos extras e truncam -> parse falha silencioso.
+    # Economia: Sonnet so para Mentor. Triagem/Mesa/Tech usam Groq/Gemini/Haiku.
     $script:LAST_CASCADE_PROVIDER = $null
 
-    # 1. Claude Haiku (primary — JSON confiavel, ~$0.005/call, 5x mais barato que Sonnet)
+    # 1. Anthropic Sonnet (primary — JSON estruturado confiavel)
     if ($env:ANTHROPIC_API_KEY) {
         try {
             $r = Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model "claude-haiku-4-5" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
-            if ($r) { $script:LAST_CASCADE_PROVIDER = "anthropic_haiku"; return $r }
+                -Model $AnthropicModel -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+            if ($r) { $script:LAST_CASCADE_PROVIDER = "anthropic_sonnet"; return $r }
         } catch {
-            Write-Host "  [$Agent] Haiku falhou, fallback Groq: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+            Write-Host "  [$Agent] Sonnet falhou, fallback Groq: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
     # 2. Groq llama-70b (fallback 1, gratis)
@@ -378,17 +378,17 @@ function Invoke-MentorCascade {
                 -Model "gemini-2.5-flash" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
             if ($r) { $script:LAST_CASCADE_PROVIDER = "gemini_2_flash"; return $r }
         } catch {
-            Write-Host "  [$Agent] Gemini falhou, fallback Sonnet: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+            Write-Host "  [$Agent] Gemini falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
-    # 4. Anthropic Sonnet (ultimo recurso)
+    # 4. Claude Haiku (ultimo recurso, ~$0.005/call)
     if ($env:ANTHROPIC_API_KEY) {
         try {
             $r = Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model $AnthropicModel -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
-            if ($r) { $script:LAST_CASCADE_PROVIDER = "anthropic_sonnet"; return $r }
+                -Model "claude-haiku-4-5" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+            if ($r) { $script:LAST_CASCADE_PROVIDER = "anthropic_haiku"; return $r }
         } catch {
-            Write-Warning "  [$Agent] Sonnet final falhou: $($_.Exception.Message)"
+            Write-Warning "  [$Agent] Haiku final falhou: $($_.Exception.Message)"
         }
     }
     return $null

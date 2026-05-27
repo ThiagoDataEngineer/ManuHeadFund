@@ -379,7 +379,7 @@ REGRAS ANTI-HALLUCINATION (CRITICAS, violar = decisao invalida):
 3. NUNCA invente razoes ausentes do contexto. Cite SO o que esta no payload.
 4. Se faltar dado real, diga "X indisponivel" (e qual X) -- nunca "todos os dados faltam".
 
-Cite knowledge (arquivo.md:tag). Responda APENAS JSON valido.
+Cite knowledge (arquivo.md:tag). Responda APENAS JSON valido. SEJA CONCISO: use APENAS os campos do schema, sem campos extras. mentor_mensagem max 2 frases.
 '@
 
 function Build-MentorFullContext {
@@ -722,7 +722,7 @@ JSON: { "decision":"APROVAR"|"VETAR", "confianca":0-100, "mentor_mensagem":"2-3 
     # Cascade Mentor 2026-05-16: Anthropic primary -> Groq -> Gemini.
     $result = $null
     if (Get-Command Invoke-MentorCascade -ErrorAction SilentlyContinue) {
-        $raw = Invoke-MentorCascade -SystemPrompt $MENTOR_DEBATE_SYSTEM -UserContent $userPrompt -Temperature 0.3 -MaxTokens 800 -Agent "mentor"
+        $raw = Invoke-MentorCascade -SystemPrompt $MENTOR_DEBATE_SYSTEM -UserContent $userPrompt -Temperature 0.3 -MaxTokens 1200 -Agent "mentor"
         if ($raw) {
             try {
                 $cleaned = $raw -replace '```json\s*','' -replace '```\s*','' -replace '^\s+','' -replace '\s+$',''
@@ -731,7 +731,7 @@ JSON: { "decision":"APROVAR"|"VETAR", "confianca":0-100, "mentor_mensagem":"2-3 
         }
     } else {
         $result = Invoke-ClaudeJson -SystemPrompt $MENTOR_DEBATE_SYSTEM -UserContent $userPrompt `
-            -Temperature 0.3 -MaxTokens 800 -Agent "mentor"
+            -Temperature 0.3 -MaxTokens 1200 -Agent "mentor"
     }
 
     # 2026-05-20 PM: provider trace -- captura qual LLM respondeu (anthropic_sonnet/groq_llama70b/...)
@@ -818,7 +818,7 @@ JSON: { "decision":"APROVAR"|"VETAR", "confianca":0-100, "mentor_mensagem":"2-3 
             Write-Host "  [MentorDebate] Critical tier '$($result.veredicto_5tier)' - chamando 2nd opinion" -ForegroundColor Magenta
             $raw2 = $null
             if (Get-Command Invoke-MentorCascade -ErrorAction SilentlyContinue) {
-                $raw2 = Invoke-MentorCascade -SystemPrompt $MENTOR_DEBATE_SYSTEM -UserContent $userPrompt -Temperature 0.4 -MaxTokens 800 -Agent "mentor"
+                $raw2 = Invoke-MentorCascade -SystemPrompt $MENTOR_DEBATE_SYSTEM -UserContent $userPrompt -Temperature 0.4 -MaxTokens 1200 -Agent "mentor"
             }
             if ($raw2) {
                 $cleaned2 = $raw2 -replace '```json\s*','' -replace '```\s*','' -replace '^\s+','' -replace '\s+$',''
