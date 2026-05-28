@@ -178,8 +178,78 @@ function Invoke-GroqJson {
 }
 
 # -----------------------------------------------------------------------------
+# Invoke-Cerebras — wrapper Cerebras Inference API (OpenAI-compatible)
+# Free tier: 50 RPM, ~1M tok/dia, 2300 tok/s (mais rapido do mundo).
+# Modelos: llama-3.3-70b / llama-3.1-8b / qwen-3-235b
+# API identica ao OpenAI — so muda a base URL e a key.
+# Substitui Gemini no cascade: 50 RPM vs 15 RPM do Gemini, sem burst 429.
+# Tracking: cost = $0 (free tier)
+# Ref: https://inference-docs.cerebras.ai
+# -----------------------------------------------------------------------------
+function Invoke-Cerebras {
+    param(
+        [string]$SystemPrompt,
+        [string]$UserContent,
+        [string]$Model       = "llama-3.3-70b",
+        [int]   $MaxTokens   = 2000,
+        [double]$Temperature = 0.4,
+        [string]$Agent       = "unknown"
+    )
+
+    $apiKey = $env:CEREBRAS_API_KEY
+    if (-not $apiKey) { throw "CEREBRAS_API_KEY nao configurada" }
+
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13
+
+    $body = @{
+        model       = $Model
+        max_tokens  = $MaxTokens
+        temperature = $Temperature
+        messages    = @(
+            @{ role = "system"; content = $SystemPrompt }
+            @{ role = "user";   content = $UserContent }
+        )
+    } | ConvertTo-Json -Depth 10 -Compress
+
+    $start = Get-Date
+    try {
+        $wr = Invoke-WebRequest `
+            -Uri "https://api.cerebras.ai/v1/chat/completions" `
+            -Method POST `
+            -Headers @{
+                "Authorization" = "Bearer $apiKey"
+                "Content-Type"  = "application/json"
+            } `
+            -Body ([System.Text.Encoding]::UTF8.GetBytes($body)) `
+            -UseBasicParsing `
+            -TimeoutSec 20 `
+            -ErrorAction Stop
+
+        $latencyMs = ((Get-Date) - $start).TotalMilliseconds
+        $json     = [System.Text.Encoding]::UTF8.GetString($wr.RawContentStream.ToArray())
+        $response = $json | ConvertFrom-Json
+
+        try {
+            if (Get-Command -Name "Track-ClaudeUsage" -ErrorAction SilentlyContinue) {
+                $inTok  = [int]$response.usage.prompt_tokens
+                $outTok = [int]$response.usage.completion_tokens
+                Track-ClaudeUsage -Model "cerebras:$Model" -InputTokens $inTok -OutputTokens $outTok -Agent $Agent -LatencyMs $latencyMs | Out-Null
+            }
+        } catch {}
+
+        return $response.choices[0].message.content
+    } catch {
+        $statusCode = $_.Exception.Response.StatusCode.value__
+        $msg = $_.Exception.Message
+        throw "Cerebras API error ($statusCode): $msg"
+    }
+}
+
+# -----------------------------------------------------------------------------
 # Invoke-Gemini — wrapper Google Gemini API (v1beta)
-# Free tier: 1500 req/dia 2.0 Flash, 50/dia 2.0 Pro. Latencia baixa, JSON-friendly.
+# Free tier: 1500 req/dia 2.0 Flash, 15 RPM (burst 429 frequente em uso intenso).
+# NOTA 2026-05-27: Gemini rebaixado para fallback de ultimo recurso no cascade.
+# Substituido por Cerebras (50 RPM, 2300 tok/s) como fallback 2.
 # Tracking: cost = $0 (free tier); pago $0.075/M in $0.30/M out
 # -----------------------------------------------------------------------------
 function Invoke-Gemini {
@@ -307,16 +377,17 @@ function Invoke-MesaDroneCascade {
             return Invoke-Groq -SystemPrompt $SystemPrompt -UserContent $UserContent `
                 -Model $GroqModel -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
-            Write-Host "  [$Agent] Groq falhou, fallback Gemini: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+            Write-Host "  [$Agent] Groq falhou, fallback Cerebras: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
-    # 2. Gemini (fallback 1 - se Groq 429/400)
-    if ($env:GEMINI_API_KEY) {
+    # 2. Cerebras llama-70b (fallback 1 - 50 RPM, 2300 tok/s, substitui Gemini 2026-05-27)
+    # Gemini tinha 15 RPM e burst 429 constante. Cerebras: 50 RPM, zero 429 em uso normal.
+    if ($env:CEREBRAS_API_KEY) {
         try {
-            return Invoke-Gemini -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model "gemini-2.5-flash" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+            return Invoke-Cerebras -SystemPrompt $SystemPrompt -UserContent $UserContent `
+                -Model "llama-3.3-70b" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
-            Write-Host "  [$Agent] Gemini falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+            Write-Host "  [$Agent] Cerebras falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
     # 3. Claude Haiku (fallback final, pago $0.005/call) — pula se ja tentou no inicio (HaikuPrimary)
@@ -368,17 +439,18 @@ function Invoke-MentorCascade {
                 -Model "llama-3.3-70b-versatile" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
             if ($r) { $script:LAST_CASCADE_PROVIDER = "groq_llama70b"; return $r }
         } catch {
-            Write-Host "  [$Agent] Groq falhou, fallback Gemini: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+            Write-Host "  [$Agent] Groq falhou, fallback Cerebras: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
-    # 3. Gemini (fallback 2, gratis)
-    if ($env:GEMINI_API_KEY) {
+    # 3. Cerebras llama-70b (fallback 2, gratis, 50 RPM — substitui Gemini 2026-05-27)
+    # Cerebras: 2300 tok/s, 50 RPM vs 15 RPM Gemini, sem burst 429
+    if ($env:CEREBRAS_API_KEY) {
         try {
-            $r = Invoke-Gemini -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model "gemini-2.5-flash" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
-            if ($r) { $script:LAST_CASCADE_PROVIDER = "gemini_2_flash"; return $r }
+            $r = Invoke-Cerebras -SystemPrompt $SystemPrompt -UserContent $UserContent `
+                -Model "llama-3.3-70b" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+            if ($r) { $script:LAST_CASCADE_PROVIDER = "cerebras_llama70b"; return $r }
         } catch {
-            Write-Host "  [$Agent] Gemini falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+            Write-Host "  [$Agent] Cerebras falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
     # 4. Claude Haiku (ultimo recurso, ~$0.005/call)
@@ -403,20 +475,22 @@ function Invoke-TriagemCascade {
         [double]$Temperature  = 0.3,
         [string]$Agent        = "triagem"
     )
-    if ($env:GEMINI_API_KEY) {
-        try {
-            return Invoke-Gemini -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model "gemini-2.5-flash" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
-        } catch {
-            Write-Host "  [$Agent] Gemini falhou, fallback Groq: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
-        }
-    }
+    # 1. Groq primary (30 RPM, rapido)
     if ($env:GROQ_API_KEY) {
         try {
             return Invoke-Groq -SystemPrompt $SystemPrompt -UserContent $UserContent `
                 -Model "llama-3.3-70b-versatile" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
-            Write-Host "  [$Agent] Groq falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+            Write-Host "  [$Agent] Groq falhou, fallback Cerebras: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+        }
+    }
+    # 2. Cerebras (fallback 1 - 50 RPM, substitui Gemini 2026-05-27)
+    if ($env:CEREBRAS_API_KEY) {
+        try {
+            return Invoke-Cerebras -SystemPrompt $SystemPrompt -UserContent $UserContent `
+                -Model "llama-3.3-70b" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+        } catch {
+            Write-Host "  [$Agent] Cerebras falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
     # 3. Haiku (fallback final, cost-conscious -- SOMENTE Haiku, nao Sonnet)

@@ -3,10 +3,10 @@
 # Objetivo: evitar cold-start no primeiro ciclo da manha (LIDAR null, Mentor null).
 # Fire-forget: falhas sao logadas mas nao bloqueiam o restart.
 #
-# Cascade coberto:
-#   Haiku   -> path critico LIDAR (mesa_agent -HaikuPrimary)
-#   Groq    -> Mesa Termal + Radar primary (llama-3.3-70b-versatile)
-#   Gemini  -> fallback 2 de todos os cascades
+# Cascade coberto (2026-05-27: Gemini substituido por Cerebras):
+#   Haiku     -> path critico LIDAR (mesa_agent -HaikuPrimary) + Mentor fallback 3
+#   Groq      -> Mesa Termal + Radar primary (llama-3.3-70b-versatile)
+#   Cerebras  -> fallback 2 de todos os cascades (50 RPM, 2300 tok/s, zero 429)
 
 $scriptDir   = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot = Split-Path -Parent $scriptDir
@@ -55,16 +55,16 @@ try {
     Log "  [Groq]   FAIL: Groq API error ($($_.Exception.Response.StatusCode.value__)): $($_.Exception.Message)"
 }
 
-# 3. Gemini (fallback 2 de todos os cascades)
+# 3. Cerebras llama-70b (fallback 2 — substitui Gemini, 50 RPM, zero 429)
 try {
     $t = Get-Date
-    $r = Invoke-Gemini -SystemPrompt $warmupSys -UserContent $warmupUser `
-        -Model "gemini-2.5-flash" -MaxTokens 5 -Temperature 0 -Agent "warmup_gemini"
+    $r = Invoke-Cerebras -SystemPrompt $warmupSys -UserContent $warmupUser `
+        -Model "llama-3.3-70b" -MaxTokens 5 -Temperature 0 -Agent "warmup_cerebras"
     $ms = [math]::Round(((Get-Date) - $t).TotalSeconds, 1)
-    if ($r) { Log "  [Gemini] ${ms}s -> OK" }
-    else    { Log "  [Gemini] ${ms}s -> null (sem erro)" }
+    if ($r) { Log "  [Cerebras] ${ms}s -> OK" }
+    else    { Log "  [Cerebras] ${ms}s -> null (sem erro)" }
 } catch {
-    Log "  [Gemini] FAIL: Gemini API error ($($_.Exception.Response.StatusCode.value__)): $($_.Exception.Message)"
+    Log "  [Cerebras] FAIL: Cerebras API error ($($_.Exception.Response.StatusCode.value__)): $($_.Exception.Message)"
 }
 
 Log "=== LLM warmup DONE ==="
