@@ -12,13 +12,17 @@
 - Telegram bot: approval gates, comandos `/scan /halt /resume /demote /keep /idea`
 - Docs técnicos: `docs/ARCHITECTURE_TATICA.md`, `docs/STRATEGIC_ROADMAP.md`, `docs/AGENTS.md`
 
-### Estado atual (2026-05-26)
+### Estado atual (2026-05-27)
 
-- **Paper calibration ativa**: `journal/PAPER_CALIBRATION_MODE.flag` presente → SCORE_MINIMO=55, intervalo 30min
-- **9 Mentor evolutions** entregues (A+B+C): phantom reconcile, reflection wire, time context, alpha history, 5-tier schema, multi-shot, calibration, self-consistency, unified prompts — ver `docs/mentor/EVOLUTIONS_2026_05_26.md`
-- **DNS fix**: `CONSERTAR_DNS_LLM.ps1` resolve Cisco Umbrella bloqueando LLMs
+- **Paper calibration ativa**: `journal/PAPER_CALIBRATION_MODE.flag` → SCORE_MINIMO=55, intervalo 30min
+- **6/10 trades reais**: `journal/trade_outcomes.jsonl` — win rate 33%, PnL -$26, faltam 4 para Kelly
+- **DSR real**: bootstrap falso removido, dados reais em SOL/LINK/NEAR/UNI/BNB/TON
+- **Mentor LLMs**: todos OK — Sonnet/Haiku/Groq/Gemini funcionando
+- **warmup_llm_endpoints.ps1**: recriado — resolve Mentor null no primeiro ciclo pos-restart 03:00
+- **Telegram visual**: Format-TgCycleSummary/EsquadraoResult/Heartbeat implementados (17/17 testes)
 - **4 daemons ativos**: gem_loop / scan_master / tg_listener / watchdog
-- **Telegram V2**: `agents/lib_telegram_v2.ps1` criado — integração pendente nos 6 scripts principais
+- **Modo**: LIVE (ambas flags presentes)
+- **Bloqueios conhecidos**: DSR parcial (6 trades), ALPHA_HIST nascente, BETA PENDLE 1.38 vs cap 1.4
 
 ---
 

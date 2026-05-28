@@ -164,7 +164,35 @@ if ($Telegram) {
         $libTg = Join-Path (Split-Path $scriptDir -Parent) "agents\lib_telegram.ps1"
         if (Test-Path $libTg) { . $libTg }
         if (Get-Command Send-TelegramAlert -ErrorAction SilentlyContinue) {
-            Send-TelegramAlert -Message ($report -join "`n") | Out-Null
+            # Usa Format-TgStatusSnapshot se disponivel (mensagem estruturada)
+            $tgMsg = if (Get-Command Format-TgStatusSnapshot -ErrorAction SilentlyContinue) {
+                # Coleta dados para o formato rico
+                $ddArr = @()
+                if ($ddFile) {
+                    try { $ddArr = @((Get-Content $ddFile.FullName -Raw -Encoding UTF8 | ConvertFrom-Json).drawdowns) } catch {}
+                }
+                $daemonMap = @{}
+                foreach ($w in $workers.GetEnumerator()) {
+                    $procs = @(Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
+                               Where-Object { $_.CommandLine -like $w.Value -and $_.CommandLine -notlike "*Get-CimInstance*" })
+                    $alive = @($procs | Where-Object { $null -ne (Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue) })
+                    $daemonMap[$w.Key] = @{ alive = ($alive.Count -gt 0) }
+                }
+                $modeStr = if ($liveFlag -and $v6Flag) { "LIVE" } elseif ($liveFlag) { "PAPER" } else { "DRYRUN" }
+                Format-TgStatusSnapshot `
+                    -Drawdowns $ddArr `
+                    -NDecisions ($recent.Count) `
+                    -NAprovar $aprovar `
+                    -NVetar $vetar `
+                    -NHalluc $halluc `
+                    -Daemons $daemonMap `
+                    -Mode $modeStr `
+                    -NOutcomes $count `
+                    -KellyActive $kellyFlag
+            } else {
+                $report -join "`n"
+            }
+            Send-TelegramAlert -Message $tgMsg | Out-Null
             Write-Host "`n[TG] Snapshot enviado" -ForegroundColor Green
         }
     } catch {

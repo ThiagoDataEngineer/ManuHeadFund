@@ -1028,8 +1028,29 @@ function Invoke-MasterCycle {
         } else { $true }
 
         if ($hasNews) {
-            $dryTag = if ($DryRun) { " [DRYRUN]" } else { "" }
-            $msg = "📊 CICLO$dryTag | janela=$($Seasonal.window) | $nextTs`ngems=$($gems.Count) scan=$scanSummary orch=$orchSummary trail=$trailSummary`nProximo: ${($Seasonal.scanIntervalMin)}min"
+            # Format-TgCycleSummary: mensagem estruturada com contadores e detalhes
+            $orchForFmt = if ($orchResults -and @($orchResults).Count -gt 0) {
+                ($orchResults | ForEach-Object {
+                    $dec = $_.decisao -replace "DRY_RUN_",""
+                    "$($_.market) $dec()"
+                }) -join " | "
+            } else { "" }
+            $msg = if (Get-Command Format-TgCycleSummary -ErrorAction SilentlyContinue) {
+                Format-TgCycleSummary `
+                    -Window $Seasonal.window `
+                    -MomentScore $Seasonal.momentScore `
+                    -TrailSummary $trailSummary `
+                    -GemSummary $gemSummary `
+                    -ScanSummary $scanSummary `
+                    -OrchSummary $orchForFmt `
+                    -NextMin $Seasonal.scanIntervalMin `
+                    -NextTime $nextTs `
+                    -ElapsedSec ([int]$elapsed) `
+                    -DryRun:$DryRun
+            } else {
+                $dryTag = if ($DryRun) { " [DRYRUN]" } else { "" }
+                "CICLO$dryTag | janela=$($Seasonal.window) | $nextTs`ngems=$($gems.Count) scan=$scanSummary orch=$orchForFmt trail=$trailSummary`nProximo: ${($Seasonal.scanIntervalMin)}min"
+            }
             Send-TelegramAlert -Message $msg | Out-Null
         } else {
             Write-MasterLog "Cycle filter: nenhuma news (gems=0 mesa=0 trail=0 exec=0) -- TG silencioso"
@@ -1195,9 +1216,11 @@ Write-Host "  GemScan + Orchestrator + Trailing + Comandos TG" -ForegroundColor 
 Write-Host "=====================================================" -ForegroundColor Cyan
 # Initialize-TelegramOffset (skipped if not found)
 "[DBG3 line852] DryRun=$DryRun" | Out-File -FilePath "$env:TEMP\dryrun_trace.log" -Append -Encoding utf8
-# System start message (skipping if function not found)
-# $_startMsg = if ($DryRun) { Format-TgSystemStart -DryRun } else { Format-TgSystemStart }
-# Send-TelegramAlert -Message $_startMsg | Out-Null
+# System start message
+if (Get-Command Format-TgSystemStart -ErrorAction SilentlyContinue) {
+    $_startMsg = if ($DryRun) { Format-TgSystemStart -DryRun } else { Format-TgSystemStart }
+    Send-TelegramAlert -Message $_startMsg | Out-Null
+}
 
 $iteration = 0
 do {

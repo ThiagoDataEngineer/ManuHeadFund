@@ -445,3 +445,343 @@ function Wait-TgCallbackApproval {
         reason = "Timeout"
     }
 }
+
+# ==============================================================================
+# VISUAL HELPERS — badges, bars, emojis
+# Implementado 2026-05-27: funções exigidas pelos testes tg_visual.Tests.ps1
+# e chamadas por Format-TgEsquadraoResult / Format-TgCycleSummary / etc.
+# ==============================================================================
+
+function Get-TierBadge {
+    param([string]$Tier)
+    $t = $Tier.ToUpper()
+    switch ($t) {
+        "A"   { return "[A]" }
+        "B"   { return "[B]" }
+        "C"   { return "[C]" }
+        "D"   { return "[D]" }
+        "GEM" { return "[G]" }
+        default { return $t }
+    }
+}
+
+function Get-DirectionEmoji {
+    param([string]$Direction)
+    switch ($Direction.ToUpper()) {
+        "LONG"  { return "^" }
+        "SHORT" { return "v" }
+        default { return "" }
+    }
+}
+
+function Get-ConfidenceBar {
+    param(
+        [int]$Pct,
+        [int]$Width = 10
+    )
+    $filled = [math]::Round($Pct / 100.0 * $Width)
+    $empty  = $Width - $filled
+    return ("#" * $filled) + ("." * $empty)
+}
+
+function Get-RegimeLabel {
+    param([string]$Regime)
+    switch ($Regime) {
+        "BULL_STRONG"    { return "BULL+" }
+        "BULL_WEAK"      { return "BULL~" }
+        "BEAR_STRONG"    { return "BEAR+" }
+        "BEAR_WEAK"      { return "BEAR~" }
+        "TRANSITION_UP"  { return "TRANS^" }
+        "TRANSITION_DOWN"{ return "TRANSv" }
+        "SIDEWAYS"       { return "SIDE" }
+        "CAPITULATION"   { return "CAPIT" }
+        default          { return $Regime }
+    }
+}
+
+# ==============================================================================
+# Format-TgSystemStart — mensagem de boot do sistema
+# ==============================================================================
+function Format-TgSystemStart {
+    param([switch]$DryRun)
+    $mode = if ($DryRun) { "DRY RUN" } else { "LIVE" }
+    $ts   = (Get-Date).ToString("dd/MM HH:mm")
+    return "[SISTEMA LIGADO] $mode | $ts"
+}
+
+# ==============================================================================
+# Format-HeartbeatMessage — heartbeat horario (ciclos sem novidade)
+# ==============================================================================
+function Format-HeartbeatMessage {
+    param(
+        [string]$Window      = "NEUTRAL",
+        [int]   $NextMin     = 60,
+        [string]$NextTime    = "",
+        [int]   $WatchCount  = 0,
+        [int]   $CyclesQuiet = 0,
+        [switch]$DryRun
+    )
+    $modeTag = if ($DryRun) { " [DRY]" } else { "" }
+    $quietStr = if ($CyclesQuiet -eq 1) { "1 ciclo sem novidade" } else { "$CyclesQuiet ciclos sem novidade" }
+    return "[HEARTBEAT]$modeTag $Window | $WatchCount pares | $quietStr | prox ${NextMin}min ($NextTime)"
+}
+
+# ==============================================================================
+# Format-TgEsquadraoResult — resultado de um par no orchestrator V6
+# Chamado em orchestrator_v6.ps1 quando cascade.telegramFire = true
+# ==============================================================================
+function Format-TgEsquadraoResult {
+    param(
+        [string]       $Market,
+        [PSCustomObject]$Triagem  = $null,
+        [PSCustomObject]$Mesa     = $null,
+        [PSCustomObject]$Mentor   = $null,
+        [string]       $Decisao  = "ABORTAR",
+        [string]       $Regime   = "",
+        [double]       $Score    = 0,
+        [string]       $Direction = ""
+    )
+
+    $isExec    = $Decisao -in @("EXECUTAR","STRONG_EXECUTAR","DRY_RUN_EXECUTAR")
+    $isDry     = $Decisao -eq "DRY_RUN_EXECUTAR"
+    $isStrong  = $Decisao -eq "STRONG_EXECUTAR"
+
+    # Linha de decisão
+    $decLabel = switch ($Decisao) {
+        "EXECUTAR"         { "EXECUTAR" }
+        "STRONG_EXECUTAR"  { "STRONG EXECUTAR" }
+        "DRY_RUN_EXECUTAR" { "EXECUTAR (simulado)" }
+        "REVISAR"          { "REVISAR" }
+        "ABORTAR"          { "ABORTAR" }
+        "HARD_VETO"        { "HARD VETO" }
+        default            { $Decisao }
+    }
+
+    $decIcon = if ($isExec) { "[OK]" } elseif ($Decisao -eq "REVISAR") { "[?]" } else { "[X]" }
+    $strongTag = if ($isStrong) { " 1.5x" } else { "" }
+    $dryTag    = if ($isDry)    { " [SIM]" } else { "" }
+
+    # Tier badge
+    $tierStr = if ($Triagem -and $Triagem.tier) { Get-TierBadge -Tier $Triagem.tier } else { "" }
+    $scoreStr = if ($Triagem -and $Triagem.score_predicted) { "score=$($Triagem.score_predicted)" } else { "" }
+
+    # Mesa consensus
+    $mesaStr = ""
+    if ($Mesa -and $Mesa.consensus) {
+        $mesaStr = "Mesa:$($Mesa.consensus)"
+        if ($Mesa.sinal_consenso) { $mesaStr += "/$($Mesa.sinal_consenso)" }
+    }
+
+    # Mentor
+    $mentorStr = ""
+    $mentorBar = ""
+    if ($Mentor) {
+        $conf = if ($Mentor.PSObject.Properties['confianca']) { [int]$Mentor.confianca }
+                elseif ($Mentor.PSObject.Properties['confianca_mentor']) { [int]$Mentor.confianca_mentor }
+                else { 0 }
+        $mentorBar = Get-ConfidenceBar -Pct $conf -Width 8
+        $mentorMsg = if ($Mentor.PSObject.Properties['mentor_mensagem'] -and $Mentor.mentor_mensagem) {
+            $raw = [string]$Mentor.mentor_mensagem
+            $maxLen = if ($global:TG_FORMAT_MODE -eq "compact") { 90 } else { 240 }
+            if ($raw.Length -gt $maxLen) { $raw.Substring(0, $maxLen) + "..." } else { $raw }
+        } else { "" }
+        $mentorStr = "Mentor($conf%) [$mentorBar] $mentorMsg"
+    }
+
+    # Regime
+    $regStr = if ($Regime) { Get-RegimeLabel -Regime $Regime } else { "" }
+    $dirEmoji = Get-DirectionEmoji -Direction $Direction
+
+    # Monta mensagem
+    $lines = @()
+    $header = "$decIcon $Market $tierStr $scoreStr$strongTag$dryTag"
+    if ($regStr)   { $header += " | $regStr" }
+    if ($dirEmoji) { $header += " $dirEmoji" }
+    $lines += $header
+    $lines += "$decLabel"
+    if ($mesaStr)  { $lines += $mesaStr }
+    if ($mentorStr){ $lines += $mentorStr }
+
+    return $lines -join "`n"
+}
+
+# ==============================================================================
+# Format-TgCycleSummary — resumo de ciclo enviado ao Telegram
+# Chamado no final de Invoke-MasterCycle
+# ==============================================================================
+function Format-TgCycleSummary {
+    param(
+        [string]$Window       = "NEUTRAL",
+        [int]   $MomentScore  = 50,
+        [string]$TrailSummary = "nenhuma posicao ativa",
+        [string]$GemSummary   = "nenhum",
+        [string]$ScanSummary  = "",
+        [string]$OrchSummary  = "",
+        [int]   $NextMin      = 60,
+        [string]$NextTime     = "",
+        [int]   $ElapsedSec   = 0,
+        [switch]$DryRun
+    )
+
+    $ts      = (Get-Date).ToString("HH:mm")
+    $dryTag  = if ($DryRun) { " [DRY]" } else { "" }
+    $bar     = Get-ConfidenceBar -Pct $MomentScore -Width 10
+
+    # Conta exec vs abort no OrchSummary
+    $nExec  = ([regex]::Matches($OrchSummary, "EXECUTAR\(\)")).Count
+    $nAbort = ([regex]::Matches($OrchSummary, "ABORTAR\(\)")).Count
+
+    $compact = ($global:TG_FORMAT_MODE -eq "compact")
+
+    $lines = @()
+    $lines += "CICLO$dryTag | janela=$Window | $ts"
+    $lines += "momento: [$bar] $MomentScore/100"
+
+    if (-not $compact) {
+        if ($GemSummary -and $GemSummary -ne "nenhum") {
+            $lines += "gems: $GemSummary"
+        }
+        if ($ScanSummary) {
+            $lines += "scan: $ScanSummary"
+        }
+        if ($OrchSummary) {
+            # Contador sempre visível mesmo no verbose
+            $lines += "$nExec exec | $nAbort abort"
+            # Mostra linha por par
+            $orchLines = $OrchSummary -split "\s*\|\s*" | Where-Object { $_.Trim() }
+            foreach ($ol in $orchLines) { $lines += "  $($ol.Trim())" }
+        }
+    } else {
+        # Compact: só contadores
+        $lines += "$nExec exec | $nAbort abort"
+        if ($GemSummary -and $GemSummary -ne "nenhum") { $lines += "gems: $GemSummary" }
+    }
+
+    $lines += "trail: $TrailSummary"
+    $lines += "Proximo: ${NextMin}min ($NextTime)"
+
+    return $lines -join "`n"
+}
+
+# ==============================================================================
+# Send-HeartbeatIfDue — envia heartbeat se passou o intervalo configurado
+# Chamado em scan_master quando ciclo nao tem novidades
+# ==============================================================================
+function Send-HeartbeatIfDue {
+    param(
+        [string]$LastHeartbeatFile = "",
+        [int]   $IntervalMinutes   = 60,
+        [string]$Window            = "NEUTRAL",
+        [int]   $NextMin           = 60,
+        [string]$NextTime          = "",
+        [int]   $WatchCount        = 0,
+        [int]   $CyclesQuiet       = 0,
+        [switch]$DryRun,
+        [bool]  $Enabled           = $true
+    )
+
+    if (-not $Enabled) { return $false }
+
+    # Verifica se passou o intervalo desde o ultimo heartbeat
+    if ($LastHeartbeatFile -and (Test-Path $LastHeartbeatFile)) {
+        $lastAge = ((Get-Date) - (Get-Item $LastHeartbeatFile).LastWriteTime).TotalMinutes
+        if ($lastAge -lt $IntervalMinutes) { return $false }
+    }
+
+    # Monta e envia
+    $msg = Format-HeartbeatMessage `
+        -Window $Window -NextMin $NextMin -NextTime $NextTime `
+        -WatchCount $WatchCount -CyclesQuiet $CyclesQuiet -DryRun:$DryRun
+
+    $result = Send-TelegramAlert -Message $msg
+    if ($result -and $result.success -and $LastHeartbeatFile) {
+        # Atualiza timestamp do ultimo heartbeat
+        $dir = Split-Path $LastHeartbeatFile
+        if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+        (Get-Date).ToString("o") | Set-Content $LastHeartbeatFile -Encoding UTF8
+    }
+    return $true
+}
+
+# ==============================================================================
+# Format-TgStatusSnapshot — versão melhorada do STATUS SNAPSHOT
+# Substitui o texto plano do watch_status.ps1 por mensagem estruturada
+# ==============================================================================
+function Format-TgStatusSnapshot {
+    param(
+        [array] $Drawdowns    = @(),
+        [int]   $NDecisions   = 0,
+        [int]   $NAprovar     = 0,
+        [int]   $NVetar       = 0,
+        [int]   $NHalluc      = 0,
+        [hashtable]$Daemons   = @{},
+        [string]$Mode         = "PAPER",
+        [int]   $NOutcomes    = 0,
+        [bool]  $KellyActive  = $false,
+        [hashtable]$LlmStatus = @{},
+        [string]$BtcDD        = "",
+        [array] $ToriRipening = @()
+    )
+
+    $ts = (Get-Date).ToString("dd/MM HH:mm")
+    $lines = @()
+    $lines += "[STATUS $ts]"
+
+    # BTC
+    if ($BtcDD) { $lines += "BTC DD: $BtcDD%" }
+
+    # Drawdown
+    if ($Drawdowns.Count -gt 0) {
+        $lines += "--- Posicoes ---"
+        foreach ($d in $Drawdowns) {
+            $icon = switch ($d.status) { "CRITICAL" { "[!!]" } "FLAGGED" { "[!]" } default { "[OK]" } }
+            $lines += "$icon $($d.market) $($d.vs_peak_pct)%"
+        }
+    }
+
+    # Decisoes
+    $aprovRate = if ($NDecisions -gt 0) { [math]::Round($NAprovar / $NDecisions * 100) } else { 0 }
+    $bar = Get-ConfidenceBar -Pct $aprovRate -Width 8
+    $lines += "--- Decisoes 24h ---"
+    $lines += "Total: $NDecisions | APROV: $NAprovar | VETO: $NVetar"
+    $lines += "Taxa: [$bar] $aprovRate%"
+    if ($NHalluc -gt 0) { $lines += "WARN hallucinations: $NHalluc" }
+
+    # LLM
+    if ($LlmStatus.Count -gt 0) {
+        $llmLine = "LLM: "
+        $llmLine += "Haiku=$(if ($LlmStatus['haiku']) { $LlmStatus['haiku'] } else { '?' }) "
+        $llmLine += "Groq=$(if ($LlmStatus['groq']) { $LlmStatus['groq'] } else { '?' }) "
+        $llmLine += "Gemini=$(if ($LlmStatus['gemini']) { $LlmStatus['gemini'] } else { '?' })"
+        $lines += $llmLine
+    }
+
+    # Daemons
+    if ($Daemons.Count -gt 0) {
+        $lines += "--- Daemons ---"
+        foreach ($k in @("scan_master","gem_loop","tg_listener","watchdog_paper")) {
+            if ($Daemons.ContainsKey($k)) {
+                $s = $Daemons[$k]
+                $icon = if ($s.alive) { "[ON]" } else { "[OFF]" }
+                $lines += "$icon $k"
+            }
+        }
+    }
+
+    # TORI
+    if ($ToriRipening.Count -gt 0) {
+        $lines += "--- TORI Ripening ---"
+        foreach ($t in $ToriRipening) { $lines += ">> $t" }
+    }
+
+    # Kelly
+    $kellyBar = Get-ConfidenceBar -Pct ([math]::Min(100, $NOutcomes * 10)) -Width 10
+    $lines += "--- Kelly ---"
+    $lines += "[$kellyBar] $NOutcomes/10 trades"
+    if ($KellyActive) { $lines += "Kelly ATIVO" }
+
+    # Modo
+    $lines += "Modo: $Mode"
+
+    return $lines -join "`n"
+}
