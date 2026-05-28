@@ -94,9 +94,15 @@ function Invoke-Groq {
         [string]$Agent       = "unknown"
     )
 
-    if (-not $env:GROQ_API_KEY) { throw "GROQ_API_KEY nao configurada" }
+    # Dual-key rotation: GROQ_API_KEY (primary) + GROQ_API_KEY_2 (secondary)
+    # Quando primary 429, tenta secondary automaticamente.
+    # Combinado: 30 + 30 = 60 RPM — absorve burst Mesa sem Gemini/Cerebras.
+    # Criar segunda key gratis em: console.groq.com -> API Keys -> Create
+    $keys = @()
+    if ($env:GROQ_API_KEY)   { $keys += $env:GROQ_API_KEY }
+    if ($env:GROQ_API_KEY_2) { $keys += $env:GROQ_API_KEY_2 }
+    if ($keys.Count -eq 0)   { throw "GROQ_API_KEY nao configurada" }
 
-    # Garantir TLS 1.2 no runspace atual (runspaces paralelos nao herdam do parent)
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13
 
     $body = @{
@@ -109,44 +115,44 @@ function Invoke-Groq {
         )
     } | ConvertTo-Json -Depth 10 -Compress
 
-    $start = Get-Date
-    try {
-        # B28c fix 2026-05-21: TimeoutSec 10s (era default 100s+).
-        # Diagnostico mesa_drones.jsonl pos-restart mostrou 5/6 drones com
-        # "job_state_Running_likely_timeout" -- Groq 429 estava hanging em vez de
-        # falhar rapido pra cascade Gemini/Haiku assumir. Fail-fast = cascade vivo.
-        $wr = Invoke-WebRequest `
-            -Uri "https://api.groq.com/openai/v1/chat/completions" `
-            -Method POST `
-            -Headers @{
-                "Authorization" = "Bearer $env:GROQ_API_KEY"
-                "Content-Type"  = "application/json"
-            } `
-            -Body ([System.Text.Encoding]::UTF8.GetBytes($body)) `
-            -UseBasicParsing `
-            -TimeoutSec 30 `
-            -ErrorAction Stop
-
-        $latencyMs = ((Get-Date) - $start).TotalMilliseconds
-        $json     = [System.Text.Encoding]::UTF8.GetString($wr.RawContentStream.ToArray())
-        $response = $json | ConvertFrom-Json
-
-        # Tracking ($0 — Groq free tier; ainda logamos tokens para auditoria)
+    $lastErr = $null
+    foreach ($key in $keys) {
+        $start = Get-Date
         try {
-            if (Get-Command -Name "Track-ClaudeUsage" -ErrorAction SilentlyContinue) {
-                $inTok  = [int]$response.usage.prompt_tokens
-                $outTok = [int]$response.usage.completion_tokens
-                # Modelo prefixado com "groq:" para diferenciar no relatorio
-                Track-ClaudeUsage -Model "groq:$Model" -InputTokens $inTok -OutputTokens $outTok -Agent $Agent -LatencyMs $latencyMs | Out-Null
-            }
-        } catch {}
+            $wr = Invoke-WebRequest `
+                -Uri "https://api.groq.com/openai/v1/chat/completions" `
+                -Method POST `
+                -Headers @{
+                    "Authorization" = "Bearer $key"
+                    "Content-Type"  = "application/json"
+                } `
+                -Body ([System.Text.Encoding]::UTF8.GetBytes($body)) `
+                -UseBasicParsing `
+                -TimeoutSec 30 `
+                -ErrorAction Stop
 
-        return $response.choices[0].message.content
-    } catch {
-        $statusCode = $_.Exception.Response.StatusCode.value__
-        $msg = $_.Exception.Message
-        throw "Groq API error ($statusCode): $msg"
+            $latencyMs = ((Get-Date) - $start).TotalMilliseconds
+            $json     = [System.Text.Encoding]::UTF8.GetString($wr.RawContentStream.ToArray())
+            $response = $json | ConvertFrom-Json
+
+            try {
+                if (Get-Command -Name "Track-ClaudeUsage" -ErrorAction SilentlyContinue) {
+                    $inTok  = [int]$response.usage.prompt_tokens
+                    $outTok = [int]$response.usage.completion_tokens
+                    Track-ClaudeUsage -Model "groq:$Model" -InputTokens $inTok -OutputTokens $outTok -Agent $Agent -LatencyMs $latencyMs | Out-Null
+                }
+            } catch {}
+
+            return $response.choices[0].message.content
+        } catch {
+            $statusCode = $_.Exception.Response.StatusCode.value__
+            $lastErr = "Groq API error ($statusCode): $($_.Exception.Message)"
+            # 429 = rate limit — tenta proxima key. Outros erros: falha imediata.
+            if ($statusCode -ne 429) { throw $lastErr }
+            Write-Host "  [$Agent] Groq key rotacionada (429 na key atual)" -ForegroundColor DarkYellow
+        }
     }
+    throw $lastErr
 }
 
 # Wrapper Groq que forca JSON com retry
@@ -342,16 +348,13 @@ function Invoke-GeminiJson {
 # Retorna texto ou $null se TUDO falhar.
 # -----------------------------------------------------------------------------
 function Invoke-MesaDroneCascade {
-    # 2026-05-27 v3: Round-robin Groq + Gemini + Cerebras para Mesa.
-    # Problema: burst 21 calls/ciclo (3 drones x 7 mercados) estoura qualquer
-    # provider sozinho. Solucao: rotacao por $Agent hash distribui carga:
-    #   Groq:     30 RPM, 14.400 RPD
-    #   Gemini:   15 RPM,  1.500 RPD
-    #   Cerebras:  5 RPM,  2.400 RPD
-    # Total combinado: ~50 RPM — absorve burst sem 429.
-    # Fallback sequencial se o provider sorteado falhar.
+    # 2026-05-27 v4: Groq dual-key como solucao principal para burst 429.
+    # Invoke-Groq ja faz rotacao automatica GROQ_API_KEY -> GROQ_API_KEY_2 em 429.
+    # Combinado: 30 + 30 = 60 RPM — absorve burst de 21 calls/ciclo.
+    # Fallback: Gemini (15 RPM) -> Haiku (pago).
+    # Cerebras removido: 5 RPM + modelo instavel para JSON curto.
     #
-    # B28d fix 2026-05-21: param -HaikuPrimary para LIDAR (libera bucket Groq).
+    # B28d: -HaikuPrimary para LIDAR libera bucket Groq para Termal+Radar.
     param(
         [string]$SystemPrompt,
         [string]$UserContent,
@@ -359,7 +362,7 @@ function Invoke-MesaDroneCascade {
         [int]   $MaxTokens    = 600,
         [double]$Temperature  = 0.3,
         [string]$Agent        = "mesa_unknown",
-        [switch]$HaikuPrimary  # B28d: forca Haiku primary (usado por Lidar)
+        [switch]$HaikuPrimary
     )
 
     # B28d: LIDAR usa Haiku primary para liberar bucket Groq para Termal+Radar
@@ -368,54 +371,37 @@ function Invoke-MesaDroneCascade {
             return Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
                 -Model "claude-haiku-4-5" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
-            Write-Host "  [$Agent] Haiku primary falhou, fallback round-robin: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+            Write-Host "  [$Agent] Haiku primary falhou, fallback Groq: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
 
-    # Round-robin: distribui por hash do Agent name para consistencia dentro do ciclo
-    # Termal -> slot 0, Radar -> slot 1, Lidar -> slot 2 (se nao HaikuPrimary)
-    $slot = [Math]::Abs($Agent.GetHashCode()) % 3
-    $hasGroq     = [bool]$env:GROQ_API_KEY
-    $hasGemini   = [bool]$env:GEMINI_API_KEY
-    $hasCerebras = [bool]$env:CEREBRAS_API_KEY
-
-    # Ordem de tentativa baseada no slot (round-robin) com fallback sequencial
-    $order = switch ($slot) {
-        0 { @("groq","gemini","cerebras","haiku") }
-        1 { @("gemini","cerebras","groq","haiku") }
-        2 { @("cerebras","groq","gemini","haiku") }
+    # 1. Groq dual-key (primary + secondary, 60 RPM combinado)
+    if ($env:GROQ_API_KEY) {
+        try {
+            return Invoke-Groq -SystemPrompt $SystemPrompt -UserContent $UserContent `
+                -Model $GroqModel -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+        } catch {
+            Write-Host "  [$Agent] Groq falhou, fallback Gemini: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+        }
     }
 
-    foreach ($provider in $order) {
+    # 2. Gemini (fallback 1 - 15 RPM)
+    if ($env:GEMINI_API_KEY) {
         try {
-            switch ($provider) {
-                "groq" {
-                    if (-not $hasGroq) { continue }
-                    $r = Invoke-Groq -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                        -Model $GroqModel -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
-                    if ($r) { return $r }
-                }
-                "gemini" {
-                    if (-not $hasGemini) { continue }
-                    $r = Invoke-Gemini -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                        -Model "gemini-2.5-flash" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
-                    if ($r) { return $r }
-                }
-                "cerebras" {
-                    if (-not $hasCerebras) { continue }
-                    $r = Invoke-Cerebras -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                        -Model "gpt-oss-120b" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
-                    if ($r) { return $r }
-                }
-                "haiku" {
-                    if (-not $env:ANTHROPIC_API_KEY -or $HaikuPrimary) { continue }
-                    $r = Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                        -Model "claude-haiku-4-5" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
-                    if ($r) { return $r }
-                }
-            }
+            return Invoke-Gemini -SystemPrompt $SystemPrompt -UserContent $UserContent `
+                -Model "gemini-2.5-flash" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
-            Write-Host "  [$Agent] $provider falhou, proximo: $($_.Exception.Message.Substring(0,[Math]::Min(60,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+            Write-Host "  [$Agent] Gemini falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+        }
+    }
+
+    # 3. Claude Haiku (fallback final, pago)
+    if (-not $HaikuPrimary -and $env:ANTHROPIC_API_KEY) {
+        try {
+            return Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
+                -Model "claude-haiku-4-5" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+        } catch {
+            Write-Warning "  [$Agent] Haiku final falhou: $($_.Exception.Message)"
         }
     }
     return $null
@@ -451,25 +437,24 @@ function Invoke-MentorCascade {
             Write-Host "  [$Agent] Sonnet falhou, fallback Groq: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
-    # 2. Groq llama-70b (fallback 1, gratis)
+    # 2. Groq llama-70b (fallback 1, gratis, dual-key automatico)
     if ($env:GROQ_API_KEY) {
         try {
             $r = Invoke-Groq -SystemPrompt $SystemPrompt -UserContent $UserContent `
                 -Model "llama-3.3-70b-versatile" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
             if ($r) { $script:LAST_CASCADE_PROVIDER = "groq_llama70b"; return $r }
         } catch {
-            Write-Host "  [$Agent] Groq falhou, fallback Cerebras: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+            Write-Host "  [$Agent] Groq falhou, fallback Gemini: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
-    # 3. Cerebras gpt-oss-120b (fallback 2, gratis, 50 RPM — substitui Gemini 2026-05-27)
-    # Cerebras: 50 RPM vs 15 RPM Gemini, sem burst 429. Modelo: gpt-oss-120b (Meta 120B)
-    if ($env:CEREBRAS_API_KEY) {
+    # 3. Gemini (fallback 2, gratis, 15 RPM)
+    if ($env:GEMINI_API_KEY) {
         try {
-            $r = Invoke-Cerebras -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model "gpt-oss-120b" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
-            if ($r) { $script:LAST_CASCADE_PROVIDER = "cerebras_gptoss120b"; return $r }
+            $r = Invoke-Gemini -SystemPrompt $SystemPrompt -UserContent $UserContent `
+                -Model "gemini-2.5-flash" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+            if ($r) { $script:LAST_CASCADE_PROVIDER = "gemini_2_flash"; return $r }
         } catch {
-            Write-Host "  [$Agent] Cerebras falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+            Write-Host "  [$Agent] Gemini falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
     # 4. Claude Haiku (ultimo recurso, ~$0.005/call)
@@ -494,22 +479,22 @@ function Invoke-TriagemCascade {
         [double]$Temperature  = 0.3,
         [string]$Agent        = "triagem"
     )
-    # 1. Groq primary (30 RPM, rapido)
+    # 1. Groq primary (dual-key automatico, 60 RPM combinado)
     if ($env:GROQ_API_KEY) {
         try {
             return Invoke-Groq -SystemPrompt $SystemPrompt -UserContent $UserContent `
                 -Model "llama-3.3-70b-versatile" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
-            Write-Host "  [$Agent] Groq falhou, fallback Cerebras: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+            Write-Host "  [$Agent] Groq falhou, fallback Gemini: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
-    # 2. Cerebras (fallback 1 - 50 RPM, substitui Gemini 2026-05-27)
-    if ($env:CEREBRAS_API_KEY) {
+    # 2. Gemini (fallback 1 - 15 RPM)
+    if ($env:GEMINI_API_KEY) {
         try {
-            return Invoke-Cerebras -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model "gpt-oss-120b" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+            return Invoke-Gemini -SystemPrompt $SystemPrompt -UserContent $UserContent `
+                -Model "gemini-2.5-flash" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
-            Write-Host "  [$Agent] Cerebras falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+            Write-Host "  [$Agent] Gemini falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
     # 3. Haiku (fallback final, cost-conscious -- SOMENTE Haiku, nao Sonnet)
