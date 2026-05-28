@@ -190,7 +190,7 @@ function Invoke-Cerebras {
     param(
         [string]$SystemPrompt,
         [string]$UserContent,
-        [string]$Model       = "llama-3.3-70b",
+        [string]$Model       = "gpt-oss-120b",   # modelo disponivel na conta free (verificado 2026-05-27)
         [int]   $MaxTokens   = 2000,
         [double]$Temperature = 0.4,
         [string]$Agent       = "unknown"
@@ -210,7 +210,6 @@ function Invoke-Cerebras {
             @{ role = "user";   content = $UserContent }
         )
     } | ConvertTo-Json -Depth 10 -Compress
-
     $start = Get-Date
     try {
         $wr = Invoke-WebRequest `
@@ -343,16 +342,16 @@ function Invoke-GeminiJson {
 # Retorna texto ou $null se TUDO falhar.
 # -----------------------------------------------------------------------------
 function Invoke-MesaDroneCascade {
-    # 2026-05-16 v2: Groq primary (30 RPM suporta 3 drones em paralelo via Start-Job).
-    # Gemini 15 RPM nao cabe Mesa (3 drones x 7 mercados burst). Gemini fallback ok.
-    # Haiku final pago. Ordem: Groq -> Gemini -> Haiku.
+    # 2026-05-27 v3: Round-robin Groq + Gemini + Cerebras para Mesa.
+    # Problema: burst 21 calls/ciclo (3 drones x 7 mercados) estoura qualquer
+    # provider sozinho. Solucao: rotacao por $Agent hash distribui carga:
+    #   Groq:     30 RPM, 14.400 RPD
+    #   Gemini:   15 RPM,  1.500 RPD
+    #   Cerebras:  5 RPM,  2.400 RPD
+    # Total combinado: ~50 RPM — absorve burst sem 429.
+    # Fallback sequencial se o provider sorteado falhar.
     #
-    # B28d fix 2026-05-21: param -HaikuPrimary opcional pra LIDAR. Diagnostico
-    # mesa_drones.jsonl mostrou Lidar como drone com mais timeouts (Groq bucket
-    # esgotando). Mover Lidar pra Anthropic Haiku primary libera bucket Groq pra
-    # Termal+Radar (Brooks + Druckenmiller, decisao tecnica mais critica).
-    # Custo: ~$0.005/call x ~12-20 Lidar/dia = $0.06-$0.10/dia (~$3/mes adicional).
-    # Trade-off aceito: cost vs reliability.
+    # B28d fix 2026-05-21: param -HaikuPrimary para LIDAR (libera bucket Groq).
     param(
         [string]$SystemPrompt,
         [string]$UserContent,
@@ -362,41 +361,61 @@ function Invoke-MesaDroneCascade {
         [string]$Agent        = "mesa_unknown",
         [switch]$HaikuPrimary  # B28d: forca Haiku primary (usado por Lidar)
     )
-    # B28d: se HaikuPrimary, tenta Haiku PRIMEIRO. Fallback Groq->Gemini.
+
+    # B28d: LIDAR usa Haiku primary para liberar bucket Groq para Termal+Radar
     if ($HaikuPrimary -and $env:ANTHROPIC_API_KEY) {
         try {
             return Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
                 -Model "claude-haiku-4-5" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
-            Write-Host "  [$Agent] Haiku primary falhou, fallback Groq: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+            Write-Host "  [$Agent] Haiku primary falhou, fallback round-robin: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
-    # 1. Groq (primary - 30 RPM, suporta parallel)
-    if ($env:GROQ_API_KEY) {
-        try {
-            return Invoke-Groq -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model $GroqModel -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
-        } catch {
-            Write-Host "  [$Agent] Groq falhou, fallback Cerebras: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
-        }
+
+    # Round-robin: distribui por hash do Agent name para consistencia dentro do ciclo
+    # Termal -> slot 0, Radar -> slot 1, Lidar -> slot 2 (se nao HaikuPrimary)
+    $slot = [Math]::Abs($Agent.GetHashCode()) % 3
+    $hasGroq     = [bool]$env:GROQ_API_KEY
+    $hasGemini   = [bool]$env:GEMINI_API_KEY
+    $hasCerebras = [bool]$env:CEREBRAS_API_KEY
+
+    # Ordem de tentativa baseada no slot (round-robin) com fallback sequencial
+    $order = switch ($slot) {
+        0 { @("groq","gemini","cerebras","haiku") }
+        1 { @("gemini","cerebras","groq","haiku") }
+        2 { @("cerebras","groq","gemini","haiku") }
     }
-    # 2. Cerebras llama-70b (fallback 1 - 50 RPM, 2300 tok/s, substitui Gemini 2026-05-27)
-    # Gemini tinha 15 RPM e burst 429 constante. Cerebras: 50 RPM, zero 429 em uso normal.
-    if ($env:CEREBRAS_API_KEY) {
+
+    foreach ($provider in $order) {
         try {
-            return Invoke-Cerebras -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model "llama-3.3-70b" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+            switch ($provider) {
+                "groq" {
+                    if (-not $hasGroq) { continue }
+                    $r = Invoke-Groq -SystemPrompt $SystemPrompt -UserContent $UserContent `
+                        -Model $GroqModel -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+                    if ($r) { return $r }
+                }
+                "gemini" {
+                    if (-not $hasGemini) { continue }
+                    $r = Invoke-Gemini -SystemPrompt $SystemPrompt -UserContent $UserContent `
+                        -Model "gemini-2.5-flash" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+                    if ($r) { return $r }
+                }
+                "cerebras" {
+                    if (-not $hasCerebras) { continue }
+                    $r = Invoke-Cerebras -SystemPrompt $SystemPrompt -UserContent $UserContent `
+                        -Model "gpt-oss-120b" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+                    if ($r) { return $r }
+                }
+                "haiku" {
+                    if (-not $env:ANTHROPIC_API_KEY -or $HaikuPrimary) { continue }
+                    $r = Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
+                        -Model "claude-haiku-4-5" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+                    if ($r) { return $r }
+                }
+            }
         } catch {
-            Write-Host "  [$Agent] Cerebras falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
-        }
-    }
-    # 3. Claude Haiku (fallback final, pago $0.005/call) — pula se ja tentou no inicio (HaikuPrimary)
-    if (-not $HaikuPrimary -and $env:ANTHROPIC_API_KEY) {
-        try {
-            return Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model "claude-haiku-4-5" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
-        } catch {
-            Write-Warning "  [$Agent] Haiku final falhou: $($_.Exception.Message)"
+            Write-Host "  [$Agent] $provider falhou, proximo: $($_.Exception.Message.Substring(0,[Math]::Min(60,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
     return $null
@@ -442,13 +461,13 @@ function Invoke-MentorCascade {
             Write-Host "  [$Agent] Groq falhou, fallback Cerebras: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
-    # 3. Cerebras llama-70b (fallback 2, gratis, 50 RPM — substitui Gemini 2026-05-27)
-    # Cerebras: 2300 tok/s, 50 RPM vs 15 RPM Gemini, sem burst 429
+    # 3. Cerebras gpt-oss-120b (fallback 2, gratis, 50 RPM — substitui Gemini 2026-05-27)
+    # Cerebras: 50 RPM vs 15 RPM Gemini, sem burst 429. Modelo: gpt-oss-120b (Meta 120B)
     if ($env:CEREBRAS_API_KEY) {
         try {
             $r = Invoke-Cerebras -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model "llama-3.3-70b" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
-            if ($r) { $script:LAST_CASCADE_PROVIDER = "cerebras_llama70b"; return $r }
+                -Model "gpt-oss-120b" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+            if ($r) { $script:LAST_CASCADE_PROVIDER = "cerebras_gptoss120b"; return $r }
         } catch {
             Write-Host "  [$Agent] Cerebras falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
@@ -488,7 +507,7 @@ function Invoke-TriagemCascade {
     if ($env:CEREBRAS_API_KEY) {
         try {
             return Invoke-Cerebras -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model "llama-3.3-70b" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+                -Model "gpt-oss-120b" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
             Write-Host "  [$Agent] Cerebras falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
