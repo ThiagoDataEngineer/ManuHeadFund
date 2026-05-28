@@ -109,11 +109,11 @@ function Test-RegimeDirectionAllowed {
         }
     }
 
-    # Regra 5 (v3 2026-05-16): SHORT bidirecional desde o início da estratégia.
-    # Whitelist v2 strict_v2 (LONG-only) era restrição conservadora baseada em backtest
-    # 14y BTCUSD, mas (1) ignora altcoin pump-dump pattern e (2) Bear 2022 já mostrava
-    # +0.56R PF 2.10 (rejeitado por threshold cosmético dd_ratio<0.5).
-    # v3 habilita SHORT live em regimes bearish + transition_down.
+    # Regra 5 (v3 2026-05-16 + Block2 2026-05-28): SHORT bidirecional.
+    # v3: SHORT live em regimes bearish + transition_down.
+    # Block2 2026-05-28: adiciona SIDEWAYS e TRANSITION_UP com edge comprovado:
+    #   SIDEWAYS + SHORT:       +0.34R PF 1.54 (18m dataset) -> execute paper, observe live
+    #   TRANSITION_UP + SHORT:  +0.81R PF 2.60 (18m dataset, bounce failure) -> execute paper, observe live
     if ($Direction -eq 'SHORT') {
         $bearishRegimes = @('BEAR_STRONG','BEAR_WEAK','CAPITULATION','TRANSITION_DOWN')
         if ($bearishRegimes -contains $Regime) {
@@ -123,19 +123,34 @@ function Test-RegimeDirectionAllowed {
                 reason  = "SHORT em $Regime (v3 bidirecional) -- regime bearish alinhado com direcao"
             }
         }
-        # SIDEWAYS SHORT: observe paper (ainda risco em ranging), skip live
+        # SIDEWAYS SHORT: execute paper (edge +0.34R PF 1.54), observe live (aguarda 30d forward)
         if ($Regime -eq 'SIDEWAYS') {
             if ($Mode -eq 'paper') {
                 return [PSCustomObject]@{
                     allowed = $true
-                    tier    = 'observe'
-                    reason  = "SHORT em SIDEWAYS -- paper observa, live exige bear regime"
+                    tier    = 'execute'
+                    reason  = "SHORT em SIDEWAYS -- paper execute (edge +0.34R PF 1.54, 18m dataset Block2 2026-05-28)"
                 }
             }
             return [PSCustomObject]@{
-                allowed = $false
-                tier    = 'skip'
-                reason  = "SHORT em SIDEWAYS -- live exige regime bearish confirmado"
+                allowed = $true
+                tier    = 'observe'
+                reason  = "SHORT em SIDEWAYS -- live observe (aguarda 30d forward validation antes de execute)"
+            }
+        }
+        # TRANSITION_UP + SHORT: bounce failure, execute paper (edge +0.81R PF 2.60), observe live
+        if ($Regime -eq 'TRANSITION_UP') {
+            if ($Mode -eq 'paper') {
+                return [PSCustomObject]@{
+                    allowed = $true
+                    tier    = 'execute'
+                    reason  = "SHORT em TRANSITION_UP -- paper execute (bounce failure +0.81R PF 2.60, 18m dataset Block2 2026-05-28)"
+                }
+            }
+            return [PSCustomObject]@{
+                allowed = $true
+                tier    = 'observe'
+                reason  = "SHORT em TRANSITION_UP -- live observe (aguarda 30d forward validation antes de execute)"
             }
         }
         # BULL_* + SHORT = anti-trend perigoso, sempre skip

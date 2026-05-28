@@ -117,6 +117,7 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 . (Join-Path $agentsDir "lib_promotion_gates.ps1")
 . (Join-Path $agentsDir "lib_orchestrator_parallel.ps1")
 . (Join-Path $agentsDir "lib_llm_quota_optimizer.ps1")  # 2026-05-26: Rate limiting + quota tracking
+. (Join-Path $agentsDir "lib_short_execution.ps1")      # 2026-05-28: SHORT Block 2 -- wiring scanner -> orchestrator
 
 # 2026-05-19 PM: Kelly sizing flag (auto-activated via cron quando 10+ outcomes graduate criteria)
 # Le journal/USE_KELLY_SIZING.flag se presente -> seta $global:USE_KELLY_SIZING=$true
@@ -833,6 +834,29 @@ function Invoke-MasterCycle {
             @{Expression='isWhitelistForced';Descending=$true}, `
             @{Expression='compScore';Descending=$true}, `
             @{Expression='vol';Descending=$true} | Select-Object -First $topN)
+
+        # ── SHORT Block 2 (2026-05-28): injeta candidatos SHORT do short_alerts.jsonl ──
+        # short_scanner.ps1 detecta sinais (vol climax + RSI overbought) e escreve
+        # short_alerts.jsonl. Aqui lemos e injetamos no pipeline do orchestrator.
+        # Regimes com edge comprovado: BEAR_STRONG/BEAR_WEAK (+0.56R), SIDEWAYS (+0.34R),
+        # TRANSITION_UP bounce failure (+0.81R). Whitelist ja atualizada para execute/observe.
+        if (-not $SkipOrchestrator -and (Get-Command Get-ShortCandidatesFromAlerts -ErrorAction SilentlyContinue)) {
+            try {
+                $shortAlertsPath = Join-Path $scriptDir "..\journal\short_alerts.jsonl"
+                $shortCandidates = @(Get-ShortCandidatesFromAlerts `
+                    -AlertsPath $shortAlertsPath `
+                    -MaxAgeHours 2 `
+                    -ExcludeMarkets $topCandidates)
+                if ($shortCandidates.Count -gt 0) {
+                    $topCandidates = @(Merge-ShortCandidatesIntoScan `
+                        -LongCandidates $topCandidates `
+                        -ShortAlerts $shortCandidates)
+                    Write-MasterLog "SHORT Block2: $($shortCandidates.Count) candidato(s) SHORT injetado(s) -- $($shortCandidates.market -join ',')"
+                }
+            } catch {
+                Write-MasterLog "SHORT Block2 inject falhou (nao critico): $_" "WARN"
+            }
+        }
 
         if ($topCandidates.Count -eq 0) {
             Write-MasterLog "Nenhum par passou o pre-screen - Orchestrator pulado" "WARN"
