@@ -102,9 +102,8 @@ if ($geminiState -and $geminiState.status -eq "RATE_LIMITED") {
         $lastTs  = if ($geminiState.ts -is [datetime]) {
             [datetime]::SpecifyKind($geminiState.ts, [DateTimeKind]::Utc)
         } else {
-            [datetime]::SpecifyKind(
-                [datetime]::ParseExact([string]$geminiState.ts, "yyyy-MM-ddTHH:mm:ssZ", $null),
-                [DateTimeKind]::Utc)
+            # RoundtripKind respeita o Z como UTC (ParseExact trata Z como literal local)
+            [datetime]::Parse([string]$geminiState.ts, $null, [System.Globalization.DateTimeStyles]::RoundtripKind)
         }
         $ageMin  = ((Get-Date).ToUniversalTime() - $lastTs).TotalMinutes
         if ($ageMin -lt 30) {

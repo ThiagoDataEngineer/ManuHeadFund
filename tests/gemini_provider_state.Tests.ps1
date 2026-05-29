@@ -44,14 +44,16 @@ function New-UtcTs {
 }
 
 # Calcula ageMin a partir de um campo ts que pode ser DateTime ou string ISO 8601
+# PS 5.1: ParseExact com "yyyy-MM-ddTHH:mm:ssZ" trata Z como literal e interpreta
+# o horario como local (nao UTC). Usar [datetime]::Parse com RoundtripKind ou
+# DateTimeOffset.Parse para preservar o offset UTC corretamente.
 function Get-AgeMinutes {
     param($Ts)
     $dt = if ($Ts -is [datetime]) {
-        [datetime]::SpecifyKind($Ts, [DateTimeKind]::Utc)
+        $Ts.ToUniversalTime()
     } else {
-        [datetime]::SpecifyKind(
-            [datetime]::ParseExact([string]$Ts, "yyyy-MM-ddTHH:mm:ssZ", $null),
-            [DateTimeKind]::Utc)
+        # RoundtripKind respeita o Z como UTC
+        [datetime]::Parse([string]$Ts, $null, [System.Globalization.DateTimeStyles]::RoundtripKind)
     }
     return ([datetime]::UtcNow - $dt).TotalMinutes
 }

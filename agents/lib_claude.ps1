@@ -402,9 +402,8 @@ function Invoke-MesaDroneCascade {
                 $lastTs = if ($pstate.gemini.ts -is [datetime]) {
                     [datetime]::SpecifyKind($pstate.gemini.ts, [DateTimeKind]::Utc)
                 } else {
-                    [datetime]::SpecifyKind(
-                        [datetime]::ParseExact([string]$pstate.gemini.ts, "yyyy-MM-ddTHH:mm:ssZ", $null),
-                        [DateTimeKind]::Utc)
+                    # RoundtripKind respeita o Z como UTC (ParseExact trata Z como literal local)
+                    [datetime]::Parse([string]$pstate.gemini.ts, $null, [System.Globalization.DateTimeStyles]::RoundtripKind)
                 }
                 $ageMin = ((Get-Date).ToUniversalTime() - $lastTs).TotalMinutes
                 if ($ageMin -lt 5) {

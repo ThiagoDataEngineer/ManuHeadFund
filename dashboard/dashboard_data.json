@@ -1,5 +1,5 @@
 ﻿{
-    "timestamp":  "2026-05-29 08:10:46",
+    "timestamp":  "2026-05-29 08:20:46",
     "capital":  {
                     "futures":  2715.79,
                     "total":  3715.79,
@@ -40,15 +40,15 @@
                          },
     "llm_costs":  {
                       "anthropic":  0,
-                      "groq":  0.0615,
-                      "total_24h":  0.9483,
-                      "cost_per_decision":  0.00895,
-                      "total_30d":  29.3994,
-                      "total_7d":  24.5477,
-                      "calls_24h":  106
+                      "groq":  0.0821,
+                      "total_24h":  1.1533,
+                      "cost_per_decision":  0.00901,
+                      "total_30d":  29.6044,
+                      "total_7d":  24.7527,
+                      "calls_24h":  128
                   },
     "mentor_decisions":  {
-                             "total_24h":  70,
+                             "total_24h":  77,
                              "veto_rate":  100,
                              "approval_rate":  0
                          },
