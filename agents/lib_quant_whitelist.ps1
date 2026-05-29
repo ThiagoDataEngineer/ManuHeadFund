@@ -113,6 +113,19 @@ function Get-MarketRegimeFromCache {
         if ($data.PSObject.Properties['markets'] -and $data.markets.PSObject.Properties[$Market]) {
             return [string]$data.markets.$Market
         }
+        # FIX 2026-05-29 (Opcao A): schema GLOBAL de producao.
+        # refresh_regime_state.ps1 grava regime GLOBAL (sem chaves por-mercado):
+        #   {regime, phase, bias, current_regime, ...}
+        # Sem este fallback, Get-MarketRegimeFromCache retornava $null pra TODOS
+        # os markets -> rebaixamento regime-aware era no-op em producao (INJUSDT
+        # e todo Tier A entravam tier_level=1 mesmo em mercado bear).
+        # Precedencia: chave por-mercado (acima) > regime global (abaixo).
+        if ($data.PSObject.Properties['regime'] -and $data.regime -and ($data.regime -is [string])) {
+            return [string]$data.regime
+        }
+        if ($data.PSObject.Properties['current_regime'] -and $data.current_regime) {
+            return [string]$data.current_regime
+        }
         return $null
     } catch {
         return $null
