@@ -1,0 +1,197 @@
+{
+  "gaps": [],
+  "partial_assets": [
+    {
+      "fields_present": 4,
+      "missing": [
+        "burn_active",
+        "utility_score",
+        "concentration_top10"
+      ],
+      "symbol": "ARRRUSDT"
+    }
+  ],
+  "tier_distribution": {
+    "tier_a": 7,
+    "tier_d": 10,
+    "tier_c": 1,
+    "tier_b": 37
+  },
+  "timestamp": "2026-05-29 14:06:23",
+  "registry_path": "C:\\Users\\thiag\\Coinex_AI_USER_API\\journal\\coin_registry.json",
+  "minimal_assets": [
+    {
+      "fields_present": 2,
+      "missing": [
+        "age_years",
+        "burn_active",
+        "utility_score",
+        "concentration_top10",
+        "listing_years"
+      ],
+      "symbol": "USELESSUSDT"
+    },
+    {
+      "fields_present": 2,
+      "missing": [
+        "age_years",
+        "burn_active",
+        "utility_score",
+        "concentration_top10",
+        "listing_years"
+      ],
+      "symbol": "GRASSUSDT"
+    },
+    {
+      "fields_present": 2,
+      "missing": [
+        "age_years",
+        "burn_active",
+        "utility_score",
+        "concentration_top10",
+        "listing_years"
+      ],
+      "symbol": "ASTERUSDT"
+    },
+    {
+      "fields_present": 2,
+      "missing": [
+        "age_years",
+        "burn_active",
+        "utility_score",
+        "concentration_top10",
+        "listing_years"
+      ],
+      "symbol": "PROVEUSDT"
+    },
+    {
+      "fields_present": 2,
+      "missing": [
+        "age_years",
+        "burn_active",
+        "utility_score",
+        "concentration_top10",
+        "listing_years"
+      ],
+      "symbol": "WIFUSDT"
+    },
+    {
+      "fields_present": 2,
+      "missing": [
+        "age_years",
+        "burn_active",
+        "utility_score",
+        "concentration_top10",
+        "listing_years"
+      ],
+      "symbol": "PEAQUSDT"
+    },
+    {
+      "fields_present": 2,
+      "missing": [
+        "age_years",
+        "burn_active",
+        "utility_score",
+        "concentration_top10",
+        "listing_years"
+      ],
+      "symbol": "CHEEMSUSDT"
+    },
+    {
+      "fields_present": 2,
+      "missing": [
+        "age_years",
+        "burn_active",
+        "utility_score",
+        "concentration_top10",
+        "listing_years"
+      ],
+      "symbol": "WLDUSDT"
+    },
+    {
+      "fields_present": 2,
+      "missing": [
+        "age_years",
+        "burn_active",
+        "utility_score",
+        "concentration_top10",
+        "listing_years"
+      ],
+      "symbol": "SUSDT"
+    },
+    {
+      "fields_present": 2,
+      "missing": [
+        "age_years",
+        "burn_active",
+        "utility_score",
+        "concentration_top10",
+        "listing_years"
+      ],
+      "symbol": "PYTHUSDT"
+    }
+  ],
+  "summary": {
+    "total_gaps": 0,
+    "minimal_count": 10,
+    "partial_pct": 1.8,
+    "partial_count": 1,
+    "minimal_pct": 18.2,
+    "complete_pct": 80.0,
+    "complete_count": 44,
+    "total_assets": 55
+  },
+  "complete_assets": [
+    "BTCUSDT",
+    "ETHUSDT",
+    "INJUSDT",
+    "ZECUSDT",
+    "RENDERUSDT",
+    "CFGUSDT",
+    "PENDLEUSDT",
+    "TONUSDT",
+    "NEARUSDT",
+    "HYPEUSDT",
+    "SOLUSDT",
+    "ATOMUSDT",
+    "DOGEUSDT",
+    "CHZUSDT",
+    "LUNCUSDT",
+    "AAVEUSDT",
+    "FILUSDT",
+    "DASHUSDT",
+    "XMRUSDT",
+    "DYDXUSDT",
+    "ONDOUSDT",
+    "COMPUSDT",
+    "ALGOUSDT",
+    "STORJUSDT",
+    "SUIUSDT",
+    "XRPUSDT",
+    "BCHUSDT",
+    "MORPHOUSDT",
+    "KASUSDT",
+    "SKYUSDT",
+    "VVVUSDT",
+    "XCHUSDT",
+    "LITUSDT",
+    "RONUSDT",
+    "BUSDT",
+    "ARBUSDT",
+    "KITEUSDT",
+    "RIVERUSDT",
+    "PENGUUSDT",
+    "TAOUSDT",
+    "JTOUSDT",
+    "IDUSDT",
+    "IOUSDT",
+    "FETUSDT"
+  ],
+  "recommendations": [
+    "1. Adicionar 3 ativos faltantes: IDUSDT, IOUSDT, FETUSDT ✅ DONE",
+    "2. Completar dados parciais via CoinGecko API para 18 ativos",
+    "3. Validar ativos novos (<1 ano) antes de Tier B",
+    "4. Implementar validação automática de age_years >= 1y para Tier B em bear phase",
+    "5. Criar pipeline de enrich para ativos meme/especulativos"
+  ]
+}

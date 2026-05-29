@@ -1,0 +1,22 @@
+{
+  "timestamp": "2026-05-29T14:30:02.656065",
+  "total_assets": 10,
+  "successful": 1,
+  "failed": 9,
+  "assets": {
+    "GRASSUSDT": {
+      "symbol": "GRASSUSDT",
+      "coingecko_id": "grass",
+      "age_years": null,
+      "burn_active": false,
+      "utility_score": 0.39,
+      "concentration_top10": 0.4,
+      "listing_years": 1.6,
+      "source": "coingecko_api",
+      "enriched_date": "2026-05-29T14:30:04.362906",
+      "market_cap_rank": 152,
+      "genesis_date": null,
+      "ath_date": "2024-11-08T12:26:05.892Z"
+    }
+  }
+}

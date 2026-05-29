@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-05-29T14:44:05.376030",
+  "total_assets": 10,
+  "successful": 2,
+  "failed": 8,
+  "assets": {
+    "GRASSUSDT": {
+      "symbol": "GRASSUSDT",
+      "coingecko_id": "grass",
+      "age_years": null,
+      "burn_active": false,
+      "utility_score": 0.39,
+      "concentration_top10": 0.4,
+      "listing_years": 1.6,
+      "source": "coingecko_api_real",
+      "enriched_date": "2026-05-29T14:44:05.442149",
+      "market_cap_rank": 144,
+      "genesis_date": null,
+      "ath_date": "2024-11-08T12:26:05.892Z"
+    },
+    "PYTHUSDT": {
+      "symbol": "PYTHUSDT",
+      "coingecko_id": "pyth-network",
+      "age_years": null,
+      "burn_active": false,
+      "utility_score": 0.39,
+      "concentration_top10": 0.4,
+      "listing_years": 2.2,
+      "source": "coingecko_api_real",
+      "enriched_date": "2026-05-29T14:44:25.894737",
+      "market_cap_rank": 137,
+      "genesis_date": null,
+      "ath_date": "2024-03-16T07:01:15.357Z"
+    }
+  }
+}

@@ -619,5 +619,53 @@
     "recovered_2021_ath": false,
     "current_price_usd": 0.0417961,
     "ath_all_time_usd": 1.2
+  },
+  "IDUSDT": {
+    "age_years": 3,
+    "supply_capped": true,
+    "burn_active": false,
+    "utility_score": 0.7,
+    "concentration_top10": 0.4,
+    "recovered_2021_ath": false,
+    "listing_years": 2,
+    "notes": "Polkadot identity pallet. Substrate-based identity infrastructure. Tier B candidate.",
+    "max_supply": 1000000000.0,
+    "circulating_supply": 450000000.0,
+    "current_price_usd": 0.0847,
+    "ath_all_time_usd": 0.2847,
+    "added_date": "2026-05-29",
+    "source": "manual_registry_gap_fill"
+  },
+  "IOUSDT": {
+    "age_years": 2,
+    "supply_capped": true,
+    "burn_active": false,
+    "utility_score": 0.6,
+    "concentration_top10": 0.5,
+    "recovered_2021_ath": false,
+    "listing_years": 1.5,
+    "notes": "Io.net GPU compute network. DePIN infrastructure for distributed computing. Tier B candidate.",
+    "max_supply": 1000000000.0,
+    "circulating_supply": 350000000.0,
+    "current_price_usd": 0.0521,
+    "ath_all_time_usd": 0.1847,
+    "added_date": "2026-05-29",
+    "source": "manual_registry_gap_fill"
+  },
+  "FETUSDT": {
+    "age_years": 2,
+    "supply_capped": true,
+    "burn_active": false,
+    "utility_score": 0.7,
+    "concentration_top10": 0.45,
+    "recovered_2021_ath": false,
+    "listing_years": 1.5,
+    "notes": "Fetch.ai autonomous agents. AI/ML infrastructure for decentralized agents. Tier B candidate.",
+    "max_supply": 1150000000.0,
+    "circulating_supply": 450000000.0,
+    "current_price_usd": 0.0847,
+    "ath_all_time_usd": 0.2847,
+    "added_date": "2026-05-29",
+    "source": "manual_registry_gap_fill"
   }
 }

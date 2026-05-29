@@ -1,0 +1,64 @@
+{
+  "timestamp": "2026-05-29T14:33:51.876800",
+  "total_assets": 4,
+  "successful": 4,
+  "failed": 0,
+  "assets": {
+    "GRASSUSDT": {
+      "symbol": "GRASSUSDT",
+      "coingecko_id": "grass",
+      "age_years": 2.1,
+      "burn_active": false,
+      "utility_score": 0.6,
+      "concentration_top10": 0.4,
+      "listing_years": 1.6,
+      "source": "coingecko_api_mock",
+      "enriched_date": "2026-05-29T14:33:51.876800",
+      "market_cap_rank": 152,
+      "genesis_date": "2024-04-20",
+      "ath_date": "2024-11-08T12:26:05.892Z"
+    },
+    "PEAQUSDT": {
+      "symbol": "PEAQUSDT",
+      "coingecko_id": "peaq",
+      "age_years": 2.4,
+      "burn_active": false,
+      "utility_score": 0.82,
+      "concentration_top10": 0.4,
+      "listing_years": 2.0,
+      "source": "coingecko_api_mock",
+      "enriched_date": "2026-05-29T14:33:51.876800",
+      "market_cap_rank": 287,
+      "genesis_date": "2024-01-15",
+      "ath_date": "2024-05-20T10:00:00.000Z"
+    },
+    "PYTHUSDT": {
+      "symbol": "PYTHUSDT",
+      "coingecko_id": "pyth-network",
+      "age_years": 4.8,
+      "burn_active": false,
+      "utility_score": 1.0,
+      "concentration_top10": 0.4,
+      "listing_years": 1.5,
+      "source": "coingecko_api_mock",
+      "enriched_date": "2026-05-29T14:33:51.876800",
+      "market_cap_rank": 89,
+      "genesis_date": "2021-08-01",
+      "ath_date": "2024-12-15T15:30:00.000Z"
+    },
+    "WIFUSDT": {
+      "symbol": "WIFUSDT",
+      "coingecko_id": "dogwifhat",
+      "age_years": null,
+      "burn_active": false,
+      "utility_score": 0.6,
+      "concentration_top10": 0.5,
+      "listing_years": 2.0,
+      "source": "coingecko_api_mock",
+      "enriched_date": "2026-05-29T14:33:51.877796",
+      "market_cap_rank": 1250,
+      "genesis_date": null,
+      "ath_date": "2024-06-01T08:00:00.000Z"
+    }
+  }
+}

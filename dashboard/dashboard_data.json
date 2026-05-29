@@ -1,8 +1,8 @@
 ﻿{
-    "timestamp":  "2026-05-29 13:55:45",
+    "timestamp":  "2026-05-29 14:50:46",
     "capital":  {
-                    "futures":  2716.04,
-                    "total":  3716.04,
+                    "futures":  2715.82,
+                    "total":  3715.82,
                     "spot":  1000
                 },
     "positions":  [
@@ -18,13 +18,13 @@
                       }
                   ],
     "trading_metrics":  {
-                            "trades_30d":  5,
+                            "trades_30d":  6,
                             "profit_factor":  0,
-                            "trades_24h":  1,
+                            "trades_24h":  2,
                             "max_drawdown":  0,
                             "sharpe_ratio":  0,
                             "win_rate":  0,
-                            "trades_7d":  3
+                            "trades_7d":  4
                         },
     "trailing_stop":  {
                           "phase":  3,
@@ -56,17 +56,17 @@
                          },
     "llm_costs":  {
                       "anthropic":  0,
-                      "groq":  0.1624,
-                      "total_24h":  6.7727,
-                      "cost_per_decision":  0.00819,
-                      "total_30d":  35.2238,
-                      "total_7d":  30.3721,
-                      "calls_24h":  827
+                      "groq":  0.1707,
+                      "total_24h":  7.7171,
+                      "cost_per_decision":  0.00811,
+                      "total_30d":  36.1682,
+                      "total_7d":  31.3164,
+                      "calls_24h":  951
                   },
     "mentor_decisions":  {
-                             "total_24h":  362,
-                             "veto_rate":  99.7,
-                             "approval_rate":  0.3
+                             "total_24h":  414,
+                             "veto_rate":  99.5,
+                             "approval_rate":  0.5
                          },
     "mesa_consensus":  {
 
