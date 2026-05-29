@@ -386,7 +386,36 @@ function Invoke-MesaDroneCascade {
     }
 
     # 2. Gemini (fallback 1 - 15 RPM)
-    if ($env:GEMINI_API_KEY) {
+    # 2026-05-28: consulta provider state cache antes de tentar.
+    # Se warmup registrou RATE_LIMITED ha menos de 5min, pula direto para Haiku.
+    # Evita gastar 15s de timeout em Gemini que ja sabemos estar em 429.
+    $geminiBlocked = $false
+    try {
+        $journalDir = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else {
+            Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) "journal"
+        }
+        $stateFile = Join-Path $journalDir "llm_provider_state.json"
+        if (Test-Path $stateFile) {
+            $pstate = Get-Content $stateFile -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction SilentlyContinue
+            if ($pstate -and $pstate.PSObject.Properties["gemini"] -and $pstate.gemini.status -eq "RATE_LIMITED") {
+                # ConvertFrom-Json no PS5.1 converte ISO 8601 para DateTime automaticamente
+                $lastTs = if ($pstate.gemini.ts -is [datetime]) {
+                    [datetime]::SpecifyKind($pstate.gemini.ts, [DateTimeKind]::Utc)
+                } else {
+                    [datetime]::SpecifyKind(
+                        [datetime]::ParseExact([string]$pstate.gemini.ts, "yyyy-MM-ddTHH:mm:ssZ", $null),
+                        [DateTimeKind]::Utc)
+                }
+                $ageMin = ((Get-Date).ToUniversalTime() - $lastTs).TotalMinutes
+                if ($ageMin -lt 5) {
+                    $geminiBlocked = $true
+                    Write-Host "  [$Agent] Gemini SKIP (RATE_LIMITED ha $([math]::Round($ageMin,0))min no cache) -> Haiku" -ForegroundColor DarkGray
+                }
+            }
+        }
+    } catch {}
+
+    if ($env:GEMINI_API_KEY -and -not $geminiBlocked) {
         try {
             return Invoke-Gemini -SystemPrompt $SystemPrompt -UserContent $UserContent `
                 -Model "gemini-2.5-flash" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent

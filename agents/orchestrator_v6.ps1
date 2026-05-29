@@ -152,7 +152,15 @@ function Invoke-V6Cascade {
     # === Mesa (Parte B) -- pula se Tier A ===
     $mesa = $null
     if ($triagem.tier -ne "A") {
-        $mesa = Invoke-Mesa -Market $Market -Context $Context -Setup $Setup
+        # B29 fix 2026-05-28: enriquecer Context com regime da triagem antes de chamar Mesa.
+        # Antes: Context nao tinha .regime -> mesa_drones.jsonl ficava com regime="" em 99% das entradas.
+        # Agora: injeta triagem.regime no Context para que Invoke-Mesa possa logar corretamente.
+        $contextForMesa = $Context
+        if ($triagem.regime -and -not ($Context.PSObject.Properties["regime"] -and $Context.regime)) {
+            $contextForMesa = $Context | Select-Object *
+            $contextForMesa | Add-Member -NotePropertyName "regime" -NotePropertyValue ([string]$triagem.regime) -Force
+        }
+        $mesa = Invoke-Mesa -Market $Market -Context $contextForMesa -Setup $Setup
         if ($mesa.consensus -eq "CAOS") {
             # B.1 fix 2026-05-15: registrar observation MESMO em CAOS quando paperOnly.
             # CAOS continua sendo dado valioso para criterio anti-padrao #3 (Mesa

@@ -88,12 +88,48 @@ function Get-QuantWhitelistEntry {
 }
 
 
+function Get-MarketRegimeFromCache {
+    # Retorna regime string para o market pedido, ou $null se arquivo nao existe
+    # ou market nao encontrado. Fail-soft: qualquer erro retorna $null.
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)] [string] $Market,
+        [string] $JournalDir = ""
+    )
+    try {
+        if (-not $JournalDir) {
+            $here = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
+            $JournalDir = Join-Path (Split-Path -Parent $here) "journal"
+        }
+        $cachePath = Join-Path $JournalDir "regime_state.json"
+        if (-not (Test-Path $cachePath)) { return $null }
+        $raw = Get-Content $cachePath -Raw -Encoding UTF8
+        $data = $raw | ConvertFrom-Json
+        # Suporta tanto objeto plano {BTCUSDT: "BEAR_STRONG"} quanto
+        # objeto com campo markets aninhado {markets: {BTCUSDT: "BEAR_STRONG"}}
+        if ($data.PSObject.Properties[$Market]) {
+            return [string]$data.$Market
+        }
+        if ($data.PSObject.Properties['markets'] -and $data.markets.PSObject.Properties[$Market]) {
+            return [string]$data.markets.$Market
+        }
+        return $null
+    } catch {
+        return $null
+    }
+}
+
+
 function Merge-QuantWhitelistIntoCandidates {
     [CmdletBinding()]
     param(
-        [PSObject[]] $Candidates = @(),
-        [string]     $Mode = "LIVE",
-        [string]     $Path = ""
+        [PSObject[]]  $Candidates = @(),
+        [string]      $Mode = "LIVE",
+        [string]      $Path = "",
+        # Opcional: scriptblock que recebe $market e retorna regime string.
+        # Quando fornecido, ativos em BEAR_STRONG ou BEAR_WEAK recebem tier_level=3
+        # em vez de 1, liberando slots para candidatos organicos do scanner.
+        [scriptblock] $RegimeProvider = $null
     )
     # FASE 4 p4 fix 2026-05-21: ler whitelist FULL pra preservar tier_level (1=A_LIVE, 2=B_PAPER).
     # Antes: Get-QuantWhitelistMarkets retornava so nomes -> sort downstream perdia info de tier.
@@ -125,6 +161,20 @@ function Merge-QuantWhitelistIntoCandidates {
         $tierLevel = if ($tierAList -contains $m) { 1 } else { 2 }
         $forcedSource = "quant_whitelist_$Mode"
 
+        # Regime-aware tier_level: se RegimeProvider fornecido e regime for BEAR,
+        # rebaixa tier_level de 1 para 3 para liberar slots para candidatos organicos.
+        $effectiveTierLevel = $tierLevel
+        if ($RegimeProvider) {
+            try {
+                $regime = & $RegimeProvider $m
+                if ($regime -eq "BEAR_STRONG" -or $regime -eq "BEAR_WEAK") {
+                    $effectiveTierLevel = 3
+                }
+            } catch {
+                # Fail-soft: qualquer erro no provider mantem tier_level original
+            }
+        }
+
         if ($existingByMkt.ContainsKey($m)) {
             # FASE 4 p5: augment existing scanner-natural entry with forced fields.
             # Preserve scanner volume/change reais; sobrescreve so source + tier_level.
@@ -133,7 +183,7 @@ function Merge-QuantWhitelistIntoCandidates {
                 Add-Member -InputObject $existing -MemberType NoteProperty -Name 'source' -Value $forcedSource -Force
             }
             if (-not $existing.PSObject.Properties['tier_level']) {
-                Add-Member -InputObject $existing -MemberType NoteProperty -Name 'tier_level' -Value $tierLevel -Force
+                Add-Member -InputObject $existing -MemberType NoteProperty -Name 'tier_level' -Value $effectiveTierLevel -Force
             }
             if (-not $existing.PSObject.Properties['quant_priority']) {
                 Add-Member -InputObject $existing -MemberType NoteProperty -Name 'quant_priority' -Value $sharpe -Force
@@ -147,7 +197,7 @@ function Merge-QuantWhitelistIntoCandidates {
                 change           = 0.0         # neutro (scanner real preenche se aparece naturalmente)
                 volume           = 0.0
                 quant_priority   = $sharpe
-                tier_level       = $tierLevel  # FASE 4 p4: sort priority absoluto Tier A > B > scanner
+                tier_level       = $effectiveTierLevel  # regime-aware: BEAR -> 3, outros -> original
                 source           = $forcedSource
             }
         }

@@ -7,8 +7,15 @@
 # explicitamente declara "[FQS] score=4/7 QUALITY". Se context diz ABSENT, eh
 # real ausencia (e LLM cita "[FQS] ABSENT" textualmente).
 #
-# Tambem provee Test-PromptForbiddenPhrases — pre-LLM guard que detecta phrases
-# que indicam tipico hallucination pattern (Mesa pulou, sem evidencia, etc).
+# Tambem provee Test-PromptForbiddenPhrases — guard pos-resposta que detecta frases
+# que indicam hallucination ou violacao de regras (Mesa pulou, FQS indisponivel,
+# DSR como veto, etc). Ver MENTOR_FORBIDDEN_PHRASES abaixo.
+#
+# 4b 2026-05-28: adicionadas frases DSR/n_trades a MENTOR_FORBIDDEN_PHRASES.
+# Problema: LLM usava "DSR n_trades=0 e track record inexistente" como razao de
+# ABORTAR mesmo com [DSR_HISTORY] INFO-ONLY no gate block e regra 5 no system
+# prompt. O guard nao detectava porque as frases nao estavam na lista.
+# Fix: 9 frases adicionadas. Ver tests/dsr_forbidden_phrases.Tests.ps1 (38 testes).
 #
 # PS 5.1. UTF-8 BOM.
 
@@ -21,7 +28,22 @@ $script:MENTOR_FORBIDDEN_PHRASES = @(
     "FQS indisponivel",
     "FQS nao declarado",
     "FQS missing",
-    "alerta critico"  # use sempre com gate name explicit
+    "alerta critico",  # use sempre com gate name explicit
+    # 4b 2026-05-28: DSR/n_trades NAO sao gate de bloqueio.
+    # LLM usava "DSR n_trades=0 e track record inexistente" como razao de ABORTAR
+    # mesmo com [DSR_HISTORY] INFO-ONLY no gate block e regra 5 no system prompt.
+    # Solucao: adicionar frases ao guard pos-resposta para detectar violacao.
+    "track record inexistente",
+    "track record zerado",
+    "zero track record",
+    "sem track record",        # cobre "sem track record validado/neste ativo/etc"
+    "DSR n_trades=0",
+    "n_trades=0 e track",
+    "n_trades=0 elimina",
+    "n_trades=0 significa"
+    # NOTA: "track record validado" (afirmativo) NAO esta na lista -- falso positivo
+    # em contextos como "track record validado por 15 trades". A negacao ja e coberta
+    # por "sem track record" acima.
 )
 
 

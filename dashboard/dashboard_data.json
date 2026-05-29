@@ -1,5 +1,5 @@
 ﻿{
-    "timestamp":  "2026-05-28 01:11:02",
+    "timestamp":  "2026-05-29 08:10:46",
     "capital":  {
                     "futures":  2715.79,
                     "total":  3715.79,
@@ -15,14 +15,14 @@
                             "max_drawdown":  0,
                             "sharpe_ratio":  0,
                             "win_rate":  0,
-                            "trades_7d":  3
+                            "trades_7d":  2
                         },
     "trailing_stop":  null,
     "market_regime":  {
-                          "phase":  null,
-                          "updated_at":  null,
-                          "regime":  null,
-                          "bias":  null
+                          "phase":  "h24_p3_bear",
+                          "updated_at":  "2026-05-29T06:00:02Z",
+                          "regime":  "BEAR_WEAK",
+                          "bias":  "BEAR_WEAK"
                       },
     "promotion_pipeline":  {
                                "tier_a":  4,
@@ -40,15 +40,15 @@
                          },
     "llm_costs":  {
                       "anthropic":  0,
-                      "groq":  0.0044,
-                      "total_24h":  0.1872,
-                      "cost_per_decision":  0.00936,
-                      "total_30d":  16.5092,
-                      "total_7d":  12.75,
-                      "calls_24h":  20
+                      "groq":  0.0615,
+                      "total_24h":  0.9483,
+                      "cost_per_decision":  0.00895,
+                      "total_30d":  29.3994,
+                      "total_7d":  24.5477,
+                      "calls_24h":  106
                   },
     "mentor_decisions":  {
-                             "total_24h":  68,
+                             "total_24h":  70,
                              "veto_rate":  100,
                              "approval_rate":  0
                          },

@@ -38,6 +38,21 @@ if (Test-Path $warmupPath) {
     }
 }
 
+# B29 fix 2026-05-28: normalizar regime_state.json antes de respawn.
+# Python escreve {current_regime, timestamp} mas PS consumers precisam de
+# {regime, phase, bias, updated_at}. refresh_regime_state.ps1 faz a traducao.
+$refreshPath = Join-Path $scriptDir "refresh_regime_state.ps1"
+if (Test-Path $refreshPath) {
+    try {
+        Log "Refresh regime_state.json (normaliza schema Python -> PS)"
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $refreshPath 2>&1 | ForEach-Object { Log "  $_" }
+    } catch {
+        Log "  refresh_regime_state falhou (nao critico): $_"
+    }
+} else {
+    Log "  refresh_regime_state.ps1 ausente -- skip"
+}
+
 $daemons = @(
     @{ name = "gem_loop";       pattern = "*gem_loop.ps1*";       script = "scripts\gem_loop.ps1" },
     @{ name = "scan_master";    pattern = "*scan_master.ps1*";    script = "scripts\scan_master.ps1" },

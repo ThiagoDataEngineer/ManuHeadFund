@@ -25,6 +25,12 @@ Describe "Get-MentorAntiHallucinationRules" {
         $r = Get-MentorAntiHallucinationRules
         $r | Should Match "NUNCA"
     }
+
+    It "menciona regra DSR informativo (4b 2026-05-28)" {
+        $r = Get-MentorAntiHallucinationRules
+        $r | Should Match "DSR"
+        $r | Should Match "n_trades"
+    }
 }
 
 Describe "Get-MentorInviolableRules" {
@@ -57,5 +63,20 @@ Describe "MENTOR_SYSTEM_PROMPT e MENTOR_DEBATE_SYSTEM convergencia C.3" {
 
     It "MENTOR_SYSTEM_PROMPT inviolaveis menciona 1:5 (nao 1:3 antigo)" {
         $MENTOR_SYSTEM_PROMPT | Should Match "1:5"
+    }
+
+    It "MENTOR_DEBATE_SYSTEM contem regra DSR informativo (4b 2026-05-28)" {
+        # Regra 6: DSR/n_trades nao sao gate de bloqueio.
+        # Sem isso, LLM usa "track record inexistente" como razao de ABORTAR.
+        $MENTOR_DEBATE_SYSTEM | Should Match "DSR"
+        $MENTOR_DEBATE_SYSTEM | Should Match "n_trades=0 NAO impede"
+    }
+
+    It "MENTOR_DEBATE_SYSTEM lista frases proibidas DSR explicitamente" {
+        # LLM precisa ver as frases proibidas no system prompt para evita-las.
+        # Guard pos-resposta detecta, mas prevencao e melhor que deteccao.
+        $MENTOR_DEBATE_SYSTEM | Should Match "track record inexistente"
+        $MENTOR_DEBATE_SYSTEM | Should Match "zero track record"
+        $MENTOR_DEBATE_SYSTEM | Should Match "sem track record"
     }
 }

@@ -95,46 +95,54 @@ Responda APENAS JSON valido (sem markdown):
 $MESA_LIDAR_SYSTEM = @'
 Voce e Van Tharp - autoridade em position sizing e psicologia de risco.
 Tambem canaliza Ed Seykota (regras numericas frias) e Curtis Faith (turtle rules).
-Voce nao opera por opinião. Voce opera por R-multiples.
+Voce nao opera por opiniao. Voce opera por R-multiples.
 
-ESCOPO DA SUA AVALIACAO (UNICA — nao saia desse escopo):
+SEU UNICO ESCOPO (nao saia dele):
 - R-multiples (RR_PROPOSTO)
 - Position size (ATR/preco)
 - Liquidez (vol_ratio)
-- Coerencia stop (stop coerente com direcao)
+- Coerencia do stop com a direcao do setup (direction_proxy)
 
-NAO E SEU PAPEL avaliar:
-- RSI overbought/oversold (papel de TERMAL/Tech)
-- Stochastic overbought (papel de TERMAL/Tech)
-- Divergencia RSI (papel de TERMAL/Tech)
-- Tendencia (papel de RADAR/Macro)
-- Estrutura de mercado (papel de RADAR/Macro)
-
-IGNORE indicadores secundarios. Foco APENAS em risk/sizing/liquidez.
+NAO E SEU PAPEL avaliar (outros drones cuidam disso):
+- RSI, Stochastic, divergencias (papel de TERMAL)
+- Tendencia, estrutura de mercado, EMA, Ichimoku (papel de TERMAL/RADAR)
+- Macro, funding rate, DXY (papel de RADAR)
 
 PRINCIPIOS INVIOLAVEIS:
 - Risco por trade NUNCA > 1% capital (Tudor Jones rule)
 - R:R minimo aceitavel = 2. Preferido = 3+
-- Position size = (Capital × 0.01) / (entry - stop) — Kelly fracionário
-- Volatility-targeted: ATR/preco > 8% = high vol warning
-- Liquidez minima: vol_ratio >= 1.0 — abaixo = NEUTRO
+- Liquidez minima: vol_ratio >= 0.37 — abaixo = NEUTRO (Faith: "liquidez antes de tudo")
+- Volatility-targeted: ATR/preco > 8% = high vol warning (sizing alerta, nao veto)
 
-DECISAO (use APENAS os números do setup + sizing/liquidez, NAO interprete indicadores):
-- RR_PROPOSTO >= 3 + vol_ratio >= 1 + ATR/preco <= 6% = direcao do setup, forca 65-85
-- RR_PROPOSTO 2-3 + vol_ratio >= 1 = direcao do setup, forca 50-65
-- RR_PROPOSTO < 2 = NEUTRO forca 30-45 (Tharp: "se RR < 2, eh aposta nao trade")
-- Stop incoerente (LONG com stop ACIMA entry, SHORT com stop ABAIXO) = NEUTRO 20
-- Liquidez ausente (vol_ratio < 0.5) = NEUTRO 25 (Faith: "liquidez antes de tudo")
-- ATR/preco > 8% = direcao do setup MAS forca reduzida 40-55 (sizing alerta, nao veto)
+REGRAS DE SINAL (baseadas APENAS em RR/vol_ratio/ATR/stop):
+- RR_PROPOSTO >= 3 + vol_ratio >= 0.37 + stop coerente = direction_proxy, forca 65-85
+- RR_PROPOSTO 2-3 + vol_ratio >= 0.37 + stop coerente = direction_proxy, forca 50-65
+- RR_PROPOSTO < 2 = NEUTRO forca 30-45
+- Stop INCOERENTE (LONG com stop acima entry; SHORT com stop abaixo entry) = NEUTRO 20
+- vol_ratio < 0.37 = NEUTRO 25
 
-IMPORTANTE: se RR aceitavel + stop coerente + liquidez OK, sinal = direcao do setup.
-NAO veta por RSI/Stochastic/divergencia — outros drones (TERMAL/RADAR) cuidam disso.
-Mesa eh um sistema, voce eh UM dos drones. Cada um na sua especializacao.
+DIRECAO DO SINAL — REGRA ABSOLUTA:
+Voce NAO decide se o mercado vai subir ou cair. Isso e papel de TERMAL e RADAR.
+Sua unica funcao e validar se o SETUP PROPOSTO tem RR aceitavel, stop coerente e liquidez suficiente.
 
-Forca eh CONVICCAO no setup proposto baseado APENAS em sizing/liquidez/RR.
+ALGORITMO OBRIGATORIO (siga exatamente):
+1. Leia direction_proxy do campo "SETUP PROPOSTO" no contexto
+2. Se RR >= 2 E vol_ratio >= 0.37 E stop coerente: sinal = direction_proxy (LONG ou SHORT)
+3. Se qualquer condicao falhar: sinal = NEUTRO
+4. NUNCA vote em direcao diferente do direction_proxy — isso viola seu escopo
+
+EXEMPLOS CORRETOS:
+- direction_proxy=SHORT + RR=5 + vol_ratio=1.2 + stop coerente -> sinal=SHORT forca=75
+- direction_proxy=LONG  + RR=5 + vol_ratio=0.1 + stop coerente -> sinal=NEUTRO forca=25 (liquidez)
+- direction_proxy=SHORT + RR=1.5 + vol_ratio=1.0              -> sinal=NEUTRO forca=35 (RR baixo)
+- direction_proxy=LONG  + RR=5 + vol_ratio=0.8 + stop ACIMA entry -> sinal=NEUTRO forca=20 (stop incoerente)
+
+EXEMPLOS ERRADOS (nunca faca):
+- direction_proxy=SHORT mas voce vota LONG porque "mercado parece bullish" -> ERRADO
+- direction_proxy=LONG  mas voce vota SHORT porque "estrutura bearish"     -> ERRADO
 
 Responda APENAS JSON valido (sem markdown):
-{"sinal":"LONG|SHORT|NEUTRO","forca":0-100,"justificativa":"frase tecnica curta CITANDO R:R/vol_ratio/ATR APENAS","confluencias":["R:R=X","vol_ratio=Y","ATR_pct=Z"]}
+{"sinal":"LONG|SHORT|NEUTRO","forca":0-100,"justificativa":"frase curta CITANDO RR/vol_ratio/ATR/stop APENAS","confluencias":["R:R=X","vol_ratio=Y","ATR_pct=Z"]}
 '@
 
 $MESA_MODELS = @{
@@ -413,6 +421,44 @@ $($Context | ConvertTo-Json -Depth 8 -Compress)
 
     $drones = _Mesa_RunDrones -Market $Market -UserContent $userContent
 
+    # B30 fix 2026-05-28: rerun de drones degraded.
+    # Analise mesa_drones.jsonl mostrou 16% das chamadas com drone_returned_empty ou
+    # job_state_Running_likely_timeout. Rerun sequencial (1 drone falho) ou paralelo
+    # (2+ falhos) recupera o drone antes de calcular consensus.
+    # Limite: 1 rerun por drone (nao loop infinito).
+    $failedDrones = @()
+    foreach ($droneName in @("termal","radar","lidar")) {
+        $d = $drones.$droneName
+        $isFailed = ($null -eq $d) -or
+                    ($d.PSObject.Properties["error"] -and $d.error) -or
+                    (-not ($MESA_VALID_SIGNALS -contains $d.sinal))
+        if ($isFailed) { $failedDrones += $droneName }
+    }
+
+    if ($failedDrones.Count -gt 0) {
+        Write-Host ("  [MESA-RERUN] {0} drone(s) falharam: [{1}] -- iniciando rerun" -f $failedDrones.Count, ($failedDrones -join ',')) -ForegroundColor DarkYellow
+        foreach ($droneName in $failedDrones) {
+            $recovered = $null
+            try {
+                if (Get-Command _Mesa_RerunDrone -ErrorAction SilentlyContinue) {
+                    $recovered = _Mesa_RerunDrone -Drone $droneName -Market $Market -UserContent $userContent
+                } else {
+                    # Rerun sequencial direto via Invoke-MesaDrone
+                    $recovered = Invoke-MesaDrone -Drone $droneName -UserContent $userContent
+                }
+            } catch {
+                Write-Warning "  [MESA-RERUN] Rerun drone $droneName falhou: $($_.Exception.Message)"
+            }
+            if ($recovered -and ($MESA_VALID_SIGNALS -contains $recovered.sinal)) {
+                Write-Host ("  [MESA-RERUN] drone {0} recuperado: sinal={1} forca={2}" -f $droneName, $recovered.sinal, $recovered.forca) -ForegroundColor Green
+                # Atualiza o objeto drones com o resultado recuperado
+                $drones | Add-Member -NotePropertyName $droneName -NotePropertyValue $recovered -Force
+            } else {
+                Write-Host ("  [MESA-RERUN] drone {0} rerun falhou tambem -- mantendo erro original" -f $droneName) -ForegroundColor Red
+            }
+        }
+    }
+
     $cons = Get-MesaConsensus -Termal $drones.termal -Radar $drones.radar -Lidar $drones.lidar
 
     # CC fix 2026-05-21 PM6+930min: logger persistente Mesa drones em JSONL.
@@ -434,7 +480,26 @@ $($Context | ConvertTo-Json -Depth 8 -Compress)
         $entry = [ordered]@{
             ts             = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
             market         = $Market
-            regime         = [string]$Context.regime
+            # B29 fix 2026-05-28: regime estava vazio em 365/368 entradas porque
+            # Context.regime nao existia como propriedade direta em todos os callers.
+            # Agora extrai com fallback em 3 niveis:
+            #   1. Context.regime (direto — apos fix orchestrator_v6)
+            #   2. Context.regime_state.regime (callers alternativos)
+            #   3. regime_state.json no disco (fallback final, sempre disponivel)
+            regime         = if ($Context.PSObject.Properties["regime"] -and $Context.regime) {
+                                 [string]$Context.regime
+                             } elseif ($Context.PSObject.Properties["regime_state"] -and $Context.regime_state -and $Context.regime_state.regime) {
+                                 [string]$Context.regime_state.regime
+                             } else {
+                                 # Fallback: le regime_state.json do disco
+                                 try {
+                                     $rsPath = Join-Path $journalDir "regime_state.json"
+                                     if (Test-Path $rsPath) {
+                                         $rs = Get-Content $rsPath -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction SilentlyContinue
+                                         if ($rs -and $rs.regime) { [string]$rs.regime } else { "" }
+                                     } else { "" }
+                                 } catch { "" }
+                             }
             consensus      = $cons.consensus
             sinal_consenso = $cons.sinal_consenso
             score_avg      = $cons.score_avg

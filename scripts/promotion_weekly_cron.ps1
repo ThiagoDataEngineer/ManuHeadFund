@@ -49,6 +49,7 @@ try {
     . (Join-Path $agentsDir "lib_promotion_paper_engine.ps1") -ErrorAction Stop
     . (Join-Path $agentsDir "lib_coinex_news.ps1") -ErrorAction SilentlyContinue
     . (Join-Path $agentsDir "lib_living_whitelist.ps1") -ErrorAction SilentlyContinue
+    . (Join-Path $agentsDir "lib_quant_whitelist.ps1") -ErrorAction SilentlyContinue
     . (Join-Path $agentsDir "lib_telegram.ps1") -ErrorAction Stop
 } catch {
     Write-CronLog "ERROR" "Falha load libs: $($_.Exception.Message)"
@@ -381,7 +382,16 @@ function Invoke-CronCycle {
         try {
             $tickers = Get-CoinexAllTickers
             if ($tickers.Count -gt 0) {
-                $lwProvider = Build-MetricsProvider
+                # Item 2 (2026-05-28): usa Get-LivingWhitelistMetrics como provider primario
+                # para o scan de discovery. Fail-soft: se funcao nao disponivel, cai para
+                # Build-MetricsProvider (mais pesado, busca candles 4h + daily).
+                $lwProvider = $null
+                if (Get-Command Get-LivingWhitelistMetrics -ErrorAction SilentlyContinue) {
+                    $lwProvider = { param($m) Get-LivingWhitelistMetrics -Market $m }
+                } else {
+                    $lwProvider = Build-MetricsProvider
+                }
+
                 $lw = Invoke-LivingWhitelistScan -Tickers $tickers -PipelinePath $pipelinePath `
                     -MetricsProvider $lwProvider -MinVolumeUsd 1000000 -TopN 30 -BullStrongAutoAdd
 

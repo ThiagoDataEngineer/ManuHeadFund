@@ -131,7 +131,56 @@ function Invoke-LivingWhitelistScan {
 }
 
 
-# ── Visualizacao ──────────────────────────────────────────────────────────────
+# ── Get-LivingWhitelistMetrics ────────────────────────────────────────────────
+# Busca closes diarios da CoinEx, computa regime via Compute-AssetRegime,
+# retorna hashtable com campos obrigatorios. Fail-soft: qualquer erro retorna
+# defaults com regime_asset="UNKNOWN".
+function Get-LivingWhitelistMetrics {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)] [string] $Market
+    )
+    $defaults = @{
+        regime_asset = "UNKNOWN"
+        regime_btc   = "UNKNOWN"
+        mom_20d      = 0.0
+        sharpe_30d   = 0.0
+        n_trades     = 0
+    }
+    try {
+        # Tenta buscar closes diarios via CoinEx API
+        $url = "https://api.coinex.com/v2/spot/kline?market=$Market&period=1day&limit=250"
+        $r = Invoke-RestMethod -Uri $url -Method GET -TimeoutSec 15 -ErrorAction Stop
+        if (-not $r.data -or @($r.data).Count -lt 200) {
+            return $defaults
+        }
+        $closes = [double[]]@($r.data | ForEach-Object { [double]$_.close })
+        $regimeResult = Compute-AssetRegime -Closes $closes
+        $mom = if ($null -ne $regimeResult.mom_20d) { [double]$regimeResult.mom_20d } else { 0.0 }
+
+        # Tenta regime BTC do cache (fail-soft)
+        $regimeBtc = "UNKNOWN"
+        try {
+            if (Get-Command Get-MarketRegimeFromCache -ErrorAction SilentlyContinue) {
+                $cached = Get-MarketRegimeFromCache -Market "BTCUSDT"
+                if ($cached) { $regimeBtc = $cached }
+            }
+        } catch {}
+
+        return @{
+            regime_asset = [string]$regimeResult.regime
+            regime_btc   = $regimeBtc
+            mom_20d      = $mom
+            sharpe_30d   = 0.0
+            n_trades     = 0
+        }
+    } catch {
+        return $defaults
+    }
+}
+
+
+
 function Format-RegimeDistribution {
     [CmdletBinding()]
     param([Parameter(Mandatory)] [hashtable] $Counts)

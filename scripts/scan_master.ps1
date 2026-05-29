@@ -639,7 +639,15 @@ function Invoke-MasterCycle {
             # Tier 2 (2026-05-17): forca inclusao de Tier A LIVE/PAPER da per_asset_whitelist
             $quantMode = if ($global:QUANT_WHITELIST_MODE) { $global:QUANT_WHITELIST_MODE } else { "LIVE" }
             try {
-                $scannerResults = @(Merge-QuantWhitelistIntoCandidates -Candidates $scannerResults -Mode $quantMode)
+                # Item 1 (2026-05-28): regime-aware tier_level -- ativos BEAR rebaixados para tier 3
+                # liberando slots para candidatos organicos quando whitelist inteira esta em BEAR.
+                $regimeProviderBlock = $null
+                if (Get-Command Get-MarketRegimeFromCache -ErrorAction SilentlyContinue) {
+                    $regimeProviderBlock = { param($m) Get-MarketRegimeFromCache -Market $m }
+                }
+                $mergeArgs = @{ Candidates = $scannerResults; Mode = $quantMode }
+                if ($regimeProviderBlock) { $mergeArgs.RegimeProvider = $regimeProviderBlock }
+                $scannerResults = @(Merge-QuantWhitelistIntoCandidates @mergeArgs)
             } catch {
                 Write-MasterLog "WARN: Merge-QuantWhitelistIntoCandidates falhou -- $($_.Exception.Message)"
             }

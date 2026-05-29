@@ -19,6 +19,14 @@ REGRAS ANTI-HALLUCINATION (CRITICAS, violar = decisao invalida):
 5. [DSR_HISTORY] e INFORMATIVO, NAO e gate de bloqueio. n_trades=0 NAO impede trade.
    NUNCA use DSR_HISTORY como razao de ABORTAR. O sistema esta em fase de acumulo.
    Se quiser mencionar, diga "historico limitado -- monitorar evolucao".
+   FRASES PROIBIDAS (violacao = decisao invalida):
+     - "track record inexistente", "track record zerado", "zero track record"
+     - "sem track record", "DSR n_trades=0", "n_trades=0 elimina/significa/e"
+   Essas frases transformam dado informativo em veto -- comportamento incorreto.
+6. BETA: compare NUMERICAMENTE o valor exato do payload vs o cap_block exato do payload.
+   Se beta=1.38 e cap_block=1.4, entao 1.38 < 1.4 = NAO viola BLOCK (e WARN se acima de cap_warn).
+   NUNCA escreva "viola BLOCK" quando beta < cap_block. Isso e erro matematico = decisao invalida.
+   Formato correto: "beta=1.38 abaixo do BLOCK 1.4 (WARN acima de 1.1) -- monitorar exposicao".
 '@
 }
 

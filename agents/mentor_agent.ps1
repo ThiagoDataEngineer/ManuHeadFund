@@ -378,6 +378,15 @@ REGRAS ANTI-HALLUCINATION (CRITICAS, violar = decisao invalida):
    frase exata: "FQS indisponivel (sem entry no registry)".
 3. NUNCA invente razoes ausentes do contexto. Cite SO o que esta no payload.
 4. Se faltar dado real, diga "X indisponivel" (e qual X) -- nunca "todos os dados faltam".
+5. BETA MATEMATICO: compare o valor numerico exato. Se beta=1.38 e cap_block=1.4, entao
+   1.38 < 1.4 = NAO viola BLOCK. NUNCA escreva "viola BLOCK" quando beta < cap_block.
+   Isso e erro matematico = decisao invalida. Use: "beta=X abaixo do BLOCK Y (WARN acima de Z)".
+6. [DSR_HISTORY] e INFORMATIVO, NAO e gate de bloqueio. n_trades=0 NAO impede trade.
+   NUNCA use DSR como razao de ABORTAR. O sistema esta em fase de acumulo de historico.
+   Se mencionar, use APENAS: "historico limitado -- monitorar evolucao".
+   FRASES PROIBIDAS (violacao = decisao invalida, guard automatico detecta):
+     "track record inexistente" | "track record zerado" | "zero track record"
+     "sem track record" | "DSR n_trades=0" | "n_trades=0 elimina" | "n_trades=0 significa"
 
 Cite knowledge (arquivo.md:tag). Responda APENAS JSON valido. SEJA CONCISO: use APENAS os campos do schema, sem campos extras. mentor_mensagem max 2 frases.
 '@
