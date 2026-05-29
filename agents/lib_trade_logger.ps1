@@ -59,7 +59,7 @@ function _Tl-ScoreOrDash {
 }
 
 function _Tl-CleanRazao {
-    param($Value)
+    param($Value, [int]$MaxLength = 200)
     if ($null -eq $Value) { return "-" }
     $s = [string]$Value
     if ([string]::IsNullOrWhiteSpace($s)) { return "-" }
@@ -71,6 +71,11 @@ function _Tl-CleanRazao {
     $s = $s -replace "\s+", " "
     $s = $s.Trim()
     if ([string]::IsNullOrEmpty($s)) { return "-" }
+    # 2026-05-29: Truncar razoes longas para evitar inflacao de contexto
+    # Manter razao completa em journal/trade_reasons.jsonl para auditoria
+    if ($s.Length -gt $MaxLength) {
+        $s = $s.Substring(0, $MaxLength - 3) + "..."
+    }
     # Escapa aspas duplas
     $s = $s -replace '"', '\"'
     return $s

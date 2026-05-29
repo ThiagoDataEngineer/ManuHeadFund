@@ -1,12 +1,16 @@
 ﻿{
     "open_positions":  [
-
+                           {
+                               "entry_ts":  "2026-05-29T12:06:49.4701372-03:00",
+                               "market":  "INJUSDT",
+                               "size_usdt":  18.58
+                           }
                        ],
-    "daily_count":  0,
+    "daily_count":  1,
     "daily_reset_date":  "2026-05-29",
-    "weekly_count":  0,
+    "weekly_count":  1,
     "weekly_reset_date":  "2026-05-25",
     "consecutive_stops":  0,
     "last_trade_result":  null,
-    "last_updated":  "2026-05-29T07:01:51.9402986-03:00"
+    "last_updated":  "2026-05-29T12:06:49.5300096-03:00"
 }

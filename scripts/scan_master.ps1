@@ -79,6 +79,7 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 . (Join-Path $agentsDir "lib_position_register.ps1")  # Layer 5 wire: wrapper opt-in via MOON_BAG_ENABLED.flag
 . (Join-Path $agentsDir "lib_validation_logger.ps1")  # 2026-05-25: Validação Opção 2 (até 1ª pos fechar)
 . (Join-Path $agentsDir "lib_trade_logger.ps1")
+. (Join-Path $agentsDir "lib_trade_reason_archive.ps1")  # 2026-05-29: Arquivo de razoes completas
 # Universe Sweep + Hit-Rate -- ZERO API extra; reusa cache da chamada CoinEx
 # que Get-ScannerCandidates ja faz ($global:LAST_UNIVERSE_SNAPSHOT).
 . (Join-Path $agentsDir "lib_universe_sweep.ps1")
@@ -1015,6 +1016,17 @@ function Invoke-MasterCycle {
                     # apos o prefixo "[TRADE] " para evitar duplicacao.
                     $payload = $tradeLine -replace '^\[\d{2}:\d{2}:\d{2}\]\s+\[TRADE\]\s+', ''
                     Write-MasterLog $payload "TRADE"
+                    
+                    # 2026-05-29: Arquivar razao completa em JSONL para auditoria
+                    # (razao foi truncada no log master para evitar inflacao de contexto)
+                    if ($razao -and (Get-Command Add-TradeReasonArchive -ErrorAction SilentlyContinue)) {
+                        try {
+                            Add-TradeReasonArchive -Market $c.market -Decision $result.decisao -FullReason $razao
+                        } catch {
+                            Write-Warning "Falha ao arquivar razao de trade: $_"
+                        }
+                    }
+                    
                     $orchResults += $result
                     if ($result.decisao -eq "EXECUTAR" -and $result.ordemId) {
                         # Layer 5 wire (opt-in via journal/MOON_BAG_ENABLED.flag)

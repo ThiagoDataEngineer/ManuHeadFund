@@ -1,26 +1,35 @@
 ﻿{
-    "timestamp":  "2026-05-29 08:20:46",
+    "timestamp":  "2026-05-29 12:06:45",
     "capital":  {
-                    "futures":  2715.79,
-                    "total":  3715.79,
+                    "futures":  2715.78,
+                    "total":  3715.78,
                     "spot":  1000
                 },
     "positions":  [
-
+                      {
+                          "market":  "INJUSDT",
+                          "entry":  0,
+                          "current":  0,
+                          "margin":  0,
+                          "stop_loss":  "3.2118",
+                          "leverage":  "3",
+                          "side":  "long",
+                          "pnl_pct":  0
+                      }
                   ],
     "trading_metrics":  {
-                            "trades_30d":  4,
+                            "trades_30d":  5,
                             "profit_factor":  0,
-                            "trades_24h":  0,
+                            "trades_24h":  1,
                             "max_drawdown":  0,
                             "sharpe_ratio":  0,
                             "win_rate":  0,
-                            "trades_7d":  2
+                            "trades_7d":  3
                         },
     "trailing_stop":  null,
     "market_regime":  {
                           "phase":  "h24_p3_bear",
-                          "updated_at":  "2026-05-29T06:00:02Z",
+                          "updated_at":  "2026-05-29T14:26:01Z",
                           "regime":  "BEAR_WEAK",
                           "bias":  "BEAR_WEAK"
                       },
@@ -40,17 +49,17 @@
                          },
     "llm_costs":  {
                       "anthropic":  0,
-                      "groq":  0.0821,
-                      "total_24h":  1.1533,
-                      "cost_per_decision":  0.00901,
-                      "total_30d":  29.6044,
-                      "total_7d":  24.7527,
-                      "calls_24h":  128
+                      "groq":  0.1289,
+                      "total_24h":  5.0919,
+                      "cost_per_decision":  0.00836,
+                      "total_30d":  33.543,
+                      "total_7d":  28.6912,
+                      "calls_24h":  609
                   },
     "mentor_decisions":  {
-                             "total_24h":  77,
-                             "veto_rate":  100,
-                             "approval_rate":  0
+                             "total_24h":  272,
+                             "veto_rate":  99.6,
+                             "approval_rate":  0.4
                          },
     "mesa_consensus":  {
 
