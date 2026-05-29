@@ -251,10 +251,88 @@ function Invoke-Cerebras {
 }
 
 # -----------------------------------------------------------------------------
+# Invoke-Mistral — wrapper Mistral AI API (OpenAI-compatible)
+# Free tier: 1 req/s, ~1B tokens/mes (praticamente ilimitado para nosso volume).
+# Modelo default: mistral-small-3.1 (qualidade comparavel ao llama-3.3-70b).
+# Substitui Gemini como fallback 2 em todos os cascades (2026-05-29).
+# Motivo: Gemini 2.5 Flash free tier tem apenas 250 RPD -- esgota em 2-3h de
+# operacao normal (10 candidatos x 3 drones x ciclos 30min = ~30 calls/ciclo).
+# Mistral nao tem limite diario fixo, API OpenAI-compatible, sem cartao.
+#
+# NOTA: gemini-2.0-flash seria alternativa mais simples (1.500 RPD vs 250 RPD
+# do 2.5 Flash), mas Mistral e superior: sem RPD fixo, API padrao, qualidade
+# equivalente para JSON estruturado de trading.
+#
+# Ref: https://docs.mistral.ai/api/
+# Criar key gratis: https://console.mistral.ai -> API Keys (sem cartao)
+# Tracking: cost = $0 (free tier)
+# -----------------------------------------------------------------------------
+function Invoke-Mistral {
+    param(
+        [string]$SystemPrompt,
+        [string]$UserContent,
+        [string]$Model       = "mistral-small-3.1",
+        [int]   $MaxTokens   = 2000,
+        [double]$Temperature = 0.4,
+        [string]$Agent       = "unknown"
+    )
+
+    $apiKey = $env:MISTRAL_API_KEY
+    if (-not $apiKey) { throw "MISTRAL_API_KEY nao configurada. Ver agents/config.local.ps1" }
+
+    [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13
+
+    $body = @{
+        model       = $Model
+        max_tokens  = $MaxTokens
+        temperature = $Temperature
+        messages    = @(
+            @{ role = "system"; content = $SystemPrompt }
+            @{ role = "user";   content = $UserContent }
+        )
+    } | ConvertTo-Json -Depth 10 -Compress
+
+    $start = Get-Date
+    try {
+        $wr = Invoke-WebRequest `
+            -Uri "https://api.mistral.ai/v1/chat/completions" `
+            -Method POST `
+            -Headers @{
+                "Authorization" = "Bearer $apiKey"
+                "Content-Type"  = "application/json"
+            } `
+            -Body ([System.Text.Encoding]::UTF8.GetBytes($body)) `
+            -UseBasicParsing `
+            -TimeoutSec 30 `
+            -ErrorAction Stop
+
+        $latencyMs = ((Get-Date) - $start).TotalMilliseconds
+        $json     = [System.Text.Encoding]::UTF8.GetString($wr.RawContentStream.ToArray())
+        $response = $json | ConvertFrom-Json
+
+        try {
+            if (Get-Command -Name "Track-ClaudeUsage" -ErrorAction SilentlyContinue) {
+                $inTok  = [int]$response.usage.prompt_tokens
+                $outTok = [int]$response.usage.completion_tokens
+                Track-ClaudeUsage -Model "mistral:$Model" -InputTokens $inTok -OutputTokens $outTok -Agent $Agent -LatencyMs $latencyMs | Out-Null
+            }
+        } catch {}
+
+        return $response.choices[0].message.content
+    } catch {
+        $statusCode = $_.Exception.Response.StatusCode.value__
+        $msg = $_.Exception.Message
+        throw "Mistral API error ($statusCode): $msg"
+    }
+}
+
+# -----------------------------------------------------------------------------
 # Invoke-Gemini — wrapper Google Gemini API (v1beta)
-# Free tier: 1500 req/dia 2.0 Flash, 15 RPM (burst 429 frequente em uso intenso).
-# NOTA 2026-05-27: Gemini rebaixado para fallback de ultimo recurso no cascade.
-# Substituido por Cerebras (50 RPM, 2300 tok/s) como fallback 2.
+# NOTA 2026-05-29: Gemini substituido por Mistral como fallback 2 em todos os
+# cascades. Motivo: free tier 2.5 Flash tem apenas 250 RPD -- esgota em 2-3h.
+# Gemini mantido aqui para uso pontual / testes / fallback de emergencia.
+# ALTERNATIVA: gemini-2.0-flash tem 1.500 RPD (6x mais que 2.5 Flash) e seria
+# suficiente se Mistral nao estivesse disponivel. Trocar model= abaixo se necessario.
 # Tracking: cost = $0 (free tier); pago $0.075/M in $0.30/M out
 # -----------------------------------------------------------------------------
 function Invoke-Gemini {
@@ -385,11 +463,11 @@ function Invoke-MesaDroneCascade {
         }
     }
 
-    # 2. Gemini (fallback 1 - 15 RPM)
-    # 2026-05-28: consulta provider state cache antes de tentar.
-    # Se warmup registrou RATE_LIMITED ha menos de 5min, pula direto para Haiku.
-    # Evita gastar 15s de timeout em Gemini que ja sabemos estar em 429.
-    $geminiBlocked = $false
+    # 2. Mistral (fallback 2 -- ~1B tok/mes, sem RPD fixo, OpenAI-compatible)
+    # 2026-05-29: substitui Gemini (250 RPD esgotava em 2-3h de operacao).
+    # NOTA: gemini-2.0-flash seria alternativa (1.500 RPD), mas Mistral e superior.
+    # Provider state cache: pula se RATE_LIMITED ha menos de 5min.
+    $mistralBlocked = $false
     try {
         $journalDir = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else {
             Join-Path (Split-Path (Split-Path $PSScriptRoot -Parent) -Parent) "journal"
@@ -397,29 +475,27 @@ function Invoke-MesaDroneCascade {
         $stateFile = Join-Path $journalDir "llm_provider_state.json"
         if (Test-Path $stateFile) {
             $pstate = Get-Content $stateFile -Raw -Encoding UTF8 | ConvertFrom-Json -ErrorAction SilentlyContinue
-            if ($pstate -and $pstate.PSObject.Properties["gemini"] -and $pstate.gemini.status -eq "RATE_LIMITED") {
-                # ConvertFrom-Json no PS5.1 converte ISO 8601 para DateTime automaticamente
-                $lastTs = if ($pstate.gemini.ts -is [datetime]) {
-                    [datetime]::SpecifyKind($pstate.gemini.ts, [DateTimeKind]::Utc)
+            if ($pstate -and $pstate.PSObject.Properties["mistral"] -and $pstate.mistral.status -eq "RATE_LIMITED") {
+                $lastTs = if ($pstate.mistral.ts -is [datetime]) {
+                    $pstate.mistral.ts.ToUniversalTime()
                 } else {
-                    # RoundtripKind respeita o Z como UTC (ParseExact trata Z como literal local)
-                    [datetime]::Parse([string]$pstate.gemini.ts, $null, [System.Globalization.DateTimeStyles]::RoundtripKind)
+                    [datetime]::Parse([string]$pstate.mistral.ts, $null, [System.Globalization.DateTimeStyles]::RoundtripKind)
                 }
                 $ageMin = ((Get-Date).ToUniversalTime() - $lastTs).TotalMinutes
                 if ($ageMin -lt 5) {
-                    $geminiBlocked = $true
-                    Write-Host "  [$Agent] Gemini SKIP (RATE_LIMITED ha $([math]::Round($ageMin,0))min no cache) -> Haiku" -ForegroundColor DarkGray
+                    $mistralBlocked = $true
+                    Write-Host "  [$Agent] Mistral SKIP (RATE_LIMITED ha $([math]::Round($ageMin,0))min no cache) -> Haiku" -ForegroundColor DarkGray
                 }
             }
         }
     } catch {}
 
-    if ($env:GEMINI_API_KEY -and -not $geminiBlocked) {
+    if ($env:MISTRAL_API_KEY -and -not $mistralBlocked) {
         try {
-            return Invoke-Gemini -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model "gemini-2.5-flash" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+            return Invoke-Mistral -SystemPrompt $SystemPrompt -UserContent $UserContent `
+                -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
-            Write-Host "  [$Agent] Gemini falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+            Write-Host "  [$Agent] Mistral falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
 
@@ -475,14 +551,15 @@ function Invoke-MentorCascade {
             Write-Host "  [$Agent] Groq falhou, fallback Gemini: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
-    # 3. Gemini (fallback 2, gratis, 15 RPM)
-    if ($env:GEMINI_API_KEY) {
+    # 3. Mistral (fallback 2 -- ~1B tok/mes, sem RPD fixo, 2026-05-29)
+    # Substitui Gemini (250 RPD esgotava em 2-3h). NOTA: gemini-2.0-flash = 1.500 RPD alternativa.
+    if ($env:MISTRAL_API_KEY) {
         try {
-            $r = Invoke-Gemini -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model "gemini-2.5-flash" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
-            if ($r) { $script:LAST_CASCADE_PROVIDER = "gemini_2_flash"; return $r }
+            $r = Invoke-Mistral -SystemPrompt $SystemPrompt -UserContent $UserContent `
+                -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+            if ($r) { $script:LAST_CASCADE_PROVIDER = "mistral_small"; return $r }
         } catch {
-            Write-Host "  [$Agent] Gemini falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+            Write-Host "  [$Agent] Mistral falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
     # 4. Claude Haiku (ultimo recurso, ~$0.005/call)
@@ -516,13 +593,14 @@ function Invoke-TriagemCascade {
             Write-Host "  [$Agent] Groq falhou, fallback Gemini: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
-    # 2. Gemini (fallback 1 - 15 RPM)
-    if ($env:GEMINI_API_KEY) {
+    # 2. Mistral (fallback 2 -- ~1B tok/mes, sem RPD fixo, 2026-05-29)
+    # Substitui Gemini (250 RPD esgotava em 2-3h). NOTA: gemini-2.0-flash = 1.500 RPD alternativa.
+    if ($env:MISTRAL_API_KEY) {
         try {
-            return Invoke-Gemini -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model "gemini-2.5-flash" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+            return Invoke-Mistral -SystemPrompt $SystemPrompt -UserContent $UserContent `
+                -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
-            Write-Host "  [$Agent] Gemini falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+            Write-Host "  [$Agent] Mistral falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
     # 3. Haiku (fallback final, cost-conscious -- SOMENTE Haiku, nao Sonnet)
@@ -603,14 +681,15 @@ function Invoke-TechCascadeJson {
                 if ($parsed) { return $parsed }
             } catch { Write-Host "  [$Agent] Groq falhou: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow }
         }
-        # 2. Gemini fallback
-        if ($env:GEMINI_API_KEY) {
+        # 2. Mistral fallback (2026-05-29: substitui Gemini, sem RPD fixo)
+        # NOTA: gemini-2.0-flash = 1.500 RPD seria alternativa mais simples.
+        if ($env:MISTRAL_API_KEY) {
             try {
-                $raw = Invoke-Gemini -SystemPrompt $sysWithJson -UserContent $UserContent `
-                    -Model "gemini-2.5-flash" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+                $raw = Invoke-Mistral -SystemPrompt $sysWithJson -UserContent $UserContent `
+                    -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
                 $parsed = _ParseJsonResponse $raw
                 if ($parsed) { return $parsed }
-            } catch { Write-Host "  [$Agent] Gemini falhou: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow }
+            } catch { Write-Host "  [$Agent] Mistral falhou: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow }
         }
         # 3. Haiku final fallback (SOMENTE Haiku, nao Sonnet)
         if ($env:ANTHROPIC_API_KEY) {

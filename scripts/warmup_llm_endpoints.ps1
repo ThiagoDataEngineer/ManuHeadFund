@@ -93,39 +93,43 @@ try {
     Set-ProviderState "groq" (if ($code -eq 429) { "RATE_LIMITED" } else { "DOWN" })
 }
 
-# 3. Gemini (fallback 2 — 15 RPM, 1500 RPD)
-# Pula se ultimo estado foi RATE_LIMITED ha menos de 30min (evita logar 429 desnecessario)
-$geminiState = Get-ProviderState "gemini"
-$skipGemini  = $false
-if ($geminiState -and $geminiState.status -eq "RATE_LIMITED") {
+# 3. Mistral (fallback 2 -- ~1B tok/mes, sem RPD fixo, OpenAI-compatible)
+# 2026-05-29: substitui Gemini (250 RPD esgotava em 2-3h de operacao).
+# NOTA: gemini-2.0-flash seria alternativa (1.500 RPD vs 250 RPD do 2.5 Flash),
+# mas Mistral e superior: sem limite diario fixo, API padrao, qualidade equivalente.
+# Pula se ultimo estado foi RATE_LIMITED ha menos de 30min.
+$mistralState = Get-ProviderState "mistral"
+$skipMistral  = $false
+if ($mistralState -and $mistralState.status -eq "RATE_LIMITED") {
     try {
-        $lastTs  = if ($geminiState.ts -is [datetime]) {
-            [datetime]::SpecifyKind($geminiState.ts, [DateTimeKind]::Utc)
+        $lastTs = if ($mistralState.ts -is [datetime]) {
+            $mistralState.ts.ToUniversalTime()
         } else {
-            # RoundtripKind respeita o Z como UTC (ParseExact trata Z como literal local)
-            [datetime]::Parse([string]$geminiState.ts, $null, [System.Globalization.DateTimeStyles]::RoundtripKind)
+            [datetime]::Parse([string]$mistralState.ts, $null, [System.Globalization.DateTimeStyles]::RoundtripKind)
         }
-        $ageMin  = ((Get-Date).ToUniversalTime() - $lastTs).TotalMinutes
+        $ageMin = ((Get-Date).ToUniversalTime() - $lastTs).TotalMinutes
         if ($ageMin -lt 30) {
-            Log "  [Gemini] SKIP -- RATE_LIMITED ha $([math]::Round($ageMin,0))min (aguardando janela de 30min)"
-            $skipGemini = $true
+            Log "  [Mistral] SKIP -- RATE_LIMITED ha $([math]::Round($ageMin,0))min (aguardando janela de 30min)"
+            $skipMistral = $true
         }
     } catch {}
 }
 
-if (-not $skipGemini) {
+if (-not $skipMistral -and $env:MISTRAL_API_KEY) {
     try {
         $t = Get-Date
-        $r = Invoke-Gemini -SystemPrompt $warmupSys -UserContent $warmupUser `
-            -Model "gemini-2.5-flash" -MaxTokens 50 -Temperature 0 -Agent "warmup_gemini"
+        $r = Invoke-Mistral -SystemPrompt $warmupSys -UserContent $warmupUser `
+            -MaxTokens 5 -Temperature 0 -Agent "warmup_mistral"
         $ms = [math]::Round(((Get-Date) - $t).TotalSeconds, 1)
-        if ($r) { Log "  [Gemini] ${ms}s -> OK"; Set-ProviderState "gemini" "OK" }
-        else    { Log "  [Gemini] ${ms}s -> null (sem erro)"; Set-ProviderState "gemini" "DOWN" }
+        if ($r) { Log "  [Mistral] ${ms}s -> OK"; Set-ProviderState "mistral" "OK" }
+        else    { Log "  [Mistral] ${ms}s -> null (sem erro)"; Set-ProviderState "mistral" "DOWN" }
     } catch {
         $code = $_.Exception.Response.StatusCode.value__
-        Log "  [Gemini] FAIL: Gemini API error ($code): $($_.Exception.Message)"
-        Set-ProviderState "gemini" (if ($code -eq 429) { "RATE_LIMITED" } else { "DOWN" })
+        Log "  [Mistral] FAIL: Mistral API error ($code): $($_.Exception.Message)"
+        Set-ProviderState "mistral" (if ($code -eq 429) { "RATE_LIMITED" } else { "DOWN" })
     }
+} elseif (-not $env:MISTRAL_API_KEY) {
+    Log "  [Mistral] SKIP -- MISTRAL_API_KEY nao configurada"
 }
 
 Log "=== LLM warmup DONE ==="
