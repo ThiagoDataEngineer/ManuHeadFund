@@ -233,7 +233,7 @@ Describe "warmup script: contem logica de provider state" {
 
 # ─── Suite 5: cascade contem logica de skip ───────────────────────────────────
 
-Describe "cascade lib_claude.ps1: contem logica de skip Gemini" {
+Describe "cascade lib_claude.ps1: contem logica de skip provider" {
 
     $cascadeContent = Get-Content (Join-Path $root "agents\lib_claude.ps1") -Raw
 
@@ -241,9 +241,10 @@ Describe "cascade lib_claude.ps1: contem logica de skip Gemini" {
         $cascadeContent | Should Match "llm_provider_state\.json"
     }
 
-    It "cascade verifica RATE_LIMITED antes de tentar Gemini" {
+    It "cascade verifica RATE_LIMITED antes de tentar Mistral (substitui Gemini 2026-05-29)" {
+        # 2026-05-29: Gemini substituido por Mistral. Cache agora verifica mistralBlocked.
         $cascadeContent | Should Match "RATE_LIMITED"
-        $cascadeContent | Should Match "geminiBlocked"
+        $cascadeContent | Should Match "mistralBlocked"
     }
 
     It "cascade usa janela de 5min para skip" {
@@ -251,6 +252,6 @@ Describe "cascade lib_claude.ps1: contem logica de skip Gemini" {
     }
 
     It "cascade loga skip com mensagem clara" {
-        $cascadeContent | Should Match "SKIP.*RATE_LIMITED|Gemini SKIP"
+        $cascadeContent | Should Match "SKIP.*RATE_LIMITED|Mistral SKIP|Gemini SKIP"
     }
 }
