@@ -112,6 +112,7 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 . (Join-Path $agentsDir "orchestrator_v6.ps1")
 . (Join-Path $agentsDir "lib_quant_whitelist.ps1")
 . (Join-Path $agentsDir "lib_top_candidates.ps1")  # Item 1 fix 2026-05-29: Select-TopCandidates (BTC anchor + top-N organicos)
+. (Join-Path $agentsDir "lib_fqs_drain.ps1")       # Item 2 fix 2026-05-29: drain FQS inline antes do orchestrator
 . (Join-Path $agentsDir "lib_market_context.ps1")
 . (Join-Path $agentsDir "lib_market_context_engine.ps1")
 . (Join-Path $agentsDir "lib_live_guards.ps1")
@@ -681,6 +682,36 @@ function Invoke-MasterCycle {
                 }
             } catch {
                 Write-MasterLog "WARN: FQS auto-enqueue falhou -- $($_.Exception.Message)"
+            }
+
+            # Item 2 fix 2026-05-29: drain FQS inline ANTES do orchestrator V6.
+            # Antes: enqueue acima marca markets na fila, mas processamento (python
+            # coingecko_enrichment) so rodava no cron separado -- markets novos
+            # chegavam ao orchestrator com "FQS indisponivel" e eram vetados.
+            # Agora: enriquecimento sincrono dos faltantes (max 10 por ciclo, 30s
+            # timeout). Fail-soft: se python ausente ou timeout, segue sem bloquear.
+            # Toggle off via $global:FQS_DRAIN_DISABLED = $true em config.local.ps1.
+            if (-not $global:FQS_DRAIN_DISABLED -and (Get-Command Invoke-FqsEnrichmentDrain -ErrorAction SilentlyContinue)) {
+                try {
+                    $invoker = $null
+                    if (Get-Command New-CoingeckoFqsInvoker -ErrorAction SilentlyContinue) {
+                        $invoker = New-CoingeckoFqsInvoker
+                    }
+                    $marketsList = @($scannerResults | ForEach-Object { $_.market } | Where-Object { $_ })
+                    $drainStats = Invoke-FqsEnrichmentDrain `
+                        -Markets $marketsList `
+                        -Invoker $invoker `
+                        -MaxMarkets 10 `
+                        -TimeoutSec 30
+                    if ($drainStats.enriched -gt 0) {
+                        Write-MasterLog ("INFO: FQS drain -- enriched={0} skipped_registered={1} overflow={2}" -f $drainStats.enriched, $drainStats.skipped_registered, $drainStats.skipped_overflow)
+                    }
+                    if ($drainStats.failed) {
+                        Write-MasterLog ("WARN: FQS drain falhou -- {0}" -f $drainStats.error)
+                    }
+                } catch {
+                    Write-MasterLog "WARN: FQS drain exception -- $($_.Exception.Message)"
+                }
             }
 
             # ── Universe Sweep + Hit-Rate (zero API extra; usa $global:LAST_UNIVERSE_SNAPSHOT) ──
