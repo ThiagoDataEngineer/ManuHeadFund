@@ -271,7 +271,7 @@ function Invoke-Mistral {
     param(
         [string]$SystemPrompt,
         [string]$UserContent,
-        [string]$Model       = "mistral-small-3.1",
+        [string]$Model       = "mistral-small-latest",
         [int]   $MaxTokens   = 2000,
         [double]$Temperature = 0.4,
         [string]$Agent       = "unknown"
