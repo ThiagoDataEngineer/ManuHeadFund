@@ -190,5 +190,64 @@ Describe "Merge-QuantWhitelistIntoCandidates -- INJUSDT cache global real" {
 }
 
 
+# =============================================================================
+# Item 1 (2026-05-29): -AnchorMarkets parametro restringe forcados
+# Antes: todos os Tier A/B da whitelist eram forcados no top do scan,
+#        monopolizando os slots (caso INJUSDT 2026-05-29).
+# Agora: AnchorMarkets define EXATAMENTE quais markets sao forcados.
+# Default: todos os Tier A/B (backward compat).
+# Producao: AnchorMarkets=@("BTCUSDT") -- so BTC anchor, demais competem organicos.
+Describe "Merge-QuantWhitelistIntoCandidates -- AnchorMarkets restringe forcados" {
+
+    It "AnchorMarkets=@('BTCUSDT'): so BTC retorna como forcado" {
+        $merged = @(Merge-QuantWhitelistIntoCandidates -Candidates @() -Mode "LIVE" `
+            -Path $mockPathInj -AnchorMarkets @("BTCUSDT"))
+        $merged.Count | Should Be 1
+        $merged[0].market | Should Be "BTCUSDT"
+    }
+
+    It "AnchorMarkets vazio: nenhum forcado retornado" {
+        $merged = @(Merge-QuantWhitelistIntoCandidates -Candidates @() -Mode "LIVE" `
+            -Path $mockPathInj -AnchorMarkets @())
+        $merged.Count | Should Be 0
+    }
+
+    It "AnchorMarkets nao especificado (default): backward compat -- todos Tier A/B forcados" {
+        $merged = @(Merge-QuantWhitelistIntoCandidates -Candidates @() -Mode "LIVE" `
+            -Path $mockPathInj)
+        # mockPathInj tem INJUSDT + BTCUSDT em TIER_A_LIVE
+        $merged.Count | Should Be 2
+    }
+
+    It "AnchorMarkets com mercado fora da whitelist: ignorado (so retorna intersecao)" {
+        $merged = @(Merge-QuantWhitelistIntoCandidates -Candidates @() -Mode "LIVE" `
+            -Path $mockPathInj -AnchorMarkets @("BTCUSDT","NOTINWHITELISTUSDT"))
+        $merged.Count | Should Be 1
+        $merged[0].market | Should Be "BTCUSDT"
+    }
+
+    It "AnchorMarkets preserva tier_level original do anchor" {
+        $merged = @(Merge-QuantWhitelistIntoCandidates -Candidates @() -Mode "LIVE" `
+            -Path $mockPathInj -AnchorMarkets @("BTCUSDT"))
+        $merged[0].tier_level | Should Be 1
+    }
+
+    It "AnchorMarkets nao filtra candidatos organicos preexistentes (preserva scanner natural)" {
+        # Cenario real: scanner ja achou ALT1 organicamente, BTC e anchor.
+        # Whitelist tem BTC+INJ mas so BTC e anchor -> INJ NAO entra forcado;
+        # ALT1 organico permanece intacto.
+        $organic = @(
+            [PSCustomObject]@{ market = "ALT1USDT"; score = 75; change = 5.0; volume = 100000 }
+        )
+        $merged = @(Merge-QuantWhitelistIntoCandidates -Candidates $organic -Mode "LIVE" `
+            -Path $mockPathInj -AnchorMarkets @("BTCUSDT"))
+        $merged.Count | Should Be 2
+        ($merged | ForEach-Object { $_.market }) -contains "ALT1USDT" | Should Be $true
+        ($merged | ForEach-Object { $_.market }) -contains "BTCUSDT"  | Should Be $true
+        ($merged | ForEach-Object { $_.market }) -contains "INJUSDT"  | Should Be $false
+    }
+}
+
+
 # Cleanup
 Remove-Item -Recurse -Force $mockDir -ErrorAction SilentlyContinue

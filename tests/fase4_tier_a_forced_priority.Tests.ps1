@@ -102,16 +102,20 @@ Describe "FASE 4 part 2 - forcedSet construction (integration shape)" {
         $src | Should Match '\$passes\s+-ge\s+3\s+-or\s+\$isForced'
     }
 
-    It "FASE 4 p4: tier_level propagado da merge ate sort top-N" {
+    It "FASE 4 p4: tier_level propagado da merge ate selecao top-N" {
         # Lockdown: Mode=PAPER tem 11 forced; sem tier_level RENDER/XMR (A) sao bumped por BCH/SKY (B).
         # Merge deve setar tier_level=1 para A_LIVE e 2 para B_PAPER. Pre-screen propaga.
+        # Item 1 fix 2026-05-29: scan_master agora delega selecao a Select-TopCandidates
+        # (lib_top_candidates.ps1) que ordena forcados por tierLevel ASC internamente.
+        # O lockdown garante que: (1) tierLevelSet existe, (2) tierLevel e propagado
+        # ao candidate, (3) selecao final usa Select-TopCandidates.
         $src = Get-Content (Join-Path $script:fase4Root "scripts\scan_master.ps1") -Raw -Encoding UTF8
         # forcedSet ahora tem irmao tierLevelSet
         $src | Should Match 'tierLevelSet\s*=\s*@\{\}'
         # tier_level propagada no candidate
         $src | Should Match 'tierLevel\s*=\s*\$tierLevel'
-        # sort 4-key: tierLevel ASC primeiro
-        $src | Should Match "Expression='tierLevel';Descending=\`$false"
+        # selecao via Select-TopCandidates (substituiu Sort-Object 4-key)
+        $src | Should Match 'Select-TopCandidates'
     }
 
     It "FASE 4 p5: Tier A organico recebe tier_level=1 (augment, nao skip)" {

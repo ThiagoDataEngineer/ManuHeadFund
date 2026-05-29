@@ -16,7 +16,7 @@ param(
     [switch]  $SkipTrailing,                  # pula atualizacao de trailing stops
     [int]     $ForceIntervalMin  = 0,         # forcas intervalo fixo (0 = usa sazonalidade)
     [int]     $GemTopN           = 5,
-    [int]     $OrchestratorTopN  = 3,         # quantos pares do scanner enviar ao Orchestrator
+    [int]     $OrchestratorTopN  = 20,        # quantos pares ORGANICOS do scanner enviar ao Orchestrator (Item 1 2026-05-29: era 3)
     [switch]  $Parallel,                      # roda candidates do orchestrator em paralelo (RunspacePool)
     # B28b fix 2026-05-21: MaxConcurrency 3 -> 2.
     # Diagnostico mesa_drones.jsonl pos B27 mostrou burst inter-market (3 markets
@@ -111,6 +111,7 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 "[DBG2 after-dot-source] DryRun=$DryRun" | Out-File -FilePath "$env:TEMP\dryrun_trace.log" -Append -Encoding utf8
 . (Join-Path $agentsDir "orchestrator_v6.ps1")
 . (Join-Path $agentsDir "lib_quant_whitelist.ps1")
+. (Join-Path $agentsDir "lib_top_candidates.ps1")  # Item 1 fix 2026-05-29: Select-TopCandidates (BTC anchor + top-N organicos)
 . (Join-Path $agentsDir "lib_market_context.ps1")
 . (Join-Path $agentsDir "lib_market_context_engine.ps1")
 . (Join-Path $agentsDir "lib_live_guards.ps1")
@@ -647,6 +648,16 @@ function Invoke-MasterCycle {
                 }
                 $mergeArgs = @{ Candidates = $scannerResults; Mode = $quantMode }
                 if ($regimeProviderBlock) { $mergeArgs.RegimeProvider = $regimeProviderBlock }
+
+                # Item 1 fix 2026-05-29: AnchorMarkets restringe forcados a apenas BTC.
+                # Antes: 11 markets da whitelist forcavam o top-10 inteiro -> INJ aparecia
+                # em todos os ciclos monopolizando slot. Agora: apenas BTC e anchor
+                # (always-on); os demais (INJ/RENDER/CFG/ZEC/PENDLE/SUI/SKY/XRP/BCH/XMR)
+                # competem como organicos pelo compScore real do scanner.
+                # Override via $global:ANCHOR_MARKETS em config.local.ps1 (opt-in).
+                $anchorList = if ($global:ANCHOR_MARKETS) { @($global:ANCHOR_MARKETS) } else { @("BTCUSDT") }
+                $mergeArgs.AnchorMarkets = $anchorList
+
                 $scannerResults = @(Merge-QuantWhitelistIntoCandidates @mergeArgs)
             } catch {
                 Write-MasterLog "WARN: Merge-QuantWhitelistIntoCandidates falhou -- $($_.Exception.Message)"
@@ -828,20 +839,14 @@ function Invoke-MasterCycle {
         # (default 3). Override valido = 1..20; valor invalido -> fallback para 3.
         $effectiveTopN = Get-OrchestratorTopN -Default $OrchestratorTopN
         $topN = if ($ForcePair) { 1 } else { $effectiveTopN }
-        # Bug B fix: ordenacao por score composto (vol_spike + momentum + ADX-saudavel)
-        # substitui Sort-Object adx -Descending puro. Empate quebra por vol desc.
-        # Caso HYPE 14/05 (vol 4.46x, ADX 29, momentum +20%) agora vence pares com
-        # ADX saturado (>80) e volume baixo.
-        # FASE 4 part 4 (2026-05-21 sessao extra): sort 4-key absoluto.
-        # 1. tierLevel ASC (1=A_LIVE primeiro, 2=B_PAPER, 99=scanner natural)
-        # 2. isWhitelistForced DESC (redundante mas explicito; forced antes nao-forced)
-        # 3. compScore DESC (tie-break dentro do mesmo tier)
-        # 4. vol DESC (tie-break final)
-        $topCandidates = @($candidates | Sort-Object -Property `
-            @{Expression='tierLevel';Descending=$false}, `
-            @{Expression='isWhitelistForced';Descending=$true}, `
-            @{Expression='compScore';Descending=$true}, `
-            @{Expression='vol';Descending=$true} | Select-Object -First $topN)
+        # Item 1 fix 2026-05-29: Select-TopCandidates (lib_top_candidates.ps1)
+        # substitui Sort-Object | Select -First N puro. Por que:
+        # - Antes: 11 forcados monopolizavam top-10 -> 0 organicos competiam.
+        # - Agora: forcados (apenas BTC anchor) ficam SEMPRE vivos, FORA da contagem
+        #   do TopN. TopN e preenchido por candidatos organicos reais ranqueados
+        #   por compScore. Resultado: BTC + top-N organicos competindo.
+        # ForcePair (1 candidato manual): -OrganicTopN 1 mantem comportamento legacy.
+        $topCandidates = @(Select-TopCandidates -Candidates $candidates -OrganicTopN $topN)
 
         # ── SHORT Block 2 (2026-05-28): injeta candidatos SHORT do short_alerts.jsonl ──
         # short_scanner.ps1 detecta sinais (vol climax + RSI overbought) e escreve

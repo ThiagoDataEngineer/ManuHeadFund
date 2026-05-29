@@ -142,7 +142,18 @@ function Merge-QuantWhitelistIntoCandidates {
         # Opcional: scriptblock que recebe $market e retorna regime string.
         # Quando fornecido, ativos em BEAR_STRONG ou BEAR_WEAK recebem tier_level=3
         # em vez de 1, liberando slots para candidatos organicos do scanner.
-        [scriptblock] $RegimeProvider = $null
+        [scriptblock] $RegimeProvider = $null,
+        # Item 1 fix 2026-05-29: lista de markets que devem permanecer FORCADOS
+        # no top do scan. Quando especificado, restringe o conjunto forcado a
+        # apenas esses markets (intersecao com a whitelist Tier A/B). Os demais
+        # ativos da whitelist permanecem VIVOS no sistema (DSR, sector_map, beta,
+        # promotion ladder) mas nao sao mais forcados no top do orchestrator --
+        # competem como candidatos organicos pelo compScore real.
+        # Producao recomendada: -AnchorMarkets @("BTCUSDT") (so BTC anchor).
+        # Default $null = backward compat (todos Tier A/B forcados).
+        # @() = explicito "nenhum forcado" (zero anchors, scanner 100% organico).
+        [AllowEmptyCollection()]
+        [string[]]    $AnchorMarkets = $null
     )
     # FASE 4 p4 fix 2026-05-21: ler whitelist FULL pra preservar tier_level (1=A_LIVE, 2=B_PAPER).
     # Antes: Get-QuantWhitelistMarkets retornava so nomes -> sort downstream perdia info de tier.
@@ -155,6 +166,20 @@ function Merge-QuantWhitelistIntoCandidates {
         @($wl.TIER_B_PAPER | ForEach-Object { $_.market } | Where-Object { $_ })
     } else { @() }
     $forced = @(@($tierAList) + @($tierBList) | Select-Object -Unique)
+
+    # Item 1 fix 2026-05-29: restringe forcados aos AnchorMarkets quando especificado.
+    # PSBoundParameters distingue $null (parametro nao passado, backward compat)
+    # de @() (passado vazio explicitamente, zero forcados).
+    if ($PSBoundParameters.ContainsKey('AnchorMarkets')) {
+        if ($null -eq $AnchorMarkets -or @($AnchorMarkets).Count -eq 0) {
+            $forced = @()
+        } else {
+            $anchorSet = @{}
+            foreach ($a in $AnchorMarkets) { if ($a) { $anchorSet[$a] = $true } }
+            $forced = @($forced | Where-Object { $anchorSet.ContainsKey($_) })
+        }
+    }
+
     if (@($forced).Count -eq 0) { return @($Candidates) }
 
     # FASE 4 p5 fix 2026-05-21 sessao final: quando market forced JA EXISTE em
