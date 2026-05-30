@@ -47,13 +47,27 @@ function Telegram-SendMessage {
         }
         
         $url = "https://api.telegram.org/bot$BotToken/sendMessage"
-        
-        $body = @{
-            chat_id = $ChatId
-            text = $Message
-        } | ConvertTo-Json
-        
-        $response = Invoke-RestMethod -Uri $url -Method Post -Body $body -ContentType "application/json"
+
+        # parse_mode HTML: faz <b>/<code> renderizarem (antes apareciam crus).
+        # UTF-8 explicito nos bytes: evita acentos/emojis quebrados (mojibake).
+        $payload = @{
+            chat_id    = $ChatId
+            text       = $Message
+            parse_mode = "HTML"
+        }
+        $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes(($payload | ConvertTo-Json))
+
+        try {
+            $response = Invoke-RestMethod -Uri $url -Method Post -Body $bodyBytes -ContentType "application/json; charset=utf-8"
+        }
+        catch {
+            # Fallback: HTML invalido (ex: < ou & cru vindo de texto dinamico) faz a
+            # API rejeitar com 400. Reenvia como texto puro para a msg nao se perder.
+            Write-Host "[TELEGRAM] HTML rejeitado, reenviando texto puro" -ForegroundColor Yellow
+            $plain = @{ chat_id = $ChatId; text = $Message }
+            $plainBytes = [System.Text.Encoding]::UTF8.GetBytes(($plain | ConvertTo-Json))
+            $response = Invoke-RestMethod -Uri $url -Method Post -Body $plainBytes -ContentType "application/json; charset=utf-8"
+        }
         
         if ($response.ok) {
             Write-Host "[TELEGRAM] Mensagem enviada com sucesso" -ForegroundColor Green
@@ -217,9 +231,36 @@ function Send-TelegramAlert {
         [string]$BotToken = $env:TELEGRAM_BOT_TOKEN,
         
         [Parameter(Mandatory=$false)]
-        [string]$ChatId = $env:TELEGRAM_CHAT_ID
+        [string]$ChatId = $env:TELEGRAM_CHAT_ID,
+
+        [Parameter(Mandatory=$false)]
+        [int]$DedupSeconds = 0,
+
+        [Parameter(Mandatory=$false)]
+        [string]$DedupStorePath = ""
     )
-    
+
+    # Deduplicacao opcional: evita reenviar a MESMA mensagem dentro da janela.
+    # Resolve o problema de heartbeats/status identicos repetidos sem acao.
+    # Se -DedupStorePath for dado, usa store persistido em JSON (sobrevive a restart
+    # do daemon); senao usa store global in-memory por processo.
+    if ($DedupSeconds -gt 0) {
+        if ($DedupStorePath) {
+            $store = Import-TgDedupStore -Path $DedupStorePath
+            $isDup = Test-TelegramDuplicate -Message $Message -Store $store -TtlSeconds $DedupSeconds
+            Export-TgDedupStore -Store $store -Path $DedupStorePath | Out-Null
+            if ($isDup) {
+                return [PSCustomObject]@{ success = $true; skipped = $true; reason = "duplicate_within_${DedupSeconds}s"; persisted = $true }
+            }
+        }
+        else {
+            if ($null -eq $global:TG_DEDUP_STORE) { $global:TG_DEDUP_STORE = @{} }
+            if (Test-TelegramDuplicate -Message $Message -Store $global:TG_DEDUP_STORE -TtlSeconds $DedupSeconds) {
+                return [PSCustomObject]@{ success = $true; skipped = $true; reason = "duplicate_within_${DedupSeconds}s" }
+            }
+        }
+    }
+
     return Telegram-SendMessage -Message $Message -BotToken $BotToken -ChatId $ChatId
 }
 
@@ -693,7 +734,10 @@ function Send-HeartbeatIfDue {
         -Window $Window -NextMin $NextMin -NextTime $NextTime `
         -WatchCount $WatchCount -CyclesQuiet $CyclesQuiet -DryRun:$DryRun
 
-    $result = Send-TelegramAlert -Message $msg
+    # Dedup persistente: heartbeats identicos nao sao reenviados mesmo apos restart
+    # do daemon. Store em journal/tg_dedup_heartbeat.json.
+    $hbDedupPath = Join-Path $PSScriptRoot "..\journal\tg_dedup_heartbeat.json"
+    $result = Send-TelegramAlert -Message $msg -DedupSeconds 3600 -DedupStorePath $hbDedupPath
     if ($result -and $result.success -and $LastHeartbeatFile) {
         # Atualiza timestamp do ultimo heartbeat
         $dir = Split-Path $LastHeartbeatFile
@@ -784,4 +828,178 @@ function Format-TgStatusSnapshot {
     $lines += "Modo: $Mode"
 
     return $lines -join "`n"
+}
+
+# ==============================================================================
+# QUALIDADE DE MENSAGENS (2026-05-29)
+# Resolve 3 problemas observados em producao:
+#   1. Tags HTML cruas / caracteres especiais quebrados (faltava parse_mode+escape)
+#   2. Mensagens repetidas reenviadas sem acao (faltava deduplicacao)
+#   3. Trade aberto sem destaque (mensagem generica)
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Format-TelegramText -- escapa caracteres reservados de HTML para uso seguro
+# com parse_mode="HTML". Deve ser aplicado em VALORES dinamicos (nao na msg toda,
+# senao escaparia as proprias tags <b>). Ordem importa: & primeiro.
+# ------------------------------------------------------------------------------
+function Format-TelegramText {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [AllowEmptyString()]
+        [string]$Text
+    )
+    if ($null -eq $Text) { return "" }
+    $t = $Text -replace '&', '&amp;'
+    $t = $t -replace '<', '&lt;'
+    $t = $t -replace '>', '&gt;'
+    return $t
+}
+
+# ------------------------------------------------------------------------------
+# Import-TgDedupStore / Export-TgDedupStore -- persistencia do store de dedup em
+# JSON. Permite que a deduplicacao sobreviva a restart do daemon (antes era
+# apenas in-memory por processo). Formato: { hash: "ISO8601 datetime", ... }.
+# Falhas de IO sao tolerantes (fail-open): retorna store vazio / nao quebra envio.
+# ------------------------------------------------------------------------------
+function Import-TgDedupStore {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Path
+    )
+    $store = @{}
+    if (-not (Test-Path $Path)) { return $store }
+    try {
+        $raw = Get-Content $Path -Raw -ErrorAction Stop
+        if ([string]::IsNullOrWhiteSpace($raw)) { return $store }
+        $obj = $raw | ConvertFrom-Json -ErrorAction Stop
+        foreach ($prop in $obj.PSObject.Properties) {
+            [datetime]$dt = [datetime]::MinValue
+            if ([datetime]::TryParse([string]$prop.Value, [ref]$dt)) {
+                $store[$prop.Name] = $dt
+            }
+        }
+    }
+    catch {
+        Write-Verbose "[TG DEDUP] Falha ao ler store ($Path): $_"
+    }
+    return $store
+}
+
+function Export-TgDedupStore {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Store,
+
+        [Parameter(Mandatory=$true)]
+        [string]$Path
+    )
+    try {
+        $dir = Split-Path $Path -Parent
+        if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+
+        $obj = [ordered]@{}
+        foreach ($k in $Store.Keys) {
+            $v = $Store[$k]
+            $obj[$k] = if ($v -is [datetime]) { $v.ToString("o") } else { [string]$v }
+        }
+        ($obj | ConvertTo-Json) | Set-Content -Path $Path -Encoding UTF8 -ErrorAction Stop
+        return $true
+    }
+    catch {
+        Write-Verbose "[TG DEDUP] Falha ao gravar store ($Path): $_"
+        return $false
+    }
+}
+
+# ------------------------------------------------------------------------------
+# Test-TelegramDuplicate -- retorna $true se a mensagem (por hash) ja foi enviada
+# dentro do TTL. Caso contrario registra no store e retorna $false.
+# $Store: hashtable [hash -> datetime do ultimo envio]. Mantida pelo caller
+# (in-memory por processo) ou persistida em JSON pelo daemon.
+# ------------------------------------------------------------------------------
+function Test-TelegramDuplicate {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Message,
+
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Store,
+
+        [Parameter(Mandatory=$false)]
+        [int]$TtlSeconds = 300
+    )
+
+    # Hash estavel da mensagem (MD5 do texto normalizado)
+    $normalized = ($Message -replace '\s+', ' ').Trim()
+    $md5 = [System.Security.Cryptography.MD5]::Create()
+    $bytes = [System.Text.Encoding]::UTF8.GetBytes($normalized)
+    $hash = [System.BitConverter]::ToString($md5.ComputeHash($bytes)) -replace '-', ''
+    $md5.Dispose()
+
+    $now = Get-Date
+
+    # Limpa entradas expiradas (mantem store pequeno)
+    $expiredKeys = @()
+    foreach ($k in $Store.Keys) {
+        if (($now - $Store[$k]).TotalSeconds -gt $TtlSeconds) { $expiredKeys += $k }
+    }
+    foreach ($k in $expiredKeys) { $Store.Remove($k) }
+
+    if ($Store.ContainsKey($hash)) {
+        $age = ($now - $Store[$hash]).TotalSeconds
+        if ($age -le $TtlSeconds) {
+            return $true   # duplicada dentro do TTL
+        }
+    }
+
+    $Store[$hash] = $now
+    return $false
+}
+
+# ------------------------------------------------------------------------------
+# Format-TgTradeOpenedHighlight -- mensagem de ABERTURA DE TRADE em destaque.
+# HTML parse_mode; valores dinamicos escapados. Pensada para ser impossivel de
+# passar despercebida (cabecalho forte + dados-chave).
+# ------------------------------------------------------------------------------
+function Format-TgTradeOpenedHighlight {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [hashtable]$Trade
+    )
+
+    $sideRaw  = "$($Trade.side)"
+    $isLong   = $sideRaw -match '(?i)long'
+    $sideIcon = if ($isLong) { "[LONG]" } else { "[SHORT]" }
+    $arrow    = if ($isLong) { "+" } else { "-" }
+
+    $mkt   = Format-TelegramText -Text "$($Trade.market)"
+    $entry = Format-TelegramText -Text "$($Trade.entry_price)"
+    $sl    = Format-TelegramText -Text "$($Trade.stop_loss)"
+    $tp    = Format-TelegramText -Text "$($Trade.take_profit)"
+    $size  = Format-TelegramText -Text "$($Trade.size)"
+
+    $lev   = if ($Trade.leverage)  { " | " + (Format-TelegramText -Text "$($Trade.leverage)x") } else { "" }
+    $cap   = if ($Trade.capital)   { Format-TelegramText -Text "$($Trade.capital)" } else { "" }
+    $stopPct   = if ($null -ne $Trade.stop_pct)   { Format-TelegramText -Text "$($Trade.stop_pct)" }   else { "" }
+    $targetPct = if ($null -ne $Trade.target_pct) { Format-TelegramText -Text "$($Trade.target_pct)" } else { "" }
+
+    $lines = @()
+    $lines += "🟢🟢🟢 <b>TRADE ABERTO</b> 🟢🟢🟢"
+    $lines += "$sideIcon <b>$mkt</b>$lev"
+    $lines += "Entry: <code>$entry</code> | Size: <code>$size</code>"
+    $slLine = "🛑 Stop: <code>$sl</code>"
+    if ($stopPct)   { $slLine += " (-$stopPct%)" }
+    $lines += $slLine
+    $tpLine = "🎯 Target: <code>$tp</code>"
+    if ($targetPct) { $tpLine += " ($arrow$targetPct%)" }
+    $lines += $tpLine
+    if ($cap) { $lines += "💰 Capital: <code>`$$cap</code>" }
+
+    return ($lines -join "`n")
 }

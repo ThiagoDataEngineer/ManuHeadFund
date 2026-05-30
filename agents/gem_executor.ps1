@@ -41,6 +41,21 @@ if (Test-Path $__posManagementPath) { . $__posManagementPath }
 $__riskManagerPath = Join-Path $PSScriptRoot "lib_position_risk_manager.ps1"
 if (Test-Path $__riskManagerPath) { . $__riskManagerPath }
 
+# 2026-05-29: Order validation (retry+fallback SL/TP) + Position protection (garante TP/SL reais).
+# Causa raiz corrigida: SL/TP embutido em ordem MARKET nao aplica confiavel na CoinEx V2.
+# Solucao: aplicar SL/TP via set-position-* APOS fill + validar + retry.
+$__orderValidationPath = Join-Path $PSScriptRoot "lib_order_validation.ps1"
+if (Test-Path $__orderValidationPath) { . $__orderValidationPath }
+$__posProtectionPath = Join-Path $PSScriptRoot "lib_position_protection.ps1"
+if (Test-Path $__posProtectionPath) { . $__posProtectionPath }
+
+# 2026-05-29: Analise de mercado automatica (nossa "AI Analysis" interna,
+# multi-timeframe 1h/4h/1d). Enviada no alerta de abertura de trade.
+foreach ($__amaDep in @("lib_chart_patterns.ps1","lib_trailing_stop_intelligent.ps1","lib_auto_market_analysis.ps1")) {
+    $__amaPath = Join-Path $PSScriptRoot $__amaDep
+    if (Test-Path $__amaPath) { . $__amaPath }
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # CoinEx-HasFuturesMarket
 # Verifica se o par existe no mercado de futuros da CoinEx
@@ -616,6 +631,22 @@ function Invoke-GemExecute {
     # Registra exposure para guard cumulativo
     try { Add-OpenGemPosition -Market $mkt -SizeUsdt $usd_size -StateFilePath $safetyStatePath } catch {}
 
+    # ── PROTECAO OBRIGATORIA: SL + TP REAIS na corretora (2026-05-29) ───────────
+    # CAUSA RAIZ CORRIGIDA: SL/TP embutido em ordem MARKET (CoinEx-PlaceOrder) NAO
+    # aplica de forma confiavel na CoinEx V2 (posicao ainda nao existe no submit).
+    # Resultado anterior: posicao INJUSDT ficou com TP/SL="--" (sem protecao, corria
+    # ate liquidacao). Agora: aplica SL+TP via set-position-* APOS fill, valida na
+    # corretora e faz retry. Se falhar, alerta Telegram (acao manual).
+    if ($hasFutures -and (Get-Command Set-PositionProtection -ErrorAction SilentlyContinue)) {
+        Start-Sleep -Seconds 2  # aguarda posicao materializar na API
+        $protect = Set-PositionProtection -Market $mkt -StopLoss $stop_price -TakeProfit $tgt_price -MaxRetries 3 -AlertOnFailure $true
+        if ($protect.success) {
+            Write-Host "  [PROTECAO OK] $mkt SL=$($protect.sl_price) TP=$($protect.tp_price) (validado na corretora)" -ForegroundColor Green
+        } else {
+            Write-Host "  [PROTECAO FALHOU] $mkt sl_set=$($protect.sl_set) tp_set=$($protect.tp_set) -- ALERTA ENVIADO" -ForegroundColor Red
+        }
+    }
+
     # ── Multi TP/SL nativo CoinEx (apenas FUTURES; spot usa stop ja colocado) ───
     if ($ladder -and $hasFutures -and (Get-Command CoinEx-PlaceMultiExitLadder -ErrorAction SilentlyContinue)) {
         try {
@@ -640,6 +671,45 @@ function Invoke-GemExecute {
     # ── Confirmacao POS-ordem ─────────────────────────────────────────────────
     $execObj = [PSCustomObject]@{ market=$mkt; market_type=$mktType; order_id=$order.order_id; price=$avg_price; qty=$filled_qty; stop=$stop_price; target=$tgt_price }
     Send-TelegramAlert -Message (Format-TgGemExecuted -ExecResult $execObj -Gem $Gem) | Out-Null
+
+    # ── 2026-05-29: ALERTA DE TRADE ABERTO EM DESTAQUE ────────────────────────
+    # Antes: abertura passava sem destaque (so a linha generica acima). Agora envia
+    # mensagem em destaque com entry/stop/TP/size para nao passar despercebida.
+    if (Get-Command Format-TgTradeOpenedHighlight -ErrorAction SilentlyContinue) {
+        try {
+            $stopPctCalc   = if ($avg_price -gt 0) { [math]::Round([math]::Abs(($avg_price - $stop_price) / $avg_price) * 100, 1) } else { 0 }
+            $targetPctCalc = if ($avg_price -gt 0) { [math]::Round([math]::Abs(($tgt_price - $avg_price) / $avg_price) * 100, 1) } else { 0 }
+            $sideForMsg = if ($hasFutures) { "long" } else { "long" }  # GEM long-only
+            $tradeHl = @{
+                market      = $mkt
+                side        = $sideForMsg
+                entry_price = $avg_price
+                size        = $filled_qty
+                stop_loss   = $stop_price
+                take_profit = $tgt_price
+                stop_pct    = $stopPctCalc
+                target_pct  = $targetPctCalc
+                capital     = $usd_size
+            }
+            Send-TelegramAlert -Message (Format-TgTradeOpenedHighlight -Trade $tradeHl) | Out-Null
+        } catch {
+            Write-Host "  [TG HIGHLIGHT WARN] Falha ao enviar destaque: $_" -ForegroundColor Yellow
+        }
+    }
+
+    # ── 2026-05-29: ANALISE DE MERCADO AUTOMATICA (multi-timeframe) ───────────
+    # Nossa "AI Analysis" interna: contexto 1h/4h/1d (RSI/MACD/Bollinger/niveis)
+    # enviado junto da abertura para dar visao de mercado no momento da entrada.
+    if ($hasFutures -and (Get-Command Get-AutoMarketAnalysis -ErrorAction SilentlyContinue)) {
+        try {
+            $autoAnalysis = Get-AutoMarketAnalysis -Market $mkt
+            if ($autoAnalysis.success -and (Get-Command Format-TgAutoAnalysis -ErrorAction SilentlyContinue)) {
+                Send-TelegramAlert -Message (Format-TgAutoAnalysis -Analysis $autoAnalysis) | Out-Null
+            }
+        } catch {
+            Write-Host "  [AUTO ANALYSIS WARN] Falha ao gerar analise: $_" -ForegroundColor Yellow
+        }
+    }
 
     # ── 2026-05-23: TRAILING STOP AUTOMATICO (Position Management) ────────────
     # Ativa trailing stop ATR-based automaticamente apos GEM executado com sucesso.
@@ -688,6 +758,9 @@ function Invoke-GemExecute {
 # ─────────────────────────────────────────────────────────────────────────────
 # Write-GemTradeJournal
 # ─────────────────────────────────────────────────────────────────────────────
+# BUG FIX 2026-05-29: Adicionar escape de aspas e formatação correta de números
+# Problema: valores numéricos estavam sendo truncados/corrompidos no CSV
+# Solução: usar InvariantCulture para serialização e escape de aspas
 function Write-GemTradeJournal {
     param(
         [string] $Market,
@@ -710,13 +783,28 @@ function Write-GemTradeJournal {
             Out-File -FilePath $tradeFile -Encoding utf8 -Force
     }
 
+    # BUG FIX: Usar InvariantCulture para evitar corrupção de números (vírgula PT-BR)
+    $inv = [System.Globalization.CultureInfo]::InvariantCulture
+    $priceStr = $Price.ToString($inv)
+    $qtyStr = $Qty.ToString($inv)
+    $stopStr = $StopPrice.ToString($inv)
+    $targetStr = $TargetPrice.ToString($inv)
+    $sizingStr = $SizingUsd.ToString($inv)
+    
+    # Escape de aspas em campos de texto
+    $marketEsc = $Market -replace '"', '""'
+    $modeEsc = $Mode -replace '"', '""'
+    $marketTypeEsc = $MarketType -replace '"', '""'
+    $orderIdEsc = $OrderId -replace '"', '""'
+    $toriSignalEsc = $ToriSignal -replace '"', '""'
+
     $row = @(
         (Get-Date -Format "yyyy-MM-dd HH:mm:ss"),
-        $Market, $Mode, $MarketType, $GemScore,
-        $Price, $Qty, $StopPrice, $TargetPrice, $SizingUsd,
-        $OrderId,
+        $marketEsc, $modeEsc, $marketTypeEsc, $GemScore,
+        $priceStr, $qtyStr, $stopStr, $targetStr, $sizingStr,
+        $orderIdEsc,
         $(if ($DryRun) { "true" } else { "false" }),
-        "OPEN", "", "", $ToriSignal, ""
+        "OPEN", "", "", $toriSignalEsc, ""
     ) -join ","
 
     Add-Content -Path $tradeFile -Value $row -Encoding utf8
