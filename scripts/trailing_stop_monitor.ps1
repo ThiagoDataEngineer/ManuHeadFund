@@ -53,6 +53,10 @@ try {
     . (Join-Path $agentsDir "lib_trailing.ps1")
     . (Join-Path $agentsDir "lib_trailing_stop_intelligent.ps1")
     . (Join-Path $agentsDir "lib_trailing_orphan_detection.ps1")
+    # 2026-05-29: auto-reparo de protecao (SL+TP reais na corretora)
+    . (Join-Path $agentsDir "lib_coinex_position_management.ps1")
+    . (Join-Path $agentsDir "lib_order_validation.ps1")
+    . (Join-Path $agentsDir "lib_position_protection.ps1")
     
     Write-CrossPlatformLog "Libraries loaded successfully" -LogFile "trailing_stop_monitor.log"
 } catch {
@@ -157,18 +161,46 @@ try {
     
     $allPositions = @(CoinEx-GetPendingPositions)
     $positionsWithoutStop = @()
-    
+    $positionsWithoutTP = @()
+
     foreach ($pos in $allPositions) {
-        if (-not $pos.stop_loss_price -or $pos.stop_loss_price -eq 0) {
+        $hasSl = ($pos.stop_loss_price -and [double]$pos.stop_loss_price -gt 0)
+        $hasTp = ($pos.take_profit_price -and [double]$pos.take_profit_price -gt 0)
+
+        if (-not $hasSl) {
             $positionsWithoutStop += $pos
             Write-CrossPlatformLog "  ALERT: $($pos.market) WITHOUT STOP LOSS!" -Level WARN -LogFile "trailing_stop_monitor.log"
         }
+        if (-not $hasTp) {
+            $positionsWithoutTP += $pos
+            Write-CrossPlatformLog "  ALERT: $($pos.market) WITHOUT TAKE PROFIT!" -Level WARN -LogFile "trailing_stop_monitor.log"
+        }
+
+        # 2026-05-29: AUTO-REPARO. Reaplica SL/TP reais na corretora (calculados do entry
+        # se ausentes). Causa raiz: SL/TP embutido em ordem MARKET nao aplica confiavel.
+        if ((-not $hasSl -or -not $hasTp) -and (Get-Command Repair-PositionProtection -ErrorAction SilentlyContinue)) {
+            try {
+                $rep = Repair-PositionProtection -Market $pos.market -EnableTrailing $true
+                if ($rep.success) {
+                    Write-CrossPlatformLog "  AUTO-REPAIR OK: $($pos.market) SL=$($rep.stop_loss) TP=$($rep.take_profit)" -LogFile "trailing_stop_monitor.log"
+                } else {
+                    Write-CrossPlatformLog "  AUTO-REPAIR FAILED: $($pos.market) reason=$($rep.reason)" -Level ERROR -LogFile "trailing_stop_monitor.log"
+                }
+            } catch {
+                Write-CrossPlatformLog "  AUTO-REPAIR EXCEPTION: $($pos.market) $_" -Level ERROR -LogFile "trailing_stop_monitor.log"
+            }
+        }
     }
-    
+
     if ($positionsWithoutStop.Count -gt 0) {
-        Write-CrossPlatformLog "CRITICAL: $($positionsWithoutStop.Count) position(s) WITHOUT STOP LOSS PROTECTION!" -Level ERROR -LogFile "trailing_stop_monitor.log"
+        Write-CrossPlatformLog "CRITICAL: $($positionsWithoutStop.Count) position(s) WITHOUT STOP LOSS (auto-repair attempted)!" -Level ERROR -LogFile "trailing_stop_monitor.log"
     } else {
         Write-CrossPlatformLog "All positions have stop loss configured." -LogFile "trailing_stop_monitor.log"
+    }
+    if ($positionsWithoutTP.Count -gt 0) {
+        Write-CrossPlatformLog "WARN: $($positionsWithoutTP.Count) position(s) WITHOUT TAKE PROFIT (auto-repair attempted)." -Level WARN -LogFile "trailing_stop_monitor.log"
+    } else {
+        Write-CrossPlatformLog "All positions have take profit configured." -LogFile "trailing_stop_monitor.log"
     }
     
     Write-CrossPlatformLog "=== TRAILING STOP MONITOR END ===" -LogFile "trailing_stop_monitor.log"

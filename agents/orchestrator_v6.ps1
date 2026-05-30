@@ -17,7 +17,34 @@
 #   Invoke-MentorDebate          (Parte C -- mentor_agent.ps1)
 #   Test-RegimeDirectionAllowed  (Wave 2 -- lib_operational_whitelist.ps1)
 #   Get-RelevantKnowledge        (Parte A, opcional, usado pelo Mentor via RAG)
+#
+# 2026-05-29: Integração de TP/SL Automático + Trailing Stop + CoinEx AI
+#   Initialize-AutomaticTPSL    (lib_trailing_stop_intelligent.ps1)
+#   Update-TrailingStopContinuous (lib_trailing_stop_intelligent.ps1)
+#   Integrate-CoinExAIAnalysis   (lib_coinex_ai_integration.ps1)
 
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Carregar dependências de Trailing Stop e CoinEx AI (2026-05-29)
+# ─────────────────────────────────────────────────────────────────────────────
+
+$trailingStopPath = Join-Path $PSScriptRoot "lib_trailing_stop_intelligent.ps1"
+$coinexAIPath = Join-Path $PSScriptRoot "lib_coinex_ai_integration.ps1"
+
+if (Test-Path $trailingStopPath) {
+    . $trailingStopPath
+    Write-Verbose "[orchestrator_v6] Loaded: lib_trailing_stop_intelligent.ps1"
+}
+
+if (Test-Path $coinexAIPath) {
+    . $coinexAIPath
+    Write-Verbose "[orchestrator_v6] Loaded: lib_coinex_ai_integration.ps1"
+}
+
+# Inicializar dicionário global para jobs de trailing stop
+if (-not $global:TRAILING_STOP_JOBS) {
+    $global:TRAILING_STOP_JOBS = @{}
+}
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Get-DayOfWeekBRT -- converte DateTime UTC para dia da semana em BRT (UTC-3).
@@ -753,3 +780,329 @@ function Invoke-OrchestratorV6 {
         execReason   = $execResult.reason
     }
 }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Initialize-TrailingStopForPosition (2026-05-29)
+# Inicializa TP/SL automático e inicia job de trailing stop contínuo
+# ─────────────────────────────────────────────────────────────────────────────
+
+function Initialize-TrailingStopForPosition {
+    <#
+    .SYNOPSIS
+        Inicializa TP/SL automático e inicia trailing stop contínuo para uma posição
+    
+    .PARAMETER Market
+        Par de trading (ex: INJUSDT)
+    
+    .PARAMETER Mode
+        Modo (GEM ou STANDARD)
+    
+    .PARAMETER JournalDir
+        Diretório do journal
+    
+    .OUTPUTS
+        PSCustomObject com resultado da inicialização
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Market,
+        
+        [Parameter(Mandatory=$false)]
+        [string]$Mode = "STANDARD",
+        
+        [Parameter(Mandatory=$false)]
+        [string]$JournalDir = ""
+    )
+    
+    if (-not $JournalDir) {
+        $JournalDir = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path (Split-Path $PSScriptRoot -Parent) "journal" }
+    }
+    
+    try {
+        # 1. Buscar posição aberta
+        $position = CoinEx-GetPendingPositions -Market $Market | Select-Object -First 1
+        
+        if (-not $position) {
+            Write-Host "❌ Nenhuma posição aberta para $Market" -ForegroundColor Red
+            return [PSCustomObject]@{
+                success = $false
+                market = $Market
+                error = "Position not found"
+            }
+        }
+        
+        $entryPrice = [double]$position.avg_entry_price
+        $qty = [double]$position.quantity
+        
+        # 2. Buscar dados de mercado
+        $ticker = CoinEx-GetTicker -market $Market
+        $currentPrice = [double]$ticker.last
+        $high24h = [double]$ticker.high_24h
+        
+        # 3. Inicializar TP/SL automático
+        $tpsl = Initialize-AutomaticTPSL `
+            -Entry $entryPrice `
+            -CurrentPrice $currentPrice `
+            -Peak24h $high24h `
+            -Qty $qty `
+            -Mode $Mode
+        
+        Write-Host "✅ TP/SL Automático Inicializado para $Market" -ForegroundColor Green
+        Write-Host "   Entry: $entryPrice | TP: $($tpsl.TPBase) | SL: $($tpsl.SLBase)" -ForegroundColor Cyan
+        Write-Host "   Trailing Stop: $($tpsl.TrailingStop) | Saídas Parciais: $($tpsl.PartialExits.Count)" -ForegroundColor Cyan
+        
+        # 4. Salvar TP/SL no journal
+        $tpslConfigPath = Join-Path $JournalDir "tpsl_config_$Market.json"
+        $tpslConfig = @{
+            Market = $Market
+            Mode = $Mode
+            Entry = $entryPrice
+            TPBase = $tpsl.TPBase
+            SLBase = $tpsl.SLBase
+            TrailingStop = $tpsl.TrailingStop
+            PartialExits = $tpsl.PartialExits
+            InitializedAt = Get-Date -Format "yyyy-MM-dd HH:mm:ss"
+        }
+        
+        $tpslConfig | ConvertTo-Json -Depth 10 | Set-Content $tpslConfigPath
+        Write-Host "   Config salvo em: $tpslConfigPath" -ForegroundColor DarkCyan
+        
+        # 5. Iniciar trailing stop contínuo como background job
+        $trailingStopJob = Start-Job -ScriptBlock {
+            param($Market, $Entry, $Peak, $SLBase, $ScriptRoot)
+            
+            # Carregar dependências no job
+            . (Join-Path $ScriptRoot "lib_trailing_stop_intelligent.ps1")
+            . (Join-Path $ScriptRoot "lib_coinex.ps1")
+            
+            # Executar trailing stop contínuo
+            Update-TrailingStopContinuous `
+                -Market $Market `
+                -Entry $Entry `
+                -Peak $Peak `
+                -SLBase $SLBase `
+                -TrailingPercent 14.5 `
+                -UpdateIntervalSeconds 60
+        } -ArgumentList $Market, $entryPrice, $high24h, $tpsl.SLBase, $PSScriptRoot
+        
+        # 6. Armazenar job ID para monitoramento
+        $global:TRAILING_STOP_JOBS[$Market] = @{
+            JobId = $trailingStopJob.Id
+            Market = $Market
+            StartedAt = Get-Date
+            Status = "RUNNING"
+            EntryPrice = $entryPrice
+            TPBase = $tpsl.TPBase
+            SLBase = $tpsl.SLBase
+        }
+        
+        Write-Host "✅ Trailing Stop Job iniciado (ID: $($trailingStopJob.Id))" -ForegroundColor Green
+        
+        return [PSCustomObject]@{
+            success = $true
+            market = $Market
+            jobId = $trailingStopJob.Id
+            tpsl = $tpsl
+            position = $position
+        }
+    }
+    catch {
+        Write-Host "❌ Erro ao inicializar trailing stop: $_" -ForegroundColor Red
+        return [PSCustomObject]@{
+            success = $false
+            market = $Market
+            error = $_.Exception.Message
+        }
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Monitor-TrailingStopJobs (2026-05-29)
+# Monitora status dos jobs de trailing stop
+# ─────────────────────────────────────────────────────────────────────────────
+
+function Monitor-TrailingStopJobs {
+    <#
+    .SYNOPSIS
+        Monitora status dos jobs de trailing stop
+    
+    .OUTPUTS
+        Array com status de cada job
+    #>
+    [CmdletBinding()]
+    param()
+    
+    $results = @()
+    
+    foreach ($market in $global:TRAILING_STOP_JOBS.Keys) {
+        $jobInfo = $global:TRAILING_STOP_JOBS[$market]
+        $job = Get-Job -Id $jobInfo.JobId -ErrorAction SilentlyContinue
+        
+        if ($job) {
+            $status = $job.State
+            $output = $job | Receive-Job -Keep -ErrorAction SilentlyContinue
+            
+            $results += [PSCustomObject]@{
+                Market = $market
+                JobId = $jobInfo.JobId
+                Status = $status
+                StartedAt = $jobInfo.StartedAt
+                Duration = (Get-Date) - $jobInfo.StartedAt
+                EntryPrice = $jobInfo.EntryPrice
+                TPBase = $jobInfo.TPBase
+                SLBase = $jobInfo.SLBase
+                LastOutput = if ($output) { $output[-1] } else { "No output yet" }
+            }
+        } else {
+            # Job completou ou foi removido
+            $results += [PSCustomObject]@{
+                Market = $market
+                JobId = $jobInfo.JobId
+                Status = "COMPLETED"
+                StartedAt = $jobInfo.StartedAt
+                Duration = (Get-Date) - $jobInfo.StartedAt
+                EntryPrice = $jobInfo.EntryPrice
+                TPBase = $jobInfo.TPBase
+                SLBase = $jobInfo.SLBase
+                LastOutput = "Job completed"
+            }
+            
+            # Remover do dicionário
+            $global:TRAILING_STOP_JOBS.Remove($market)
+        }
+    }
+    
+    return $results
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Stop-TrailingStopJob (2026-05-29)
+# Para job de trailing stop para um mercado
+# ─────────────────────────────────────────────────────────────────────────────
+
+function Stop-TrailingStopJob {
+    <#
+    .SYNOPSIS
+        Para job de trailing stop para um mercado
+    
+    .PARAMETER Market
+        Par de trading
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Market
+    )
+    
+    if ($global:TRAILING_STOP_JOBS.ContainsKey($Market)) {
+        $jobInfo = $global:TRAILING_STOP_JOBS[$Market]
+        
+        try {
+            Stop-Job -Id $jobInfo.JobId -ErrorAction SilentlyContinue
+            Remove-Job -Id $jobInfo.JobId -ErrorAction SilentlyContinue
+            $global:TRAILING_STOP_JOBS.Remove($Market)
+            
+            Write-Host "✅ Trailing stop job parado para $Market" -ForegroundColor Green
+            return $true
+        }
+        catch {
+            Write-Host "❌ Erro ao parar job: $_" -ForegroundColor Red
+            return $false
+        }
+    }
+    
+    return $false
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Validate-WithCoinExAI (2026-05-29)
+# Valida decisão com análise IA da CoinEx
+# ─────────────────────────────────────────────────────────────────────────────
+
+function Validate-WithCoinExAI {
+    <#
+    .SYNOPSIS
+        Valida decisão com análise IA da CoinEx
+    
+    .PARAMETER Market
+        Par de trading
+    
+    .PARAMETER OurAnalysis
+        Nossa análise técnica
+    
+    .OUTPUTS
+        PSCustomObject com resultado da validação
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Market,
+        
+        [Parameter(Mandatory=$false)]
+        [PSCustomObject]$OurAnalysis = $null
+    )
+    
+    try {
+        # Consumir análise CoinEx
+        $coinexAnalysis = Get-CoinExAIAnalysis -Symbol $Market
+        
+        if (-not $coinexAnalysis.Success) {
+            return [PSCustomObject]@{
+                success = $false
+                market = $Market
+                error = "Failed to fetch CoinEx analysis"
+            }
+        }
+        
+        # Se não temos nossa análise, usar padrão
+        if (-not $OurAnalysis) {
+            $OurAnalysis = @{
+                RSI = 50
+                MACD = 0
+                Resistance = 0
+                Support = 0
+                Volume = 0
+            }
+        }
+        
+        # Integrar análise CoinEx
+        $integration = Integrate-CoinExAIAnalysis `
+            -Symbol $Market `
+            -OurAnalysis $OurAnalysis `
+            -MinAlignmentScore 0.8
+        
+        Write-Host "[VALIDACAO] CoinEx AI para $($Market):" -ForegroundColor Cyan
+        Write-Host "   Alinhamento: $([Math]::Round($integration.OverallAlignment * 100, 1))%" -ForegroundColor Cyan
+        Write-Host "   Tecnico: $([Math]::Round($integration.TechnicalAlignment * 100, 1))%" -ForegroundColor Cyan
+        Write-Host "   Sentimento: $([Math]::Round($integration.SentimentAlignment * 100, 1))%" -ForegroundColor Cyan
+        
+        if ($integration.UseCoinExAnalysis) {
+            Write-Host "   [OK] CoinEx AI ALINHADA - usando como validacao" -ForegroundColor Green
+        } else {
+            Write-Host "   [WARN] CoinEx AI DESALINHADA - ignorando" -ForegroundColor Yellow
+        }
+        
+        return [PSCustomObject]@{
+            success = $true
+            market = $Market
+            useCoinExAnalysis = $integration.UseCoinExAnalysis
+            overallAlignment = $integration.OverallAlignment
+            technicalAlignment = $integration.TechnicalAlignment
+            sentimentAlignment = $integration.SentimentAlignment
+            coinexAnalysis = $integration.CoinExAnalysis
+            details = $integration.TechnicalDetails + $integration.SentimentDetails
+        }
+    }
+    catch {
+        Write-Host "[ERROR] Erro ao validar com CoinEx AI: $_" -ForegroundColor Red
+        return [PSCustomObject]@{
+            success = $false
+            market = $Market
+            error = $_.Exception.Message
+        }
+    }
+}
+
+# Fim do arquivo orchestrator_v6.ps1
