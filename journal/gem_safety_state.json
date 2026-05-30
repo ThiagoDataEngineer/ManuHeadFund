@@ -6,11 +6,11 @@
                                "size_usdt":  18.58
                            }
                        ],
-    "daily_count":  1,
-    "daily_reset_date":  "2026-05-29",
+    "daily_count":  0,
+    "daily_reset_date":  "2026-05-30",
     "weekly_count":  1,
     "weekly_reset_date":  "2026-05-25",
     "consecutive_stops":  0,
     "last_trade_result":  null,
-    "last_updated":  "2026-05-29T12:06:49.5300096-03:00"
+    "last_updated":  "2026-05-30T01:17:08.0024166-03:00"
 }

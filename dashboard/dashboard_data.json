@@ -1,8 +1,8 @@
 ﻿{
-    "timestamp":  "2026-05-30 01:00:47",
+    "timestamp":  "2026-05-30 01:25:47",
     "capital":  {
-                    "futures":  2716.18,
-                    "total":  3716.18,
+                    "futures":  2716.07,
+                    "total":  3716.07,
                     "spot":  1000
                 },
     "positions":  [
