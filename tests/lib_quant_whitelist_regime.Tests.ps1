@@ -65,13 +65,25 @@ $mockPathInj = Join-Path $mockDir "per_asset_whitelist_inj.json"
 # =============================================================================
 Describe "Merge-QuantWhitelistIntoCandidates com RegimeProvider" {
 
-    It "ativo BEAR_STRONG recebe tier_level=3" {
+    It "ativo BEAR_STRONG (nao-BTC) recebe tier_level=3" {
+        # Regra de negocio: BTC e anchor permanente (sempre no top, nunca rebaixa).
+        # Validamos o rebaixamento BEAR_STRONG com um ativo nao-anchor (SOLUSDT).
+        $provider = { param($m) if ($m -eq "SOLUSDT") { "BEAR_STRONG" } else { $null } }
+        $merged = Merge-QuantWhitelistIntoCandidates -Candidates @() -Mode "LIVE" `
+            -Path $mockPath -RegimeProvider $provider
+        $sol = $merged | Where-Object { $_.market -eq "SOLUSDT" }
+        $sol | Should Not BeNullOrEmpty
+        $sol.tier_level | Should Be 3
+    }
+
+    It "BTC anchor NAO rebaixa mesmo em BEAR_STRONG (sempre no top)" {
+        # Regra de negocio (2026-05-29): BTC permanece tier_level=1 em qualquer regime.
         $provider = { param($m) if ($m -eq "BTCUSDT") { "BEAR_STRONG" } else { $null } }
         $merged = Merge-QuantWhitelistIntoCandidates -Candidates @() -Mode "LIVE" `
             -Path $mockPath -RegimeProvider $provider
         $btc = $merged | Where-Object { $_.market -eq "BTCUSDT" }
         $btc | Should Not BeNullOrEmpty
-        $btc.tier_level | Should Be 3
+        $btc.tier_level | Should Be 1
     }
 
     It "ativo BULL_STRONG mantem tier_level=1" {
@@ -179,12 +191,18 @@ Describe "Merge-QuantWhitelistIntoCandidates -- INJUSDT cache global real" {
         $inj.tier_level | Should Be 3
     }
 
-    It "todos os Tier A caem para tier_level=3 em mercado bear global" {
+    It "Tier A nao-BTC cai para tier_level=3 em mercado bear global (BTC anchor permanece 1)" {
+        # Regra de negocio (2026-05-29): BTC sempre no top (tier_level=1) em qualquer regime.
+        # Os demais Tier A rebaixam para 3 em bear, liberando slots para organicos.
         $provider = { param($m) Get-MarketRegimeFromCache -Market $m -JournalDir $journalGlobalDir }
         $merged = Merge-QuantWhitelistIntoCandidates -Candidates @() -Mode "LIVE" `
             -Path $mockPathInj -RegimeProvider $provider
         foreach ($entry in $merged) {
-            $entry.tier_level | Should Be 3
+            if ($entry.market -eq "BTCUSDT") {
+                $entry.tier_level | Should Be 1
+            } else {
+                $entry.tier_level | Should Be 3
+            }
         }
     }
 }

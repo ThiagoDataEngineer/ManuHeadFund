@@ -192,6 +192,24 @@ function Merge-QuantWhitelistIntoCandidates {
         if ($mktKey) { $existingByMkt[$mktKey] = $c }
     }
 
+    # FIX 2026-05-29: quando AnchorMarkets e especificado, remover isWhitelistForced
+    # dos candidatos que nao estao em AnchorMarkets. Isso garante que Select-TopCandidates
+    # os trate como organicos e nao forcados.
+    $forcedSet = @{}
+    foreach ($f in $forced) { $forcedSet[$f] = $true }
+    
+    if ($PSBoundParameters.ContainsKey('AnchorMarkets')) {
+        foreach ($c in $Candidates) {
+            $mktKey = if ($c.PSObject.Properties['market']) { $c.market } elseif ($c.PSObject.Properties['Market']) { $c.Market } else { $null }
+            if ($mktKey -and -not $forcedSet.ContainsKey($mktKey)) {
+                # Market nao esta em AnchorMarkets -> remover isWhitelistForced
+                if ($c.PSObject.Properties['isWhitelistForced']) {
+                    $c.isWhitelistForced = $false
+                }
+            }
+        }
+    }
+
     $extras = @()
     foreach ($m in $forced) {
         $entry = Get-QuantWhitelistEntry -Market $m -Path $Path
@@ -201,8 +219,9 @@ function Merge-QuantWhitelistIntoCandidates {
 
         # Regime-aware tier_level: se RegimeProvider fornecido e regime for BEAR,
         # rebaixa tier_level de 1 para 3 para liberar slots para candidatos organicos.
+        # EXCETO: BTC (anchor) nunca e rebaixado (sempre tier_level=1).
         $effectiveTierLevel = $tierLevel
-        if ($RegimeProvider) {
+        if ($RegimeProvider -and $m -ne "BTCUSDT") {
             try {
                 $regime = & $RegimeProvider $m
                 if ($regime -eq "BEAR_STRONG" -or $regime -eq "BEAR_WEAK") {
@@ -226,6 +245,8 @@ function Merge-QuantWhitelistIntoCandidates {
             if (-not $existing.PSObject.Properties['quant_priority']) {
                 Add-Member -InputObject $existing -MemberType NoteProperty -Name 'quant_priority' -Value $sharpe -Force
             }
+            # FIX 2026-05-29: marcar como forcado para Select-TopCandidates diferenciar
+            Add-Member -InputObject $existing -MemberType NoteProperty -Name 'isWhitelistForced' -Value $true -Force
         } else {
             # Market nao apareceu organicamente -> adiciona extra forced.
             $extras += [PSCustomObject]@{
@@ -233,10 +254,13 @@ function Merge-QuantWhitelistIntoCandidates {
                 marketType       = "FUTURES"   # Tier A/B LIVE eh sempre futures (validado curated)
                 score            = 100         # forcado pra entrar no top
                 change           = 0.0         # neutro (scanner real preenche se aparece naturalmente)
-                volume           = 0.0
+                vol              = 0.0         # FIX 2026-05-29: usar 'vol' em vez de 'volume' para consistencia
+                volume           = 0.0         # FIX 2026-05-29: manter 'volume' tambem (filtro downstream + lockdown test)
+                compScore        = 100         # FIX 2026-05-29: adicionar compScore para Select-TopCandidates
                 quant_priority   = $sharpe
                 tier_level       = $effectiveTierLevel  # regime-aware: BEAR -> 3, outros -> original
                 source           = $forcedSource
+                isWhitelistForced = $true      # FIX 2026-05-29: marcar como forcado
             }
         }
     }
