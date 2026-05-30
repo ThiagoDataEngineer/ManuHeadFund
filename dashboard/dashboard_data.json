@@ -1,8 +1,8 @@
 ﻿{
-    "timestamp":  "2026-05-29 14:50:46",
+    "timestamp":  "2026-05-30 01:00:47",
     "capital":  {
-                    "futures":  2715.82,
-                    "total":  3715.82,
+                    "futures":  2716.18,
+                    "total":  3716.18,
                     "spot":  1000
                 },
     "positions":  [
@@ -11,20 +11,20 @@
                           "entry":  0,
                           "current":  0,
                           "margin":  0,
-                          "stop_loss":  "0",
+                          "stop_loss":  "5.7288",
                           "leverage":  "3",
                           "side":  "long",
                           "pnl_pct":  0
                       }
                   ],
     "trading_metrics":  {
-                            "trades_30d":  6,
+                            "trades_30d":  9,
                             "profit_factor":  0,
-                            "trades_24h":  2,
+                            "trades_24h":  0,
                             "max_drawdown":  0,
                             "sharpe_ratio":  0,
                             "win_rate":  0,
-                            "trades_7d":  4
+                            "trades_7d":  7
                         },
     "trailing_stop":  {
                           "phase":  3,
@@ -36,7 +36,7 @@
                       },
     "market_regime":  {
                           "phase":  "h24_p3_bear",
-                          "updated_at":  "2026-05-29T14:26:01Z",
+                          "updated_at":  "2026-05-30T02:15:24Z",
                           "regime":  "BEAR_WEAK",
                           "bias":  "BEAR_WEAK"
                       },
@@ -56,17 +56,17 @@
                          },
     "llm_costs":  {
                       "anthropic":  0,
-                      "groq":  0.1707,
-                      "total_24h":  7.7171,
-                      "cost_per_decision":  0.00811,
-                      "total_30d":  36.1682,
-                      "total_7d":  31.3164,
-                      "calls_24h":  951
+                      "groq":  0,
+                      "total_24h":  0,
+                      "cost_per_decision":  0,
+                      "total_30d":  41.3381,
+                      "total_7d":  35.8736,
+                      "calls_24h":  0
                   },
     "mentor_decisions":  {
-                             "total_24h":  414,
-                             "veto_rate":  99.5,
-                             "approval_rate":  0.5
+                             "total_24h":  76,
+                             "veto_rate":  100,
+                             "approval_rate":  0
                          },
     "mesa_consensus":  {
 

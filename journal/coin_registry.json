@@ -233,8 +233,10 @@
     "recovered_2021_ath": false,
     "listing_years": 8,
     "notes": "Dash privacy. Hard cap 18.9M. Sem burn. Long history.",
-    "current_price_usd": 45.8,
-    "ath_all_time_usd": 1493.59
+    "current_price_usd": 39.63,
+    "ath_all_time_usd": 1493.59,
+    "max_supply": 18920000.0,
+    "circulating_supply": 12717866.36711139
   },
   "XMRUSDT": {
     "age_years": 12,

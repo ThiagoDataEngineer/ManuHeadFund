@@ -1,0 +1,38 @@
+﻿{
+    "StopLoss":  5.9188,
+    "CreatedAt":  "2026-05-29 22:22:28",
+    "PartialExits":  [
+                         {
+                             "Level":  1,
+                             "Price":  6.7423,
+                             "Qty":  0,
+                             "Percent":  50,
+                             "Action":  "SELL_50_PERCENT",
+                             "Status":  "PENDING"
+                         },
+                         {
+                             "Level":  2,
+                             "Price":  7.257,
+                             "Qty":  0,
+                             "Percent":  25,
+                             "Action":  "SELL_25_PERCENT",
+                             "Status":  "PENDING"
+                         },
+                         {
+                             "Level":  3,
+                             "Price":  8.4922,
+                             "Qty":  0,
+                             "Percent":  25,
+                             "Action":  "SELL_25_PERCENT_AT_TP",
+                             "Status":  "PENDING"
+                         }
+                     ],
+    "Qty":  0,
+    "TakeProfit":  8.4922,
+    "TrailingPercent":  14.5,
+    "UpdatedAt":  "2026-05-29 22:22:28",
+    "Market":  "INJUSDT",
+    "TrailingStop":  5.7288,
+    "Peak24h":  6.7004,
+    "Entry":  6.4335
+}
