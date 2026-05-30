@@ -256,7 +256,7 @@ function Update-PositionTrailingStop {
     )
 
     try {
-        $positions = CoinEx-GetPendingPositions -Market $Market
+        $positions = @(CoinEx-GetPendingPositions -Market $Market)
         if ($positions.Count -eq 0) {
             return [PSCustomObject]@{ success = $false; market = $Market; error = "Position not found" }
         }
@@ -267,7 +267,7 @@ function Update-PositionTrailingStop {
             return [PSCustomObject]@{ success = $false; market = $Market; error = "No stop loss configured" }
         }
 
-        $candles = CoinEx-GetFuturesCandles -market $Market -period "15min" -limit 50
+        $candles = @(CoinEx-GetFuturesCandles -market $Market -period "15min" -limit 50)
         if ($candles.Count -lt 20) {
             return [PSCustomObject]@{ success = $false; market = $Market; error = "Insufficient candle data" }
         }
@@ -313,7 +313,7 @@ function Update-AllTrailingStops {
     )
 
     try {
-        $positions = CoinEx-GetPendingPositions
+        $positions = @(CoinEx-GetPendingPositions)
         if ($positions.Count -eq 0) {
             return [PSCustomObject]@{ success = $true; message = "No open positions"; total_positions = 0; updated = 0; no_update = 0; errors = 0; results = @() }
         }
@@ -330,10 +330,10 @@ function Update-AllTrailingStops {
         return [PSCustomObject]@{
             success = $true
             total_positions = $positions.Count
-            updated = ($results | Where-Object { $_.action -eq "updated" }).Count
-            simulated = ($results | Where-Object { $_.action -eq "simulated" }).Count
-            no_update = ($results | Where-Object { $_.action -eq "no_update" }).Count
-            errors = ($results | Where-Object { -not $_.success }).Count
+            updated = @($results | Where-Object { $_.action -eq "updated" }).Count
+            simulated = @($results | Where-Object { $_.action -eq "simulated" }).Count
+            no_update = @($results | Where-Object { $_.action -eq "no_update" }).Count
+            errors = @($results | Where-Object { -not $_.success }).Count
             results = $results
         }
     }
