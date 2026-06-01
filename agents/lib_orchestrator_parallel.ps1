@@ -39,22 +39,30 @@ function Invoke-OrchestratorCandidatesParallel {
         try {
             # Re-dot-source libs minimas necessarias pro orchestrator_v6 + sub-agentes.
             # Ordem importa: knowledge_retriever ANTES de triagem (mock idempotente).
+            # CRITICAL FIX 2026-06-01: Lista COMPLETA de libs que orchestrator_v6 precisa
             $libs = @(
                 "config.ps1","config.local.ps1","lib_coinex.ps1","lib_cost_tracker.ps1","lib_claude.ps1",
                 "lib_macro.ps1","lib_indicators.ps1","lib_seasonality.ps1","lib_telegram.ps1",
-                "lib_observation_logger.ps1","lib_market_context.ps1","lib_market_context_engine.ps1",
-                "lib_operational_whitelist.ps1","lib_pump_buy_gate.ps1","lib_promotion_gates.ps1",
-                "lib_quant_whitelist.ps1","lib_fundamental_quality.ps1",
+                "lib_idempotency.ps1","lib_retry.ps1","lib_order_idempotency.ps1","lib_price_freshness.ps1",
+                "lib_mentor_hallucination_detector.ps1","lib_fqs_enrichment_queue.ps1",
+                "lib_tori_proximity.ps1","lib_trailing.ps1","lib_trailing_adaptive.ps1",
+                "lib_mentor_reflection.ps1","lib_layer4_tori_timestop.ps1","lib_moon_bag.ps1",
+                "lib_position_register.ps1","lib_validation_logger.ps1","lib_trade_logger.ps1",
+                "lib_trade_reason_archive.ps1","lib_universe_sweep.ps1","lib_hit_rate.ps1",
+                "lib_observation_logger.ps1","lib_mentor_invariants.ps1","lib_gem_safety.ps1",
+                "lib_gem_auto_approve.ps1","gem_agent.ps1","gem_executor.ps1",
+                "lib_cycle_indicators.ps1","lib_cycle_indicators_advanced.ps1","scanner.ps1",
+                "lib_market_context.ps1","lib_market_context_engine.ps1","lib_operational_whitelist.ps1",
+                "lib_enhanced_short_entry.ps1","lib_mesa_consensus_relaxed.ps1","lib_quant_whitelist.ps1",
+                "lib_top_candidates.ps1","lib_fqs_drain.ps1","lib_live_guards.ps1",
+                "lib_promotion_gates.ps1","lib_llm_quota_optimizer.ps1","lib_short_execution.ps1",
                 # 2026-05-20 PM3: libs orfas em runspace child -- causavam Get-Command null
                 # silencioso. Adicionar pra orchestrator_v6 nao chamar funcoes inexistentes.
-                "lib_market_router.ps1","lib_market_router_wire.ps1","lib_order_routed.ps1",
+                "lib_market_router_wire.ps1","lib_order_routed.ps1",
                 "lib_entry_score_boost.ps1","lib_news_entry_boost.ps1",
-                # 2026-05-21 PM7: Tori proximity reader -- Mentor FullContext consulta
-                # Get-ToriProximityForMarket; sem este path, hidden dependency contract
-                # cai em silent-skip (Get-Command null mascara o gap).
-                "lib_tori_proximity.ps1",
+                # Core agents MUST be loaded in correct order
                 "knowledge_retriever.ps1","triagem_agent.ps1","mesa_agent.ps1",
-                "lib_esquadrao_mocks.ps1","mentor_agent.ps1","orchestrator_v6.ps1"
+                "mentor_agent.ps1","lib_esquadrao_mocks.ps1","orchestrator_v6.ps1"
             )
             foreach ($l in $libs) {
                 $p = Join-Path $AgentsDir $l
