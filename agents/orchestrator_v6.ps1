@@ -297,7 +297,7 @@ function Invoke-V6Cascade {
                                                               -MesaConsensus $mesa.consensus
                 if (-not $enhancedVal.approved) {
                     $confStr = $enhancedVal.confidence
-                    Write-Host "  [Enhanced SHORT] $Market`: $($enhancedVal.reason) (confidence: $confStr%)" -ForegroundColor Yellow
+                    Write-Host "  [Enhanced SHORT] $Market - $($enhancedVal.reason) (confidence: $confStr%)" -ForegroundColor Yellow
                     return [PSCustomObject]@{
                         decisao      = "ABORTAR"
                         motivo       = "Enhanced SHORT filter: $($enhancedVal.reason)"
@@ -309,7 +309,7 @@ function Invoke-V6Cascade {
                     }
                 } else {
                     $confStr = $enhancedVal.confidence
-                    Write-Host "  [Enhanced SHORT] $Market`: PASSED (confidence: $confStr%)" -ForegroundColor Cyan
+                    Write-Host "  [Enhanced SHORT] $Market - PASSED (confidence: $confStr%)" -ForegroundColor Cyan
                 }
             } catch {
                 Write-Warning "[Enhanced SHORT] Validação falhou (passa adiante): $_"
