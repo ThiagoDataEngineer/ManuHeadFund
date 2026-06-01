@@ -16,6 +16,57 @@ env:
 
 jobs:
   # ============================================================================
+  # JOB 0: INITIALIZE DATA FILES (uma vez por workflow)
+  # Cria fqs_registry.json, tori_snapshot.json, alpha_hist.json se nao existirem
+  # ============================================================================
+  initialize-data:
+    name: Initialize Data Files
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Create Data Files
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "journal" -Force | Out-Null
+          
+          # fqs_registry.json
+          $fqs = @{
+            "BTCUSDT" = @{ fqs = 7; category = "BLUE_CHIP"; updated = (Get-Date -Format "yyyy-MM-dd HH:mm:ss") }
+            "ETHUSDT" = @{ fqs = 7; category = "BLUE_CHIP"; updated = (Get-Date -Format "yyyy-MM-dd HH:mm:ss") }
+            "SOLUSDT" = @{ fqs = 6; category = "QUALITY"; updated = (Get-Date -Format "yyyy-MM-dd HH:mm:ss") }
+            "BNBUSDT" = @{ fqs = 6; category = "QUALITY"; updated = (Get-Date -Format "yyyy-MM-dd HH:mm:ss") }
+          }
+          $fqs | ConvertTo-Json | Out-File "journal/fqs_registry.json" -Encoding UTF8 -Force
+          Write-Host "Created fqs_registry.json" -ForegroundColor Green
+          
+          # tori_snapshot.json
+          $tori = @{
+            "BTCUSDT" = @{ support = 60000; resistance = 70000; touches_support = 5; touches_resistance = 3; updated = (Get-Date -Format "yyyy-MM-dd HH:mm:ss") }
+            "ETHUSDT" = @{ support = 3000; resistance = 4000; touches_support = 4; touches_resistance = 2; updated = (Get-Date -Format "yyyy-MM-dd HH:mm:ss") }
+          }
+          $tori | ConvertTo-Json | Out-File "journal/tori_snapshot.json" -Encoding UTF8 -Force
+          Write-Host "Created tori_snapshot.json" -ForegroundColor Green
+          
+          # alpha_hist.json
+          $alpha = @{
+            "BTCUSDT" = @{ alpha_score = 0.75; win_rate = 0.65; updated = (Get-Date -Format "yyyy-MM-dd HH:mm:ss") }
+            "ETHUSDT" = @{ alpha_score = 0.70; win_rate = 0.62; updated = (Get-Date -Format "yyyy-MM-dd HH:mm:ss") }
+          }
+          $alpha | ConvertTo-Json | Out-File "journal/alpha_hist.json" -Encoding UTF8 -Force
+          Write-Host "Created alpha_hist.json" -ForegroundColor Green
+      
+      - name: Commit and Push
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add journal/*.json
+          git commit -m "chore: Initialize data files (fqs_registry, tori_snapshot, alpha_hist)" || true
+          git push
+
+  # ============================================================================
   # JOB 1: TRAILING STOP MONITOR (CrÃ­tico - a cada 5min)
   # ============================================================================
   trailing-stop-monitor:
