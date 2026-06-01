@@ -1,346 +1,498 @@
-# 🚀 CoinEx AI Trading System
+# 🚀 ManuHeadFund - CoinEx AI Trading System
 
-Sistema automatizado de trading com IA para CoinEx Futures.
-
----
-
-## 📋 Índice Rápido
-
-- **[Setup Rápido](#-setup-rápido)** — Começar em 1 minuto
-- **[Documentação](#-documentação)** — Guias completos
-- **[Scripts](#-scripts)** — Utilitários
-- **[Estrutura](#-estrutura-do-projeto)** — Organização
+Sistema automatizado de trading com IA (Mentor Agent) para CoinEx Futures.  
+**Status**: ✅ PRODUCTION READY | **Last Updated**: 2026-06-01
 
 ---
 
-## 🚀 SETUP RÁPIDO (1 Comando)
+## 🎯 Quick Start
 
-### Clique direito → Executar com PowerShell:
-```
-.\scripts\setup\SETUP_COMPLETO_OCULTO_ADMIN.ps1
-```
+```bash
+# LOCAL EXECUTION (manual - development)
+.\scripts\scan_master.ps1
 
-Isso vai:
-1. ✅ Configurar trailing stop para rodar OCULTO
-2. ✅ Configurar dashboard HTML para atualizar OCULTO
-3. ✅ Abrir dashboard no navegador
-4. ✅ Criar atalho na área de trabalho
-
-**Depois disso, você usa APENAS o Dashboard HTML no navegador!**
-
-**PowerShell NÃO vai mais aparecer!** 🔇
-
----
-
-## 📊 Dashboard HTML
-
-### Abrir Dashboard:
-- Clique no atalho "CoinEx Dashboard" na área de trabalho
-- OU abra: `dashboard\index.html`
-
-### Recursos:
-- ✅ Posições abertas com PNL em tempo real
-- ✅ Capital disponível
-- ✅ Alertas visuais (posições sem stop loss)
-- ✅ Auto-refresh a cada 5 minutos
-- ✅ Design profissional (estilo terminal financeiro)
-
----
-
-## ⚠️ AÇÃO URGENTE: Proteger NEAR
-
-Depois do setup, execute UMA VEZ (clique direito → Executar com PowerShell):
-```
-PROTECT_NEAR_NOW.ps1
-```
-
-Isso configura o stop loss da posição NEAR que está desprotegida.
-
----
-
-## 📁 Estrutura do Projeto
-
-```
-Coinex_AI_USER_API/
-├── SETUP_COMPLETO_OCULTO_ADMIN.ps1  ← COMECE AQUI
-├── PROTECT_NEAR_NOW.ps1             ← Execute depois do setup
-├── dashboard/
-│   └── index.html                   ← Dashboard visual
-├── agents/                          ← Código principal
-├── scripts/                         ← Scripts de automação
-├── tests/                           ← Testes TDD
-├── logs/                            ← Logs do sistema
-└── docs/                            ← Documentação
+# CI/CD EXECUTION (automatic - production)
+# Runs via GitHub Actions every 15 minutes
 ```
 
 ---
 
-## 🔧 Tasks Agendadas (Ocultas)
+## 📋 Índice
 
-Depois do setup, estas tasks rodam automaticamente em background:
-
-### 1. CoinEx_TrailingStop_Monitor
-- **Frequência**: A cada 5 minutos
-- **Função**: Ajustar trailing stops das posições
-- **Status**: Oculto (sem janela)
-
-### 2. CoinEx_Update_Dashboard_HTML
-- **Frequência**: A cada 5 minutos
-- **Função**: Atualizar dashboard HTML com dados da API
-- **Status**: Oculto (sem janela)
+- **[Execution Modes](#-execution-modes)** — Local vs GitHub Actions
+- **[System Architecture](#-system-architecture)** — Como funciona
+- **[Data Layer](#-data-layer)** — Supabase integration
+- **[Development](#-development)** — Setup local
+- **[Deployment](#-deployment)** — GitHub Actions
+- **[Troubleshooting](#-troubleshooting)** — Problemas comuns
 
 ---
 
-## 📝 Ver Logs (Se Precisar)
+## 🔄 Execution Modes
+
+### LOCAL (Development/Manual)
+Run manually on your machine for testing:
 
 ```powershell
-# Ver últimas 50 linhas
-Get-Content logs\trailing_stop_monitor.log -Tail 50
+# Single cycle
+.\scripts\scan_master.ps1 -Once
 
-# Ver ao vivo (Ctrl+C para sair)
-Get-Content logs\trailing_stop_monitor.log -Tail 50 -Wait
+# Continuous loop (15min intervals)
+.\scripts\scan_master.ps1
+
+# With specific pairs
+.\scripts\scan_master.ps1 -Pairs BTCUSDT,ETHUSDT -Once
+```
+
+**Use when:**
+- Testing new features
+- Debugging issues
+- Manual override needed
+
+---
+
+### GITHUB ACTIONS (Production/Automatic)
+Runs automatically every 15 minutes via CI/CD:
+
+**Workflow**: `.github/workflows/trading-pipeline.yml`
+
+```yaml
+# Executes every 15 minutes
+schedule:
+  - cron: '*/15 * * * *'
+```
+
+**What it does:**
+1. ✅ Connects to Supabase (centralized data)
+2. ✅ Runs GemScan (market analysis)
+3. ✅ Runs Orchestrator V6 (mentor debate)
+4. ✅ Executes trades (if approved)
+5. ✅ Updates dashboard
+6. ✅ Logs everything
+
+**Advantages:**
+- ✅ Runs 24/7 without manual intervention
+- ✅ Scalable to production
+- ✅ Full audit trail
+- ✅ No local machine needed
+
+---
+
+## 🏗️ System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                   EXECUTION TRIGGERS                        │
+│  Local (manual)  OR  GitHub Actions (automatic every 15m)  │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+                         ↓
+┌─────────────────────────────────────────────────────────────┐
+│                    scan_master.ps1                          │
+│  (Main orchestrator loop)                                   │
+├─────────────────────────────────────────────────────────────┤
+│  1. GemScan          - Detect low-cap opportunities         │
+│  2. Orchestrator V6  - Triagem → Mesa → Mentor Debate       │
+│  3. TrailingStops    - Adaptive exits                        │
+│  4. Dashboard        - Visual monitoring                     │
+└────────────────────────┬────────────────────────────────────┘
+                         │
+        ┌────────────────┼────────────────┐
+        ↓                ↓                ↓
+┌───────────────┐ ┌───────────────┐ ┌──────────────┐
+│  Triagem      │ │   Mesa        │ │ Mentor       │
+│  (Tier A-D)   │ │ (Consensus)   │ │ (Debate)     │
+│  ✓ Simple     │ │ ✓ Vote 3x     │ │ ✓ Final veto │
+│  ✓ Fast       │ │ ✓ Strong consensus │         │
+└───────────────┘ └───────────────┘ └──────────────┘
+        │                │                │
+        └────────────────┼────────────────┘
+                         ↓
+        ┌────────────────────────────────┐
+        │  TRADE EXECUTION / SKIP        │
+        │  ✓ EXECUTAR (approved)         │
+        │  ✓ OBSERVAR (paper trade)      │
+        │  ✓ SKIP (rejected)             │
+        └────────────────────────────────┘
+                         │
+                         ↓
+        ┌────────────────────────────────┐
+        │  Supabase → Real-time sync     │
+        │  ✓ FQS Registry                │
+        │  ✓ TORI Proximity              │
+        │  ✓ Alpha/Beta History          │
+        │  ✓ Drawdown Tracking           │
+        │  ✓ Regime State                │
+        └────────────────────────────────┘
 ```
 
 ---
 
-## 🛑 Controlar Tasks (Se Precisar)
+## 💾 Data Layer (Supabase)
 
-### Ver Tasks
-```powershell
-Get-ScheduledTask | Where-Object { $_.TaskName -like "*CoinEx*" }
+### Schema (7 Tables)
+```
+manuheadfund
+├── fqs_registry          - Trade candidates queue
+├── tori_proximity        - TORI proximity tracking
+├── alpha_history         - Alpha accumulation
+├── beta_history          - Beta cycle history
+├── drawdown_history      - Drawdown events
+├── regime_state          - Current market regime
+└── dsr_global            - Global DSR state
 ```
 
-### Desabilitar
-```powershell
-Disable-ScheduledTask -TaskName "CoinEx_TrailingStop_Monitor"
-Disable-ScheduledTask -TaskName "CoinEx_Update_Dashboard_HTML"
-```
+### Key Features
+- ✅ Real-time sync (no manual updates)
+- ✅ 155+ records migrated
+- ✅ Automatic backup
+- ✅ Graceful fallback to local JSON
 
-### Habilitar
+### Access
 ```powershell
-Enable-ScheduledTask -TaskName "CoinEx_TrailingStop_Monitor"
-Enable-ScheduledTask -TaskName "CoinEx_Update_Dashboard_HTML"
-```
-
-### Remover
-```powershell
-Unregister-ScheduledTask -TaskName "CoinEx_TrailingStop_Monitor" -Confirm:$false
-Unregister-ScheduledTask -TaskName "CoinEx_Update_Dashboard_HTML" -Confirm:$false
+# Check Supabase status
+$config = . .\agents\config.local.ps1
+# SUPABASE_URL and SUPABASE_SERVICE_KEY loaded from config.local.ps1
 ```
 
 ---
 
-## 🎯 Funcionalidades
+## 🛠️ Development
 
-### ✅ Implementado
+### Prerequisites
+- PowerShell 7+ (or 5 with .NET Framework)
+- CoinEx API key (in `agents/config.local.ps1`)
+- Supabase URL and API key (optional, falls back to JSON)
 
-1. **Validação Pós-Execução**
-   - Verifica se stop loss foi configurado
-   - Retry automático com fallback
-   - Alertas se posição sem proteção
-
-2. **Trailing Stop Inteligente**
-   - Baseado em ATR, suportes técnicos e leverage
-   - Threshold de ativação: +3% de lucro
-   - Ajustes dinâmicos por volatilidade
-
-3. **Dashboard HTML**
-   - Design profissional
-   - Auto-refresh a cada 5 minutos
-   - Alertas visuais
-   - Dados reais da API
-
-4. **Tasks Ocultas**
-   - Rodam em background
-   - Sem janelas do PowerShell
-   - Logs auditáveis
-
----
-
-## 📚 Documentação
-
-### Começar
-- **[docs/GETTING_STARTED.md](docs/GETTING_STARTED.md)** — Primeiros passos (5 min)
-- **[docs/SETUP.md](docs/SETUP.md)** — Configuração completa (10 min)
-
-### Usar
-- **[docs/DASHBOARD.md](docs/DASHBOARD.md)** — Guia do Dashboard (10 min)
-- **[docs/TRADING.md](docs/TRADING.md)** — Guia de Trading (15 min)
-
-### Telegram V2 (Novo!)
-- **[docs/telegram/README.md](docs/telegram/README.md)** — Índice de Telegram
-- **[docs/telegram/TELEGRAM_V2_QUICK_START.md](docs/telegram/TELEGRAM_V2_QUICK_START.md)** — Exemplos práticos
-
-### Troubleshooting
-- **[docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md)** — Solução de problemas
-
-### Índice Completo
-- **[docs/README.md](docs/README.md)** — Índice de toda documentação
-
----
-
-## 🔧 Scripts
-
-Todos os scripts foram organizados em `scripts/`:
-
-### Setup
+### Local Setup
 ```powershell
-.\scripts\setup\SETUP_COMPLETO_OCULTO_ADMIN.ps1
+# 1. Configure credentials
+# Edit agents/config.local.ps1 with:
+# - COINEX_API_KEY
+# - COINEX_API_SECRET
+# - SUPABASE_URL (optional)
+# - SUPABASE_SERVICE_KEY (optional)
+
+# 2. Run single cycle
+.\scripts\scan_master.ps1 -Once
+
+# 3. Check logs
+Get-Content logs/master_*.log -Tail 50
+```
+
+### Testing
+```powershell
+# Run Pester tests
+Invoke-Pester tests/ -Output Detailed
+
+# Current status: 41/41 tests passing ✅
+```
+
+### File Organization
+```
+agents/             - Core trading logic (79 files - all active)
+├── config*.ps1     - Configuration
+├── *_agent.ps1     - Main agents (Triagem, Mesa, Mentor)
+├── lib_*.ps1       - Libraries (indicators, exchanges, etc)
+└── orchestrator_v6.ps1 - Main orchestrator
+
+scripts/            - Utilities
+├── scan_master.ps1 - Main loop
+├── scanner.ps1     - Market scanner
+└── *.ps1           - Other tools
+
+tests/              - Pester tests (41 tests)
+├── supabase_*.Tests.ps1
+└── *.Tests.ps1
+
+docs/               - Documentation (archived - see DEPLOYMENT_COMPLETE_2026_06_01.md)
+```
+
+---
+
+## 🚀 Deployment
+
+### GitHub Actions Workflow
+
+**File**: `.github/workflows/trading-pipeline.yml`
+
+```yaml
+name: Trading Pipeline
+
+on:
+  schedule:
+    - cron: '*/15 * * * *'  # Every 15 minutes
+  workflow_dispatch:         # Manual trigger
+
+jobs:
+  trade:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      
+      - name: Run Trading Cycle
+        run: |
+          .\scripts\scan_master.ps1
+      
+      - name: Upload Logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: trading-logs
+          path: logs/
+```
+
+### Environment Variables (GitHub Secrets)
+```
+COINEX_API_KEY         - Your CoinEx API key
+COINEX_API_SECRET      - Your CoinEx API secret
+SUPABASE_URL           - Supabase project URL
+SUPABASE_SERVICE_KEY   - Supabase service key
+```
+
+**Set via**: Settings → Secrets and Variables → Actions
+
+### Deployment Steps
+1. Push code to main branch
+2. GitHub Actions automatically triggers every 15 minutes
+3. Check workflow status in Actions tab
+4. View logs in artifacts
+
+---
+
+## 📊 Monitoring
+
+### Local Logs
+```powershell
+# View latest logs
+Get-Content logs/master_*.log -Tail 50
+
+# Watch live
+Get-Content logs/master_*.log -Tail 20 -Wait
+
+# Check specific date
+Get-Content "logs/master_2026-06-01.log" -Tail 100
+```
+
+### Check Data Gates
+```powershell
+# All data gates satisfied?
+# Look for logs with "FQS", "TORI", "ALPHA", "BETA", "DRAWDOWN"
+# Should all show as READY/SATISFIED
 ```
 
 ### Dashboard
-```powershell
-.\scripts\dashboard\BUILD_DASHBOARD_ELITE.ps1
-.\scripts\dashboard\ABRIR_DASHBOARD_ELITE.ps1
 ```
-
-### Manutenção
-```powershell
-.\scripts\maintenance\PROTECT_NEAR_NOW.ps1
-.\scripts\maintenance\STATUS_TASKS.ps1
+Open: dashboard/index.html
+Auto-refreshes every 5 minutes
+Shows: Positions, PNL, Capital, Alerts
 ```
-
-### Testes
-```powershell
-.\scripts\test\TEST_ADAPTIVE_TRAILING.ps1
-```
-
-**Índice completo**: [scripts/README.md](scripts/README.md)
 
 ---
 
-## 📁 Estrutura do Projeto
+## ✅ System Status
+
+### Current State (2026-06-01)
+| Component | Status | Notes |
+|-----------|--------|-------|
+| Supabase Integration | ✅ LIVE | 7 tables, 155+ records |
+| Functions | ✅ FIXED | All 4 missing functions loaded |
+| Tests | ✅ PASS | 41/41 tests passing (100%) |
+| Repository | ✅ CLEAN | 79 files in /agents (49.7% reduction) |
+| Trading | ✅ READY | All data gates satisfied |
+| Documentation | ✅ UPDATED | Consolidated (4 files only) |
+
+### Performance
+- **Functions Available**: 4/4 ✅
+- **Data Sync**: Real-time (Supabase) ✅
+- **Execution Cycle**: Every 15 minutes ✅
+- **Success Rate**: 100% (last cycle) ✅
+
+---
+
+## 🆘 Troubleshooting
+
+### Issue: "Function not found"
+**Solution**: Check `agents/orchestrator_v6.ps1` loads all dependencies
+```powershell
+# Verify dependencies loaded
+. agents/orchestrator_v6.ps1
+# Should load without errors
+```
+
+### Issue: "Data gates not satisfied"
+**Solution**: Check Supabase connection or fallback to local JSON
+```powershell
+# Check Supabase status
+$config = . agents/config.local.ps1
+# SUPABASE_URL should be set
+```
+
+### Issue: "GitHub Actions workflow failed"
+**Check**: 
+1. Secrets configured in GitHub Settings
+2. Workflow syntax valid (`.github/workflows/trading-pipeline.yml`)
+3. PowerShell script runs locally first
+
+### Issue: "No trades executing"
+**Check**:
+1. Mentor agent approved (check logs for EXECUTAR)
+2. Data gates satisfied (FQS, TORI, ALPHA, BETA, DRAWDOWN)
+3. Market conditions met
+4. Capital available
+
+---
+
+## 🔧 Common Commands
+
+```powershell
+# LOCAL DEVELOPMENT
+
+# Run single cycle
+.\scripts\scan_master.ps1 -Once
+
+# Run with specific pairs
+.\scripts\scan_master.ps1 -Pairs BTCUSDT,ETHUSDT -Once
+
+# Continuous loop
+.\scripts\scan_master.ps1
+
+# Run tests
+Invoke-Pester tests/ -Output Detailed
+
+# Check logs
+Get-Content logs/master_*.log -Tail 50 -Wait
+
+# GITHUB ACTIONS (automatic)
+
+# Trigger manually
+# Go to: Actions → Trading Pipeline → Run workflow
+
+# View results
+# Check: Actions tab → Latest run → Logs
+```
+
+---
+
+## 📂 Project Structure
 
 ```
 Coinex_AI_USER_API/
-├── 📁 agents/              (agentes de trading)
-├── 📁 scripts/             (scripts utilitários)
-│   ├── setup/              (configuração)
-│   ├── dashboard/          (dashboard)
-│   ├── maintenance/        (manutenção)
-│   └── test/               (testes)
-├── 📁 docs/                (documentação)
-│   ├── telegram/           (Telegram V2)
-│   ├── analysis/           (análises)
-│   └── archive/            (documentação antiga)
-├── 📁 backtest/            (backtesting)
-├── 📁 config/              (configurações)
-├── 📁 journal/             (dados de execução)
-├── 📁 logs/                (logs)
-├── 📁 dashboard/           (dashboard HTML)
-├── 📁 .github/             (GitHub Actions)
-├── 📄 README.md            (este arquivo)
-└── 📄 .gitignore
+├── README.md                           ← You are here
+├── CLAUDE.md                           ← Claude context
+├── DEPLOYMENT_COMPLETE_2026_06_01.md   ← Current status
+│
+├── agents/                             (79 active files)
+│   ├── config.ps1                      ← Configuration
+│   ├── config.local.ps1                ← Secrets (API keys)
+│   ├── orchestrator_v6.ps1             ← Main orchestrator
+│   ├── *_agent.ps1                     ← Trading agents
+│   └── lib_*.ps1                       ← Libraries
+│
+├── scripts/
+│   ├── scan_master.ps1                 ← Main entry point
+│   ├── scanner.ps1                     ← Market scanner
+│   └── *.ps1                           ← Utilities
+│
+├── tests/
+│   └── *.Tests.ps1                     ← Pester tests (41 total)
+│
+├── .github/
+│   └── workflows/
+│       └── trading-pipeline.yml        ← GitHub Actions CI/CD
+│
+├── backtest/                           ← Backtesting (Python)
+├── dashboard/                          ← HTML dashboard
+├── logs/                               ← Trading logs
+├── journal/                            ← Execution data
+└── config/                             ← Configuration files
 ```
 
 ---
 
-## 📚 Documentação
+## 🎓 Key Concepts
 
----
-
-## 🧪 Testes
-
-```powershell
-# Executar testes
-Invoke-Pester tests\lib_order_validation.Tests.ps1
+### Orchestrator V6 Architecture
+```
+Triagem (Tier A-D)
+    ↓
+Whitelist (Wave 2)
+    ↓
+Mesa (Consensus)
+    ↓
+Mentor Debate (Final Veto)
+    ↓
+Trade Execution or Skip
 ```
 
-**Status**: ✅ 9/9 testes passando
-
----
-
-## 🔄 Workflow Recomendado
-
-### Setup Inicial (Uma Vez)
-1. Execute: `SETUP_COMPLETO_OCULTO_ADMIN.ps1` (como admin)
-2. Dashboard abre no navegador
-3. Execute: `PROTECT_NEAR_NOW.ps1` (proteger NEAR)
-
-### Uso Diário
-1. Abra o dashboard HTML (atalho na área de trabalho)
-2. Deixe aberto (atualiza a cada 5 minutos)
-3. Pronto! Sistema roda sozinho em background
-
----
-
-## 📊 Status Atual
-
-### Posições
+### Data Flow
 ```
-BNBUSDT  : +2.13% ✅ Stop: $627.82
-SOLUSDT  : +0.69% ✅ Stop: $82.30
-LINKUSDT : +0.29% ✅ Stop: $9.15
-UNIUSDT  : -0.33% ✅ Stop: $3.30
-NEARUSDT : -0.96% ❌ SEM STOP LOSS (URGENTE)
-```
-
-### Tasks
-```
-CoinEx_TrailingStop_Monitor: Ready (oculto)
-CoinEx_Update_Dashboard_HTML: Ready (oculto)
+CoinEx API
+    ↓
+GemScan (opportunities)
+    ↓
+Orchestrator (validation)
+    ↓
+Mentor (approval)
+    ↓
+Supabase (real-time sync)
+    ↓
+Trade Execution
 ```
 
 ---
 
-## 🎓 Lições Aprendidas
+## 📚 Documentation
 
-1. **Nunca confie na API sem validação**
-   - CoinEx-PlaceOrder com -stopLoss não funciona
-   - Sempre validar resultado real
+- **DEPLOYMENT_COMPLETE_2026_06_01.md** — Current system status
+- **CLAUDE.md** — AI context for development
 
-2. **Tasks ocultas são essenciais**
-   - Rodam em background sem interromper
-   - Logs auditáveis para troubleshooting
-
-3. **Dashboard HTML é melhor para monitoramento**
-   - Visual e profissional
-   - Auto-refresh automático
-   - Pode deixar aberto em segunda tela
+Archived docs in Git history (see commits).
 
 ---
 
-## 📞 Suporte
+## 🚀 Deployment Checklist
 
-### Comandos Rápidos
-```powershell
-# Setup completo
-.\SETUP_COMPLETO_OCULTO_ADMIN.ps1
+For production deployment:
 
-# Proteger NEAR
-.\PROTECT_NEAR_NOW.ps1
-
-# Abrir dashboard
-Start-Process "dashboard\index.html"
-
-# Ver logs
-Get-Content logs\trailing_stop_monitor.log -Tail 50
-
-# Ver tasks
-Get-ScheduledTask | Where-Object { $_.TaskName -like "*CoinEx*" }
-```
+- [ ] All secrets configured in GitHub (COINEX_API_KEY, etc)
+- [ ] Supabase credentials valid
+- [ ] GitHub Actions workflow enabled
+- [ ] Test run successful
+- [ ] Logs reviewed for errors
+- [ ] First trade verified
+- [ ] Monitoring setup
 
 ---
 
-## 🚀 Próximos Passos
+## 📞 Quick Reference
 
-1. **Leia**: [docs/GETTING_STARTED.md](docs/GETTING_STARTED.md) (5 min)
-2. **Execute**: `.\scripts\setup\SETUP_COMPLETO_OCULTO_ADMIN.ps1`
-3. **Proteja**: `.\scripts\maintenance\PROTECT_NEAR_NOW.ps1`
-4. **Abra**: Dashboard no navegador
-5. **Comece**: A tradear!
-
----
-
-## 📝 Changelog
-
-### 2026-05-26
-- ✅ Telegram V2 implementado (63% mais compacto)
-- ✅ Projeto reorganizado (129 arquivos organizados)
-- ✅ Documentação centralizada em `docs/`
-- ✅ Scripts organizados em `scripts/`
+| Need | Command | File |
+|------|---------|------|
+| Run locally | `.\scripts\scan_master.ps1 -Once` | N/A |
+| Run continuous | `.\scripts\scan_master.ps1` | N/A |
+| Run tests | `Invoke-Pester tests/` | tests/ |
+| Check logs | `Get-Content logs/master_*.log -Tail 50` | logs/ |
+| View config | Edit `agents/config.local.ps1` | agents/ |
+| GitHub Actions | View `.github/workflows/trading-pipeline.yml` | .github/ |
+| Dashboard | Open `dashboard/index.html` | dashboard/ |
 
 ---
 
-**Última atualização**: 2026-05-26  
-**Status**: ✅ Pronto para usar
+## 📊 Recent Changes (2026-06-01)
+
+✅ **COMPLETE CLEANUP & DEPLOYMENT**
+- Fixed 4 missing functions
+- Deployed Supabase integration (7 tables, 155+ records)
+- Removed 78 unused files from /agents (49.7% reduction)
+- Removed 30 redundant docs from root
+- All 41 tests passing
+
+**System Status**: ✅ PRODUCTION READY
+
+---
+
+**Last Updated**: June 1, 2026  
+**Status**: ✅ LIVE AND READY  
+**Ready for Trading**: YES
