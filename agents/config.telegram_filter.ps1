@@ -33,6 +33,8 @@ $global:TELEGRAM_SEND_CRITICAL = $true
 # Promotion/Demotion
 # Regime change
 # Kelly sizing ativado
+# Trailing updates (mudanças de stop/fase)
+# Whale/Bacon alerts
 
 $global:TELEGRAM_SEND_IMPORTANT = $true
 

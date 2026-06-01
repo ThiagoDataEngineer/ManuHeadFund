@@ -549,6 +549,11 @@ function Invoke-MasterCycle {
     # ── 1. Trailing stops (ADAPTIVE — Layer 1 TDD) ──────────────────────────────
     if (-not $SkipTrailing) {
         Write-Host "`n[TRAIL] Atualizando posicoes abertas (modo adaptativo)..." -ForegroundColor DarkGreen
+        
+        # 2026-06-01: Sincronizar posições com exchange ANTES de atualizar
+        # Detecta mudanças manuais feitas na ferramenta
+        try { Sync-TrailingPositionsWithExchange } catch { Write-MasterLog "Sync trailing erro: $_" "WARN" }
+        
         try { Update-TrailingStopsAdaptive } catch { Write-MasterLog "Trailing adaptativo erro: $_" "WARN" }
         Show-TrailingStatus
         

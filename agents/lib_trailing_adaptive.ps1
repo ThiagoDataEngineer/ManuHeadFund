@@ -355,9 +355,10 @@ function Update-TrailingStopsAdaptive {
                 $msg = "🔄 $($pos.market) $($pos.side) fase $oldPhase→$($pos.phase) ($($phaseLabel[$pos.phase])) stop $oldStop→$($calc.newStop) | regime=$regime"
                 Write-Host "  [Adaptive Trailing] $msg" -ForegroundColor Green
                 
-                # Enviar apenas se mudança > threshold
+                # 2026-06-01: Trailing é cobertura de trades vivos - SEMPRE enviar (TIER IMPORTANT)
+                # Não filtrar por INFORMATIVE (que está desativado em production)
                 if ($changePct -ge $minChange -and (Get-Command Send-TelegramAlertFiltered -ErrorAction SilentlyContinue)) {
-                    try { Send-TelegramAlertFiltered -Message $msg -Tier "INFORMATIVE" | Out-Null } catch { }
+                    try { Send-TelegramAlertFiltered -Message $msg -Tier "IMPORTANT" | Out-Null } catch { }
                 }
 
                 # Tenta mover stop na exchange
@@ -384,3 +385,170 @@ function Update-TrailingStopsAdaptive {
 
 # Funções exportadas: Get-AdaptiveBuffer, Get-TrailingNewStopAdaptive, Update-TrailingStopsAdaptive
 # Dot-source ao usar (não é módulo formal)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Sync-TrailingPositionsWithExchange — Sincroniza posições com CoinEx
+# ─────────────────────────────────────────────────────────────────────────────
+# 2026-06-01: Função para sincronizar posições abertas com a exchange
+# Problema: Quando usuário muda stop/target manualmente na ferramenta,
+# o arquivo trailing_positions.json não é atualizado automaticamente.
+# Solução: Buscar posições abertas da exchange e atualizar arquivo.
+function Sync-TrailingPositionsWithExchange {
+    <#
+    .SYNOPSIS
+    Sincroniza posições de trailing com dados reais da exchange.
+    
+    .DESCRIPTION
+    1. Busca posições abertas da CoinEx
+    2. Para cada posição aberta, verifica se existe em trailing_positions.json
+    3. Se existe, atualiza stop/target com valores reais da exchange
+    4. Se não existe, cria nova entrada
+    5. Persiste arquivo atualizado
+    
+    Útil quando usuário muda stop/target manualmente na ferramenta.
+    #>
+    [CmdletBinding()]
+    param()
+
+    if (-not (Get-Command CoinEx-GetOpenOrders -ErrorAction SilentlyContinue)) {
+        Write-Warning "[Sync Trailing] CoinEx-GetOpenOrders não disponível; skipping sync"
+        return
+    }
+
+    if (-not (Get-Command Get-TrailingPositions -ErrorAction SilentlyContinue)) {
+        Write-Warning "[Sync Trailing] Get-TrailingPositions não disponível; skipping sync"
+        return
+    }
+
+    try {
+        # Busca posições abertas da exchange
+        $openOrders = @(CoinEx-GetOpenOrders)
+        if (-not $openOrders -or @($openOrders).Count -eq 0) {
+            if ($Verbose) { Write-Host "  [Sync Trailing] Nenhuma posição aberta na exchange." -ForegroundColor DarkGray }
+            return
+        }
+
+        # Carrega posições atuais do arquivo
+        $positions = @(Get-TrailingPositions)
+        $updated = $false
+
+        # Para cada ordem aberta na exchange
+        foreach ($order in $openOrders) {
+            $market = [string]$order.market
+            $orderId = [string]$order.order_id
+            
+            # Procura posição correspondente
+            $existing = $positions | Where-Object { $_.market -eq $market -and $_.orderId -eq $orderId }
+            
+            if ($existing) {
+                # Atualiza com dados reais da exchange
+                $oldStop = $existing.stopCurrent
+                $oldTarget = $existing.target
+                
+                # Busca stop loss e take profit reais
+                $newStop = if ($order.stop_price) { [double]$order.stop_price } else { $existing.stopCurrent }
+                $newTarget = if ($order.take_profit_price) { [double]$order.take_profit_price } else { $existing.target }
+                
+                if ($newStop -ne $oldStop -or $newTarget -ne $oldTarget) {
+                    Write-Host "  [Sync Trailing] $market: stop $oldStop→$newStop, target $oldTarget→$newTarget" -ForegroundColor Cyan
+                    $existing.stopCurrent = $newStop
+                    $existing.target = $newTarget
+                    $existing.updatedAt = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+                    $updated = $true
+                    
+                    # Notificar via Telegram
+                    $msg = "🔄 SYNC: $market stop atualizado $oldStop→$newStop (mudança manual detectada)"
+                    if (Get-Command Send-TelegramAlertFiltered -ErrorAction SilentlyContinue) {
+                        try { Send-TelegramAlertFiltered -Message $msg -Tier "IMPORTANT" | Out-Null } catch { }
+                    }
+                }
+            } else {
+                # Posição nova na exchange - criar entrada
+                Write-Host "  [Sync Trailing] Nova posição detectada: $market" -ForegroundColor Yellow
+                $newPos = [PSCustomObject]@{
+                    market = $market
+                    side = if ($order.side -eq "buy") { "LONG" } else { "SHORT" }
+                    entry = [double]$order.price
+                    stop = [double]($order.stop_price ?? $order.price * 0.95)
+                    target = [double]($order.take_profit_price ?? $order.price * 1.05)
+                    orderId = $orderId
+                    source = "exchange_sync"
+                    mode = "STANDARD"
+                    max_days = 0
+                    dd_threshold_pct = 30
+                    phase = 0
+                    peak = [double]$order.price
+                    stopCurrent = [double]($order.stop_price ?? $order.price * 0.95)
+                    active = $true
+                    openedAt = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+                    updatedAt = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+                }
+                $positions += $newPos
+                $updated = $true
+                
+                # Notificar via Telegram
+                $msg = "✅ SYNC: Nova posição $market detectada na exchange"
+                if (Get-Command Send-TelegramAlertFiltered -ErrorAction SilentlyContinue) {
+                    try { Send-TelegramAlertFiltered -Message $msg -Tier "IMPORTANT" | Out-Null } catch { }
+                }
+            }
+        }
+
+        # Persiste se houve mudanças
+        if ($updated -and (Get-Command Save-TrailingPositions -ErrorAction SilentlyContinue)) {
+            Save-TrailingPositions @($positions)
+            Write-Host "  [Sync Trailing] Posições sincronizadas com sucesso." -ForegroundColor Green
+        }
+
+    } catch {
+        Write-Warning "[Sync Trailing] Erro ao sincronizar: $_"
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Whale/Bacon Alert Handler — Receber alertas com tipo (compra/venda)
+# ─────────────────────────────────────────────────────────────────────────────
+function Send-WhaleAlert {
+    <#
+    .SYNOPSIS
+    Envia alerta de whale/bacon com tipo de transação (compra/venda).
+    
+    .PARAMETER Market
+    Par de trading (ex: BTCUSDT)
+    
+    .PARAMETER Amount
+    Quantidade movida
+    
+    .PARAMETER Price
+    Preço da transação
+    
+    .PARAMETER Type
+    Tipo: "BUY" ou "SELL"
+    
+    .PARAMETER Source
+    Fonte do alerta (ex: "whale_monitor", "bacon_detector")
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)][string]$Market,
+        [Parameter(Mandatory=$true)][double]$Amount,
+        [Parameter(Mandatory=$true)][double]$Price,
+        [Parameter(Mandatory=$true)][ValidateSet("BUY","SELL")][string]$Type,
+        [Parameter(Mandatory=$false)][string]$Source = "whale_monitor"
+    )
+
+    $emoji = if ($Type -eq "BUY") { "🐋 COMPRA" } else { "🐋 VENDA" }
+    $usdValue = [math]::Round($Amount * $Price, 2)
+    
+    $msg = "$emoji | $Market`nVolume: $Amount @ $Price`nValor: \$$usdValue`nFonte: $Source"
+    
+    # Whale/Bacon é CRÍTICO - sempre enviar
+    if (Get-Command Send-TelegramAlertFiltered -ErrorAction SilentlyContinue) {
+        try { Send-TelegramAlertFiltered -Message $msg -Tier "CRITICAL" | Out-Null } catch { }
+    } elseif (Get-Command Send-TelegramAlert -ErrorAction SilentlyContinue) {
+        try { Send-TelegramAlert -Message $msg | Out-Null } catch { }
+    }
+}
+
+# Exportadas: Sync-TrailingPositionsWithExchange, Send-WhaleAlert
