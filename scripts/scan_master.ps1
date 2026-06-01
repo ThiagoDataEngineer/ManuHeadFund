@@ -106,6 +106,7 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 . (Join-Path $agentsDir "knowledge_retriever.ps1")
 . (Join-Path $agentsDir "triagem_agent.ps1")
 . (Join-Path $agentsDir "mesa_agent.ps1")
+. (Join-Path $agentsDir "mentor_agent.ps1")  # 2026-06-01: Mentor Debate para validação final
 . (Join-Path $agentsDir "lib_esquadrao_mocks.ps1")
 "[DBG2 after-dot-source] DryRun=$DryRun" | Out-File -FilePath "$env:TEMP\dryrun_trace.log" -Append -Encoding utf8
 . (Join-Path $agentsDir "orchestrator_v6.ps1")
