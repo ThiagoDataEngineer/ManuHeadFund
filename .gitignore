@@ -93,6 +93,19 @@ journal/tg_listener_hb
 journal/watchdog_respawn_state.json
 journal/tori_proximity_state.json
 journal/trailing_positions.json
+journal/funding_history/
+journal/beta_vs_btc.json
+journal/capital_context.json
+journal/coin_registry.json
+journal/correlation_matrix.json
+journal/dsr_trials.jsonl
+journal/gem_safety_state.json
+journal/promotion_pipeline.jsonl
+journal/staleness_audit.json
+journal/staleness_audit_history.jsonl
+journal/tier_a_flag_history.jsonl
+journal/trend_persistence_cache.json
+journal/whale_alerts_seen.jsonl
 
 # ============================================================
 # Dashboards temporarios e testes
@@ -103,6 +116,7 @@ dashboard/*.html
 dashboard/*.json
 !dashboard/dashboard_data.json
 dashboard/*.js
+dashboard/dashboard_data.json
 TEST_*.ps1
 *_FIXED.ps1
 *_TEMP.ps1
