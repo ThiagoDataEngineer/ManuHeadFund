@@ -470,8 +470,8 @@ function Sync-TrailingPositionsWithExchange {
                     market = $market
                     side = if ($order.side -eq "buy") { "LONG" } else { "SHORT" }
                     entry = [double]$order.price
-                    stop = [double]($order.stop_price ?? $order.price * 0.95)
-                    target = [double]($order.take_profit_price ?? $order.price * 1.05)
+                    stop = [double](if ($order.stop_price) { $order.stop_price } else { $order.price * 0.95 })
+                    target = [double](if ($order.take_profit_price) { $order.take_profit_price } else { $order.price * 1.05 })
                     orderId = $orderId
                     source = "exchange_sync"
                     mode = "STANDARD"
@@ -479,7 +479,7 @@ function Sync-TrailingPositionsWithExchange {
                     dd_threshold_pct = 30
                     phase = 0
                     peak = [double]$order.price
-                    stopCurrent = [double]($order.stop_price ?? $order.price * 0.95)
+                    stopCurrent = [double](if ($order.stop_price) { $order.stop_price } else { $order.price * 0.95 })
                     active = $true
                     openedAt = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
                     updatedAt = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
