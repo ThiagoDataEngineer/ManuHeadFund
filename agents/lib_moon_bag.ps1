@@ -489,10 +489,13 @@ function Update-MoonBagReview {
             $pos | Add-Member -NotePropertyName "lastMoonBagReview" -NotePropertyValue (Get-Date -Format "yyyy-MM-dd HH:mm:ss") -Force
             $changed = $true
 
-            if (Get-Command Send-TelegramAlert -ErrorAction SilentlyContinue) {
+            # 2026-06-01: Enviar apenas CLOSE, não HOLD (reduzir ruído)
+            $sendMoonBag = $decision.action -eq "CLOSE" -or $global:TELEGRAM_MOON_BAG_SEND_HOLD
+            
+            if ($sendMoonBag -and (Get-Command Send-TelegramAlertFiltered -ErrorAction SilentlyContinue)) {
                 try {
                     $msg = "[Layer5 ADVISORY] $($pos.market) $($pos.moonBagKind) $($pos.side) suggests $($decision.action) at $current. Manual action required."
-                    Send-TelegramAlert -Message $msg | Out-Null
+                    Send-TelegramAlertFiltered -Message $msg -Tier "INFORMATIVE" | Out-Null
                 } catch { }
             }
             continue
@@ -513,9 +516,9 @@ function Update-MoonBagReview {
             $pos | Add-Member -NotePropertyName "closedAt" -NotePropertyValue (Get-Date -Format "yyyy-MM-dd HH:mm:ss") -Force
             $changed = $true
 
-            if (Get-Command Send-TelegramAlert -ErrorAction SilentlyContinue) {
+            if (Get-Command Send-TelegramAlertFiltered -ErrorAction SilentlyContinue) {
                 try {
-                    Send-TelegramAlert -Message "[Layer5 EXECUTED] $($pos.market) $($pos.moonBagKind) CLOSED: $($decision.reason)" | Out-Null
+                    Send-TelegramAlertFiltered -Message "[Layer5 EXECUTED] $($pos.market) $($pos.moonBagKind) CLOSED: $($decision.reason)" -Tier "CRITICAL" | Out-Null
                 } catch { }
             }
         }

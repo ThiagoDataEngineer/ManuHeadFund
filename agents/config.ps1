@@ -5,6 +5,10 @@
 $_localConfig = Join-Path $PSScriptRoot "config.local.ps1"
 if (Test-Path $_localConfig) { . $_localConfig }
 
+# 2026-06-01: Carregar configuração de filtro Telegram
+$_telegramFilterConfig = Join-Path $PSScriptRoot "config.telegram_filter.ps1"
+if (Test-Path $_telegramFilterConfig) { . $_telegramFilterConfig }
+
 # ── API Keys ──────────────────────────────────────────────────────────────────
 
 # Claude / Anthropic

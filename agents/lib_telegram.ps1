@@ -705,6 +705,53 @@ function Format-TgCycleSummary {
 }
 
 # ==============================================================================
+# Send-TelegramAlertFiltered — Envia com filtro por tier de importância
+# 2026-06-01: Reduzir ruído filtrando mensagens por tier
+# ==============================================================================
+function Send-TelegramAlertFiltered {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$Message,
+        
+        [Parameter(Mandatory=$false)]
+        [ValidateSet("CRITICAL", "IMPORTANT", "INFORMATIVE", "DEBUG")]
+        [string]$Tier = "CRITICAL",
+        
+        [Parameter(Mandatory=$false)]
+        [int]$DedupSeconds = 0,
+        
+        [Parameter(Mandatory=$false)]
+        [string]$DedupStorePath = ""
+    )
+    
+    # Verificar se deve enviar baseado no tier
+    $shouldSend = switch ($Tier) {
+        "CRITICAL"     { $global:TELEGRAM_SEND_CRITICAL }
+        "IMPORTANT"    { $global:TELEGRAM_SEND_IMPORTANT }
+        "INFORMATIVE"  { $global:TELEGRAM_SEND_INFORMATIVE }
+        "DEBUG"        { $global:TELEGRAM_SEND_DEBUG }
+        default        { $true }
+    }
+    
+    if (-not $shouldSend) {
+        Write-Verbose "[TELEGRAM] Mensagem $Tier filtrada (modo=$global:TELEGRAM_FILTER_MODE)"
+        return [PSCustomObject]@{
+            success = $true
+            skipped = $true
+            reason = "filtered_by_tier_$Tier"
+        }
+    }
+    
+    # Enviar com dedup se configurado
+    if ($DedupSeconds -gt 0) {
+        return Send-TelegramAlert -Message $Message -DedupSeconds $DedupSeconds -DedupStorePath $DedupStorePath
+    } else {
+        return Send-TelegramAlert -Message $Message
+    }
+}
+
+# ==============================================================================
 # Send-HeartbeatIfDue — envia heartbeat se passou o intervalo configurado
 # Chamado em scan_master quando ciclo nao tem novidades
 # ==============================================================================
@@ -723,10 +770,17 @@ function Send-HeartbeatIfDue {
 
     if (-not $Enabled) { return $false }
 
+    # 2026-06-01: Usar intervalo da configuração (default 360 min = 6h)
+    $interval = if ($global:TELEGRAM_HEARTBEAT_INTERVAL_MIN) {
+        $global:TELEGRAM_HEARTBEAT_INTERVAL_MIN
+    } else {
+        $IntervalMinutes
+    }
+
     # Verifica se passou o intervalo desde o ultimo heartbeat
     if ($LastHeartbeatFile -and (Test-Path $LastHeartbeatFile)) {
         $lastAge = ((Get-Date) - (Get-Item $LastHeartbeatFile).LastWriteTime).TotalMinutes
-        if ($lastAge -lt $IntervalMinutes) { return $false }
+        if ($lastAge -lt $interval) { return $false }
     }
 
     # Monta e envia

@@ -757,12 +757,22 @@ function Invoke-OrchestratorV6 {
     if ($cascade.mesa    -and $cascade.mesa.setup)    { $finalSetup = $cascade.mesa.setup }
 
     # Telegram: SO dispara se cascade.telegramFire = true
-    if ($cascade.telegramFire -and (Get-Command Send-TelegramAlert -ErrorAction SilentlyContinue)) {
+    # 2026-06-01: Enviar apenas EXECUTAR (não ABORTAR) para reduzir ruído
+    if ($cascade.telegramFire -and (Get-Command Send-TelegramAlertFiltered -ErrorAction SilentlyContinue)) {
         try {
             $decisaoTg = if ($DryRun) { "DRY_RUN_EXECUTAR" } else { $cascade.decisao }
-            $msg = Format-TgEsquadraoResult -Market $Market -Triagem $cascade.triagem `
-                -Mesa $cascade.mesa -Mentor $cascade.mentor -Decisao $decisaoTg
-            Send-TelegramAlert -Message $msg | Out-Null
+            
+            # Enviar apenas se EXECUTAR (crítico) ou em debug mode
+            if ($decisaoTg -eq "EXECUTAR" -or $decisaoTg -eq "DRY_RUN_EXECUTAR") {
+                $msg = Format-TgEsquadraoResult -Market $Market -Triagem $cascade.triagem `
+                    -Mesa $cascade.mesa -Mentor $cascade.mentor -Decisao $decisaoTg
+                Send-TelegramAlertFiltered -Message $msg -Tier "CRITICAL" | Out-Null
+            } elseif ($global:TELEGRAM_SEND_DEBUG) {
+                # Debug mode: enviar ABORTAR também
+                $msg = Format-TgEsquadraoResult -Market $Market -Triagem $cascade.triagem `
+                    -Mesa $cascade.mesa -Mentor $cascade.mentor -Decisao $decisaoTg
+                Send-TelegramAlertFiltered -Message $msg -Tier "DEBUG" | Out-Null
+            }
         } catch { Write-Host "  [TG] Falha envio: $_" -ForegroundColor DarkYellow }
     }
 

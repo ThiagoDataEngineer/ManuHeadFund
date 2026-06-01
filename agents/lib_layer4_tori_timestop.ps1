@@ -315,19 +315,20 @@ function Update-Layer4Review {
 
             # ADVISORY mode: only alert, don't execute
             if (-not $autoExec) {
-                if ($decision.action -ne "HOLD") {
-                    # Send advisory alert (no auto-execution)
-                    if (Get-Command Send-TelegramAlert -ErrorAction SilentlyContinue) {
-                        try {
-                            $alertMsg = "[Layer4 ADVISORY] $($pos.market) $($pos.side) suggests: $($decision.action) (reason=$($decision.reason)). Manual action required - no auto-execute."
-                            Send-TelegramAlert -Message $alertMsg | Out-Null
-                        } catch { }
-                    }
+                # 2026-06-01: Enviar apenas CLOSE, não HOLD (reduzir ruído)
+                $sendLayer = $decision.action -eq "CLOSE" -or $global:TELEGRAM_LAYER_SEND_HOLD
+                
+                if ($sendLayer -and (Get-Command Send-TelegramAlertFiltered -ErrorAction SilentlyContinue)) {
+                    try {
+                        $alertMsg = "[Layer4 ADVISORY] $($pos.market) $($pos.side) suggests: $($decision.action) (reason=$($decision.reason)). Manual action required - no auto-execute."
+                        Send-TelegramAlertFiltered -Message $alertMsg -Tier "INFORMATIVE" | Out-Null
+                    } catch { }
+                }
 
-                    # Track advisory in position metadata (for auditing)
-                    $pos | Add-Member -NotePropertyName "layer4Advisory" -NotePropertyValue $decision.action -Force
-                    $pos | Add-Member -NotePropertyName "layer4AdvisoryReason" -NotePropertyValue $decision.reason -Force
-                    $pos | Add-Member -NotePropertyName "lastLayer4Review" -NotePropertyValue (Get-Date -Format "yyyy-MM-dd HH:mm:ss") -Force
+                # Track advisory in position metadata (for auditing)
+                $pos | Add-Member -NotePropertyName "layer4Advisory" -NotePropertyValue $decision.action -Force
+                $pos | Add-Member -NotePropertyName "layer4AdvisoryReason" -NotePropertyValue $decision.reason -Force
+                $pos | Add-Member -NotePropertyName "lastLayer4Review" -NotePropertyValue (Get-Date -Format "yyyy-MM-dd HH:mm:ss") -Force
                     $updated = $true
                 }
                 return $pos

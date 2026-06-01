@@ -198,8 +198,11 @@ function Invoke-OrchestratorAgent {
 
     if (-not $prePass) {
         Write-Host "  [BLOQUEADO] Setup insuficiente — pipeline encerrado sem custo AI." -ForegroundColor Yellow
-        $tgMsg = "[~] PRE-SCREEN BLOQUEOU $Market`n$preMotivo`nNenhum custo AI gerado.`n$(Get-Date -Format 'HH:mm dd/MM/yy')"
-        Send-TelegramAlert -Message $tgMsg | Out-Null
+        # 2026-06-01: Enviar apenas em debug mode (reduzir ruído)
+        if ($global:TELEGRAM_SEND_PRESCREEN) {
+            $tgMsg = "[~] PRE-SCREEN BLOQUEOU $Market`n$preMotivo`nNenhum custo AI gerado.`n$(Get-Date -Format 'HH:mm dd/MM/yy')"
+            Send-TelegramAlertFiltered -Message $tgMsg -Tier "DEBUG" | Out-Null
+        }
         return [PSCustomObject]@{
             market         = $Market
             timestamp      = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")

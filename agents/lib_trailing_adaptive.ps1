@@ -338,11 +338,26 @@ function Update-TrailingStopsAdaptive {
                 $pos.updatedAt = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
                 $updated = $true
 
+                # 2026-06-01: Calcular mudança percentual e filtrar pequenas mudanças
+                $changePct = if ($oldStop -gt 0) {
+                    [math]::Abs(($calc.newStop - $oldStop) / $oldStop * 100)
+                } else {
+                    0
+                }
+                
+                $minChange = if ($global:TELEGRAM_TRAILING_MIN_CHANGE_PCT) {
+                    $global:TELEGRAM_TRAILING_MIN_CHANGE_PCT
+                } else {
+                    5.0
+                }
+
                 $phaseLabel = @("inicial", "breakeven", "lock+33%", "trailing")
                 $msg = "🔄 $($pos.market) $($pos.side) fase $oldPhase→$($pos.phase) ($($phaseLabel[$pos.phase])) stop $oldStop→$($calc.newStop) | regime=$regime"
                 Write-Host "  [Adaptive Trailing] $msg" -ForegroundColor Green
-                if (Get-Command Send-TelegramAlert -ErrorAction SilentlyContinue) {
-                    try { Send-TelegramAlert -Message $msg | Out-Null } catch { }
+                
+                # Enviar apenas se mudança > threshold
+                if ($changePct -ge $minChange -and (Get-Command Send-TelegramAlertFiltered -ErrorAction SilentlyContinue)) {
+                    try { Send-TelegramAlertFiltered -Message $msg -Tier "INFORMATIVE" | Out-Null } catch { }
                 }
 
                 # Tenta mover stop na exchange
