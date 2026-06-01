@@ -111,6 +111,7 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 . (Join-Path $agentsDir "orchestrator_v6.ps1")
 . (Join-Path $agentsDir "lib_operational_whitelist.ps1")  # 2026-06-01: Whitelist SHORT bypass para Tier D
 . (Join-Path $agentsDir "lib_enhanced_short_entry.ps1")   # 2026-06-01: Enhanced SHORT entry filter + regime trailing
+. (Join-Path $agentsDir "lib_mesa_consensus_relaxed.ps1") # 2026-06-01: Relaxar Mesa Consensus + Permitir Tier C com FORTE_3
 . (Join-Path $agentsDir "lib_quant_whitelist.ps1")
 . (Join-Path $agentsDir "lib_top_candidates.ps1")  # Item 1 fix 2026-05-29: Select-TopCandidates (BTC anchor + top-N organicos)
 . (Join-Path $agentsDir "lib_fqs_drain.ps1")       # Item 2 fix 2026-05-29: drain FQS inline antes do orchestrator
