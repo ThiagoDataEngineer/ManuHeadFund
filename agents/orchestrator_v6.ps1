@@ -120,6 +120,19 @@ function Invoke-V6Cascade {
     # === Triagem (Parte A) ===
     $triagem = Invoke-Triagem -Market $Market -Context $Context
 
+    # 2026-06-01: Whitelist SHORT bypass para Tier D
+    # Se ativo está na whitelist SHORT, promover de Tier D para Tier B
+    # Permite SHORTs validados (EV +2.85pp) executarem mesmo com score baixo
+    if ($triagem.tier -eq "D" -and $triagem.direction -eq "SHORT") {
+        if (Get-Command Test-WhitelistShort -ErrorAction SilentlyContinue) {
+            if (Test-WhitelistShort -Market $Market) {
+                Write-Host "  [Whitelist] $Market SHORT: Tier D → B (whitelist override)" -ForegroundColor Cyan
+                $triagem.tier = "B"
+                $triagem.razao = "Whitelist SHORT override: $($triagem.razao)"
+            }
+        }
+    }
+
     if ($triagem.tier -eq "D") {
         return [PSCustomObject]@{
             decisao      = "ABORTAR"

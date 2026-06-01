@@ -168,3 +168,64 @@ function Test-RegimeDirectionAllowed {
         reason  = "$Regime + $Direction nao esta na whitelist (avoid no 14y)"
     }
 }
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Test-WhitelistShort — Verifica se ativo está na whitelist SHORT
+# ─────────────────────────────────────────────────────────────────────────────
+# 2026-06-01: Função para bypass Triagem Tier D para SHORTs na whitelist
+# Permite que SHORTs validados (EV +2.85pp) executem mesmo com score baixo
+function Test-WhitelistShort {
+    <#
+    .SYNOPSIS
+    Verifica se ativo está na whitelist SHORT (TIER_A_LIVE ou TIER_B_PAPER).
+    
+    .PARAMETER Market
+    Par de trading (ex: BTCUSDT)
+    
+    .OUTPUTS
+    [bool] $true se está na whitelist, $false caso contrário
+    #>
+    [CmdletBinding()]
+    [OutputType([bool])]
+    param(
+        [Parameter(Mandatory=$true)][string]$Market
+    )
+
+    try {
+        # Carregar whitelist
+        $wlPath = Join-Path (Join-Path (Split-Path $PSScriptRoot -Parent) "journal") "per_asset_whitelist_2026_05_20_v3_10.json"
+        if (-not (Test-Path $wlPath)) {
+            Write-Verbose "[Whitelist] Arquivo não encontrado: $wlPath"
+            return $false
+        }
+
+        $wl = Get-Content $wlPath -Raw | ConvertFrom-Json
+        
+        # Verificar em ambas as listas
+        $shortLists = @()
+        if ($wl.PSObject.Properties['SHORT_TIER_A_LIVE']) {
+            $shortLists += @($wl.SHORT_TIER_A_LIVE)
+        }
+        if ($wl.PSObject.Properties['SHORT_TIER_B_PAPER']) {
+            $shortLists += @($wl.SHORT_TIER_B_PAPER)
+        }
+
+        # Procurar pelo market
+        foreach ($list in $shortLists) {
+            if ($null -ne ($list | Where-Object { $_.market -eq $Market })) {
+                Write-Verbose "[Whitelist] $Market encontrado em SHORT whitelist"
+                return $true
+            }
+        }
+
+        Write-Verbose "[Whitelist] $Market NÃO encontrado em SHORT whitelist"
+        return $false
+
+    } catch {
+        Write-Warning "[Whitelist] Erro ao verificar SHORT whitelist: $_"
+        return $false
+    }
+}
+
+# Exportada: Test-WhitelistShort
