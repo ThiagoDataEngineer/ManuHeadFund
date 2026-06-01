@@ -25,12 +25,29 @@
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Carregar dependências de Trailing Stop e CoinEx AI (2026-05-29)
+# Carregar dependências principais (2026-06-01)
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Mentor Agent (Parte C - Debate final)
+$mentorAgentPath = Join-Path $PSScriptRoot "mentor_agent.ps1"
+if (Test-Path $mentorAgentPath) {
+    . $mentorAgentPath
+    Write-Verbose "[orchestrator_v6] Loaded: mentor_agent.ps1"
+} else {
+    Write-Warning "[orchestrator_v6] mentor_agent.ps1 not found at $mentorAgentPath"
+}
+
+# Trailing Stop e CoinEx AI (2026-05-29)
+$trailingAdaptivePath = Join-Path $PSScriptRoot "lib_trailing_adaptive.ps1"
 $trailingStopPath = Join-Path $PSScriptRoot "lib_trailing_stop_intelligent.ps1"
 $coinexAIPath = Join-Path $PSScriptRoot "lib_coinex_ai_integration.ps1"
 $enhancedShortPath = Join-Path $PSScriptRoot "lib_enhanced_short_entry.ps1"
+$layer4Path = Join-Path $PSScriptRoot "lib_layer4_tori_timestop.ps1"
+
+if (Test-Path $trailingAdaptivePath) {
+    . $trailingAdaptivePath
+    Write-Verbose "[orchestrator_v6] Loaded: lib_trailing_adaptive.ps1"
+}
 
 if (Test-Path $trailingStopPath) {
     . $trailingStopPath
@@ -45,6 +62,11 @@ if (Test-Path $coinexAIPath) {
 if (Test-Path $enhancedShortPath) {
     . $enhancedShortPath
     Write-Verbose "[orchestrator_v6] Loaded: lib_enhanced_short_entry.ps1 (Enhanced SHORT entry + regime trailing)"
+}
+
+if (Test-Path $layer4Path) {
+    . $layer4Path
+    Write-Verbose "[orchestrator_v6] Loaded: lib_layer4_tori_timestop.ps1"
 }
 
 # Inicializar dicionário global para jobs de trailing stop
