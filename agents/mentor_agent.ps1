@@ -394,6 +394,7 @@ Cite knowledge (arquivo.md:tag). Responda APENAS JSON valido. SEJA CONCISO: use 
 function Build-MentorFullContext {
     # Monta PSCustomObject rich pro Mentor. Cada source eh try/catch -- se quebrar,
     # campo fica null e prompt skipa (graceful). Custo: ~6 leituras de json pequeno.
+    # 2026-06-01: Supabase integration - reads from state_store (Supabase or local JSON fallback)
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)] [string] $Market,
@@ -419,12 +420,23 @@ function Build-MentorFullContext {
         try { $ctx.alpha_history = Get-MarketAlphaSummary -Market $Market } catch {}
     }
 
-    # FQS -- 2026-05-20 PM2: detecta missing + enqueue pra auto-enrich.
+    # FQS -- 2026-06-01: Try Supabase first, fallback to JSON
     try {
-        if (Get-Command Get-FundamentalScore -ErrorAction SilentlyContinue) {
+        # Try Supabase state_store first
+        if (Get-Command Get-StateRecords -ErrorAction SilentlyContinue) {
+            try {
+                $fqsRecords = @(Get-StateRecords -Table "fqs_registry" -Filter @{ market = $Market })
+                if ($fqsRecords.Count -gt 0) {
+                    $fqs = $fqsRecords[0]
+                    $ctx.fqs = [PSCustomObject]@{ score = [int]$fqs.fqs; category = [string]$fqs.category }
+                }
+            } catch {}
+        }
+        
+        # Fallback to JSON if Supabase failed
+        if (-not $ctx.fqs -and (Get-Command Get-FundamentalScore -ErrorAction SilentlyContinue)) {
             $fqs = Get-FundamentalScore -Market $Market
             if ($fqs -and $fqs.reason -eq "market_not_in_registry") {
-                # Enqueue pra coingecko enrichment + sinaliza explicit no ctx
                 try {
                     $queueFile = Join-Path $journalDir "fqs_enrichment_queue.jsonl"
                     @{ market = $Market; queued_at = (Get-Date).ToString('o'); source = "mentor_full_context" } |
@@ -437,86 +449,170 @@ function Build-MentorFullContext {
         }
     } catch {}
 
-    # Beta + dynamic cap (2026-05-22 PM: fix Mentor halucinacao "cap 1.2"
-    # hardcoded. Agora payload carrega current_cap real da phase atual -- Mentor
-    # cita o numero do payload em vez de inventar 1.2 do system prompt).
+    # Beta + dynamic cap (2026-06-01: Supabase integration)
     try {
-        $bPath = Join-Path $journalDir "beta_vs_btc.json"
-        if (Test-Path $bPath) {
-            $b = Get-Content $bPath -Raw -Encoding UTF8 | ConvertFrom-Json
-            if ($b.beta -and $b.beta.PSObject.Properties[$Market]) {
-                # Cap dinamico via phase atual (regime_state.json)
-                $currentCapBlock = 1.2; $currentCapWarn = 1.0; $capPhase = "default"
-                if (Get-Command Get-BetaCapForPhase -ErrorAction SilentlyContinue) {
-                    try {
-                        $regimePath = Join-Path $journalDir "regime_state.json"
-                        $regimeForCap = ""
-                        if (Test-Path $regimePath) {
-                            $rs = Get-Content $regimePath -Raw -Encoding UTF8 | ConvertFrom-Json
-                            if ($rs.current_regime) { $regimeForCap = [string]$rs.current_regime }
-                            elseif ($rs.phase) { $regimeForCap = [string]$rs.phase }
-                        }
-                        $capObj = Get-BetaCapForPhase -Phase $regimeForCap
-                        $currentCapBlock = [double]$capObj.block
-                        $currentCapWarn = [double]$capObj.warn
-                        $capPhase = [string]$capObj.phase
-                    } catch {}
+        # Try Supabase state_store first
+        if (Get-Command Get-StateRecords -ErrorAction SilentlyContinue) {
+            try {
+                $betaRecords = @(Get-StateRecords -Table "beta_history" -Filter @{ market = $Market })
+                if ($betaRecords.Count -gt 0) {
+                    $beta = $betaRecords[0].beta
+                    # Cap dinamico via phase atual
+                    $currentCapBlock = 1.2; $currentCapWarn = 1.0; $capPhase = "default"
+                    if (Get-Command Get-BetaCapForPhase -ErrorAction SilentlyContinue) {
+                        try {
+                            $regimeRecords = @(Get-StateRecords -Table "regime_state")
+                            if ($regimeRecords.Count -gt 0) {
+                                $regimeForCap = [string]$regimeRecords[0].phase
+                                $capObj = Get-BetaCapForPhase -Phase $regimeForCap
+                                $currentCapBlock = [double]$capObj.block
+                                $currentCapWarn = [double]$capObj.warn
+                                $capPhase = [string]$capObj.phase
+                            }
+                        } catch {}
+                    }
+                    $ctx.beta = [PSCustomObject]@{
+                        asset = [double]$beta
+                        portfolio_after = [double]$beta
+                        current_cap_block = $currentCapBlock
+                        current_cap_warn = $currentCapWarn
+                        cap_phase = $capPhase
+                    }
                 }
-                $ctx.beta = [PSCustomObject]@{
-                    asset = [double]$b.beta.$Market
-                    portfolio_after = [double]$b.beta.$Market   # caller pode override com avg real
-                    current_cap_block = $currentCapBlock
-                    current_cap_warn = $currentCapWarn
-                    cap_phase = $capPhase
+            } catch {}
+        }
+        
+        # Fallback to JSON if Supabase failed
+        if (-not $ctx.beta) {
+            $bPath = Join-Path $journalDir "beta_vs_btc.json"
+            if (Test-Path $bPath) {
+                $b = Get-Content $bPath -Raw -Encoding UTF8 | ConvertFrom-Json
+                if ($b.beta -and $b.beta.PSObject.Properties[$Market]) {
+                    $currentCapBlock = 1.2; $currentCapWarn = 1.0; $capPhase = "default"
+                    if (Get-Command Get-BetaCapForPhase -ErrorAction SilentlyContinue) {
+                        try {
+                            $regimePath = Join-Path $journalDir "regime_state.json"
+                            $regimeForCap = ""
+                            if (Test-Path $regimePath) {
+                                $rs = Get-Content $regimePath -Raw -Encoding UTF8 | ConvertFrom-Json
+                                if ($rs.current_regime) { $regimeForCap = [string]$rs.current_regime }
+                                elseif ($rs.phase) { $regimeForCap = [string]$rs.phase }
+                            }
+                            $capObj = Get-BetaCapForPhase -Phase $regimeForCap
+                            $currentCapBlock = [double]$capObj.block
+                            $currentCapWarn = [double]$capObj.warn
+                            $capPhase = [string]$capObj.phase
+                        } catch {}
+                    }
+                    $ctx.beta = [PSCustomObject]@{
+                        asset = [double]$b.beta.$Market
+                        portfolio_after = [double]$b.beta.$Market
+                        current_cap_block = $currentCapBlock
+                        current_cap_warn = $currentCapWarn
+                        cap_phase = $capPhase
+                    }
                 }
             }
         }
     } catch {}
 
-    # Historical DSR + n_trades
+    # Historical DSR + n_trades (2026-06-01: Supabase integration)
     try {
-        $dsrPath = Join-Path $journalDir "dsr_global.json"
-        if (Test-Path $dsrPath) {
-            $d = Get-Content $dsrPath -Raw -Encoding UTF8 | ConvertFrom-Json
-            $perMarket = if ($d.per_market -and $d.per_market.PSObject.Properties[$Market]) { $d.per_market.$Market } else { $null }
-            if ($perMarket) {
-                $ctx.historical = [PSCustomObject]@{
-                    dsr = [double]$perMarket.dsr
-                    n_trades = [int]$perMarket.n_trials
-                    sharpe_30d = if ($perMarket.PSObject.Properties['sharpe_30d']) { [double]$perMarket.sharpe_30d } else { 0 }
+        # Try Supabase state_store first
+        if (Get-Command Get-StateRecords -ErrorAction SilentlyContinue) {
+            try {
+                $drsRecords = @(Get-StateRecords -Table "dsr_global" -Filter @{ market = $Market })
+                if ($drsRecords.Count -gt 0) {
+                    $dsr = $drsRecords[0]
+                    $ctx.historical = [PSCustomObject]@{
+                        dsr = [double]$dsr.dsr
+                        n_trades = [int]$dsr.n_trades
+                        sharpe_30d = if ($dsr.PSObject.Properties['sharpe_30d']) { [double]$dsr.sharpe_30d } else { 0 }
+                    }
+                }
+            } catch {}
+        }
+        
+        # Fallback to JSON if Supabase failed
+        if (-not $ctx.historical) {
+            $dsrPath = Join-Path $journalDir "dsr_global.json"
+            if (Test-Path $dsrPath) {
+                $d = Get-Content $dsrPath -Raw -Encoding UTF8 | ConvertFrom-Json
+                $perMarket = if ($d.per_market -and $d.per_market.PSObject.Properties[$Market]) { $d.per_market.$Market } else { $null }
+                if ($perMarket) {
+                    $ctx.historical = [PSCustomObject]@{
+                        dsr = [double]$perMarket.dsr
+                        n_trades = [int]$perMarket.n_trials
+                        sharpe_30d = if ($perMarket.PSObject.Properties['sharpe_30d']) { [double]$perMarket.sharpe_30d } else { 0 }
+                    }
                 }
             }
         }
     } catch {}
 
-    # Regime
+    # Regime (2026-06-01: Supabase integration)
     try {
-        $rPath = Join-Path $journalDir "regime_state.json"
-        $phase = ""
-        if (Test-Path $rPath) {
-            $r = Get-Content $rPath -Raw -Encoding UTF8 | ConvertFrom-Json
-            if ($r.phase) { $phase = [string]$r.phase }
+        # Try Supabase state_store first
+        if (Get-Command Get-StateRecords -ErrorAction SilentlyContinue) {
+            try {
+                $regimeRecords = @(Get-StateRecords -Table "regime_state")
+                if ($regimeRecords.Count -gt 0) {
+                    $regime = $regimeRecords[0]
+                    $phase = [string]$regime.phase
+                    if ($phase) {
+                        $ctx.regime = [PSCustomObject]@{ phase = $phase; bias = $RegimeBias }
+                    }
+                }
+            } catch {}
         }
-        if ($phase -or $RegimeBias) {
-            $ctx.regime = [PSCustomObject]@{ phase = $phase; bias = $RegimeBias }
+        
+        # Fallback to JSON if Supabase failed
+        if (-not $ctx.regime) {
+            $rPath = Join-Path $journalDir "regime_state.json"
+            $phase = ""
+            if (Test-Path $rPath) {
+                $r = Get-Content $rPath -Raw -Encoding UTF8 | ConvertFrom-Json
+                if ($r.phase) { $phase = [string]$r.phase }
+            }
+            if ($phase -or $RegimeBias) {
+                $ctx.regime = [PSCustomObject]@{ phase = $phase; bias = $RegimeBias }
+            }
         }
     } catch {}
 
-    # Drawdown (latest tier_a_drawdown_*.json)
+    # Drawdown (2026-06-01: Supabase integration)
     try {
-        $ddFile = Get-ChildItem -Path $journalDir -Filter "tier_a_drawdown_*.json" -ErrorAction SilentlyContinue |
-                   Sort-Object LastWriteTime -Descending | Select-Object -First 1
-        if ($ddFile) {
-            $dd = Get-Content $ddFile.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
-            $entry = $null
-            if ($dd.drawdowns) {
-                $entry = @($dd.drawdowns | Where-Object { $_.market -eq $Market }) | Select-Object -First 1
-            }
-            if ($entry) {
-                $ctx.drawdown = [PSCustomObject]@{
-                    vs_peak_pct = [double]$entry.vs_peak_pct
-                    flag_streak = if ($entry.PSObject.Properties['flag_streak']) { [int]$entry.flag_streak } else { 0 }
-                    level = [string]$entry.level
+        # Try Supabase state_store first
+        if (Get-Command Get-StateRecords -ErrorAction SilentlyContinue) {
+            try {
+                $ddRecords = @(Get-StateRecords -Table "drawdown_history" -Filter @{ market = $Market })
+                if ($ddRecords.Count -gt 0) {
+                    $dd = $ddRecords[0]
+                    $ctx.drawdown = [PSCustomObject]@{
+                        vs_peak_pct = [double]$dd.vs_peak_pct
+                        flag_streak = if ($dd.PSObject.Properties['flag_streak']) { [int]$dd.flag_streak } else { 0 }
+                        level = [string]$dd.level
+                    }
+                }
+            } catch {}
+        }
+        
+        # Fallback to JSON if Supabase failed
+        if (-not $ctx.drawdown) {
+            $ddFile = Get-ChildItem -Path $journalDir -Filter "tier_a_drawdown_*.json" -ErrorAction SilentlyContinue |
+                       Sort-Object LastWriteTime -Descending | Select-Object -First 1
+            if ($ddFile) {
+                $dd = Get-Content $ddFile.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
+                $entry = $null
+                if ($dd.drawdowns) {
+                    $entry = @($dd.drawdowns | Where-Object { $_.market -eq $Market }) | Select-Object -First 1
+                }
+                if ($entry) {
+                    $ctx.drawdown = [PSCustomObject]@{
+                        vs_peak_pct = [double]$entry.vs_peak_pct
+                        flag_streak = if ($entry.PSObject.Properties['flag_streak']) { [int]$entry.flag_streak } else { 0 }
+                        level = [string]$entry.level
+                    }
                 }
             }
         }
@@ -524,26 +620,50 @@ function Build-MentorFullContext {
 
     # Gates: deferred -- caller passa via -GatesResult quando tiver. Default null.
 
-    # Tori proximity (anticipatory layer 2026-05-21):
+    # Tori proximity (2026-06-01: Supabase integration - anticipatory layer)
     # Le snapshot escrito por CoinExToriProximity cron 15min. Fail-safe -- se stale/missing,
     # field=null e Mentor prompt skipa. Field rico: side (LONG/SHORT/NONE), proximity_pct,
     # action_line, ripening. Mentor decide se trade eh "setup zone" ou "chase".
     try {
-        if (Get-Command Get-ToriProximityForMarket -ErrorAction SilentlyContinue) {
-            $statePath = Join-Path $journalDir "tori_proximity_state.json"
-            $tp = Get-ToriProximityForMarket -Market $Market -StatePath $statePath -MaxAgeMinutes 30
-            if ($tp) {
-                $ctx | Add-Member -MemberType NoteProperty -Name tori_proximity -Value ([PSCustomObject]@{
-                    valid          = [bool]$tp.valid
-                    side           = "$($tp.side)"
-                    proximity_pct  = $tp.proximity_pct
-                    action_line    = $tp.action_line
-                    touches        = $tp.touches
-                    slope_deg      = $tp.slope_deg
-                    rsi            = $tp.rsi
-                    vol_drying     = $tp.vol_drying
-                    setup_ripening = [bool]$tp.setup_ripening
-                }) -Force
+        # Try Supabase state_store first
+        if (Get-Command Get-StateRecords -ErrorAction SilentlyContinue) {
+            try {
+                $toriRecords = @(Get-StateRecords -Table "tori_proximity" -Filter @{ market = $Market })
+                if ($toriRecords.Count -gt 0) {
+                    $tp = $toriRecords[0]
+                    $ctx | Add-Member -MemberType NoteProperty -Name tori_proximity -Value ([PSCustomObject]@{
+                        valid          = [bool]$tp.valid
+                        side           = "$($tp.side)"
+                        proximity_pct  = [double]$tp.proximity_pct
+                        action_line    = [double]$tp.action_line
+                        touches        = [int]$tp.touches
+                        slope_deg      = [double]$tp.slope_deg
+                        rsi            = [double]$tp.rsi
+                        vol_drying     = [bool]$tp.vol_drying
+                        setup_ripening = [bool]$tp.setup_ripening
+                    }) -Force
+                }
+            } catch {}
+        }
+        
+        # Fallback to JSON if Supabase failed
+        if (-not ($ctx.PSObject.Properties['tori_proximity'])) {
+            if (Get-Command Get-ToriProximityForMarket -ErrorAction SilentlyContinue) {
+                $statePath = Join-Path $journalDir "tori_proximity_state.json"
+                $tp = Get-ToriProximityForMarket -Market $Market -StatePath $statePath -MaxAgeMinutes 30
+                if ($tp) {
+                    $ctx | Add-Member -MemberType NoteProperty -Name tori_proximity -Value ([PSCustomObject]@{
+                        valid          = [bool]$tp.valid
+                        side           = "$($tp.side)"
+                        proximity_pct  = $tp.proximity_pct
+                        action_line    = $tp.action_line
+                        touches        = $tp.touches
+                        slope_deg      = $tp.slope_deg
+                        rsi            = $tp.rsi
+                        vol_drying     = $tp.vol_drying
+                        setup_ripening = [bool]$tp.setup_ripening
+                    }) -Force
+                }
             }
         }
     } catch {}

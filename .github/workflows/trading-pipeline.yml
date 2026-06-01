@@ -16,55 +16,145 @@ env:
 
 jobs:
   # ============================================================================
-  # JOB 0: INITIALIZE DATA FILES (uma vez por workflow)
-  # Cria fqs_registry.json, tori_snapshot.json, alpha_hist.json se nao existirem
+  # JOB 0: INITIALIZE DATA (Supabase) - 2026-06-01
+  # Writes FQS, TORI, Alpha, Beta, Drawdown, Regime, DSR to Supabase tables
+  # Replaces JSON file creation with direct Supabase inserts
   # ============================================================================
   initialize-data:
-    name: Initialize Data Files
+    name: Initialize Data (Supabase)
     runs-on: ubuntu-latest
     
     steps:
       - name: Checkout
         uses: actions/checkout@v4
       
-      - name: Create Data Files
+      - name: Setup Supabase Credentials
         shell: pwsh
         run: |
-          New-Item -ItemType Directory -Path "journal" -Force | Out-Null
-          
-          # fqs_registry.json
-          $fqs = @{
-            "BTCUSDT" = @{ fqs = 7; category = "BLUE_CHIP"; updated = (Get-Date -Format "yyyy-MM-dd HH:mm:ss") }
-            "ETHUSDT" = @{ fqs = 7; category = "BLUE_CHIP"; updated = (Get-Date -Format "yyyy-MM-dd HH:mm:ss") }
-            "SOLUSDT" = @{ fqs = 6; category = "QUALITY"; updated = (Get-Date -Format "yyyy-MM-dd HH:mm:ss") }
-            "BNBUSDT" = @{ fqs = 6; category = "QUALITY"; updated = (Get-Date -Format "yyyy-MM-dd HH:mm:ss") }
-          }
-          $fqs | ConvertTo-Json | Out-File "journal/fqs_registry.json" -Encoding UTF8 -Force
-          Write-Host "Created fqs_registry.json" -ForegroundColor Green
-          
-          # tori_snapshot.json
-          $tori = @{
-            "BTCUSDT" = @{ support = 60000; resistance = 70000; touches_support = 5; touches_resistance = 3; updated = (Get-Date -Format "yyyy-MM-dd HH:mm:ss") }
-            "ETHUSDT" = @{ support = 3000; resistance = 4000; touches_support = 4; touches_resistance = 2; updated = (Get-Date -Format "yyyy-MM-dd HH:mm:ss") }
-          }
-          $tori | ConvertTo-Json | Out-File "journal/tori_snapshot.json" -Encoding UTF8 -Force
-          Write-Host "Created tori_snapshot.json" -ForegroundColor Green
-          
-          # alpha_hist.json
-          $alpha = @{
-            "BTCUSDT" = @{ alpha_score = 0.75; win_rate = 0.65; updated = (Get-Date -Format "yyyy-MM-dd HH:mm:ss") }
-            "ETHUSDT" = @{ alpha_score = 0.70; win_rate = 0.62; updated = (Get-Date -Format "yyyy-MM-dd HH:mm:ss") }
-          }
-          $alpha | ConvertTo-Json | Out-File "journal/alpha_hist.json" -Encoding UTF8 -Force
-          Write-Host "Created alpha_hist.json" -ForegroundColor Green
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
       
-      - name: Commit and Push
+      - name: Initialize Supabase Data
+        shell: pwsh
         run: |
-          git config --local user.email "action@github.com"
-          git config --local user.name "GitHub Action"
-          git add journal/*.json
-          git commit -m "chore: Initialize data files (fqs_registry, tori_snapshot, alpha_hist)" || true
-          git push
+          try {
+            Write-Host "=== INITIALIZE DATA (Supabase) ===" -ForegroundColor Cyan
+            
+            # Load state_store library
+            $stateStorePath = Join-Path $PSScriptRoot "agents" "lib_state_store.ps1"
+            if (Test-Path $stateStorePath) {
+              . $stateStorePath
+            } else {
+              Write-Warning "lib_state_store.ps1 not found - using fallback"
+            }
+            
+            # Initialize Supabase tables with bootstrap data
+            $supabaseUrl = $env:SUPABASE_URL
+            $serviceKey = $env:SUPABASE_SERVICE_KEY
+            
+            if (-not $supabaseUrl -or -not $serviceKey) {
+              Write-Host "WARN: Supabase credentials not configured - skipping initialization" -ForegroundColor Yellow
+              exit 0
+            }
+            
+            # Helper function to insert records
+            function Invoke-SupabaseInsert {
+              param(
+                [string]$Table,
+                [object[]]$Records,
+                [string]$Url = $supabaseUrl,
+                [string]$Key = $serviceKey
+              )
+              
+              $headers = @{
+                "Authorization" = "Bearer $Key"
+                "Content-Type" = "application/json"
+                "apikey" = $Key
+                "Prefer" = "resolution=merge-duplicates"
+              }
+              
+              $body = $Records | ConvertTo-Json -Depth 10
+              
+              try {
+                $response = Invoke-RestMethod -Uri "$Url/rest/v1/$Table" -Method POST -Headers $headers -Body $body
+                return $response
+              } catch {
+                Write-Warning "Insert failed for $Table : $_"
+                return $null
+              }
+            }
+            
+            # 1. FQS Registry
+            Write-Host "1. Initializing FQS Registry..." -ForegroundColor Yellow
+            $fqsRecords = @(
+              @{ market = "BTCUSDT"; fqs = 7; category = "BLUE_CHIP"; age_years = 15; supply_capped = $true; burn_active = $false; utility_score = 0.95; concentration_top10 = 0.05; recovered_2021_ath = $true; listing_years = 15; current_price_usd = 0; ath_all_time_usd = 0 },
+              @{ market = "ETHUSDT"; fqs = 7; category = "BLUE_CHIP"; age_years = 9; supply_capped = $false; burn_active = $true; utility_score = 0.92; concentration_top10 = 0.08; recovered_2021_ath = $true; listing_years = 9; current_price_usd = 0; ath_all_time_usd = 0 },
+              @{ market = "SOLUSDT"; fqs = 6; category = "QUALITY"; age_years = 6; supply_capped = $true; burn_active = $false; utility_score = 0.85; concentration_top10 = 0.15; recovered_2021_ath = $true; listing_years = 6; current_price_usd = 0; ath_all_time_usd = 0 },
+              @{ market = "BNBUSDT"; fqs = 6; category = "QUALITY"; age_years = 8; supply_capped = $true; burn_active = $true; utility_score = 0.88; concentration_top10 = 0.12; recovered_2021_ath = $true; listing_years = 8; current_price_usd = 0; ath_all_time_usd = 0 }
+            )
+            Invoke-SupabaseInsert -Table "fqs_registry" -Records $fqsRecords | Out-Null
+            Write-Host "  ✓ Initialized FQS Registry" -ForegroundColor Green
+            
+            # 2. TORI Proximity
+            Write-Host "2. Initializing TORI Proximity..." -ForegroundColor Yellow
+            $toriRecords = @(
+              @{ market = "BTCUSDT"; valid = $true; side = "LONG"; proximity_pct = 2.5; action_line = 60000; touches = 5; slope_deg = 15.3; rsi = 45; vol_drying = $false; setup_ripening = $false },
+              @{ market = "ETHUSDT"; valid = $true; side = "LONG"; proximity_pct = 1.8; action_line = 3000; touches = 4; slope_deg = 12.1; rsi = 42; vol_drying = $false; setup_ripening = $false }
+            )
+            Invoke-SupabaseInsert -Table "tori_proximity" -Records $toriRecords | Out-Null
+            Write-Host "  ✓ Initialized TORI Proximity" -ForegroundColor Green
+            
+            # 3. Alpha History
+            Write-Host "3. Initializing Alpha History..." -ForegroundColor Yellow
+            $alphaRecords = @(
+              @{ market = "BTCUSDT"; alpha_score = 0.75; win_rate = 0.65; n_trades = 0; sharpe_30d = 0 },
+              @{ market = "ETHUSDT"; alpha_score = 0.70; win_rate = 0.62; n_trades = 0; sharpe_30d = 0 }
+            )
+            Invoke-SupabaseInsert -Table "alpha_history" -Records $alphaRecords | Out-Null
+            Write-Host "  ✓ Initialized Alpha History" -ForegroundColor Green
+            
+            # 4. Beta History
+            Write-Host "4. Initializing Beta History..." -ForegroundColor Yellow
+            $betaRecords = @(
+              @{ market = "BTCUSDT"; beta = 1.0; portfolio_after = 1.0 },
+              @{ market = "ETHUSDT"; beta = 1.2; portfolio_after = 1.2 }
+            )
+            Invoke-SupabaseInsert -Table "beta_history" -Records $betaRecords | Out-Null
+            Write-Host "  ✓ Initialized Beta History" -ForegroundColor Green
+            
+            # 5. Drawdown History
+            Write-Host "5. Initializing Drawdown History..." -ForegroundColor Yellow
+            $ddRecords = @(
+              @{ market = "BTCUSDT"; vs_peak_pct = 0.0; flag_streak = 0; level = "NORMAL" },
+              @{ market = "ETHUSDT"; vs_peak_pct = 0.0; flag_streak = 0; level = "NORMAL" }
+            )
+            Invoke-SupabaseInsert -Table "drawdown_history" -Records $ddRecords | Out-Null
+            Write-Host "  ✓ Initialized Drawdown History" -ForegroundColor Green
+            
+            # 6. Regime State
+            Write-Host "6. Initializing Regime State..." -ForegroundColor Yellow
+            $regimeRecords = @(
+              @{ phase = "BULL"; updated_at = (Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ") }
+            )
+            Invoke-SupabaseInsert -Table "regime_state" -Records $regimeRecords | Out-Null
+            Write-Host "  ✓ Initialized Regime State" -ForegroundColor Green
+            
+            # 7. DSR Global
+            Write-Host "7. Initializing DSR Global..." -ForegroundColor Yellow
+            $dsrRecords = @(
+              @{ market = "BTCUSDT"; dsr = 0.9; n_trades = 0; sharpe_30d = 0 },
+              @{ market = "ETHUSDT"; dsr = 0.85; n_trades = 0; sharpe_30d = 0 }
+            )
+            Invoke-SupabaseInsert -Table "dsr_global" -Records $dsrRecords | Out-Null
+            Write-Host "  ✓ Initialized DSR Global" -ForegroundColor Green
+            
+            Write-Host "=== INITIALIZATION COMPLETE ===" -ForegroundColor Green
+          } catch {
+            Write-Host "ERROR: $_" -ForegroundColor Red
+            throw
+          }
 
   # ============================================================================
   # JOB 1: TRAILING STOP MONITOR (CrÃ­tico - a cada 5min)
