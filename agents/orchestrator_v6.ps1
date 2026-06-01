@@ -281,10 +281,23 @@ function Invoke-V6Cascade {
             $mentorMode = "TIER_A_PAPER"
             Write-Warning "[orchestrator_v6] BTCUSDT_TIMEOUT_FIX: Tier A sem whitelist tier; fallback para TIER_A_PAPER (Market=$Market)"
         }
-    } elseif ($wlTierStr -eq "observe") {
-        $mentorMode = "TIER_B_PAPER"
-    } elseif ($wlTierStr -eq "live") {
-        $mentorMode = "TIER_A_LIVE"   # fallback compat
+    } elseif ($triagemTier -eq "B") {
+        if ($wlTierStr -eq "observe") {
+            $mentorMode = "TIER_B_PAPER"
+        } elseif ($wlTierStr -eq "live") {
+            $mentorMode = "TIER_B_LIVE"
+        } else {
+            $mentorMode = "TIER_B_PAPER"  # Tier B default para PAPER
+        }
+    } else {
+        # Tier C/D ou vazio
+        if ($wlTierStr -eq "observe") {
+            $mentorMode = "TIER_B_PAPER"
+        } elseif ($wlTierStr -eq "live") {
+            $mentorMode = "TIER_A_LIVE"   # fallback compat
+        } else {
+            $mentorMode = "STANDARD"
+        }
     }
     
     if ($Context.source -eq "GEM" -or $Context.mode -eq "GEM") { $mentorMode = "GEM" }
