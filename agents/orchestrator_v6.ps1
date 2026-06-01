@@ -419,6 +419,12 @@ function Invoke-V6Cascade {
         }
     }
 
+    # Verificar se Invoke-MentorDebate está disponível
+    if (-not (Get-Command Invoke-MentorDebate -ErrorAction SilentlyContinue)) {
+        Write-Warning "[orchestrator_v6] Invoke-MentorDebate NAO disponivel - recarregando mentor_agent.ps1"
+        . (Join-Path $PSScriptRoot "mentor_agent.ps1")
+    }
+
     $mentor = Invoke-MentorDebate -Market $Market -TriagemResult $triagem `
                                   -MesaResult $mesa -Setup $setupForMentor -FullContext $fullCtx
 
