@@ -127,4 +127,3 @@ function Get-TradeReasonStats {
         return $null
     }
 }
-)

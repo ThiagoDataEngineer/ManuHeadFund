@@ -151,7 +151,7 @@ function Test-MesaSkip {
     # Critério 1: SMA flatline
     if ($Candidate.sma9 -and $Candidate.sma21) {
         if (Test-SmaFlatline -SmaShort $Candidate.sma9 -SmaLong $Candidate.sma21 -FlatnessThresholdPct 2.0) {
-            Write-Verbose "[MesaSkip] $($Candidate.market): SMA flatline — skip Mesa"
+            Write-Verbose "[MesaSkip] $($Candidate.market): SMA flatline - skip Mesa"
             return $true
         }
     }
