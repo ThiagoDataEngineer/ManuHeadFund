@@ -350,8 +350,7 @@ function Update-Layer4Review {
                         } else {
                             Write-Host "      Exchange close FAILED: $($pos.market)" -ForegroundColor Red
                         }
-                    }
-                    catch {
+                    } catch {
                         Write-Host "      Exchange close ERROR: $_" -ForegroundColor Red
                     }
                 }
@@ -387,8 +386,7 @@ function Update-Layer4Review {
                 }
             }
 
-        }
-        catch {
+        } catch {
             Write-Host "    [Layer4] Error processing $($pos.market): $_" -ForegroundColor DarkRed
         }
 
@@ -402,4 +400,3 @@ function Update-Layer4Review {
 
 # Functions exported: Test-StagnantTrade, Get-PeakProgress, Get-ToriProximity,
 #                      Get-Layer4Decision, Update-Layer4Review
-
