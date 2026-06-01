@@ -7,16 +7,16 @@
 #
 # Dot-source: . (Join-Path $PSScriptRoot "lib_trailing_adaptive.ps1")
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Get-AdaptiveBuffer -- Calcula buffer dinâmico por regime + volatilidade
-# ─────────────────────────────────────────────────────────────────────────────
+# -------------------------------------------------------------------------
+# Get-AdaptiveBuffer -- Calcula buffer dinamico por regime + volatilidade
+# -------------------------------------------------------------------------
 function Get-AdaptiveBuffer {
     <#
     .SYNOPSIS
     Calcula buffer adaptativo para breakeven transition baseado em regime + ATR.
     
     .PARAMETER Range
-    Distância entry → target (movimento esperado)
+    Distancia entry -> target (movimento esperado)
     
     .PARAMETER CurrentAtr
     ATR atual (volatilidade intraday)
@@ -76,9 +76,9 @@ function Get-AdaptiveBuffer {
     return [math]::Max($buffer, $minBuffer)
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -------------------------------------------------------------------------
 # Get-TrailingNewStopAdaptive -- Calcula novo stop por fase com buffer adaptativo
-# ─────────────────────────────────────────────────────────────────────────────
+# -------------------------------------------------------------------------
 function Get-TrailingNewStopAdaptive {
     <#
     .SYNOPSIS
@@ -220,9 +220,9 @@ function Get-TrailingNewStopAdaptive {
     }
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
+# -------------------------------------------------------------------------
 # Update-TrailingStopsAdaptive -- Wrapper que integra adaptive no ciclo master
-# ─────────────────────────────────────────────────────────────────────────────
+# -------------------------------------------------------------------------
 function Update-TrailingStopsAdaptive {
     <#
     .SYNOPSIS
@@ -352,7 +352,7 @@ function Update-TrailingStopsAdaptive {
                 }
 
                 $phaseLabel = @("inicial", "breakeven", "lock+33%", "trailing")
-                $msg = "🔄 $($pos.market) $($pos.side) fase $oldPhase→$($pos.phase) ($($phaseLabel[$pos.phase])) stop $oldStop→$($calc.newStop) | regime=$regime"
+                $msg = "[PHASE] $($pos.market) $($pos.side) fase $oldPhase->$($pos.phase) ($($phaseLabel[$pos.phase])) stop $oldStop->$($calc.newStop) | regime=$regime"
                 Write-Host "  [Adaptive Trailing] $msg" -ForegroundColor Green
                 
                 # 2026-06-01: Trailing é cobertura de trades vivos - SEMPRE enviar (TIER IMPORTANT)
@@ -387,9 +387,9 @@ function Update-TrailingStopsAdaptive {
 # Dot-source ao usar (não é módulo formal)
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Sync-TrailingPositionsWithExchange — Sincroniza posições com CoinEx
-# ─────────────────────────────────────────────────────────────────────────────
+# -------------------------------------------------------------------------
+# Sync-TrailingPositionsWithExchange - Sincroniza posicoes com CoinEx
+# -------------------------------------------------------------------------
 # 2026-06-01: Função para sincronizar posições abertas com a exchange
 # Problema: Quando usuário muda stop/target manualmente na ferramenta,
 # o arquivo trailing_positions.json não é atualizado automaticamente.
@@ -451,14 +451,14 @@ function Sync-TrailingPositionsWithExchange {
                 $newTarget = if ($order.take_profit_price) { [double]$order.take_profit_price } else { $existing.target }
                 
                 if ($newStop -ne $oldStop -or $newTarget -ne $oldTarget) {
-                    Write-Host "  [Sync Trailing] $market: stop $oldStop→$newStop, target $oldTarget→$newTarget" -ForegroundColor Cyan
+                    Write-Host ("  [Sync Trailing] {0}: stop {1} -> {2}, target {3} -> {4}" -f $market, $oldStop, $newStop, $oldTarget, $newTarget) -ForegroundColor Cyan
                     $existing.stopCurrent = $newStop
                     $existing.target = $newTarget
                     $existing.updatedAt = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
                     $updated = $true
                     
                     # Notificar via Telegram
-                    $msg = "🔄 SYNC: $market stop atualizado $oldStop→$newStop (mudança manual detectada)"
+                    $msg = "SYNC: $market stop atualizado $oldStop -> $newStop (mudanca manual detectada)"
                     if (Get-Command Send-TelegramAlertFiltered -ErrorAction SilentlyContinue) {
                         try { Send-TelegramAlertFiltered -Message $msg -Tier "IMPORTANT" | Out-Null } catch { }
                     }
@@ -506,9 +506,9 @@ function Sync-TrailingPositionsWithExchange {
     }
 }
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Whale/Bacon Alert Handler — Receber alertas com tipo (compra/venda)
-# ─────────────────────────────────────────────────────────────────────────────
+# -------------------------------------------------------------------------
+# Whale/Bacon Alert Handler - Receber alertas com tipo (compra/venda)
+# -------------------------------------------------------------------------
 function Send-WhaleAlert {
     <#
     .SYNOPSIS
@@ -538,7 +538,7 @@ function Send-WhaleAlert {
         [Parameter(Mandatory=$false)][string]$Source = "whale_monitor"
     )
 
-    $emoji = if ($Type -eq "BUY") { "🐋 COMPRA" } else { "🐋 VENDA" }
+    $emoji = if ($Type -eq "BUY") { "[WHALE BUY]" } else { "[WHALE SELL]" }
     $usdValue = [math]::Round($Amount * $Price, 2)
     
     $msg = "$emoji | $Market`nVolume: $Amount @ $Price`nValor: \$$usdValue`nFonte: $Source"
