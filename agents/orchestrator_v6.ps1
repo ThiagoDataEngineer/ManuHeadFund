@@ -30,6 +30,7 @@
 
 $trailingStopPath = Join-Path $PSScriptRoot "lib_trailing_stop_intelligent.ps1"
 $coinexAIPath = Join-Path $PSScriptRoot "lib_coinex_ai_integration.ps1"
+$enhancedShortPath = Join-Path $PSScriptRoot "lib_enhanced_short_entry.ps1"
 
 if (Test-Path $trailingStopPath) {
     . $trailingStopPath
@@ -39,6 +40,11 @@ if (Test-Path $trailingStopPath) {
 if (Test-Path $coinexAIPath) {
     . $coinexAIPath
     Write-Verbose "[orchestrator_v6] Loaded: lib_coinex_ai_integration.ps1"
+}
+
+if (Test-Path $enhancedShortPath) {
+    . $enhancedShortPath
+    Write-Verbose "[orchestrator_v6] Loaded: lib_enhanced_short_entry.ps1 (Enhanced SHORT entry + regime trailing)"
 }
 
 # Inicializar dicionário global para jobs de trailing stop
@@ -279,6 +285,36 @@ function Invoke-V6Cascade {
     #   triagem=B + wl=observe -> TIER_B_PAPER (paper validation antes promote)
     #   GEM source             -> GEM
     # 2026-06-01 FIX: Tier A NUNCA pode ser STANDARD mode (causa timeout). Fallback para PAPER.
+    # 2026-06-01 ENHANCED SHORT: Validar entrada com RSI/MACD/Volume gates antes de Mentor
+    
+    # Enhanced SHORT validation (se direction SHORT + Mesa FORTE_3)
+    if ($triagem.direction -eq "SHORT" -and $mesa -and $mesa.consensus -eq "FORTE_3") {
+        if (Get-Command Invoke-EnhancedShortValidation -ErrorAction SilentlyContinue) {
+            try {
+                $enhancedVal = Invoke-EnhancedShortValidation -Market $Market `
+                                                              -Context $Context `
+                                                              -TriagemTier $triagemTier `
+                                                              -MesaConsensus $mesa.consensus
+                if (-not $enhancedVal.approved) {
+                    Write-Host "  [Enhanced SHORT] $Market: $($enhancedVal.reason) (confidence: $($enhancedVal.confidence)%)" -ForegroundColor Yellow
+                    return [PSCustomObject]@{
+                        decisao      = "ABORTAR"
+                        motivo       = "Enhanced SHORT filter: $($enhancedVal.reason)"
+                        triagem      = $triagem
+                        mesa         = $mesa
+                        mentor       = $null
+                        telegramFire = $false
+                        paperOnly    = $paperOnly
+                    }
+                } else {
+                    Write-Host "  [Enhanced SHORT] $Market: ✅ PASSED (confidence: $($enhancedVal.confidence)%)" -ForegroundColor Cyan
+                }
+            } catch {
+                Write-Warning "[Enhanced SHORT] Validação falhou (passa adiante): $_"
+            }
+        }
+    }
+    
     $triagemTier = if ($triagem -and $triagem.tier) { [string]$triagem.tier } else { "" }
     $wlTierStr   = if ($wl -and $wl.tier) { [string]$wl.tier } else { "" }
     $mentorMode = "STANDARD"
