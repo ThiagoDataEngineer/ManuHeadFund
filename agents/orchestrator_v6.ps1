@@ -919,7 +919,7 @@ function Initialize-TrailingStopForPosition {
         $position = CoinEx-GetPendingPositions -Market $Market | Select-Object -First 1
         
         if (-not $position) {
-            Write-Host "❌ Nenhuma posição aberta para $Market" -ForegroundColor Red
+            Write-Host "[FAIL] Nenhuma posição aberta para $Market" -ForegroundColor Red
             return [PSCustomObject]@{
                 success = $false
                 market = $Market
@@ -943,7 +943,7 @@ function Initialize-TrailingStopForPosition {
             -Qty $qty `
             -Mode $Mode
         
-        Write-Host "✅ TP/SL Automático Inicializado para $Market" -ForegroundColor Green
+        Write-Host "[OK] TP/SL Automático Inicializado para $Market" -ForegroundColor Green
         Write-Host "   Entry: $entryPrice | TP: $($tpsl.TPBase) | SL: $($tpsl.SLBase)" -ForegroundColor Cyan
         Write-Host "   Trailing Stop: $($tpsl.TrailingStop) | Saídas Parciais: $($tpsl.PartialExits.Count)" -ForegroundColor Cyan
         
@@ -992,7 +992,7 @@ function Initialize-TrailingStopForPosition {
             SLBase = $tpsl.SLBase
         }
         
-        Write-Host "✅ Trailing Stop Job iniciado (ID: $($trailingStopJob.Id))" -ForegroundColor Green
+        Write-Host "[OK] Trailing Stop Job iniciado (ID: $($trailingStopJob.Id))" -ForegroundColor Green
         
         return [PSCustomObject]@{
             success = $true
@@ -1003,7 +1003,7 @@ function Initialize-TrailingStopForPosition {
         }
     }
     catch {
-        Write-Host "❌ Erro ao inicializar trailing stop: $_" -ForegroundColor Red
+        Write-Host "[FAIL] Erro ao inicializar trailing stop: $_" -ForegroundColor Red
         return [PSCustomObject]@{
             success = $false
             market = $Market
@@ -1098,11 +1098,11 @@ function Stop-TrailingStopJob {
             Remove-Job -Id $jobInfo.JobId -ErrorAction SilentlyContinue
             $global:TRAILING_STOP_JOBS.Remove($Market)
             
-            Write-Host "✅ Trailing stop job parado para $Market" -ForegroundColor Green
+            Write-Host "[OK] Trailing stop job parado para $Market" -ForegroundColor Green
             return $true
         }
         catch {
-            Write-Host "❌ Erro ao parar job: $_" -ForegroundColor Red
+            Write-Host "[FAIL] Erro ao parar job: $_" -ForegroundColor Red
             return $false
         }
     }
@@ -1200,3 +1200,4 @@ function Validate-WithCoinExAI {
 }
 
 # Fim do arquivo orchestrator_v6.ps1
+
