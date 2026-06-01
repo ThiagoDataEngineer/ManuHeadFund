@@ -123,6 +123,8 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 . (Join-Path $agentsDir "lib_orchestrator_parallel.ps1")
 . (Join-Path $agentsDir "lib_llm_quota_optimizer.ps1")  # 2026-05-26: Rate limiting + quota tracking
 . (Join-Path $agentsDir "lib_short_execution.ps1")      # 2026-05-28: SHORT Block 2 -- wiring scanner -> orchestrator
+. (Join-Path $agentsDir "lib_trailing_adaptive.ps1")    # 2026-06-01: Sync-TrailingPositionsWithExchange + Update-TrailingStopsAdaptive
+. (Join-Path $agentsDir "lib_layer4_tori_timestop.ps1") # 2026-06-01: Update-Layer4Review para trailing
 
 # 2026-05-19 PM: Kelly sizing flag (auto-activated via cron quando 10+ outcomes graduate criteria)
 # Le journal/USE_KELLY_SIZING.flag se presente -> seta $global:USE_KELLY_SIZING=$true
