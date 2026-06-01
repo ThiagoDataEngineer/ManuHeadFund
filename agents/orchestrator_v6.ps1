@@ -265,13 +265,28 @@ function Invoke-V6Cascade {
     #   triagem=A + wl=observe -> TIER_A_PAPER (high quality MAS regime limita pra paper)
     #   triagem=B + wl=observe -> TIER_B_PAPER (paper validation antes promote)
     #   GEM source             -> GEM
+    # 2026-06-01 FIX: Tier A NUNCA pode ser STANDARD mode (causa timeout). Fallback para PAPER.
     $triagemTier = if ($triagem -and $triagem.tier) { [string]$triagem.tier } else { "" }
     $wlTierStr   = if ($wl -and $wl.tier) { [string]$wl.tier } else { "" }
     $mentorMode = "STANDARD"
-    if ($triagemTier -eq "A" -and $wlTierStr -eq "live")    { $mentorMode = "TIER_A_LIVE" }
-    elseif ($triagemTier -eq "A" -and $wlTierStr -eq "observe") { $mentorMode = "TIER_A_PAPER" }
-    elseif ($wlTierStr -eq "observe")                       { $mentorMode = "TIER_B_PAPER" }
-    elseif ($wlTierStr -eq "live")                          { $mentorMode = "TIER_A_LIVE" }   # fallback compat
+    
+    # Tier A routing: SEMPRE live ou observe, nunca STANDARD
+    if ($triagemTier -eq "A") {
+        if ($wlTierStr -eq "live") {
+            $mentorMode = "TIER_A_LIVE"
+        } elseif ($wlTierStr -eq "observe") {
+            $mentorMode = "TIER_A_PAPER"
+        } else {
+            # Fallback defensivo: Tier A sem whitelist tier determinado -> PAPER (evita timeout)
+            $mentorMode = "TIER_A_PAPER"
+            Write-Warning "[orchestrator_v6] BTCUSDT_TIMEOUT_FIX: Tier A sem whitelist tier; fallback para TIER_A_PAPER (Market=$Market)"
+        }
+    } elseif ($wlTierStr -eq "observe") {
+        $mentorMode = "TIER_B_PAPER"
+    } elseif ($wlTierStr -eq "live") {
+        $mentorMode = "TIER_A_LIVE"   # fallback compat
+    }
+    
     if ($Context.source -eq "GEM" -or $Context.mode -eq "GEM") { $mentorMode = "GEM" }
 
     $fullCtx = $null
@@ -285,6 +300,11 @@ function Invoke-V6Cascade {
     # Defesa em profundidade — se algum payload chegar corrompido (tier=A + mode=TIER_B_PAPER
     # impossivel apos 4-mode mapping, mas defensivo p/ replay/recovery futuro), falha fast
     # SEM queimar 1 LLM call (~$0.006).
+    # 2026-06-01: Adicionar logging de diagnóstico para whitelist failures
+    if ([string]::IsNullOrEmpty($wlTierStr) -and $triagemTier -eq "A") {
+        Write-Verbose "[orchestrator_v6] DIAGNOSTIC: Market=$Market tier=A mas wlTierStr vazio; fallback acionado"
+    }
+    
     if (Get-Command Test-MentorPayloadInvariant -ErrorAction SilentlyContinue) {
         $inv = Test-MentorPayloadInvariant -TriagemTier $triagemTier -MentorMode $mentorMode
         if (-not $inv.valid) {
