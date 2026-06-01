@@ -127,10 +127,4 @@ function Get-TradeReasonStats {
         return $null
     }
 }
-
-# Export
-Export-ModuleMember -Function @(
-    'Add-TradeReasonArchive',
-    'Get-TradeReasonArchive',
-    'Get-TradeReasonStats'
 )

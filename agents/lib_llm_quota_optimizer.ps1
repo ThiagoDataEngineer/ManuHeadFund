@@ -126,7 +126,7 @@ function Update-QuotaTracker {
     $isOk = $usedPct -lt 80
 
     if (-not $isOk) {
-        $warning = "[QUOTA WARNING] $Provider: $($tracker.callsToday)/$DailyQuota calls ($([math]::Round($usedPct, 1))%) — activate Mesa skip mode"
+        $warning = "[QUOTA WARNING] $Provider`: $($tracker.callsToday)/$DailyQuota calls ($([math]::Round($usedPct, 1))%) - activate Mesa skip mode"
         if ($warning -notin $tracker.warnings) {
             $tracker.warnings += $warning
         }
@@ -158,7 +158,7 @@ function Test-MesaSkip {
 
     # Critério 2: Sem volume spike
     if ($Candidate.vol24h_spike -and $Candidate.vol24h_spike -lt 1.5) {
-        Write-Verbose "[MesaSkip] $($Candidate.market): Vol spike $($Candidate.vol24h_spike)x < 1.5x — skip Mesa"
+        Write-Verbose "[MesaSkip] $($Candidate.market): Vol spike $($Candidate.vol24h_spike)x < 1.5x - skip Mesa"
         return $true
     }
 
@@ -167,19 +167,10 @@ function Test-MesaSkip {
         $tracker = New-QuotaTracker -Provider "groq"
         $usedPct = ($tracker.callsToday / 14400) * 100
         if ($usedPct -gt 80) {
-            Write-Verbose "[MesaSkip] Groq quota $([math]::Round($usedPct, 1))% > 80% — activate emergency Mesa skip"
+            Write-Verbose "[MesaSkip] Groq quota $([math]::Round($usedPct, 1))% > 80% - activate emergency Mesa skip"
             return $true
         }
     }
 
     return $false
 }
-
-# Exports
-Export-ModuleMember -Function @(
-    "Invoke-DroneLimited"
-    "Test-SmaFlatline"
-    "New-QuotaTracker"
-    "Update-QuotaTracker"
-    "Test-MesaSkip"
-)
