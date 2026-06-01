@@ -92,14 +92,12 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 . (Join-Path $agentsDir "gem_executor.ps1")
 
 # V6.5 Cycle Indicators (Pi Cycle / 200WMA / ATH-DD / NUPL proxy)
-# Reais ANTES do orchestrator.ps1 (que importa chain_agent.ps1 -> mocks idempotentes).
+# Reais ANTES do orchestrator_v6.ps1 (que importa chain_agent.ps1 -> mocks idempotentes).
 . (Join-Path $agentsDir "lib_cycle_indicators.ps1")          # Parte A
 . (Join-Path $agentsDir "lib_cycle_indicators_advanced.ps1") # Parte B
 
-# Bug fix 2026-05-16: orchestrator.ps1 e scanner.ps1 têm [switch]$DryRun no
-# param top-level. Dot-source sem passar arg RE-BINDA $DryRun a $false no scope
-# do scan_master. Solução: passar $DryRun explicitamente no dot-source.
-. (Join-Path $agentsDir "orchestrator.ps1") -DryRun:$DryRun
+# 2026-06-01: Remover orchestrator.ps1 antigo (usar apenas orchestrator_v6.ps1)
+# . (Join-Path $agentsDir "orchestrator.ps1") -DryRun:$DryRun
 . (Join-Path $agentsDir "scanner.ps1")
 
 # ── V6 Esquadrao: Triagem + Mesa + Mentor Debate ─────────────────────────────
