@@ -232,13 +232,18 @@ $RATE_LIMIT_ENABLED    = $true          # Master toggle para rate limiting
 
 # FARO V3 (2026-06-02)
 $global:FARO_V3_ENABLED = $true
-$global:FARO_V3_MODE = "SCALP"                  # SCALP (quick) or SWING (hold)
-$global:FARO_V3_CAPITAL_PCT = 0.002             # 0.2% per position (allow 10+ concurrent)
-$global:FARO_V3_POSITION_RISK = 0.03            # -3% hard stop (not -8%)
-$global:FARO_V3_TARGET1 = 0.05                  # +5% first exit (close 30%)
-$global:FARO_V3_TARGET2 = 0.15                  # +15% second exit (close 50%)
-$global:FARO_V3_TARGET3 = 0.50                  # +50% final exit (close 20%)
-$global:FARO_V3_TRAILING_STOP = 0.04            # Trail by 4% after target1 hit
-$global:FARO_V3_MAX_POSITIONS = 10              # Allow 10 concurrent scalps
-$global:FARO_V3_TIMEOUT_HOURS = 4               # Exit after 4h (not 7 days)
+$global:FARO_V3_MODE = "AGGRESSIVE_SCALP"       # Optimized for $300/day on $5k
+$global:FARO_V3_CAPITAL_PCT = 0.005             # 0.5% per position (was 0.2%)
+$global:FARO_V3_POSITION_RISK = 0.02            # -2% hard stop (was -3%) — TIGHTER
+$global:FARO_V3_MIN_SIGNAL_COUNT = 6            # Require 6/7 signals (was 5/7) — HIGHER QUALITY
+$global:FARO_V3_MIN_SCORE = 70                  # Score must be 70+ (was any)
+$global:FARO_V3_TARGET1 = 0.03                  # +3% first exit (close 20%, super fast)
+$global:FARO_V3_TARGET2 = 0.08                  # +8% second exit (close 30%)
+$global:FARO_V3_TARGET3 = 0.20                  # +20% third exit (close 50%)
+$global:FARO_V3_TRAILING_STOP = 0.04            # Trail by 4% after target1
+$global:FARO_V3_MAX_POSITIONS = 20              # Allow 20 concurrent scalps (was 10)
+$global:FARO_V3_TIMEOUT_HOURS = 3               # Exit after 3h (was 4h)
+$global:FARO_V3_MARGIN_ENABLED = $true          # 1.5x margin on 6/7 signals only
+$global:FARO_V3_MARGIN_MAX = 1.5                # Conservative margin cap
 $global:FARO_V3_MICRO_CAP_ONLY = $true          # Skip top 100 by market cap
+$global:FARO_V3_ENGINE_FREQUENCY_HOURS = 3      # Scan every 3h (was 6h) — MORE OPPORTUNITIES

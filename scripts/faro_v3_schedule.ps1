@@ -24,41 +24,41 @@ if ($Action -eq "install") {
         exit 1
     }
 
-    # Task 1: Engine every 6 hours (00:00, 06:00, 12:00, 18:00)
+    # Task 1: Engine every 3 hours (more opportunities)
     $enginePath = Join-Path $scriptsDir "faro_v3_engine.ps1"
-    $engineTask = Get-TaskName "engine"
+    $engineTask = Get-TaskName "engine_agg"
     $engineAction = New-ScheduledTaskAction -Execute $psPath -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$enginePath`""
-    $engineTrigger = New-ScheduledTaskTrigger -Daily -At "00:00:00" -RepetitionInterval (New-TimeSpan -Hours 6) -RepetitionDuration ([timespan]::MaxValue)
+    $engineTrigger = New-ScheduledTaskTrigger -Daily -At "00:00:00" -RepetitionInterval (New-TimeSpan -Hours 3) -RepetitionDuration ([timespan]::MaxValue)
     $engineSettings = New-ScheduledTaskSettingsSet -RunOnlyIfNetworkAvailable -WakeToRun -AllowStartIfOnBatteries
     try {
         Register-ScheduledTask -TaskName $engineTask -Action $engineAction -Trigger $engineTrigger -Settings $engineSettings -Force -ErrorAction Stop | Out-Null
-        Write-Host "✅ $engineTask scheduled: every 6 hours" -ForegroundColor Green
+        Write-Host "✅ $engineTask scheduled: every 3 hours (AGGRESSIVE)" -ForegroundColor Green
     } catch {
-        Write-Warning "⚠️  Failed to schedule $engineTask : $_"
+        Write-Warning "WARN: Failed to schedule $engineTask : $_"
     }
 
-    # Task 2: Entry (scalp mode) every 15 minutes
-    $entryPath = Join-Path $scriptsDir "faro_v3_entry_scalp.ps1"
-    $entryTask = Get-TaskName "entry_scalp"
+    # Task 2: Entry (AGGRESSIVE mode) every 10 minutes — 6/7 signals only
+    $entryPath = Join-Path $scriptsDir "faro_v3_entry_aggressive.ps1"
+    $entryTask = Get-TaskName "entry_agg"
     $entryAction = New-ScheduledTaskAction -Execute $psPath -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$entryPath`""
-    $entryTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 15) -RepetitionDuration ([timespan]::MaxValue)
+    $entryTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 10) -RepetitionDuration ([timespan]::MaxValue)
     $entrySettings = New-ScheduledTaskSettingsSet -RunOnlyIfNetworkAvailable -WakeToRun
     try {
         Register-ScheduledTask -TaskName $entryTask -Action $entryAction -Trigger $entryTrigger -Settings $entrySettings -Force -ErrorAction Stop | Out-Null
-        Write-Host "✅ $entryTask scheduled: every 15 minutes (scalp)" -ForegroundColor Green
+        Write-Host "✅ $entryTask scheduled: every 10 minutes (AGGRESSIVE 6/7 signals)" -ForegroundColor Green
     } catch {
         Write-Warning "WARN: Failed to schedule $entryTask : $_"
     }
 
-    # Task 3: Manager (scalp mode) every 5 minutes (tight monitoring)
-    $managerPath = Join-Path $scriptsDir "faro_v3_manager_scalp.ps1"
-    $managerTask = Get-TaskName "manager_scalp"
+    # Task 3: Manager (AGGRESSIVE mode) every 3 minutes — ultra-tight stops
+    $managerPath = Join-Path $scriptsDir "faro_v3_manager_aggressive.ps1"
+    $managerTask = Get-TaskName "manager_agg"
     $managerAction = New-ScheduledTaskAction -Execute $psPath -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$managerPath`""
-    $managerTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration ([timespan]::MaxValue)
+    $managerTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 3) -RepetitionDuration ([timespan]::MaxValue)
     $managerSettings = New-ScheduledTaskSettingsSet -RunOnlyIfNetworkAvailable -WakeToRun
     try {
         Register-ScheduledTask -TaskName $managerTask -Action $managerAction -Trigger $managerTrigger -Settings $managerSettings -Force -ErrorAction Stop | Out-Null
-        Write-Host "✅ $managerTask scheduled: every 5 minutes (scalp)" -ForegroundColor Green
+        Write-Host "✅ $managerTask scheduled: every 3 minutes (AGGRESSIVE tight stops)" -ForegroundColor Green
     } catch {
         Write-Warning "WARN: Failed to schedule $managerTask : $_"
     }
