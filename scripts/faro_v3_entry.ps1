@@ -3,7 +3,7 @@
 
 param([bool] $DryRun = $false, [double] $CapitalPercent = 0.01, [int] $MaxPositions = 5)
 
-$projectRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+$projectRoot = Split-Path $PSScriptRoot -Parent
 $agentsDir = Join-Path $projectRoot "agents"
 $journalDir = Join-Path $projectRoot "journal"
 
@@ -26,11 +26,11 @@ Write-Host "🟢 FARO V3 Entry started — auto-entry mode" -ForegroundColor Cya
 try {
     $totalCap = CoinEx-GetTotalCapitalUSDT
     if ($totalCap -le 0) {
-        Write-Warning "⚠️  Capital is 0 or negative; skipping entries"
+        Write-Warning "WARN: Capital is 0 or negative; skipping entries"
         exit 0
     }
 } catch {
-    Write-Warning "⚠️  Failed to get capital: $_"
+    Write-Warning "WARN: Failed to get capital: $_"
     exit 1
 }
 
@@ -50,7 +50,7 @@ if (Test-Path $posFile) {
 }
 
 if ($activePositions.Count -ge $MaxPositions) {
-    Write-Host "⚠️  Max positions ($MaxPositions) reached; skipping new entries" -ForegroundColor Yellow
+    Write-Host "WARN: Max positions ($MaxPositions) reached; skipping new entries" -ForegroundColor Yellow
     exit 0
 }
 
@@ -141,16 +141,16 @@ foreach ($entry in $entries) {
                     $entered += $position
                     Write-Host "✅ Order placed: $market" -ForegroundColor Green
                 } else {
-                    Write-Warning "⚠️  PlaceOrder failed for $market"
+                    Write-Warning "WARN: PlaceOrder failed for $market"
                 }
             } catch {
-                Write-Warning "⚠️  Exception in $market: $_"
+                Write-Warning "WARN: Exception in $market: $_"
             }
         } else {
             Write-Host "✅ [DRY RUN] Would enter $market" -ForegroundColor Cyan
         }
     } catch {
-        Write-Warning "⚠️  Error processing $market: $_"
+        Write-Warning "WARN: Error processing $market: $_"
     }
 }
 
