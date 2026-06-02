@@ -10,49 +10,10 @@
 # NAO implementa: multipliers automaticos de sizing (precisa Versao C
 # meta-labeling com 6m+ paper data antes).
 
-# Halving dates historicos
+# Halving dates historicos (para referencia)
 $HALVING_2012 = [DateTime]::Parse("2012-11-28")
 $HALVING_2016 = [DateTime]::Parse("2016-07-09")
 $HALVING_2020 = [DateTime]::Parse("2020-05-11")
-$HALVING_2024 = [DateTime]::Parse("2024-04-19")
-
-# Peak month observado pos-halving (n=3 ciclos historicos)
-$HALVING_PEAK_MONTHS = @(21, 17, 18)   # ciclos 1, 2, 3
-$HALVING_PEAK_AVG    = 18.7            # media
-
-function Get-HalvingPhase {
-    [CmdletBinding()]
-    param([DateTime]$AsOf = (Get-Date))
-
-    $months = ($AsOf - $HALVING_2024).TotalDays / 30.44   # mes medio
-    $months = [math]::Round($months, 1)
-
-    # Fase nomeada
-    $phase = if ($months -lt 0)   { "PRE_HALVING" }
-             elseif ($months -le 6)  { "ACUMULACAO" }
-             elseif ($months -le 18) { "MID_BULL" }
-             elseif ($months -le 22) { "DISTRIBUTION_RISK" }
-             elseif ($months -le 36) { "BEAR_TERRITORY" }
-             else                    { "POST_CYCLE" }
-
-    $verdict = switch ($phase) {
-        "PRE_HALVING"        { "Acumulacao pre-halving (n/a)" }
-        "ACUMULACAO"         { "Acumulacao pos-halving -- bull confirmation early stage" }
-        "MID_BULL"           { "Mid-bull -- historicamente full size OK (3/3 ciclos)" }
-        "DISTRIBUTION_RISK"  { "ALERTA: zona de pico historico (m 17-21) -- reduzir size" }
-        "BEAR_TERRITORY"     { "Bear territory historico -- operar minimo ou parar" }
-        "POST_CYCLE"         { "Post-cycle -- fora do framework historico" }
-    }
-
-    return [PSCustomObject]@{
-        as_of               = $AsOf.ToString("yyyy-MM-dd")
-        months_since_halving = $months
-        phase               = $phase
-        peak_month_historical_avg = $HALVING_PEAK_AVG
-        peak_months_n3      = $HALVING_PEAK_MONTHS
-        verdict             = $verdict
-    }
-}
 
 
 function Get-MiningCostContext {
