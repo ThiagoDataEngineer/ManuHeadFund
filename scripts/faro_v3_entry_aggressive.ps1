@@ -156,13 +156,13 @@ foreach ($entry in $entries) {
                     Write-Host "WARN: PlaceOrder failed for $market"
                 }
             } catch {
-                Write-Host "WARN: Exception in $market: $_" -ForegroundColor Yellow
+                Write-Host "WARN: Exception in ${market}: $_" -ForegroundColor Yellow
             }
         } else {
-            Write-Host "✅ [DRY] Would enter $market with 1.5x margin" -ForegroundColor Cyan
+            Write-Host "✅ [DRY] Would enter ${market} with 1.5x margin" -ForegroundColor Cyan
         }
     } catch {
-        Write-Host "WARN: Error in $market: $_" -ForegroundColor Yellow
+        Write-Host "WARN: Error in ${market}: $_" -ForegroundColor Yellow
     }
 }
 
