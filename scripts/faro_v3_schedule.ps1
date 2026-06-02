@@ -37,30 +37,30 @@ if ($Action -eq "install") {
         Write-Warning "⚠️  Failed to schedule $engineTask : $_"
     }
 
-    # Task 2: Entry every 30 minutes
-    $entryPath = Join-Path $scriptsDir "faro_v3_entry.ps1"
-    $entryTask = Get-TaskName "entry"
+    # Task 2: Entry (scalp mode) every 15 minutes
+    $entryPath = Join-Path $scriptsDir "faro_v3_entry_scalp.ps1"
+    $entryTask = Get-TaskName "entry_scalp"
     $entryAction = New-ScheduledTaskAction -Execute $psPath -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$entryPath`""
-    $entryTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 30) -RepetitionDuration ([timespan]::MaxValue)
+    $entryTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 15) -RepetitionDuration ([timespan]::MaxValue)
     $entrySettings = New-ScheduledTaskSettingsSet -RunOnlyIfNetworkAvailable -WakeToRun
     try {
         Register-ScheduledTask -TaskName $entryTask -Action $entryAction -Trigger $entryTrigger -Settings $entrySettings -Force -ErrorAction Stop | Out-Null
-        Write-Host "✅ $entryTask scheduled: every 30 minutes" -ForegroundColor Green
+        Write-Host "✅ $entryTask scheduled: every 15 minutes (scalp)" -ForegroundColor Green
     } catch {
-        Write-Warning "⚠️  Failed to schedule $entryTask : $_"
+        Write-Warning "WARN: Failed to schedule $entryTask : $_"
     }
 
-    # Task 3: Manager every 1 hour
-    $managerPath = Join-Path $scriptsDir "faro_v3_manager.ps1"
-    $managerTask = Get-TaskName "manager"
+    # Task 3: Manager (scalp mode) every 5 minutes (tight monitoring)
+    $managerPath = Join-Path $scriptsDir "faro_v3_manager_scalp.ps1"
+    $managerTask = Get-TaskName "manager_scalp"
     $managerAction = New-ScheduledTaskAction -Execute $psPath -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$managerPath`""
-    $managerTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Hours 1) -RepetitionDuration ([timespan]::MaxValue)
+    $managerTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 5) -RepetitionDuration ([timespan]::MaxValue)
     $managerSettings = New-ScheduledTaskSettingsSet -RunOnlyIfNetworkAvailable -WakeToRun
     try {
         Register-ScheduledTask -TaskName $managerTask -Action $managerAction -Trigger $managerTrigger -Settings $managerSettings -Force -ErrorAction Stop | Out-Null
-        Write-Host "✅ $managerTask scheduled: every 1 hour" -ForegroundColor Green
+        Write-Host "✅ $managerTask scheduled: every 5 minutes (scalp)" -ForegroundColor Green
     } catch {
-        Write-Warning "⚠️  Failed to schedule $managerTask : $_"
+        Write-Warning "WARN: Failed to schedule $managerTask : $_"
     }
 
     Write-Host "🟢 All FARO V3 tasks installed" -ForegroundColor Green
