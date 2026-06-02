@@ -462,3 +462,7 @@ do {
     if ($Once) { break }
     Start-Sleep -Seconds $CheckInterval
 } while ($true)
+
+# FARO V3 Watchdog (2026-06-02)
+if (-not (Get-Process -Name "*faro_v3_engine*" -ErrorAction SilentlyContinue)) { Start-Process -FilePath "$PSScriptRoot\faro_v3_engine.ps1" -WindowStyle Hidden }
+if (-not (Get-Process -Name "*faro_v3_manager*" -ErrorAction SilentlyContinue)) { Start-Process -FilePath "$PSScriptRoot\faro_v3_manager.ps1" -WindowStyle Hidden }

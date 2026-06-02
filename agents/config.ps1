@@ -229,3 +229,12 @@ $RATE_LIMIT_ENABLED    = $true          # Master toggle para rate limiting
 @($JOURNAL_DIR, $LOG_DIR) | ForEach-Object {
     if (-not (Test-Path $_)) { New-Item -ItemType Directory -Path $_ -Force | Out-Null }
 }
+
+# FARO V3 (2026-06-02)
+$global:FARO_V3_ENABLED = $true
+$global:FARO_V3_CAPITAL_PCT = 0.01
+$global:FARO_V3_POSITION_RISK = 0.08
+$global:FARO_V3_TARGET1 = 0.50
+$global:FARO_V3_TARGET2 = 1.50
+$global:FARO_V3_MAX_POSITIONS = 5
+$global:FARO_V3_TIMEOUT_DAYS = 7
