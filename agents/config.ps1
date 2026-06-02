@@ -200,8 +200,8 @@ $GEM_MAX_DAYS_MOM     = 21
 $GEM_TRAILING_PCT     = 0.30   # trailing stop: 30% abaixo do pico
 
 # Score minimo para abertura de posicao
-$GEM_SCORE_MIN_DISC   = 70     # DISCOVERY: exige score alto (risco maior)
-$GEM_SCORE_MIN_MOM    = 60     # MOMENTUM: bar ligeiramente menor
+$GEM_SCORE_MIN_DISC   = 55     # DISCOVERY: relaxado para capturar mais oportunidades (era 70)
+$GEM_SCORE_MIN_MOM    = 45     # MOMENTUM: relaxado para capturar SHORT (era 60)
 
 # Acumulacao organica — thresholds (Gate 6)
 $GEM_CV_ORGANIC_MIN   = 0.5    # coef. variacao de volume: heterogeneidade minima
@@ -236,7 +236,7 @@ $global:FARO_V3_MODE = "AGGRESSIVE_SCALP"       # Optimized for $300/day on $5k
 $global:FARO_V3_CAPITAL_PCT = 0.005             # 0.5% per position ($2.50 per trade on $500)
 $global:FARO_V3_POSITION_RISK = 0.02            # -2% hard stop (capital loss = -$2.50 per stop hit)
 $global:FARO_V3_MIN_SIGNAL_COUNT = 4            # Require 4/7 signals (calibrated for LIVE data)
-$global:FARO_V3_MIN_SCORE = 35                  # Score must be 35+ (real data: max=41, avg=23.1 — relaxed for entries)
+$global:FARO_V3_MIN_SCORE = 30                  # Score must be 30+ (parallelized: 101 coins ready)
 $global:FARO_V3_TARGET1 = 0.03                  # +3% first exit (close 20%, ultra-fast)
 $global:FARO_V3_TARGET2 = 0.08                  # +8% second exit (close 30%)
 $global:FARO_V3_TARGET3 = 0.20                  # +20% third exit (close remaining)
