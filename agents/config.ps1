@@ -247,3 +247,6 @@ $global:FARO_V3_MARGIN_ENABLED = $true          # 1.5x-2.0x margin on 6/7 signal
 $global:FARO_V3_MARGIN_MAX = 2.0                # Max 2x leverage cap (capital safety)
 $global:FARO_V3_MICRO_CAP_ONLY = $true          # Skip top 100 by market cap
 $global:FARO_V3_ENGINE_FREQUENCY_HOURS = 3      # Scan every 3h (8 scans/day = 80 signals/day)
+
+# SHORT AGGRESSIVE OVERRIDE (2026-06-02 paralelização)
+$global:GEM_BETA_CAP_BEAR_STRONG = 1.4    # Liberar SHORT (era 1.2 no regime)
