@@ -25,4 +25,3 @@ function Get-Momentum {
     }
     return [Math]::Min($score, 25)
 }
-Export-ModuleMember -Function @("Calculate-RSI", "Get-Momentum")

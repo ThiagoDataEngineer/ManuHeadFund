@@ -6,11 +6,10 @@ function Get-VolumeSpikePro {
     if ($ratio -lt 2.0) { return 0 }
     if ($BuySideVol -gt 0 -and $SellSideVol -gt 0 -and ($BuySideVol / $SellSideVol) -lt 1.2) { return 0 }
     if ($VolumeMomentum -lt 0.8) { return 0 }
-    $score = switch {
-        ($ratio -lt 2.5) { [int](10 + ($ratio - 2.0) * 16) }
-        ($ratio -lt 3.5) { [int](18 + ($ratio - 2.5) * 7) }
+    $score = switch ($ratio) {
+        {$_ -lt 2.5} { [int](10 + ($ratio - 2.0) * 16); break }
+        {$_ -lt 3.5} { [int](18 + ($ratio - 2.5) * 7); break }
         default { 25 }
     }
     return $score
 }
-Export-ModuleMember -Function "Get-VolumeSpikePro"

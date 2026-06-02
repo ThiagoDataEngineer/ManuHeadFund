@@ -17,4 +17,3 @@ function Get-FingerprintMatch {
     }
     return [Math]::Min($score, 20)
 }
-Export-ModuleMember -Function "Get-FingerprintMatch"

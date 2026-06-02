@@ -23,4 +23,3 @@ function Get-WhaleOnChain {
     }
     return [Math]::Min($score, 20)
 }
-Export-ModuleMember -Function "Get-WhaleOnChain"

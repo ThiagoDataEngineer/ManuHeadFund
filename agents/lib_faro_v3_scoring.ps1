@@ -19,10 +19,10 @@ function Get-FaroScoreV3 {
     $totalRaw = $vol + $pat + $sent + $whale + $mom + $fp + $timing
     $totalNormalized = if ($totalRaw -gt 0) { [int](($totalRaw / 175) * 100) } else { 0 }
     $totalNormalized = [Math]::Min($totalNormalized, 100)
-    $decision = switch {
-        ($signalCount -ge 6) { "URGENTE" }
-        ($signalCount -eq 5) { "ENTRA" }
-        ($signalCount -eq 4) { "WATCH" }
+    $decision = switch ($signalCount) {
+        {$_ -ge 6} { "URGENTE"; break }
+        {$_ -eq 5} { "ENTRA"; break }
+        {$_ -eq 4} { "WATCH"; break }
         default { "SKIP" }
     }
     $confidence = [decimal]($signalCount) / 7.0
@@ -43,4 +43,3 @@ function Get-FaroScoreV3 {
         }
     }
 }
-Export-ModuleMember -Function "Get-FaroScoreV3"

@@ -13,4 +13,3 @@ function Get-EntryTiming {
     if ($CurrentHourUTC -ge 13 -and $CurrentHourUTC -le 16) { $score += 5 }
     return [Math]::Min($score, 20)
 }
-Export-ModuleMember -Function "Get-EntryTiming"
