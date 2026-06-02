@@ -334,7 +334,9 @@
       "PowerShell($f = Get-Content \"C:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\journal\\\\funding_history\\\\BTCUSDT.jsonl\" | ConvertFrom-Json; $first = $f[0]; $last = $f[-1]; \"Count: $\\($f.Count\\)\"; \"First funding_time: $\\([DateTimeOffset]::FromUnixTimeMilliseconds\\([long]$first.funding_time\\).ToString\\(\\)\\)\"; \"Last funding_time: $\\([DateTimeOffset]::FromUnixTimeMilliseconds\\([long]$last.funding_time\\).ToString\\(\\)\\)\")",
       "PowerShell(Get-ChildItem \"C:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\journal\\\\candles_coinex\" | Where-Object { $_.Name -match \"1h\" -or $_.Name -match \"1min\" -or $_.Name -match \"5min\" } | Select-Object Name, Length, LastWriteTime | Select-Object -First 20)",
       "PowerShell(Get-ChildItem \"C:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\journal\\\\candles_coinex\" | Select-Object Name | ForEach-Object { $_.Name } | Select-Object -Last 20)",
-      "PowerShell($lines = Get-Content \"C:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\journal\\\\faro_v3_candidates.jsonl\" | Where-Object { $_ -ne \"\" }; \"Total lines: $\\($lines.Count\\)\"; $lines[-3..-1] | ForEach-Object { $_ | ConvertFrom-Json | Select-Object ts, market, score, decision, signal_count, confidence | ConvertTo-Json -Compress })"
+      "PowerShell($lines = Get-Content \"C:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\journal\\\\faro_v3_candidates.jsonl\" | Where-Object { $_ -ne \"\" }; \"Total lines: $\\($lines.Count\\)\"; $lines[-3..-1] | ForEach-Object { $_ | ConvertFrom-Json | Select-Object ts, market, score, decision, signal_count, confidence | ConvertTo-Json -Compress })",
+      "Bash(timeout 30 tail -f C:\\\\Users\\\\thiag\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-thiag-Coinex-AI-USER_API\\\\b96ee8d8-9dbb-4699-8b2c-2925f1621bc2\\\\tasks\\\\bndjpwsas.output)",
+      "Bash(git commit -m '🎯 FARO V3: Calibração threshold score 35 + 4/7 signals — 12 moedas prontas *)"
     ]
   }
 }

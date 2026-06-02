@@ -236,7 +236,7 @@ $global:FARO_V3_MODE = "AGGRESSIVE_SCALP"       # Optimized for $300/day on $5k
 $global:FARO_V3_CAPITAL_PCT = 0.005             # 0.5% per position ($2.50 per trade on $500)
 $global:FARO_V3_POSITION_RISK = 0.02            # -2% hard stop (capital loss = -$2.50 per stop hit)
 $global:FARO_V3_MIN_SIGNAL_COUNT = 4            # Require 4/7 signals (calibrated for LIVE data)
-$global:FARO_V3_MIN_SCORE = 50                  # Score must be 50+ (conservative for real data)
+$global:FARO_V3_MIN_SCORE = 35                  # Score must be 35+ (real data: max=41, avg=23.1 — relaxed for entries)
 $global:FARO_V3_TARGET1 = 0.03                  # +3% first exit (close 20%, ultra-fast)
 $global:FARO_V3_TARGET2 = 0.08                  # +8% second exit (close 30%)
 $global:FARO_V3_TARGET3 = 0.20                  # +20% third exit (close remaining)
