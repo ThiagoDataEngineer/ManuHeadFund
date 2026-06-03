@@ -606,6 +606,20 @@ function Invoke-GemExecute {
         }
     }
 
+    # ── 2026-06-03: VALIDAÇÃO OBRIGATÓRIA DE TP ANTES DE ABRIR ──────────────────
+    # BUG: CoinEx API está rejeitando TP alto (0.334+) e colocando TP mínimo (0.111).
+    # SOLUÇÃO: Validar que TP é razoável ANTES de abrir. Se TP < entry*1.01, BLOQUEAR.
+    if ($hasFutures) {
+        $tp_vs_entry = $tgt_price / $price
+        $tp_min_acceptable = 1.01  # TP deve ser pelo menos 1% acima entry
+        if ($tp_vs_entry -lt $tp_min_acceptable) {
+            Write-Host "  [GEM BLOQUEADO] TP INVALIDO: TP=$tgt_price vs Entry=$price (ratio=$([Math]::Round($tp_vs_entry, 4)))" -ForegroundColor Red
+            $blockMsg = "*GEM BLOQUEADO* -- $mkt`nMotivo: TP invalido (rejeitado por API?)`nTP: $tgt_price vs Entry: $price`nAcao: Revisar CoinEx API limits"
+            try { Send-TelegramAlert -Message $blockMsg | Out-Null } catch {}
+            return [PSCustomObject]@{ blocked = $true; blocked_by = @("tp_validation_failed:tp_too_close_to_entry"); market = $mkt }
+        }
+    }
+
     # ── Alerta PRE-ordem ─────────────────────────────────────────────────────
     $mktType = if ($hasFutures) { "FUTURES" } else { "SPOT" }
     $ts = (Get-Date).ToString("HH:mm dd/MM/yy")
