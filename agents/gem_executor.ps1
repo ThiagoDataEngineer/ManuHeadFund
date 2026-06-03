@@ -558,8 +558,11 @@ function Invoke-GemExecute {
 
     # ── GUARD: tier whitelist + 4 live guards (2026-05-18) ────────────────────
     # GemAgent agora respeita Mode 2 LIVE guards. Bloqueia GEMs fora Tier A/B em LIVE.
+    # 2026-06-03: DISCOVERY mode exempto de tier whitelist (são pares novos por definição)
     if (Get-Command Test-LiveTradeGuards -ErrorAction SilentlyContinue) {
-        $tierMode = if ($global:LIVE_TIER_FILTER) { $global:LIVE_TIER_FILTER } else { "PAPER" }
+        $tierMode = if ($gem.mode -eq "DISCOVERY") { "ANY" } else {
+            if ($global:LIVE_TIER_FILTER) { $global:LIVE_TIER_FILTER } else { "PAPER" }
+        }
         $maxSize  = if ($global:LIVE_MAX_SIZE_USD) { [double]$global:LIVE_MAX_SIZE_USD } else { 100.0 }
         $maxFreq  = if ($global:LIVE_MAX_TRADES_PER_WEEK) { [int]$global:LIVE_MAX_TRADES_PER_WEEK } else { 5 }
         $maxCust  = if ($global:LIVE_MAX_CUSTODIAL_RATIO) { [double]$global:LIVE_MAX_CUSTODIAL_RATIO } else { 0.30 }
