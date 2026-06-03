@@ -33,9 +33,10 @@ $script:BETA_CAP_PER_PHASE = @{
 $script:BETA_CAP_DEFAULT = @{ warn = 1.0; block = 1.2; rationale = "default conservador (atual prod)" }
 
 
-# 2026-05-23 fix wire mismatch: regime_state.json usa nomes SEMANTICOS (BEAR_WEAK,
-# BULL_STRONG, etc) mas table key eh PHASE_HALVING (h24_p3_bear). Translator mapeia
-# regime semantic -> phase halving usando data atual (months post halving 2024-04-19).
+# 2026-06-03 FIX: regime semantic NUNCA deve ignorar input.
+# Antes: _Translate-RegimeToPhase recebia "BULL_STRONG" mas retornava date-based phase,
+#        causando conflito regime per-pair vs phase global.
+# Depois: mapeia regime semantic direto para caps, preservando intenção per-pair.
 function _Get-PhaseFromHalvingMonths {
     $halving2024 = [datetime]::new(2024, 4, 19, 0, 0, 0, [DateTimeKind]::Utc)
     $halving2020 = [datetime]::new(2020, 5, 11, 0, 0, 0, [DateTimeKind]::Utc)
@@ -58,22 +59,43 @@ function _Get-PhaseFromHalvingMonths {
     else                  { return "${prefix}_p4_rec" }
 }
 
-function _Translate-RegimeToPhase {
-    # Mapeia regime semantic (BULL_WEAK, BEAR_STRONG, etc) -> phase halving (h24_p3_bear).
-    # Usa data atual pra detectar cycle/phase. Strings desconhecidas retornam vazio
-    # (caller usa default fallback).
+function _Map-RegimeToPhase {
+    # 2026-06-03: Mapeia regime semantic direto -> phase CORRESPONDENTE (não data-only).
+    # BULL_STRONG / BULL_WEAK -> h24_p1_bull (ou h20_p1_bull, h28_p1_bull per cycle)
+    # BEAR_STRONG / BEAR_WEAK -> h24_p3_bear (ou h20_p3_bear, h28_p3_bear)
+    # CAPITULATION -> h24_p4_rec
+    # Outros -> fallback date-based ou default
     param([string] $RegimeOrPhase)
     if (-not $RegimeOrPhase) { return "" }
-    # If already phase format (h20_/h24_/h28_/pre_h20), return as-is
     if ($RegimeOrPhase -match '^(h20_p|h24_p|h28_p|pre_h20)') { return $RegimeOrPhase }
-    # Regime semantic conhecido? Translate via data atual
-    $regimeKnown = @('BULL_STRONG','BULL_WEAK','BEAR_STRONG','BEAR_WEAK',
-                     'TRANSITION_UP','TRANSITION_DOWN','CAPITULATION',
-                     'STRUCTURAL_BREAK','SIDEWAYS','RECOVERY','TOP','UNKNOWN')
-    if ($regimeKnown -contains $RegimeOrPhase.ToUpper()) {
-        return (_Get-PhaseFromHalvingMonths)
+
+    $halving2024 = [datetime]::new(2024, 4, 19, 0, 0, 0, [DateTimeKind]::Utc)
+    $halving2020 = [datetime]::new(2020, 5, 11, 0, 0, 0, [DateTimeKind]::Utc)
+    $halving2028 = [datetime]::new(2028, 4, 15, 0, 0, 0, [DateTimeKind]::Utc)
+    $now = (Get-Date).ToUniversalTime()
+
+    $prefix = "h24"
+    if ($now -ge $halving2028) { $prefix = "h28" }
+    elseif ($now -lt $halving2024) { $prefix = "h20" }
+
+    $regimeUpper = $RegimeOrPhase.ToUpper()
+
+    if ($regimeUpper -match "BULL") {
+        return "${prefix}_p1_bull"  # BULL_STRONG ou BULL_WEAK -> p1 caps
     }
-    # Unknown string: return empty (fall through to default cap)
+    elseif ($regimeUpper -match "BEAR") {
+        return "${prefix}_p3_bear"  # BEAR_STRONG ou BEAR_WEAK -> p3 caps
+    }
+    elseif ($regimeUpper -eq "CAPITULATION") {
+        return "${prefix}_p4_rec"   # CAPITULATION -> recovery caps (conservador)
+    }
+    elseif ($regimeUpper -match "TRANSITION_UP") {
+        return "${prefix}_p2_top"   # TRANSITION_UP -> p2 (mixed)
+    }
+    elseif ($regimeUpper -match "TRANSITION_DOWN") {
+        return "${prefix}_p3_bear"  # TRANSITION_DOWN -> bear caps
+    }
+    # Unknown: fallback date-based
     return ""
 }
 
@@ -81,23 +103,37 @@ function _Translate-RegimeToPhase {
 function Get-BetaCapForPhase {
     <#
     .SYNOPSIS
-    Returns @{warn, block, rationale, phase, source} dado phase OR regime semantic.
+    Returns @{warn, block, rationale, phase, source} dado regime semantic OU phase halving.
+
+    .PARAMETER Regime
+    Regime semantic: "BULL_STRONG", "BEAR_WEAK", etc.
+    Mapeia direto para caps correspondentes (não date-based).
+    Exemplo: BULL_STRONG -> h24_p1_bull caps (1.3/1.6), sempre.
 
     .PARAMETER Phase
-    Aceita ambos:
-      - Phase halving: "h24_p3_bear" (table key direto)
-      - Regime semantic: "BEAR_WEAK", "BULL_STRONG" (translates to phase via current date)
-    Vazio/unknown -> default.
+    Phase halving direto: "h24_p3_bear" (table key).
+    Legacy path: aceita regime semantic (traduz via _Map-RegimeToPhase).
 
     .EXAMPLE
-    $cap = Get-BetaCapForPhase -Phase "BEAR_WEAK"   # translates to h24_p3_bear (current)
-    if ($asset_beta -gt $cap.block) { "BLOCK" }
-    #>
-    [CmdletBinding()]
-    param([string] $Phase = "")
+    $cap = Get-BetaCapForPhase -Regime "BULL_STRONG"
+    # Returns: warn=1.3, block=1.6 (bull caps, nunca date-only)
 
-    # Translator: aceita regime semantic ou phase direto
-    $effectivePhase = _Translate-RegimeToPhase -RegimeOrPhase $Phase
+    $cap = Get-BetaCapForPhase -Phase "h24_p3_bear"
+    # Returns: warn=1.1, block=1.4 (bear caps, date-based legacy)
+    #>
+    [CmdletBinding(DefaultParameterSetName='Regime')]
+    param(
+        [Parameter(ParameterSetName='Regime')][string] $Regime = "",
+        [Parameter(ParameterSetName='Phase')][string] $Phase = ""
+    )
+
+    # Resolve effective phase: priorita Regime, fallback Phase
+    $effectivePhase = ""
+    if ($Regime) {
+        $effectivePhase = _Map-RegimeToPhase -RegimeOrPhase $Regime
+    } elseif ($Phase) {
+        $effectivePhase = _Map-RegimeToPhase -RegimeOrPhase $Phase
+    }
 
     if (-not $effectivePhase -or -not $script:BETA_CAP_PER_PHASE.ContainsKey($effectivePhase)) {
         $d = $script:BETA_CAP_DEFAULT
@@ -106,7 +142,8 @@ function Get-BetaCapForPhase {
             block = [double]$d.block
             rationale = $d.rationale
             phase = if ($effectivePhase) { $effectivePhase } else { "unknown" }
-            input_regime = $Phase
+            input_regime = $Regime
+            input_phase = $Phase
             source = "default"
         }
     }
@@ -116,7 +153,8 @@ function Get-BetaCapForPhase {
         block = [double]$c.block
         rationale = $c.rationale
         phase = $effectivePhase
-        input_regime = $Phase
+        input_regime = $Regime
+        input_phase = $Phase
         source = "per_phase_table"
     }
 }
@@ -125,13 +163,17 @@ function Get-BetaCapForPhase {
 function Test-BetaWithinCap {
     <#
     .SYNOPSIS
-    Tests asset OR portfolio beta against phase cap. Returns level (OK|WARN|BLOCK) + reason.
+    Tests asset OR portfolio beta against regime cap. Returns level (OK|WARN|BLOCK) + reason.
 
     .PARAMETER Beta
     Asset OR portfolio_after_add beta value.
 
+    .PARAMETER Regime
+    Regime semantic: "BULL_STRONG", "BEAR_WEAK", etc.
+    Mapeia direto para caps (não date-based).
+
     .PARAMETER Phase
-    Current phase (ex: "h24_p3_bear").
+    Phase halving direto: "h24_p3_bear" (legacy).
 
     .PARAMETER Strict
     If $true, treats WARN as BLOCK (conservadora).
@@ -139,13 +181,14 @@ function Test-BetaWithinCap {
     .OUTPUTS
     PSCustomObject @{ level (OK|WARN|BLOCK), beta, cap_warn, cap_block, phase, reason }
     #>
-    [CmdletBinding()]
+    [CmdletBinding(DefaultParameterSetName='Regime')]
     param(
         [Parameter(Mandatory)] [double] $Beta,
-        [string] $Phase = "",
+        [Parameter(ParameterSetName='Regime')][string] $Regime = "",
+        [Parameter(ParameterSetName='Phase')][string] $Phase = "",
         [switch] $Strict
     )
-    $cap = Get-BetaCapForPhase -Phase $Phase
+    $cap = if ($Regime) { Get-BetaCapForPhase -Regime $Regime } else { Get-BetaCapForPhase -Phase $Phase }
     $level = "OK"
     if ($Beta -gt $cap.block) { $level = "BLOCK" }
     elseif ($Beta -gt $cap.warn) { $level = "WARN" }

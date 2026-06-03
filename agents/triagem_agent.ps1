@@ -122,9 +122,12 @@ function _Compute-Tier {
     }
     $dowFavoravel = ($TRIAGEM_DOW_FAVORAVEL -contains $DayOfWeek)
     $macroFavoravel = ($MacroBias -eq "BULLISH" -or $MacroBias -eq "NEUTRAL")
+    # 2026-06-03 FIX: macro BEARISH nao bloqueia Tier A se score muito alto (per-pair override).
+    # Antes: BEARISH sempre retornava C. Agora: BEARISH com score >= A threshold -> pode ser A (se DoW/regime forem).
+    # Mantém conservadorismo: exige DoW favorável + sem Thursday+alt penalty.
     # Thursday+alt nao chega a Tier A nem com score alto (penalidade leve)
-    if ($Score -ge $th.A -and $macroFavoravel -and $dowFavoravel -and -not $thursdayAlt) { return "A" }
-    if ($Score -ge $th.B -and $macroFavoravel)                                            { return "B" }
+    if ($Score -ge $th.A -and $dowFavoravel -and -not $thursdayAlt) { return "A" }
+    if ($Score -ge $th.B -and ($macroFavoravel -or ($Score -ge 100)))  { return "B" }
     return "C"
 }
 
@@ -145,8 +148,15 @@ function _Compute-RegimeFromContext {
     # na condicao backtest. Quando tech data (EMA200+ADX) disponivel, usar semantics
     # backtest-compat. Senao fallback ao change_24h legacy.
     #
+    # 2026-06-03 PUMP FAKE FIX (Opção 1):
+    # Change +112% SEM validacao técnica = pump fake em bear estrutural.
+    # Com tech data (EMA200+ADX+PDI/NDI): validar BULL_STRONG antes de retornar.
+    # - Se preço ABAIXO EMA200: pump fake -> BEAR_WEAK
+    # - Se preço ACIMA EMA200 MAS ADX<=25: bounce sem força -> BULL_WEAK
+    # - Se preço ACIMA EMA200 MAS NDI>PDI + ADX>25: pump em downtrend -> BEAR_STRONG
+    #
     # Regras (por par):
-    #   change >= +15%  -> BULL_STRONG (pump forte)
+    #   change >= +15%  -> BULL_STRONG (IFF confirmação técnica; senão BEAR_WEAK/BULL_WEAK)
     #   change >= +5%   -> BULL_WEAK ou TRANSITION_UP (se macro bullish)
     #   change >= +2%   -> TRANSITION_UP ou SIDEWAYS
     #   change ±2%      -> SIDEWAYS
@@ -165,15 +175,61 @@ function _Compute-RegimeFromContext {
         [Nullable[double]]$Ndi          = $null
     )
 
-    # Pair-specific dominates (regras change_24h fortes ficam)
-    if ($PairChange24h -ge 15)  { return "BULL_STRONG" }
+    # Helper: verificar se tech data disponível
+    $hasTechData = ($null -ne $CurrentPrice -and $null -ne $Ema200 -and $Ema200 -gt 0 -and `
+                    $null -ne $Adx -and $null -ne $Pdi -and $null -ne $Ndi)
+
+    # Pair-specific dominates (regras change_24h fortes, mas com pump fake detection)
+    if ($PairChange24h -ge 15) {
+        # PUMP FAKE DETECTION: change +15%+ MAS validar tech
+        if ($hasTechData) {
+            $price  = [double]$CurrentPrice
+            $ema200 = [double]$Ema200
+            $adx    = [double]$Adx
+            $pdi    = [double]$Pdi
+            $ndi    = [double]$Ndi
+
+            # Pump fake: pump (+112%) MAS abaixo EMA200 = continuação de downtrend
+            if ($price -lt $ema200) { return "BEAR_WEAK" }
+
+            # Pump acima EMA200 MAS sem força (ADX baixo) = bounce
+            if ($adx -le 25) { return "BULL_WEAK" }
+
+            # Pump acima EMA200 + ADX forte MAS downtrend (NDI>PDI) = sucker's pump
+            if ($ndi -gt $pdi) { return "BEAR_STRONG" }
+
+            # Pump validado: acima EMA200 + ADX>25 + uptrend (PDI>NDI)
+            return "BULL_STRONG"
+        }
+        # Sem tech data: legacy (retorna BULL_STRONG direto)
+        return "BULL_STRONG"
+    }
+
+    # Regras negativas (downtrend) — não requerem pump fake detection
     if ($PairChange24h -le -20) { return "CAPITULATION" }
     if ($PairChange24h -le -8)  { return "BEAR_STRONG" }
     if ($PairChange24h -le -2)  { return "BEAR_WEAK" }
+
+    # Ranges positivos moderados (+5 a +15%)
     if ($PairChange24h -ge 5) {
+        if ($hasTechData) {
+            $price  = [double]$CurrentPrice
+            $ema200 = [double]$Ema200
+            $adx    = [double]$Adx
+            $pdi    = [double]$Pdi
+            $ndi    = [double]$Ndi
+            # Tech validation: validação técnica BULL_STRONG
+            if ($price -lt $ema200) { return "TRANSITION_UP" }  # pump fake: abaixo EMA
+            if ($adx -le 25) { return "BULL_WEAK" }             # sem força: ADX baixo
+            if ($ndi -gt $pdi) { return "BEAR_WEAK" }           # downtrend: NDI>PDI
+            # Confirmado: acima EMA200 + ADX>25 + uptrend (PDI>NDI)
+            return "BULL_STRONG"
+        }
+        # Legacy: macro driven
         if ($MacroBias -eq "BULLISH") { return "BULL_STRONG" }
         return "BULL_WEAK"
     }
+
     if ($PairChange24h -ge 2)  { return "TRANSITION_UP" }
     if ($PairChange24h -le -1) { return "TRANSITION_DOWN" }
 
@@ -283,23 +339,61 @@ function Invoke-Triagem {
     # 2026-05-21 HYBRID: fetch tech data (EMA200+ADX+PDI+NDI) para semantics backtest-compat.
     # Sem tech data -> fallback ao change_24h legacy.
     $pairChange24h = 0.0
-    try { if ($null -ne $Context.scanner.change) { $pairChange24h = [double]$Context.scanner.change } } catch {}
+    try {
+        # Compatibilidade: aceita scanner.change (nested) ou pair_change_24h (top-level)
+        if ($null -ne $Context.pair_change_24h) {
+            $pairChange24h = [double]$Context.pair_change_24h
+        } elseif ($null -ne $Context.scanner.change) {
+            $pairChange24h = [double]$Context.scanner.change
+        }
+    } catch {}
 
     $hyCurrentPrice = $null; $hyEma200 = $null
     $hyAdx = $null; $hyPdi = $null; $hyNdi = $null
+
+    # 2026-06-03: Accept tech data from Context (testability) OR fetch via Get-TechData (prod)
+    # Priority: Context.tech > Context.{flat} > Get-TechData API
+    # Context.tech aceita PSCustomObject OR hashtable (testability)
     try {
-        if (Get-Command Get-TechData -ErrorAction SilentlyContinue) {
+        # Path 1: Nested Context.tech (PSCustomObject ou hashtable)
+        if ($null -ne $Context.tech) {
+            $tech = $Context.tech
+            if ($tech -is [PSCustomObject]) {
+                if ($tech.PSObject.Properties['current_price']) { $hyCurrentPrice = [double]$tech.current_price }
+                if ($tech.PSObject.Properties['ema200']) { $hyEma200 = [double]$tech.ema200 }
+                if ($tech.PSObject.Properties['adx']) { $hyAdx = [double]$tech.adx }
+                if ($tech.PSObject.Properties['pdi']) { $hyPdi = [double]$tech.pdi }
+                if ($tech.PSObject.Properties['ndi']) { $hyNdi = [double]$tech.ndi }
+            } elseif ($tech -is [Hashtable]) {
+                if ($tech.ContainsKey('current_price')) { $hyCurrentPrice = [double]$tech['current_price'] }
+                if ($tech.ContainsKey('ema200')) { $hyEma200 = [double]$tech['ema200'] }
+                if ($tech.ContainsKey('adx')) { $hyAdx = [double]$tech['adx'] }
+                if ($tech.ContainsKey('pdi')) { $hyPdi = [double]$tech['pdi'] }
+                if ($tech.ContainsKey('ndi')) { $hyNdi = [double]$tech['ndi'] }
+            }
+        }
+        # Path 2: Flat Context top-level
+        if ($null -ne $Context.current_price -and -not $hyCurrentPrice) { $hyCurrentPrice = [double]$Context.current_price }
+        if ($null -ne $Context.ema200 -and -not $hyEma200) { $hyEma200 = [double]$Context.ema200 }
+        if ($null -ne $Context.adx -and -not $hyAdx) { $hyAdx = [double]$Context.adx }
+        if ($null -ne $Context.pdi -and -not $hyPdi) { $hyPdi = [double]$Context.pdi }
+        if ($null -ne $Context.ndi -and -not $hyNdi) { $hyNdi = [double]$Context.ndi }
+    } catch {}
+
+    # Path 3: Fetch via Get-TechData API (production)
+    try {
+        if ((-not $hyEma200 -or -not $hyAdx) -and (Get-Command Get-TechData -ErrorAction SilentlyContinue)) {
             $td = Get-TechData -Market $Market -ErrorAction SilentlyContinue
             if ($td) {
                 $tfRef = if ($td.tf1d) { $td.tf1d } else { $td.tf1h }
                 if ($tfRef) {
-                    if ($tfRef.PSObject.Properties['ema200']) { $hyEma200 = [double]$tfRef.ema200 }
-                    if ($tfRef.PSObject.Properties['adx'])    {
+                    if ($tfRef.PSObject.Properties['ema200'] -and -not $hyEma200) { $hyEma200 = [double]$tfRef.ema200 }
+                    if ($tfRef.PSObject.Properties['adx'] -and -not $hyAdx) {
                         $hyAdx = [double]$tfRef.adx.adx
                         $hyPdi = [double]$tfRef.adx.pdi
                         $hyNdi = [double]$tfRef.adx.ndi
                     }
-                    if ($tfRef.PSObject.Properties['close']) { $hyCurrentPrice = [double]$tfRef.close }
+                    if ($tfRef.PSObject.Properties['close'] -and -not $hyCurrentPrice) { $hyCurrentPrice = [double]$tfRef.close }
                 }
                 # Price preferencial vem do tf1h close (mais recente)
                 if ($td.tf1h -and $td.tf1h.PSObject.Properties['close']) {

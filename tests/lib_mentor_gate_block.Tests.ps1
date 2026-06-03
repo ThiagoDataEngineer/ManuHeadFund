@@ -12,6 +12,7 @@ function _MakeContext {
         regime = [PSCustomObject]@{ phase = "phase_3_bear"; bias = "neutral" }
         drawdown = [PSCustomObject]@{ vs_peak_pct = -3.2; flag_streak = 0; level = "GREEN" }
         tori_proximity = [PSCustomObject]@{ valid = $true; side = "LONG"; proximity_pct = 2.3; action_line = 100.5; touches = 4; slope_deg = 22; rsi = 35; vol_drying = $true; setup_ripening = $true }
+        alpha_correlation = [PSCustomObject]@{ pass = $true; correlation = 0.65; trend = "stable" }
         gates = $null
     }
     foreach ($k in $Overrides.Keys) {
