@@ -83,12 +83,12 @@ function New-CronJob {
             -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$ScriptPath`"" `
             -WorkingDirectory $projectRoot
         
-        # Criar trigger (repetir a cada X minutos, indefinidamente)
-        $trigger = New-ScheduledTaskTrigger `
-            -Once `
-            -At (Get-Date) `
-            -RepetitionInterval (New-TimeSpan -Minutes $IntervalMinutes) `
-            -RepetitionDuration ([TimeSpan]::MaxValue)
+        # Criar trigger (repetir a cada X minutos, indefinidamente).
+        # NOTA: RepetitionDuration [TimeSpan]::MaxValue gera XML invalido
+        # (P99999999D, fora do intervalo). Repeticao indefinida = SEM duration.
+        $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date)
+        $trigger.Repetition = (New-ScheduledTaskTrigger -Once -At (Get-Date) `
+            -RepetitionInterval (New-TimeSpan -Minutes $IntervalMinutes)).Repetition
         
         # Configurações
         $settings = New-ScheduledTaskSettingsSet `
