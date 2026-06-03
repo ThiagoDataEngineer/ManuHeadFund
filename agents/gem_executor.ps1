@@ -26,7 +26,15 @@ if (Test-Path $__trackerPath) { . $__trackerPath }
 # Carrega tech_agent_ai (provedor de Get-ToriTrendlineSignal) se ainda nao dot-sourced.
 if (-not (Get-Command Get-ToriTrendlineSignal -ErrorAction SilentlyContinue)) {
     $__toriPath = Join-Path $PSScriptRoot "tech_agent_ai.ps1"
-    if (Test-Path $__toriPath) { . $__toriPath }
+    if (Test-Path $__toriPath) {
+        try {
+            . $__toriPath -ErrorAction Stop
+        } catch {
+            Write-Host "[WARN] Falha ao carregar tech_agent_ai.ps1: $($_.Exception.Message)" -ForegroundColor Yellow
+        }
+    } else {
+        Write-Host "[WARN] tech_agent_ai.ps1 nao encontrado em $__toriPath" -ForegroundColor Yellow
+    }
 }
 
 # 2026-05-21: auto-enqueue FQS para GEMs sem registry (skip se ja registrado/recente).
@@ -369,6 +377,13 @@ function Invoke-GemExecute {
     # ── 2. TORI GATE (qualidade tecnica de trendline; ENTER|SKIP|WAIT) ───────
     # Bloqueia GEMs sem ancora tecnica antes de comprometer capital. Defensivo:
     # qualquer falha upstream (Claude indisponivel, exception) aborta o trade.
+    # 2026-06-03: Validacao da funcao antes de chamar.
+    if (-not (Get-Command Get-ToriTrendlineSignal -ErrorAction SilentlyContinue)) {
+        Write-Host "  [GEM BLOQUEADO] ${mkt}: Get-ToriTrendlineSignal nao disponivel (carregamento falhou)" -ForegroundColor Red
+        try { Send-TelegramAlert -Message "GEM bloqueado: $mkt -- Get-ToriTrendlineSignal nao carregou. Restart necessario." | Out-Null } catch {}
+        return [PSCustomObject]@{ blocked = $true; blocked_by = @("tori_unavailable"); market = $mkt }
+    }
+
     $tori_signal = "ENTER"
     $tori_reason = ""
     try {

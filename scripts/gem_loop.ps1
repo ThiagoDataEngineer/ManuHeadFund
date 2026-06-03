@@ -93,6 +93,14 @@ try {
     Write-GemLog "WARN" "Falha ao carregar guards: $($_.Exception.Message)"
 }
 
+# Tech agent (precisa estar disponivel para gem_executor)
+try {
+    . (Join-Path $agentsDir "tech_agent_ai.ps1") -ErrorAction SilentlyContinue
+    Write-GemLog "DEBUG" "Tech agent carregado"
+} catch {
+    Write-GemLog "WARN" "Falha ao carregar tech_agent_ai (fallback sera no gem_executor): $($_.Exception.Message)"
+}
+
 # Gem agents (GemAgent DEVE vir antes de gem_executor)
 try {
     . (Join-Path $agentsDir "gem_agent.ps1") -ErrorAction Stop
