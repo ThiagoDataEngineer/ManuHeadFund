@@ -49,9 +49,15 @@ while ($true) {
                 $qty = [double]$pos.qty
                 $side = [string]$pos.side
 
-                # Valida dados
-                if ($mark -le 0 -or $entry -le 0) {
-                    Write-TrailingLog "SKIP" "${mkt}: dados invalidos (mark=$mark entry=$entry)"
+                # Valida dados — se mark=0, pula (API bug com mark_price)
+                # TODO: CoinEx API retorna mark=0 em algumas respostas
+                if ($mark -le 0) {
+                    Write-TrailingLog "SKIP" "${mkt}: mark_price invalido ($mark), API bug — aguardando próximo ciclo"
+                    continue
+                }
+
+                if ($entry -le 0) {
+                    Write-TrailingLog "ERROR" "${mkt}: entry invalido ($entry), não pode calcular trailing"
                     continue
                 }
 
