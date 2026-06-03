@@ -1,4 +1,4 @@
-# setup_all_cron_jobs.ps1 - Configura TODOS os cron jobs do sistema
+﻿# setup_all_cron_jobs.ps1 - Configura TODOS os cron jobs do sistema
 # Rodar como Administrador: .\scripts\setup_all_cron_jobs.ps1
 #
 # CRON JOBS:
@@ -180,6 +180,24 @@ if (Test-Path $script3) {
     }
 } else {
     Write-Host "  ❌ Script não encontrado: $script3" -ForegroundColor Red
+    $failed++
+}
+
+# 4. Funding Scanner (60 minutos) -- producer event-driven do trigger-bus
+Write-Host "`n4. Funding Scanner..." -ForegroundColor Yellow
+$scriptFunding = Join-Path $projectRoot "scripts\funding_scanner.ps1"
+if (Test-Path $scriptFunding) {
+    if (New-CronJob `
+        -TaskName "CoinExFundingScanner" `
+        -ScriptPath $scriptFunding `
+        -IntervalMinutes 60 `
+        -Description "Funding exhaustion scanner -- enfileira trigger funding (event-driven) no signal_triggers.jsonl") {
+        $success++
+    } else {
+        $failed++
+    }
+} else {
+    Write-Host "  ❌ Script não encontrado: $scriptFunding" -ForegroundColor Red
     $failed++
 }
 

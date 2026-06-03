@@ -1,6 +1,25 @@
-# lib_funding_exhaustion_gate.ps1
+﻿# lib_funding_exhaustion_gate.ps1
 # Dead-hand SHORT mode: hunt divergence opportunities when SHORT suspended
 # Detects funding rate exhaustion on high-quality assets when BTC is lateral
+
+function Get-FundingConviction {
+    # Funding rate (por 8h) -> conviccao 0-100 + direcao para o trigger-bus.
+    # Funding alto POSITIVO = longs lotados -> exhaustion -> SHORT. Negativo
+    # extremo = shorts lotados -> LONG. Abaixo do limiar de exhaustion
+    # (0.05%/8h) -> 0 (nao dispara). Magnitude maior = conviccao maior.
+    [CmdletBinding()]
+    param([double] $FundingRate)
+    $abs = [Math]::Abs($FundingRate)
+    $exhaustThreshold = 0.0005   # 0.05% / 8h
+    if ($abs -lt $exhaustThreshold) {
+        return [PSCustomObject]@{ conviction = 0; direction = "auto" }
+    }
+    $c = 60 + (($abs - $exhaustThreshold) / $exhaustThreshold) * 20
+    if ($c -gt 100) { $c = 100 }
+    if ($c -lt 0)   { $c = 0 }
+    $dir = if ($FundingRate -gt 0) { "short" } else { "long" }
+    return [PSCustomObject]@{ conviction = [int][Math]::Round($c); direction = $dir }
+}
 
 function Test-FundingExhaustionGate {
     param(
