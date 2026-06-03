@@ -124,7 +124,9 @@ function Invoke-GemCycle-Once {
             $cachePath = Join-Path $global:JOURNAL_DIR "gem_recent_decisions.json"
             $filtered = @(); $skipped = @()
             foreach ($g in $gems) {
-                if (Test-GemRecentlyRejected -Path $cachePath -Market $g.market -TtlMinutes 60) {
+                # 2026-06-03: Reduzido TTL de 60 para 5 minutos
+                # Tori agora FORÇA ENTRY, então gems rejeitados devem ser re-tentados rapidamente
+                if (Test-GemRecentlyRejected -Path $cachePath -Market $g.market -TtlMinutes 5) {
                     $skipped += $g.market
                 } else { $filtered += $g }
             }
