@@ -1,9 +1,0 @@
-﻿{"queued_at":"2026-05-21T09:45:48.7457767-03:00","market":"PEAQUSDT","source":"gem_executor"}
-{"queued_at":"2026-05-21T09:47:19.5331065-03:00","market":"CHEEMSUSDT","source":"scan_master_discovery"}
-{"queued_at":"2026-05-21T09:47:19.5830658-03:00","market":"WLDUSDT","source":"scan_master_discovery"}
-{"queued_at":"2026-05-21T09:47:19.6041031-03:00","market":"SUSDT","source":"scan_master_discovery"}
-{"market":"CHEEMSUSDT","source":"mentor_full_context","queued_at":"2026-05-21T09:48:48.4312726-03:00"}
-{"market":"CHEEMSUSDT","source":"mentor_full_context","queued_at":"2026-05-21T10:01:23.5654224-03:00"}
-{"queued_at":"2026-05-21T10:14:08.3411478-03:00","market":"PYTHUSDT","source":"scan_master_discovery"}
-{"market":"CHEEMSUSDT","source":"mentor_full_context","queued_at":"2026-05-21T10:24:53.3505479-03:00"}
-{"market":"CHEEMSUSDT","source":"mentor_full_context","queued_at":"2026-05-21T10:24:53.6997576-03:00"}
