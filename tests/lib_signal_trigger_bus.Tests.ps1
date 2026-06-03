@@ -123,6 +123,28 @@ Describe "Get-PendingSignalTriggers" {
 }
 
 
+Describe "Get-NextTriggerScan -- consumer" {
+    BeforeEach { Reset-Bus }
+
+    It "retorna null quando nao ha pendentes" {
+        Get-NextTriggerScan | Should BeNullOrEmpty
+    }
+
+    It "retorna o de maior conviccao e o marca processado" {
+        Add-SignalTrigger -Market "AUSDT" -Signal "whale" -Conviction 72 | Out-Null
+        Add-SignalTrigger -Market "BUSDT" -Signal "faro"  -Conviction 95 | Out-Null
+        $n = Get-NextTriggerScan
+        $n.market     | Should Be "BUSDT"
+        $n.conviction | Should Be 95
+        # marcado processado -> nao volta
+        $n2 = Get-NextTriggerScan
+        $n2.market | Should Be "AUSDT"
+        # esvaziou
+        Get-NextTriggerScan | Should BeNullOrEmpty
+    }
+}
+
+
 Describe "Set-SignalTriggerProcessed" {
     BeforeEach { Reset-Bus }
 

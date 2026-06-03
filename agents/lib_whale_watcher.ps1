@@ -1,4 +1,4 @@
-# lib_whale_watcher.ps1 -- Monitor whale TXs via mempool.space (BTC).
+﻿# lib_whale_watcher.ps1 -- Monitor whale TXs via mempool.space (BTC).
 #
 # MVP 2026-05-21 sessao extra. Free API sem signup.
 #
@@ -107,6 +107,23 @@ function Get-MempoolRecentTxs {
 }
 
 
+function Get-WhaleConviction {
+    <#
+    .SYNOPSIS
+    Mapeia tamanho da whale TX (BTC) para conviccao 0-100 (log-scaled).
+    100 BTC -> 70 (baseline whale), 1000 BTC -> 100 (cap). Whales menores caem
+    abaixo do limiar (70) e nao disparam trigger -- gate de custo natural.
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory)][double] $ValueBtc)
+    if ($ValueBtc -le 0) { return 0 }
+    $c = 70 + ([Math]::Log10($ValueBtc / 100.0) * 30)
+    if ($c -lt 0)   { $c = 0 }
+    if ($c -gt 100) { $c = 100 }
+    return [int][Math]::Round($c)
+}
+
+
 function Invoke-WhaleWatcherCycle {
     <#
     .SYNOPSIS
@@ -131,6 +148,13 @@ function Invoke-WhaleWatcherCycle {
                 $usdEst = $w.value_btc * 77000  # rough; orchestrator pode ter cotacao real
                 $msg = "<b>WHALE</b> $($w.value_btc) BTC (~`$$([Math]::Round($usdEst/1e6,1))M)`ntxid: <code>$($w.txid.Substring(0,16))...</code>`nFee: $($w.fee_sat) sat | VSize: $($w.vsize)"
                 try { Send-TelegramAlert -Message $msg | Out-Null } catch {}
+            }
+            # Fast-path: enfileira trigger event-driven (conviction-gated). Whale BTC
+            # mempool -> reanalise imediata de BTCUSDT (regime anchor). ClusterKey=txid
+            # dedupa o mesmo evento. Producer desacoplado do consumer via JSONL.
+            if (Get-Command Add-SignalTrigger -ErrorAction SilentlyContinue) {
+                $conv = Get-WhaleConviction -ValueBtc $w.value_btc
+                try { Add-SignalTrigger -Market "BTCUSDT" -Signal "whale" -Conviction $conv -Direction "auto" -ClusterKey $w.txid -Notes "$($w.value_btc) BTC mempool" | Out-Null } catch {}
             }
         }
     }

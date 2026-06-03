@@ -19,6 +19,7 @@ Set-Location $projectRoot
 . (Join-Path (Join-Path $projectRoot "agents") "config.local.ps1")
 . (Join-Path (Join-Path $projectRoot "agents") "lib_telegram.ps1")
 . (Join-Path (Join-Path $projectRoot "agents") "lib_whale_watcher.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "lib_signal_trigger_bus.ps1")  # fast-path: enfileira trigger
 
 $logFile = Join-Path $projectRoot ("logs\whale_cron_" + (Get-Date -Format "yyyyMMdd") + ".log")
 $logDir = Split-Path $logFile -Parent

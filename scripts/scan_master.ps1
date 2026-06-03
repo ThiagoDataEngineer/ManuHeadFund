@@ -71,6 +71,7 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 . (Join-Path $agentsDir "lib_mentor_hallucination_detector.ps1")  # P0b FQS hallucination detector
 . (Join-Path $agentsDir "lib_fqs_enrichment_queue.ps1")  # 2026-05-21: auto-enqueue early (pre-Mentor)
 . (Join-Path $agentsDir "lib_fundamental_quality.ps1")  # 2026-06-03 fix: Get-FundamentalScore (FQS JSON fallback) ausente do runspace -> FQS ABSENT -> 100% abort
+. (Join-Path $agentsDir "lib_signal_trigger_bus.ps1")   # 2026-06-03 fast-path: consome triggers event-driven de sinais-lider
 . (Join-Path $agentsDir "lib_entry_score_boost.ps1")    # 2026-06-03 fix: runspace audit missing (Get-EntryScoreBoost)
 . (Join-Path $agentsDir "lib_order_routed.ps1")         # 2026-06-03 fix: runspace audit missing (Invoke-OrderRouted)
 . (Join-Path $agentsDir "lib_market_router_wire.ps1")   # 2026-06-03 fix: runspace audit missing (Resolve-MarketRouteLive)
@@ -1288,6 +1289,26 @@ function Wait-WithCommands {
             $nextTime  = $endTime.ToString("HH:mm")
             $action = Invoke-TelegramCommand -Cmd $cmd -Seasonal $Seasonal -RemainingMin $remaining -NextTime $nextTime
             if ($action) { return $action }
+        }
+
+        # ── Fast-path event-driven: consome trigger de sinal-lider ───────────────
+        # Sinais-lider (whale/faro/vol_climax/...) enfileiram triggers conviction-
+        # gated no signal_triggers.jsonl. Aqui (polling 15s) disparamos analise full
+        # (Mesa+Mentor) imediata e direcionada no mercado -- sem esperar o ciclo de
+        # 30min. Inline + continua aguardando (mesmo padrao do comando /scan PAR).
+        if (Get-Command Get-NextTriggerScan -ErrorAction SilentlyContinue) {
+            try {
+                $trg = Get-NextTriggerScan
+                if ($trg -and $trg.market) {
+                    Write-MasterLog "TRIGGER $($trg.signal) conv=$($trg.conviction) -> scan direcionado $($trg.market)"
+                    if (Get-Command Send-TelegramAlert -ErrorAction SilentlyContinue) {
+                        try { Send-TelegramAlert -Message "<b>TRIGGER</b> $($trg.signal) (conv $($trg.conviction))`nScan imediato: $($trg.market)" | Out-Null } catch {}
+                    }
+                    try { Invoke-MasterCycle -Seasonal $Seasonal -ForcePair $trg.market } catch {
+                        Write-MasterLog "Erro no scan triggered $($trg.market): $_" "ERROR"
+                    }
+                }
+            } catch {}
         }
 
         # Log de keepalive a cada 10 min para confirmar que o loop esta vivo

@@ -171,6 +171,26 @@ function Get-PendingSignalTriggers {
 }
 
 
+function Get-NextTriggerScan {
+    # Consumer (scan_master): pega o trigger pendente de maior conviccao, marca
+    # como processado e retorna {market, direction, signal, conviction, id} para
+    # disparar Invoke-MasterCycle -ForcePair. Retorna $null se nao ha pendentes.
+    [CmdletBinding()]
+    param()
+    $pending = @(Get-PendingSignalTriggers)
+    if ($pending.Count -eq 0) { return $null }
+    $top = $pending[0]
+    Set-SignalTriggerProcessed -Id $top.id -Result "scan_dispatched" | Out-Null
+    return [PSCustomObject]@{
+        market     = [string]$top.market
+        direction  = [string]$top.direction
+        signal     = [string]$top.signal
+        conviction = [int]$top.conviction
+        id         = [string]$top.id
+    }
+}
+
+
 function Set-SignalTriggerProcessed {
     [CmdletBinding()]
     param(
