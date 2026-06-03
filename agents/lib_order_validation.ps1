@@ -225,13 +225,22 @@ function Set-PositionTakeProfitFallback {
             Write-Verbose "Attempt ${attempt}: Using set-position-take-profit"
             
             $inv = [System.Globalization.CultureInfo]::InvariantCulture
+
+            # 2026-06-03: Validacao TP — rejeitar se TP muito perto da entrada (bug detection)
+            # Symptoma: API retorna TP=entrada*1.0001 em vez de entrada*1.0 + target%
+            if ($Price -le 0) {
+                throw "Set-PositionTakeProfitFallback: Price invalido ($Price <= 0)"
+            }
+
             $bodyObj = @{
                 market = $Market
                 market_type = "FUTURES"
                 take_profit_type = "mark_price"
                 take_profit_price = ([Math]::Round($Price, 4)).ToString($inv)
             }
-            
+
+            Write-Verbose "Set-PositionTakeProfitFallback: Enviando TP=$Price (arredondado=$(([Math]::Round($Price, 4)).ToString($inv)))"
+
             $response = CoinEx-Post -path "/v2/futures/set-position-take-profit" -bodyObj $bodyObj
             
             if ($response.code -eq 0) {

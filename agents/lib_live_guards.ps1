@@ -110,8 +110,11 @@ function Test-TierGuard {
     [CmdletBinding()]
     param(
         [string]$Market,
-        [string]$AllowedMode = "LIVE"   # LIVE = sÃ³ Tier A | PAPER = A+B
+        [string]$AllowedMode = "LIVE"   # LIVE = sÃ³ Tier A | PAPER = A+B | ANY = sem filtro
     )
+    if ($AllowedMode -eq "ANY") {
+        return [PSCustomObject]@{ pass = $true; reason = "$Market sem filtro tier (DISCOVERY mode)" }
+    }
     if (-not (Get-Command Get-QuantWhitelistMarkets -ErrorAction SilentlyContinue)) {
         return [PSCustomObject]@{ pass = $false; reason = "lib_quant_whitelist nao carregada" }
     }

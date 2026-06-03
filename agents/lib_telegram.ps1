@@ -19,12 +19,17 @@ function Telegram-SendMessage {
     )
     
     try {
+        # 2026-06-03: SEMPRE usar env vars first (config.local.ps1)
+        if (-not $BotToken) { $BotToken = $env:TELEGRAM_BOT_TOKEN }
+        if (-not $ChatId) { $ChatId = $env:TELEGRAM_CHAT_ID }
+
+        # Fallback: telegram.json so se env vars nao definidas
         if (-not $BotToken -or -not $ChatId) {
             $configPath = Join-Path $PSScriptRoot "..\config\telegram.json"
-            
+
             if (Test-Path $configPath) {
                 $config = Get-Content $configPath -Raw | ConvertFrom-Json
-                
+
                 if (-not $BotToken) { $BotToken = $config.bot_token }
                 if (-not $ChatId) { $ChatId = $config.chat_id }
             }
