@@ -1,4 +1,4 @@
-# lib_chart_patterns.ps1 -- Pure-math chart pattern recognition.
+﻿# lib_chart_patterns.ps1 -- Pure-math chart pattern recognition.
 #
 # Filosofia: identificar formacoes graficas classicas SEM LLM. Auto-similar em
 # qualquer timeframe (daily/4h/1h). Resultado: PSCustomObject com detected/strength/etc.
@@ -82,6 +82,25 @@ function _CP-FindSwingHighs {
 # ============================================================================
 # 1. VOLUME CLIMAX
 # ============================================================================
+
+function Get-VolClimaxConviction {
+    # Mapeia resultado do vol_climax -> conviccao 0-100 para o trigger-bus.
+    # Alinhado a regra do scanner: SO Tier S (paper-trade eligible) e nao
+    # cluster-suprimido dispara fast-path. Conviccao = WSS (composito 0-100 ja
+    # validado OOS). Tier A/B = observatorio, nao dispara (retorna 0).
+    [CmdletBinding()]
+    param(
+        [string] $Tier,
+        [double] $Wss,
+        [bool]   $ClusterSuppressed = $false
+    )
+    if ($ClusterSuppressed) { return 0 }
+    if ($Tier -ne "S")      { return 0 }
+    $w = [int][Math]::Round($Wss)
+    if ($w -lt 0)   { $w = 0 }
+    if ($w -gt 100) { $w = 100 }
+    return $w
+}
 
 function Detect-VolumeClimax {
     <#

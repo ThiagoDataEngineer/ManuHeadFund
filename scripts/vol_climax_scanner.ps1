@@ -23,6 +23,7 @@ Set-Location $projectRoot
 . (Join-Path (Join-Path $projectRoot "agents") "lib_chart_patterns.ps1")
 . (Join-Path (Join-Path $projectRoot "agents") "lib_cluster_filter.ps1")
 . (Join-Path (Join-Path $projectRoot "agents") "lib_wyckoff_spring_score.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "lib_signal_trigger_bus.ps1")  # fast-path: enfileira trigger vol_climax
 # Caminho 2 (2026-05-23): forward validation tracker â€” captura Tier S signals pra audit real
 if (Test-Path (Join-Path (Join-Path $projectRoot "agents") "lib_wss_forward_tracker.ps1")) {
     . (Join-Path (Join-Path $projectRoot "agents") "lib_wss_forward_tracker.ps1")
@@ -217,6 +218,16 @@ foreach ($mkt in $markets) {
 
         if (-not $DryRun) {
             Add-Content -Path $alertsPath -Value ($entry | ConvertTo-Json -Compress) -Encoding UTF8
+            # Fast-path: enfileira trigger event-driven. So Tier S (paper-trade
+            # eligible) e nao cluster-suprimido dispara; conviccao = WSS. Consumer
+            # (scan_master) roda analise full direcionada sem esperar o ciclo.
+            if (Get-Command Add-SignalTrigger -ErrorAction SilentlyContinue) {
+                $vcWss = if ($wssResult) { [double]$wssResult.wss } else { 0 }
+                $vcConv = Get-VolClimaxConviction -Tier $tier -Wss $vcWss -ClusterSuppressed ([bool]$cluster.exceeded)
+                if ($vcConv -gt 0) {
+                    try { Add-SignalTrigger -Market $mkt -Signal "vol_climax" -Conviction $vcConv -Direction "long" -ClusterKey "$mkt-$today" -Notes "WSS tier S vol_ratio=$($r.vol_ratio)x" | Out-Null } catch {}
+                }
+            }
             # Tier-based TG behavior:
             #   - Cluster cap excedido: silent (audit only)
             #   - Tier S: full alert + PAPER_TRADE flag
