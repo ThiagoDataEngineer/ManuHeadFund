@@ -33,6 +33,9 @@ try {
 
 Write-MonitorLog "INFO" "Position Monitor iniciado. Check=$($CheckInterval)s"
 
+# Deduplicação de alertas (não repetir mesma alerta)
+$lastAlertTime = @{}
+
 while ($true) {
     try {
         $positions = CoinEx-GetPendingPositions -ErrorAction SilentlyContinue
@@ -47,22 +50,44 @@ while ($true) {
                 $tp = [double]$pos.take_profit_price
                 $sl = [double]$pos.stop_loss_price
 
+                # 2026-06-03: Validação — mark_price pode ser 0 (API bug), não processar
+                if ($mark -le 0) {
+                    Write-MonitorLog "SKIP" "${mkt} mark_price invalido ($mark), ignorando check"
+                    continue
+                }
+
                 # Valida TP foi colocado corretamente
                 if ($tp -le 0) {
                     Write-MonitorLog "WARN" "${mkt} TP NAO FOI COLOCADA! Valor: $tp"
-                    Send-TelegramAlert -Message "⚠️ $mkt SEM TP! Fechar manualmente em $mark" | Out-Null
+
+                    # Dedup: só alerta 1x por hora
+                    $key = "${mkt}_NO_TP"
+                    if (-not $lastAlertTime[$key] -or ((Get-Date) - $lastAlertTime[$key]).TotalMinutes -gt 60) {
+                        Send-TelegramAlert -Message "⚠️ $mkt SEM TP! Fechar manualmente em $mark" | Out-Null
+                        $lastAlertTime[$key] = Get-Date
+                    }
                 }
 
-                # Log contínuo de P&L
+                # Log contínuo de P&L (sem alerta, só log)
                 Write-MonitorLog "POS" "${mkt} Entry: $entry Mark: $mark PnL: $pnl_usd USD ($pnl_pct%) TP: $tp SL: $sl"
 
-                # Se atingiu TP ou SL, notifica
+                # Se atingiu TP ou SL, notifica (com dedup 1x por 5min)
                 if ($mark -ge $tp -and $tp -gt 0) {
                     Write-MonitorLog "TP_HIT" "${mkt} Atingiu TP em $mark ganho: $pnl_pct%"
-                    Send-TelegramAlert -Message "✅ $mkt TP ATINGIDO! Ganho: $pnl_pct% ($pnl_usd USD)" | Out-Null
+
+                    $key = "${mkt}_TP_HIT"
+                    if (-not $lastAlertTime[$key] -or ((Get-Date) - $lastAlertTime[$key]).TotalMinutes -gt 5) {
+                        Send-TelegramAlert -Message "✅ $mkt TP ATINGIDO! Ganho: $pnl_pct% ($pnl_usd USD)" | Out-Null
+                        $lastAlertTime[$key] = Get-Date
+                    }
                 } elseif ($mark -le $sl -and $sl -gt 0) {
                     Write-MonitorLog "SL_HIT" "${mkt} Atingiu SL em $mark perda: $pnl_pct%"
-                    Send-TelegramAlert -Message "🛑 $mkt SL ATIVADO. Perda: $pnl_pct% ($pnl_usd USD)" | Out-Null
+
+                    $key = "${mkt}_SL_HIT"
+                    if (-not $lastAlertTime[$key] -or ((Get-Date) - $lastAlertTime[$key]).TotalMinutes -gt 5) {
+                        Send-TelegramAlert -Message "🛑 $mkt SL ATIVADO. Perda: $pnl_pct% ($pnl_usd USD)" | Out-Null
+                        $lastAlertTime[$key] = Get-Date
+                    }
                 }
             }
         }
