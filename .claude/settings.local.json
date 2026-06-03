@@ -409,7 +409,9 @@
       "PowerShell(cd 'c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API'; . agents/triagem_agent.ps1; $ctx = [PSCustomObject]@{ scanner = @{ score = 112; change = 112.0; current_price = 1.5 }; macro = @{ macro_bias = \"BEARISH\" }; seasonal = @{ dayOfWeek = \"Tuesday\"; marketTier = \"alt\" }; tech = @{ ema200 = 2.0; adx = 35.0; pdi = 45.0; ndi = 20.0 } }; Write-Host \"Context.tech type: $\\($ctx.tech.GetType\\(\\).Name\\)\"; Write-Host \"ema200: $\\($ctx.tech.ema200\\)\"; Write-Host \"ContainsKey\\('ema200'\\): $\\($ctx.tech.ContainsKey\\('ema200'\\)\\)\")",
       "PowerShell(cd 'c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API'; Import-Module Pester -ErrorAction Stop; $result = Invoke-Pester tests/triagem_regime_pump_fake_detection.Tests.ps1 -PassThru; Write-Host \"=== OPÇÃO 1 & 2 FINAL RESULTADO ===\" -ForegroundColor Green; Write-Host \"Opção 1 \\(Pump fake\\):  $\\($result.PassedCount\\) / $\\($result.TotalCount\\)\" -ForegroundColor $\\(if \\($result.FailedCount -eq 0\\) { 'Green' } else { 'Yellow' }\\); if \\($result.FailedCount -eq 0\\) { Write-Host \"✓ 12/12 GREEN\" -ForegroundColor Green })",
       "Bash(xargs grep -l \"setWebhook\\\\|webhook\")",
-      "PowerShell(& \"c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\scripts\\\\_restart_all.ps1\")"
+      "PowerShell(& \"c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\scripts\\\\_restart_all.ps1\")",
+      "PowerShell(& \"c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\scripts\\\\_restart_all.ps1\" 2>&1)",
+      "Bash(xargs grep -l \"Get-ToriTrendlineSignal\\\\|function.*Tori.*Signal\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\thiag\\Coinex_AI_USER_API\\.backup\\agents_20260601_164756"
