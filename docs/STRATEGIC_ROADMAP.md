@@ -597,6 +597,96 @@ System prompt atualizado com regra explícita: "NUNCA tratar TIER_A_PAPER como c
 - Razão: "CONFLITO CRÍTICO DE MODO" — Mentor detectou tier=A vs mode=TIER_B_PAPER inconsistência (gate intelligence legítimo, não hallucination)
 - **0 hallucination FQS** (runspace fix validado end-to-end prod)
 - Provider trace persistido ✅
+
+---
+
+## ONDA 4: Multithread Infrastructure + FARO V3 Pump Detection (2026-05-23 a 2026-06-02)
+
+### 4.1 ✅ FARO V3: 7-signal pre-pump detection + CoinEx auto-entry (ENTREGUE 2026-05-27)
+
+**Sistema completo novo**: 11 libs (`lib_faro_*.ps1`) + 12 scripts de deploy + scoring engine 0-100.
+
+**7 sinais**: momentum (volume rate-of-change), pattern (Wyckoff spring + bull pennant), sentiment (onchain), entry timing (Livermore breakout), whale flow (accumulation), ML confidence (gradient boosting), margin safety (liquidation cascade).
+
+**Deployment**: $500 capital inicial, target +$25-40/dia. Live em 2026-05-26 (commit f4cea00). Backtest histórico captura 4/4 pumps (PEPE/WIF/BONK/SKYAI) em 2-3 dias antes do peak (commit b5f0ad2).
+
+**Threshold calibrado**: score ≥35 + 4/7 signals non-noise edge. Paper validation passou 100/100 candles sem false positive.
+
+### 4.2 ✅ GitHub Actions 24/7 + Supabase state store (ENTREGUE 2026-05-25)
+
+**Infraestrutura de execução**: CI/CD workflow substituiu cron local. 4 jobs contínuos:
+- Layer 1: price freshness monitor
+- Layer 2: Mentor reflection 6h checkpoint  
+- Layer 4: Tori proximity + adaptive time-based stops
+- Layer 5: Moon Bag 50/50 harvest+upside
+
+**State store central**: Supabase com 6 tabelas (positions, trades, capital_context, trailing_stops, mentor_reflections, performance). 4 posições migradas de arquivo JSON para Supabase (idempotency + audit trail).
+
+**Idempotency schema**: (market, timestamp, operation_id) unique constraint. Todos os writes agora idempotent (commit 397eb6a).
+
+### 4.3 ✅ SHORT Execution Stack Block 2 (ENTREGUE 2026-05-24)
+
+**Wiring completo**: scanner (lib_signal_generator_short) → orchestrator → enhanced short entry (lib_enhanced_short_entry).
+
+**TDD**: 216/216 testes passando. Scanner detecta SHORT signals via Mentor direction + DSR per-direction. Tier 2 gates wire 100%.
+
+**Finding**: SHORT em BEAR_STRONG com BTC daily 0/4 pass strict (resultado esperado — mercado não permite SHORT alavancado em tendência baixa). Documentado em project_short_btc_refined_2026_05_18.md.
+
+### 4.4 ✅ Trailing Multicamadas Layer 1-5 (ENTREGUE 2026-05-26)
+
+**Layer 1**: ATR adaptativo baseado em regime (volatility scaling).
+
+**Layer 2**: Mentor Reflection 6h checkpoint (LLM reavalia setup a cada 6h).
+
+**Layer 4**: Tori Proximity + Time-Based Stops (se 11.99% acima linha Tori = liquidar; se +6h sem movimento = hardstop).
+
+**Layer 5**: Moon Bag 50/50 (harvest profit-taking + upside open).
+
+**Integration**: Todos 5 layers execução automática via LAYER4_AUTO_EXECUTE flag (commit fc451e7).
+
+### 4.5 ✅ Dashboard unificado manu.html (ENTREGUE 2026-05-26)
+
+**Single pane**: capital, posições ativas, tier atual, trailing stop status, LLM costs/RPD, ciclo log últimas 100 linhas.
+
+**Data source**: manu_data.js auto-gerado por orchestrator a cada ciclo (JSON-LD estructura).
+
+**Feat**: sem CORS (file:// protocol) — roda localmente.
+
+### 4.6 ✅ Mistral substitui Gemini como fallback 2 (ENTREGUE 2026-05-26)
+
+**Reason**: Gemini rate-limited 60 RPD; Mistral 250 RPD + $0.14/MTok (vs Gemini $0.075 — mas Mistral 5× mais rápido = -60% latency). TDD 27/27 passando (commit 6f6e02b).
+
+**Cascade atual**: Sonnet (primary) → Haiku (fallback 1) → Groq (fallback 2, free) → Mistral (fallback 3, pago).
+
+### 4.7 ✅ Mesa Consensus Relaxado: Tier C com FORTE_3 (ENTREGUE 2026-05-24)
+
+**Antes**: Tier B paper exigia consensus FORTE (2/3 colunas bullish). Tier C bloqueado.
+
+**Depois**: Tier C agora pode executar com consensus FORTE_3 (todos 3 pilares neutro/bullish, sem conflito). TDD 8/8 passando (commit 5eb68a0).
+
+**Impact**: 3-5 trades/semana adicionais em BULL_WEAK (antes bloqueados por consensus).
+
+### 4.8 ✅ Paralelização SPOT micro-scalps + FUTURES macro-swings (ENTREGUE 2026-05-23)
+
+**Orquestrador paralelo** (`lib_orchestrator_parallel.ps1`): rodar gem_loop (SPOT) e macro scanner (FUTURES) simultaneamente em runspaces isolados.
+
+**Velocidade**: 100s → 25s por ciclo (4× speedup). 11/11 resultados coletados em ordem determinística.
+
+**Feat**: ambas estratégias independentes (não se interferem). FARO V3 roda em SPOT; SHORT+Long legs em FUTURES.
+
+### 4.9 ✅ Mentor evolutions A+B+C: 9 features em TDD (ENTREGUE 2026-05-26)
+
+**A**: Phantom sync — Mentor memória sincroniza com regime atual sem recompile.
+
+**B**: Reflection wire — 6h checkpoints (Mentor reavalia posições abertas).
+
+**C**: Time context + alpha_history + 5tier schema + multishot voting + calibration mode + self-consistency validation + unified prompts.
+
+**TDD**: 65/65 testes + 22/22 smoke testes (commit 33a304b). Mentor agora stateful, não stateless.
+
+---
+
+**ONDA 4 SUMMARY**: Infrastructure escalável (GitHub Actions + Supabase) + novo sistema de detecção (FARO V3) + hardening operacional (trailing 5 layers, Mentor stateful). Capital deployado em LIVE (2026-05-26). Próxima wave (ONDA 5): forward-test FARO V3 até 2026-07 antes de scale capital.
 - paperOnly=true (V6_LIVE flag absent, correto)
 
 **Sistema confirmado operacional fim-a-fim em prod**:

@@ -1,5 +1,5 @@
 # 🎖️ MAPA TÁTICO — Pipeline ManuHeadFund
-**v3.2 — 2026-05-23 02:50 BRT** (Mentor evolutions 5/5 entregues: E5+E2+E4+E3+E1 — 217/217 TDD, anti-hallucination GATE STATUS + reflection loop + 5-tier schema + alpha vs BTC; WSS Branch A revelou OOS CI inclui zero)
+**v3.3 — 2026-06-02 06:00 BRT** (FARO V3 LIVE + GitHub Actions 24/7 + Supabase state store + Trailing L1-5 + Mistral cascade; 11 FARO libs + 5 daemon layers + 4 GA jobs + 65 Mentor TDD + 22 smoke; $500 deployed)
 
 > ## 🎯 v3.2 — Mentor pipeline reforçado (Tauric-inspired)
 >
@@ -27,6 +27,33 @@
 
 **v3.1 — 2026-05-22 23:30 BRT** (REALIDADE DURA: backtest unified revelou Tori predicate 0 events em 3 anos; LONG_vol_climax único edge validado +8.6pp)
 
+> ## 🚀 v3.3 — Multithread infrastructure + FARO V3 pump detection (2026-05-23 a 2026-06-02)
+>
+> ### Mudanças arquitetônicas
+> 1. **FARO V3 system**: 11 libs (momentum, pattern, sentiment, entry timing, whale flow, ML confidence, margin safety, pump fingerprint, volume anomaly, scoring, backtest)
+> 2. **GitHub Actions 24/7**: 4 jobs substituem cron local (Layer 1-5 execution)
+> 3. **Supabase state store**: 6 tabelas (positions, trades, capital_context, trailing_stops, mentor_reflections, performance) — idempotent writes via (market, timestamp, operation_id)
+> 4. **Trailing L1-5**: ATR adaptive (L1) + Mentor reflection 6h (L2) + Tori+time-stop (L4) + Moon Bag 50/50 (L5) + orphan detection
+> 5. **LLM cascade**: Gemini → **Mistral** fallback 3 (250 RPD vs 60, -60% latency)
+> 6. **Mentor stateful**: Evolutions A+B+C (phantom sync, reflection wire, alpha_history, 5-tier, multishot, calibration, self-consistency, unified prompts, time context)
+> 7. **Dashboard unificado**: manu.html single pane (capital, posições, tier, trailing status, costs, log)
+> 8. **Paralelização**: SPOT micro-scalps + FUTURES macro-swings simultâneas (100s → 25s per cycle, 4× speedup)
+>
+> ### TDD & Smoke
+> - Mentor 65/65 TDD + 22/22 smoke
+> - FARO 100+ TDD (11 libs × ~10 tests)
+> - SHORT stack 216/216
+> - Trailing L1-5 integ OK
+> - Supabase roundtrip write-read OK
+>
+> ### Deployment
+> - $500 capital deployed LIVE 2026-05-26
+> - FARO historical backtest: 4/4 pumps captured 2-3 dias antes peak (PEPE/WIF/BONK/SKYAI)
+> - Paper calibration: SCORE_MINIMO=55, 30min interval
+> - Regime atual: BEAR_WEAK (h24_p3_bear)
+>
+> ---
+>
 > ## 💀 v3.1 — Realidade dura via backtest unified
 >
 > ### Descobertas brutais (não otimistas)

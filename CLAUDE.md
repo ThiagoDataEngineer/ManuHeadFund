@@ -12,17 +12,19 @@
 - Telegram bot: approval gates, comandos `/scan /halt /resume /demote /keep /idea`
 - Docs técnicos: `docs/ARCHITECTURE_TATICA.md`, `docs/STRATEGIC_ROADMAP.md`, `docs/AGENTS.md`
 
-### Estado atual (2026-05-27)
+### Estado atual (2026-06-02)
 
+- **Regime**: BEAR_WEAK / h24_p3_bear
 - **Paper calibration ativa**: `journal/PAPER_CALIBRATION_MODE.flag` → SCORE_MINIMO=55, intervalo 30min
 - **6/10 trades reais**: `journal/trade_outcomes.jsonl` — win rate 33%, PnL -$26, faltam 4 para Kelly
 - **DSR real**: bootstrap falso removido, dados reais em SOL/LINK/NEAR/UNI/BNB/TON
-- **Mentor LLMs**: todos OK — Sonnet/Haiku/Groq/Gemini funcionando
-- **warmup_llm_endpoints.ps1**: recriado — resolve Mentor null no primeiro ciclo pos-restart 03:00
-- **Telegram visual**: Format-TgCycleSummary/EsquadraoResult/Heartbeat implementados (17/17 testes)
-- **4 daemons ativos**: gem_loop / scan_master / tg_listener / watchdog
-- **Modo**: LIVE (ambas flags presentes)
-- **Bloqueios conhecidos**: DSR parcial (6 trades), ALPHA_HIST nascente, BETA PENDLE 1.38 vs cap 1.4
+- **Mentor LLMs**: Sonnet/Haiku/Groq/**Mistral** (Gemini deprecated — commit 6f6e02b)
+- **FARO V3 LIVE**: 7-signal pre-pump detection + auto-entry + 500 capital deployed (commit f4cea00)
+- **5 daemons ativos**: gem_loop / scan_master / tg_listener / watchdog / faro_scheduler
+- **Flags ativas**: LAYER4_AUTO_EXECUTE, MOON_BAG_ENABLED, PARALLEL_DEFAULT_ENABLED, GEM_AUTO_APPROVE, V6_LIVE_ENABLED
+- **Infrastructure**: GitHub Actions 24/7 (Layers 1-5) + Supabase state store (6 tabelas)
+- **Telegram visual**: Format-TgCycleSummary/EsquadraoResult/Heartbeat (17/17 testes)
+- **Bloqueios conhecidos**: SHORT BEAR_STRONG 0/4 pass (commit 2026-05-18)
 
 ---
 
