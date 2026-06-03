@@ -154,16 +154,18 @@ function Get-ToriTrendlineSignal {
     if (-not $r) {
         return [PSCustomObject]@{ signal = "WAIT"; reason = "tech_agent_null" }
     }
-    # Tori agora permissivo: se Claude respondeu (mesmo sem trendline perfeita), deixa entrar
-    # Mentor vai fazer validacao secundaria rigorosa
+    # Tori FORÇA ENTER: ignora SKIP de Claude por falta de trendline
+    # Mentor faz filtragem secundaria (gem_executor chama Mentor DEPOIS de Tori)
+    # Gems com score alto merecem chance mesmo sem trendline perfeita
     if ($r.trendline -and $r.trendline.verdict) {
         $verdict = "$($r.trendline.verdict)".ToUpper()
-        if ($verdict -eq "SKIP") {
-            return [PSCustomObject]@{ signal = "SKIP"; reason = "$($r.trendline.reason)" }
-        }
+        # IGNORAR SKIP de Claude — vamos deixar Mentor decidir
+        # if ($verdict -eq "SKIP") {
+        #     return [PSCustomObject]@{ signal = "SKIP"; reason = "$($r.trendline.reason)" }
+        # }
     }
-    # Default: ENTER (deixa Mentor decidir em vez de Tori bloquear)
-    $reasonTxt = if ($r.trendline -and $r.trendline.reason) { "$($r.trendline.reason)" } else { "tori_permissive_defer_to_mentor" }
+    # SEMPRE ENTER — deixa Mentor decidir tudo (Tori é só info)
+    $reasonTxt = if ($r.trendline -and $r.trendline.reason) { "$($r.trendline.reason)" } else { "tori_force_entry_mentor_decides" }
     return [PSCustomObject]@{ signal = "ENTER"; reason = $reasonTxt }
 }
 
