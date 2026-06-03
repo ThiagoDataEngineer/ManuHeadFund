@@ -1,4 +1,4 @@
-# lib_tori_proximity.ps1 -- Tori trendline PROXIMITY scanner (anticipatory).
+﻿# lib_tori_proximity.ps1 -- Tori trendline PROXIMITY scanner (anticipatory).
 #
 # Filosofia: GEM/V6 atuais validam Tori DEPOIS que vol_spike acorda o pipeline
 # (lagging). Esta lib computa proximidade da action_line ANTES do bounce, dando
@@ -178,6 +178,24 @@ function _ToriProx-CalcRSI {
 
 
 # ── Core: proximidade derivada de Get-TrendlineScore + projecao linear ───────
+
+function Get-ToriConviction {
+    # Mapeia proximity Tori -> conviccao 0-100 para o trigger-bus. So setup_ripening
+    # dispara. Mais perto da action_line + mais toques = maior conviccao. base 50.
+    [CmdletBinding()]
+    param(
+        [bool]   $Ripening,
+        [double] $ProximityPct,
+        [int]    $Touches
+    )
+    if (-not $Ripening) { return 0 }
+    $proxScore  = [Math]::Max(0, 30 - ([Math]::Abs($ProximityPct) * 15))  # 0%->30, 2%+->0
+    $touchScore = [Math]::Min(20, $Touches * 5)
+    $c = 50 + $proxScore + $touchScore
+    if ($c -lt 0)   { $c = 0 }
+    if ($c -gt 100) { $c = 100 }
+    return [int][Math]::Round($c)
+}
 
 function Get-ToriProximityFromArrays {
     [CmdletBinding()]

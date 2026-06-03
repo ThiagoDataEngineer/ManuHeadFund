@@ -1,4 +1,4 @@
-# tori_proximity_scanner.ps1 -- Scanner anticipatorio Tori (cron 15min default).
+﻿# tori_proximity_scanner.ps1 -- Scanner anticipatorio Tori (cron 15min default).
 #
 # Filosofia: GEM/V6 atuais acordam por vol_spike (lagging, +14% ja foi). Este
 # scanner roda em paralelo sobre o whitelist PAPER, computa proximidade
@@ -55,6 +55,7 @@ try {
     . (Join-Path $agentsDir "lib_telegram.ps1") -ErrorAction Stop
     . (Join-Path $agentsDir "lib_quant_whitelist.ps1") -ErrorAction Stop
     . (Join-Path $agentsDir "lib_tori_proximity.ps1") -ErrorAction Stop
+    . (Join-Path $agentsDir "lib_signal_trigger_bus.ps1") -ErrorAction SilentlyContinue  # fast-path: enfileira trigger tori_ripe
 } catch {
     Write-ProxLog "ERROR" "Falha libs: $($_.Exception.Message)"
     exit 1
@@ -164,6 +165,16 @@ Setup amadurecendo -- $actionHint
         Add-ProximityAlert -Market $mkt -JsonlPath $alertsPath -Proximity $p
     } catch {
         Write-ProxLog "WARN" "$mkt -- falha persist dedup: $($_.Exception.Message)"
+    }
+
+    # Fast-path: enfileira trigger tori_ripe (setup amadurecendo) -> scan_master
+    # roda analise full direcionada. Conviccao por proximidade + toques.
+    if ((-not $DryRun) -and (Get-Command Add-SignalTrigger -ErrorAction SilentlyContinue)) {
+        $toriConv = Get-ToriConviction -Ripening $true -ProximityPct ([double]$p.proximity_pct) -Touches ([int]$p.touches)
+        if ($toriConv -gt 0) {
+            $dir = if ($p.side -eq "SHORT") { "short" } else { "long" }
+            try { Add-SignalTrigger -Market $mkt -Signal "tori_ripe" -Conviction $toriConv -Direction $dir -Notes "prox=$($p.proximity_pct)% touches=$($p.touches) side=$($p.side)" | Out-Null } catch {}
+        }
     }
 }
 
