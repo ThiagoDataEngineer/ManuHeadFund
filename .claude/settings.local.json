@@ -412,10 +412,16 @@
       "PowerShell(& \"c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\scripts\\\\_restart_all.ps1\")",
       "PowerShell(& \"c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\scripts\\\\_restart_all.ps1\" 2>&1)",
       "Bash(xargs grep -l \"Get-ToriTrendlineSignal\\\\|function.*Tori.*Signal\")",
-      "Bash(grep -r \"\\\\-[0-9]\\\\{10,\\\\}\\\\|\\\\b[0-9]\\\\{15,\\\\}\\\\b\" \"c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\agents\")"
+      "Bash(grep -r \"\\\\-[0-9]\\\\{10,\\\\}\\\\|\\\\b[0-9]\\\\{15,\\\\}\\\\b\" \"c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\agents\")",
+      "Bash(pwsh -File _restart_all.ps1)",
+      "PowerShell(Set-Location 'C:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API'; pwsh -File _restart_all.ps1)",
+      "PowerShell(Set-Location 'C:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API'; pwsh -File scripts\\\\_restart_all.ps1)",
+      "Read(//c/Users/thiag/Coinex_AI_USER_API/journal/**)",
+      "PowerShell(grep -i telegram)"
     ],
     "additionalDirectories": [
-      "c:\\Users\\thiag\\Coinex_AI_USER_API\\.backup\\agents_20260601_164756"
+      "c:\\Users\\thiag\\Coinex_AI_USER_API\\.backup\\agents_20260601_164756",
+      "\\dev"
     ]
   }
 }
