@@ -347,7 +347,16 @@
       "Bash(rm -f FARO_V3_DEPLOYMENT.md)",
       "Bash(rm -f FARO_V3_GO_LIVE.md)",
       "Bash(git -C \"c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\" log --oneline --since=\"2026-05-23\")",
-      "PowerShell(\\(Get-Content \"c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\docs\\\\ARCHITECTURE_TATICA.md\" | Measure-Object -Line\\).Lines; \\(Get-Content \"c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\docs\\\\AGENTS.md\" | Measure-Object -Line\\).Lines; \\(Get-Content \"c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\docs\\\\BLUEPRINT.md\" | Measure-Object -Line\\).Lines; \\(Get-Content \"c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\docs\\\\STRATEGIC_ROADMAP.md\" | Measure-Object -Line\\).Lines; \\(Get-Content \"c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\CLAUDE.md\" | Measure-Object -Line\\).Lines)"
+      "PowerShell(\\(Get-Content \"c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\docs\\\\ARCHITECTURE_TATICA.md\" | Measure-Object -Line\\).Lines; \\(Get-Content \"c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\docs\\\\AGENTS.md\" | Measure-Object -Line\\).Lines; \\(Get-Content \"c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\docs\\\\BLUEPRINT.md\" | Measure-Object -Line\\).Lines; \\(Get-Content \"c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\docs\\\\STRATEGIC_ROADMAP.md\" | Measure-Object -Line\\).Lines; \\(Get-Content \"c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\CLAUDE.md\" | Measure-Object -Line\\).Lines)",
+      "Bash(pwsh -NoProfile -Command \"Invoke-Pester tests/faro_v3_aggressive_config.Tests.ps1 -Output Detailed\")",
+      "Bash(pwsh -NoProfile -Command \"Invoke-Pester tests/faro_v3_aggressive_config.Tests.ps1\")",
+      "Bash(pwsh -NoProfile -Command \"Invoke-Pester tests/faro_v3_aggressive_config.Tests.ps1 -PassThru | Select-Object -Last 20\")",
+      "Bash(pwsh -NoProfile -Command \"Invoke-Pester tests/faro_v3_aggressive_config.Tests.ps1 -PassThru\")",
+      "Bash(pwsh -NoProfile -Command 'Invoke-Pester tests/faro_v3_aggressive_config.Tests.ps1 -PassThru | Select-Object PassedCount, FailedCount, @{N='\\\\''Result'\\\\''; E={if\\($_.PassedCount -eq $_.TotalCount\\){'\\\\''✅ ALL GREEN'\\\\''}else{\"$\\($_.PassedCount\\)/$\\($_.TotalCount\\) PASS\"}}}')",
+      "Bash(pwsh -NoProfile -Command \"Invoke-Pester tests/short_vol_climax_collector.Tests.ps1 -PassThru | Select-Object PassedCount, FailedCount\")",
+      "Bash(python -m pytest backtest/test_faro_aggressive_backtest.py -v)",
+      "Bash(pwsh -NoProfile -Command \"Invoke-Pester tests/lib_vol_climax_gate.Tests.ps1 -PassThru | Select-Object PassedCount, FailedCount\")",
+      "Bash(pwsh .\\\\scripts\\\\weekly_metrics_faro_short.ps1)"
     ]
   }
 }
