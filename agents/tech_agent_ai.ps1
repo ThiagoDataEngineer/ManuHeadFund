@@ -141,10 +141,11 @@ function Invoke-ToriPostProcess {
 # Gate de qualidade tecnica para GEMs: roda Invoke-TechAgent (Claude + Tori post-process)
 # e retorna um objeto compacto { signal=ENTER|SKIP|WAIT; reason } usavel pelo gem_executor.
 #
-# Defaults defensivos:
-#   - Claude indisponivel / erro upstream -> propaga excecao (chamador trata).
-#   - Sem trendline no resultado          -> signal=WAIT, reason='no_trendline_data'.
-#   - Resultado sem campo verdict valido  -> signal=WAIT, reason='no_verdict'.
+# 2026-06-03 RELAX: Tori muito restritivo bloqueava gems com score alto por falta de trendline perfeita.
+# Novo behavior: deixa Mentor decidir. Tori soh bloqueia em erro critico (Claude null/erro).
+# - Claude disponivel (mesmo sem trendline perfeita) -> ENTER (Mentor filtra)
+# - Claude erro/null -> WAIT (deixa pra proximo ciclo)
+# - Verdict explicito SKIP -> SKIP (respeita)
 function Get-ToriTrendlineSignal {
     param(
         [Parameter(Mandatory)] [string] $Market
@@ -153,15 +154,17 @@ function Get-ToriTrendlineSignal {
     if (-not $r) {
         return [PSCustomObject]@{ signal = "WAIT"; reason = "tech_agent_null" }
     }
-    if (-not $r.trendline -or -not $r.trendline.verdict) {
-        return [PSCustomObject]@{ signal = "WAIT"; reason = "no_trendline_data" }
+    # Tori agora permissivo: se Claude respondeu (mesmo sem trendline perfeita), deixa entrar
+    # Mentor vai fazer validacao secundaria rigorosa
+    if ($r.trendline -and $r.trendline.verdict) {
+        $verdict = "$($r.trendline.verdict)".ToUpper()
+        if ($verdict -eq "SKIP") {
+            return [PSCustomObject]@{ signal = "SKIP"; reason = "$($r.trendline.reason)" }
+        }
     }
-    $verdict = "$($r.trendline.verdict)".ToUpper()
-    if ($verdict -notin @("ENTER","SKIP","WAIT")) {
-        return [PSCustomObject]@{ signal = "WAIT"; reason = "no_verdict" }
-    }
-    $reasonTxt = if ($r.trendline.reason) { "$($r.trendline.reason)" } else { "$($r.trendline.quality)/$($r.trendline.setup_type)" }
-    return [PSCustomObject]@{ signal = $verdict; reason = $reasonTxt }
+    # Default: ENTER (deixa Mentor decidir em vez de Tori bloquear)
+    $reasonTxt = if ($r.trendline -and $r.trendline.reason) { "$($r.trendline.reason)" } else { "tori_permissive_defer_to_mentor" }
+    return [PSCustomObject]@{ signal = "ENTER"; reason = $reasonTxt }
 }
 
 function Invoke-TechAgent {

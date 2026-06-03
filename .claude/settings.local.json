@@ -411,7 +411,8 @@
       "Bash(xargs grep -l \"setWebhook\\\\|webhook\")",
       "PowerShell(& \"c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\scripts\\\\_restart_all.ps1\")",
       "PowerShell(& \"c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\scripts\\\\_restart_all.ps1\" 2>&1)",
-      "Bash(xargs grep -l \"Get-ToriTrendlineSignal\\\\|function.*Tori.*Signal\")"
+      "Bash(xargs grep -l \"Get-ToriTrendlineSignal\\\\|function.*Tori.*Signal\")",
+      "Bash(grep -r \"\\\\-[0-9]\\\\{10,\\\\}\\\\|\\\\b[0-9]\\\\{15,\\\\}\\\\b\" \"c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\agents\")"
     ],
     "additionalDirectories": [
       "c:\\Users\\thiag\\Coinex_AI_USER_API\\.backup\\agents_20260601_164756"
