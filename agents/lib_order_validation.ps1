@@ -242,7 +242,12 @@ function Set-PositionTakeProfitFallback {
             Write-Verbose "Set-PositionTakeProfitFallback: Enviando TP=$Price (arredondado=$(([Math]::Round($Price, 4)).ToString($inv)))"
 
             $response = CoinEx-Post -path "/v2/futures/set-position-take-profit" -bodyObj $bodyObj
-            
+
+            # 2026-06-03: DEBUG resposta da API — se rejeitou, logar
+            if ($response.code -ne 0) {
+                Write-Verbose "API REJEITOU TP: code=$($response.code) msg=$($response.msg)"
+            }
+
             if ($response.code -eq 0) {
                 # Validar
                 Start-Sleep -Milliseconds 500
