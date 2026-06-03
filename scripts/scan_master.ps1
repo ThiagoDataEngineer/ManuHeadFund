@@ -70,6 +70,10 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 . (Join-Path $agentsDir "lib_price_freshness.ps1")  # B18 stale price gate
 . (Join-Path $agentsDir "lib_mentor_hallucination_detector.ps1")  # P0b FQS hallucination detector
 . (Join-Path $agentsDir "lib_fqs_enrichment_queue.ps1")  # 2026-05-21: auto-enqueue early (pre-Mentor)
+. (Join-Path $agentsDir "lib_fundamental_quality.ps1")  # 2026-06-03 fix: Get-FundamentalScore (FQS JSON fallback) ausente do runspace -> FQS ABSENT -> 100% abort
+. (Join-Path $agentsDir "lib_entry_score_boost.ps1")    # 2026-06-03 fix: runspace audit missing (Get-EntryScoreBoost)
+. (Join-Path $agentsDir "lib_order_routed.ps1")         # 2026-06-03 fix: runspace audit missing (Invoke-OrderRouted)
+. (Join-Path $agentsDir "lib_market_router_wire.ps1")   # 2026-06-03 fix: runspace audit missing (Resolve-MarketRouteLive)
 . (Join-Path $agentsDir "lib_tori_proximity.ps1")  # 2026-05-21 PM7: snapshot reader consumido por Mentor FullContext
 . (Join-Path $agentsDir "lib_trailing.ps1")
 . (Join-Path $agentsDir "lib_trailing_adaptive.ps1")  # Layer 1 TDD: Adaptive buffers + regime-aware stops
