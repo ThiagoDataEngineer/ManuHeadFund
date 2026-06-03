@@ -94,11 +94,16 @@ try {
 }
 
 # Tech agent (precisa estar disponivel para gem_executor)
+# Carrega com erro visivel (Stop) — catch loga + continua (fallback no gem_executor)
 try {
-    . (Join-Path $agentsDir "tech_agent_ai.ps1") -ErrorAction SilentlyContinue
-    Write-GemLog "DEBUG" "Tech agent carregado"
+    . (Join-Path $agentsDir "tech_agent_ai.ps1") -ErrorAction Stop
+    if (Get-Command Get-ToriTrendlineSignal -ErrorAction SilentlyContinue) {
+        Write-GemLog "DEBUG" "Tech agent carregado com sucesso"
+    } else {
+        Write-GemLog "WARN" "tech_agent_ai carregou mas Get-ToriTrendlineSignal nao disponivel"
+    }
 } catch {
-    Write-GemLog "WARN" "Falha ao carregar tech_agent_ai (fallback sera no gem_executor): $($_.Exception.Message)"
+    Write-GemLog "WARN" "Falha ao carregar tech_agent_ai (fallback gem_executor): $($_.Exception.Message)"
 }
 
 # Gem agents (GemAgent DEVE vir antes de gem_executor)
