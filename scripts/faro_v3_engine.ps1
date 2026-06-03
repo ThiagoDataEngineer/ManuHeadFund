@@ -1,4 +1,4 @@
-param([bool] $DryRun = $false, [int] $TopCount = 200, [int] $ConcurrencyLimit = 3)
+﻿param([bool] $DryRun = $false, [int] $TopCount = 200, [int] $ConcurrencyLimit = 3)
 
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $agentsDir = Join-Path $projectRoot "agents"
@@ -16,7 +16,8 @@ $libs = @(
     "lib_faro_momentum.ps1",
     "lib_faro_fingerprint_dna.ps1",
     "lib_faro_entry_timing.ps1",
-    "lib_faro_v3_scoring.ps1"
+    "lib_faro_v3_scoring.ps1",
+    "lib_signal_trigger_bus.ps1"
 )
 foreach ($l in $libs) {
     $p = Join-Path $agentsDir $l
@@ -168,6 +169,15 @@ foreach ($gainer in $gainers) {
 
         if ($score.decision -in "ENTRA","URGENTE") {
             Write-Host "✅ $($score.decision): $market | score=$([Math]::Round($score.score, 1)) | $($score.signal_count)/7 signals" -ForegroundColor Yellow
+            # Fast-path: enfileira trigger event-driven (mode scan = pode entrar via
+            # scan_master full analysis). Coexiste com faro_v3_entry (dedup pelo
+            # position-register do scan_master). Conviccao = score normalizado.
+            if ((-not $DryRun) -and (Get-Command Add-SignalTrigger -ErrorAction SilentlyContinue)) {
+                $faroConv = Get-FaroConviction -Score $score.score -Decision $score.decision
+                if ($faroConv -gt 0) {
+                    try { Add-SignalTrigger -Market $market -Signal "faro" -Conviction $faroConv -Direction "long" -Mode "scan" -Notes "$($score.decision) $($score.signal_count)/7" | Out-Null } catch {}
+                }
+            }
         }
     } catch {
         # Skip silently and continue

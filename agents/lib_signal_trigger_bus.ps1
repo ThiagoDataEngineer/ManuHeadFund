@@ -99,6 +99,7 @@ function Add-SignalTrigger {
         [Parameter(Mandatory)] [string] $Signal,
         [Parameter(Mandatory)] [double] $Conviction,
         [ValidateSet("long","short","auto")] [string] $Direction = "auto",
+        [ValidateSet("scan","observe")] [string] $Mode = "scan",
         [string] $ClusterKey = "",
         [hashtable] $Meta = $null,
         [string] $Notes = ""
@@ -135,6 +136,7 @@ function Add-SignalTrigger {
         signal     = $signal
         conviction = [int]$Conviction
         direction  = $Direction
+        mode       = $Mode
         cluster    = $ClusterKey
         status     = "pending"
         notes      = $Notes
@@ -181,11 +183,13 @@ function Get-NextTriggerScan {
     if ($pending.Count -eq 0) { return $null }
     $top = $pending[0]
     Set-SignalTriggerProcessed -Id $top.id -Result "scan_dispatched" | Out-Null
+    $mode = if ($top.PSObject.Properties['mode'] -and $top.mode) { [string]$top.mode } else { "scan" }
     return [PSCustomObject]@{
         market     = [string]$top.market
         direction  = [string]$top.direction
         signal     = [string]$top.signal
         conviction = [int]$top.conviction
+        mode       = $mode
         id         = [string]$top.id
     }
 }

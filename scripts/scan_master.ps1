@@ -1300,12 +1300,20 @@ function Wait-WithCommands {
             try {
                 $trg = Get-NextTriggerScan
                 if ($trg -and $trg.market) {
-                    Write-MasterLog "TRIGGER $($trg.signal) conv=$($trg.conviction) -> scan direcionado $($trg.market)"
-                    if (Get-Command Send-TelegramAlert -ErrorAction SilentlyContinue) {
-                        try { Send-TelegramAlert -Message "<b>TRIGGER</b> $($trg.signal) (conv $($trg.conviction))`nScan imediato: $($trg.market)" | Out-Null } catch {}
-                    }
-                    try { Invoke-MasterCycle -Seasonal $Seasonal -ForcePair $trg.market } catch {
-                        Write-MasterLog "Erro no scan triggered $($trg.market): $_" "ERROR"
+                    if ($trg.mode -eq "observe") {
+                        # Observe: so audit/alerta, NAO dispara analise/entrada.
+                        Write-MasterLog "TRIGGER(observe) $($trg.signal) conv=$($trg.conviction) market=$($trg.market)"
+                        if (Get-Command Send-TelegramAlert -ErrorAction SilentlyContinue) {
+                            try { Send-TelegramAlert -Message "<b>TRIGGER (obs)</b> $($trg.signal) conv $($trg.conviction)`n$($trg.market)" | Out-Null } catch {}
+                        }
+                    } else {
+                        Write-MasterLog "TRIGGER $($trg.signal) conv=$($trg.conviction) -> scan direcionado $($trg.market)"
+                        if (Get-Command Send-TelegramAlert -ErrorAction SilentlyContinue) {
+                            try { Send-TelegramAlert -Message "<b>TRIGGER</b> $($trg.signal) (conv $($trg.conviction))`nScan imediato: $($trg.market)" | Out-Null } catch {}
+                        }
+                        try { Invoke-MasterCycle -Seasonal $Seasonal -ForcePair $trg.market } catch {
+                            Write-MasterLog "Erro no scan triggered $($trg.market): $_" "ERROR"
+                        }
                     }
                 }
             } catch {}

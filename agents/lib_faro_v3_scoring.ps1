@@ -1,4 +1,16 @@
-# lib_faro_v3_scoring.ps1 — 7-signal scoring (5/7 threshold)
+﻿# lib_faro_v3_scoring.ps1 — 7-signal scoring (5/7 threshold)
+
+function Get-FaroConviction {
+    # Mapeia FARO -> conviccao 0-100 para o trigger-bus. So ENTRA (5/7) e
+    # URGENTE (6+/7) disparam; conviccao = score normalizado. WATCH/SKIP = 0.
+    param([double] $Score, [string] $Decision)
+    if ($Decision -ne "ENTRA" -and $Decision -ne "URGENTE") { return 0 }
+    $s = [int][Math]::Round($Score)
+    if ($s -lt 0)   { $s = 0 }
+    if ($s -gt 100) { $s = 100 }
+    return $s
+}
+
 function Get-FaroScoreV3 {
     param([decimal] $VolScore = 0, [decimal] $PatternScore = 0, [decimal] $SentimentScore = 0, [decimal] $WhaleScore = 0, [decimal] $MomentumScore = 0, [decimal] $FingerprintScore = 0, [decimal] $TimingScore = 0)
     $vol = [decimal]($VolScore ?? 0)

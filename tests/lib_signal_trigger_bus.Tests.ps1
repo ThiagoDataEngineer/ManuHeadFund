@@ -142,6 +142,16 @@ Describe "Get-NextTriggerScan -- consumer" {
         # esvaziou
         Get-NextTriggerScan | Should BeNullOrEmpty
     }
+
+    It "mode default = scan" {
+        Add-SignalTrigger -Market "AUSDT" -Signal "whale" -Conviction 80 | Out-Null
+        (Get-NextTriggerScan).mode | Should Be "scan"
+    }
+
+    It "preserva mode observe ate o consumer" {
+        Add-SignalTrigger -Market "AUSDT" -Signal "news" -Conviction 80 -Mode "observe" | Out-Null
+        (Get-NextTriggerScan).mode | Should Be "observe"
+    }
 }
 
 
