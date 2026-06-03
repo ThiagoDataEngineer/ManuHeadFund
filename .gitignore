@@ -87,13 +87,17 @@ journal/tier_a_drawdown_*.json
 # Journal data (dados operacionais locais, nao versionar)
 # ============================================================
 journal/*.csv
+journal/*.csv.bak*
 journal/*.jsonl
+journal/*.jsonl.bak*
 journal/*.json
+journal/*.json.bak*
 journal/tg_listener_hb
 journal/watchdog_respawn_state.json
 journal/tori_proximity_state.json
 journal/trailing_positions.json
 journal/funding_history/
+journal/candles_external/
 journal/beta_vs_btc.json
 journal/capital_context.json
 journal/coin_registry.json
