@@ -182,7 +182,7 @@ Describe "Invoke-GemExecute -- Tori gate integration" {
         $gem = New-MockGem "FIROUSDT"
         $r = Invoke-GemExecute -Gem $gem
         ($global:__placeorder_called) | Should Be $false
-        ($r -eq $null) | Should Be $true
+        ($r.blocked -eq $true) | Should Be $true
     }
 
     It "4. quando Tori retorna WAIT, GEM aborta sem PlaceOrder" {
@@ -192,7 +192,7 @@ Describe "Invoke-GemExecute -- Tori gate integration" {
         $gem = New-MockGem "FIROUSDT"
         $r = Invoke-GemExecute -Gem $gem
         ($global:__placeorder_called) | Should Be $false
-        ($r -eq $null) | Should Be $true
+        ($r.blocked -eq $true) | Should Be $true
     }
 
     It "5. quando Get-ToriTrendlineSignal lanca, GEM aborta defensivo" {
@@ -201,7 +201,7 @@ Describe "Invoke-GemExecute -- Tori gate integration" {
         $gem = New-MockGem "FIROUSDT"
         $r = Invoke-GemExecute -Gem $gem
         ($global:__placeorder_called) | Should Be $false
-        ($r -eq $null) | Should Be $true
+        ($r.blocked -eq $true) | Should Be $true
     }
 
     It "6. Tori gate chamado APOS Safety Guards e ANTES de Calculate-StopTarget" {

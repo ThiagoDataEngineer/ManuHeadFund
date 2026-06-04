@@ -6,7 +6,7 @@ Describe "Dashboard Elite - TDD Tests" {
     
     BeforeAll {
         $script:projectRoot = Split-Path -Parent $PSScriptRoot
-        $script:dashboardPath = "$projectRoot\dashboard\index_elite.html"
+        $script:dashboardPath = "$projectRoot\dashboard\elite.html"
         $script:collectScript = "$projectRoot\scripts\collect_dashboard_data.ps1"
     }
     
@@ -56,7 +56,7 @@ Describe "Dashboard Elite - TDD Tests" {
             & "$projectRoot\BUILD_DASHBOARD_ELITE.ps1"
         }
         
-        It "index_elite.html deve ser criado" {
+        It "elite.html deve ser criado" {
             Test-Path $dashboardPath | Should Be $true
         }
         

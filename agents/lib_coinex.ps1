@@ -465,12 +465,13 @@ function CoinEx-GetPendingPositions {
     if ($r.code -ne 0) { return @() }
     
     # API retorna array diretamente em $r.data
+    # Usa ,@() para prevenir PS5.1 single-element array unwrapping no return
     if ($r.data -is [array]) {
-        return $r.data
+        return ,$r.data
     } elseif ($r.data) {
-        return @($r.data)
+        return ,@($r.data)
     }
-    return @()
+    return ,@()
 }
 
 # Submete ordem em /v2/futures/order.

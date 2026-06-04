@@ -1,4 +1,4 @@
-# trailing_stop_monitor_orphan_detection.Tests.ps1
+﻿# trailing_stop_monitor_orphan_detection.Tests.ps1
 # TDD para detecção e auto-registro de posições órfãs
 # Criado: 2026-05-24
 #
@@ -34,11 +34,11 @@ $global:TRAILING_FILE = "$tmpDir\trailing_positions.json"
 function Mock-CoinExPositions {
     param([array]$Positions)
     
-    $script:MockedPositions = $Positions
+    $global:__orphan_mock_positions = $Positions
     
     # Override global function
     function global:CoinEx-GetPendingPositions {
-        return $script:MockedPositions
+        return $global:__orphan_mock_positions
     }
 }
 
@@ -389,18 +389,10 @@ Describe "Integration: trailing_stop_monitor.ps1 com orphan detection" {
     }
 }
 
-# ============================================================================
-# Cleanup
-# ============================================================================
-
-AfterAll {
-    # Restaurar path original
-    if ($global:TRAILING_FILE_BACKUP) {
-        $global:TRAILING_FILE = $global:TRAILING_FILE_BACKUP
-    }
+# Cleanup inline (Pester 3.x: AfterAll so pode ser usado dentro de Describe)
+if (Test-Path $tmpDir) { Remove-Item $tmpDir -Recurse -Force -EA SilentlyContinue }
     
     # Limpar diretório temporário
     if (Test-Path $tmpDir) {
         Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
     }
-}

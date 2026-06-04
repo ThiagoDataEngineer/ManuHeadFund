@@ -1,4 +1,4 @@
-# warmup_llm_endpoints.Tests.ps1 -- FASE 2 fix D anti-regression.
+﻿# warmup_llm_endpoints.Tests.ps1 -- FASE 2 fix D anti-regression.
 # Pester 3.x. Garante que:
 #   1. Script existe + parse limpo
 #   2. daily_daemon_restart wire-up persiste (regressao de wiring)
@@ -29,9 +29,9 @@ Describe "warmup_llm_endpoints.ps1 - shape" {
         $src = Get-Content $warmupPath -Raw -Encoding UTF8
         $src | Should Match 'Invoke-Groq[\s\S]+?llama'
     }
-    It "Chama Invoke-Gemini (cascade fallback 2)" {
+    It "Chama Invoke-Mistral (cascade fallback 2 - substituiu Gemini 2026-05-29)" {
         $src = Get-Content $warmupPath -Raw -Encoding UTF8
-        $src | Should Match 'Invoke-Gemini[\s\S]+?gemini-'
+        $src | Should Match 'Invoke-Mistral'
     }
     It "Fail-open: cada call em try/catch separado" {
         $src = Get-Content $warmupPath -Raw -Encoding UTF8

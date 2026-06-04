@@ -35,7 +35,7 @@ Describe "Get-WhaleTransactions" {
         $mockTx = @{
             hash = "test123"
             inputs = @( @{ prev_out = @{ addr = "whale_address"; value = 10000000000 } } )
-            out = @( @{ addr = "binance_cold_wallet"; value = 10000000000 } )
+            out = @( @{ addr = "34xp4vRoCGJym3xR7yCVPFHoCNxv4Twseo"; value = 10000000000 } )
         }
         
         # ACT
@@ -50,7 +50,7 @@ Describe "Get-WhaleTransactions" {
         # ARRANGE: Exchange → Whale = accumulation signal
         $mockTx = @{
             hash = "test456"
-            inputs = @( @{ prev_out = @{ addr = "coinbase_hot_wallet"; value = 20000000000 } } )
+            inputs = @( @{ prev_out = @{ addr = "bc1qgdjqv0av3q56jvd82tkdjpy7gdp9ut8tlqmgrpmv24sq90ecnvqqjwvw97"; value = 20000000000 } } )
             out = @( @{ addr = "whale_address"; value = 20000000000 } )
         }
         

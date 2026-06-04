@@ -233,7 +233,8 @@ function Send-TelegramAlert {
         [string]$Message,
 
         [Parameter(Mandatory=$false)]
-        [string]$BotToken = $env:TELEGRAM_BOT_TOKEN,
+        [Alias("BotToken")]
+        [string]$Token = $env:TELEGRAM_BOT_TOKEN,
 
         [Parameter(Mandatory=$false)]
         [string]$ChatId = $env:TELEGRAM_CHAT_ID,
@@ -242,33 +243,110 @@ function Send-TelegramAlert {
         [int]$DedupSeconds = 0,
 
         [Parameter(Mandatory=$false)]
-        [string]$DedupStorePath = ""
+        [string]$DedupStorePath = "",
+
+        [Parameter(Mandatory=$false)]
+        [string]$Enabled = "true"
     )
 
-    # Deduplicacao opcional: evita reenviar a MESMA mensagem dentro da janela.
-    # Resolve o problema de heartbeats/status identicos repetidos sem acao.
-    # Se -DedupStorePath for dado, usa store persistido em JSON (sobrevive a restart
-    # do daemon); senao usa store global in-memory por processo.
+    if ($Enabled -ne "true")  { return $false }
+    if (-not $Token)          { return $false }
+    if (-not $ChatId)         { return $false }
+
+    # Deduplicacao opcional
     if ($DedupSeconds -gt 0) {
         if ($DedupStorePath) {
             $store = Import-TgDedupStore -Path $DedupStorePath
             $isDup = Test-TelegramDuplicate -Message $Message -Store $store -TtlSeconds $DedupSeconds
             Export-TgDedupStore -Store $store -Path $DedupStorePath | Out-Null
-            if ($isDup) {
-                return [PSCustomObject]@{ success = $true; skipped = $true; reason = "duplicate_within_${DedupSeconds}s"; persisted = $true }
-            }
+            if ($isDup) { return $true }
         }
         else {
             if ($null -eq $global:TG_DEDUP_STORE) { $global:TG_DEDUP_STORE = @{} }
             if (Test-TelegramDuplicate -Message $Message -Store $global:TG_DEDUP_STORE -TtlSeconds $DedupSeconds) {
-                return [PSCustomObject]@{ success = $true; skipped = $true; reason = "duplicate_within_${DedupSeconds}s" }
+                return $true
             }
         }
     }
 
-    return Telegram-SendMessage -Message $Message -BotToken $BotToken -ChatId $ChatId
+    try {
+        $r = Telegram-SendMessage -Message $Message -BotToken $Token -ChatId $ChatId
+        return ($r -and $r.success -eq $true)
+    } catch {
+        return $false
+    }
 }
 
+
+# ============================================================================
+# TG_EMOJI -- Hashtable global de emojis para mensagens Telegram
+# ============================================================================
+if (-not $global:TG_EMOJI) {
+    $global:TG_EMOJI = @{
+        alert  = "⚠️"
+        check  = "✅"
+        cross  = "❌"
+        clock  = "⏰"
+        chart  = "📈"
+        money  = "💰"
+        target = "🎯"
+        stop   = "🛑"
+        gem    = "💎"
+        fire   = "🔥"
+    }
+}
+
+# ============================================================================
+# Format-TelegramMessage -- Formata gem para mensagem Telegram compacta
+# ============================================================================
+function Format-TelegramMessage {
+    param(
+        [Parameter(Mandatory=$true)] $Gem,
+        [string]$MarketType = "FUTURES"
+    )
+    $market  = if ($Gem.market) { $Gem.market } else { "?" }
+    $score   = if ($Gem.score)  { $Gem.score }  else { 0 }
+    $mode    = if ($Gem.mode)   { $Gem.mode }   else { "DISCOVERY" }
+    $spike   = if ($Gem.vol_data -and $Gem.vol_data.spike_ratio)      { "$([math]::Round($Gem.vol_data.spike_ratio,1))x" }      else { "N/A" }
+    $chg     = if ($Gem.vol_data -and $Gem.vol_data.pct_change_today) { "$([math]::Round($Gem.vol_data.pct_change_today,1))%" } else { "N/A" }
+    $sizeUsd = if ($Gem.sizing  -and $Gem.sizing.sizing_usd)          { "`$$([math]::Round($Gem.sizing.sizing_usd,2))" }         else { "N/A" }
+    return "<b>$market</b> [$MarketType] Score:$score | $mode | Vol:$spike $chg | Size:$sizeUsd"
+}
+
+# ============================================================================
+# Send-GemAlertWithLogo -- Envia alerta de gem com foto (logo) ou texto
+# ============================================================================
+function Send-GemAlertWithLogo {
+    param(
+        [Parameter(Mandatory=$true)] $Gem,
+        [string]$Token   = $env:TELEGRAM_BOT_TOKEN,
+        [string]$ChatId  = $env:TELEGRAM_CHAT_ID,
+        [string]$Enabled = "true"
+    )
+    if ($Enabled -ne "true" -or -not $Token -or -not $ChatId) { return $false }
+    $msg     = Format-TelegramMessage -Gem $Gem
+    $logoUrl = if ($Gem.PSObject.Properties["logo_url"]) { $Gem.logo_url } else { $null }
+    $baseUrl = "https://api.telegram.org/bot$Token"
+    try {
+        if ($logoUrl) {
+            $body = @{ chat_id=$ChatId; photo=$logoUrl; caption=$msg } | ConvertTo-Json -Compress
+            $r = Invoke-RestMethod -Uri "$baseUrl/sendPhoto" -Method POST -Body $body -ContentType "application/json" -ErrorAction Stop
+        } else {
+            $body = @{ chat_id=$ChatId; text=$msg } | ConvertTo-Json -Compress
+            $r = Invoke-RestMethod -Uri "$baseUrl/sendMessage" -Method POST -Body $body -ContentType "application/json" -ErrorAction Stop
+        }
+        return ($r.ok -eq $true)
+    } catch {
+        if ($logoUrl) {
+            try {
+                $body2 = @{ chat_id=$ChatId; text=$msg } | ConvertTo-Json -Compress
+                $r2 = Invoke-RestMethod -Uri "$baseUrl/sendMessage" -Method POST -Body $body2 -ContentType "application/json" -ErrorAction Stop
+                return ($r2.ok -eq $true)
+            } catch {}
+        }
+        return $false
+    }
+}
 
 # ==============================================================================
 # Send-GemAlert — Formata e envia alerta Telegram para gem encontrado (COMPACTO)
@@ -335,7 +413,19 @@ function Format-TgGemApproval {
     $stopPct   = if ($Gem.sizing -and $Gem.sizing.stop_pct)             { "$([math]::Round($Gem.sizing.stop_pct*100,0))%" }        else { "N/A" }
     $targetPct = if ($Gem.sizing -and $Gem.sizing.target_pct)           { "+$([math]::Round($Gem.sizing.target_pct*100,0))%" }     else { "N/A" }
 
-    $msg = "$modeEmoji <b>APPROVE$dryTag — $($Gem.market)</b> | Score: $($Gem.score) | Vol: $volSpike ↑$change24h`n💰 $sizeUsd | Stop: $stopPct | Target: $targetPct`n✅ Approve?"
+    # mcap formatado (ex: 1200000 → "1.2M")
+    $mcapStr = ""
+    if ($Gem.PSObject.Properties["mcap_usd"] -and $Gem.mcap_usd -gt 0) {
+        $mcapStr = " | MCap: $([math]::Round($Gem.mcap_usd/1000000,2))M"
+    }
+
+    # gates_passed como "G1 G2 G3"
+    $gatesStr = ""
+    if ($Gem.PSObject.Properties["gates_passed"] -and $Gem.gates_passed) {
+        $gatesStr = "`nGates: $($Gem.gates_passed -join ' ')"
+    }
+
+    $msg = "$modeEmoji <b>APROVAR$dryTag — $($Gem.market)</b> | Score: $($Gem.score)$mcapStr | Vol: $volSpike ↑$change24h`n💰 $sizeUsd | Stop: $stopPct | Target: $targetPct$gatesStr`n✅ Confirmar?"
 
     return $msg
 }
@@ -431,65 +521,52 @@ Preço: <code>$CurrentPrice</code> | Stop: <code>$OldStop</code> → <code>$($Po
 function Wait-TgCallbackApproval {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [string]$GemMarket,
-
-        [Parameter(Mandatory=$false)]
-        [int]$TimeoutSeconds = 300,
-
-        [Parameter(Mandatory=$false)]
-        [string]$BotToken = $env:TELEGRAM_BOT_TOKEN,
-
-        [Parameter(Mandatory=$false)]
-        [string]$ChatId = $env:TELEGRAM_CHAT_ID
+        [Parameter(Mandatory=$true)]  $Gem,
+        [Parameter(Mandatory=$true)]  [string]$GemId,
+        [Parameter(Mandatory=$false)] [int]$TimeoutSeconds = 300,
+        [Parameter(Mandatory=$false)] [int]$PollSeconds    = 5,
+        [Parameter(Mandatory=$false)] [string]$Token       = $env:TELEGRAM_BOT_TOKEN,
+        [Parameter(Mandatory=$false)] [string]$ChatId      = $env:TELEGRAM_CHAT_ID,
+        [Parameter(Mandatory=$false)] [string]$Enabled     = "true",
+        # Compat retroativa: aceita GemMarket (alias para GemId)
+        [Parameter(Mandatory=$false)] [string]$GemMarket   = "",
+        [Parameter(Mandatory=$false)] [string]$BotToken    = ""
     )
+    if ($GemMarket -and -not $GemId) { $GemId = $GemMarket }
+    if ($BotToken  -and -not $Token) { $Token  = $BotToken  }
 
-    if (-not $BotToken -or -not $ChatId) {
-        Write-Host "[CALLBACK] Config Telegram nao encontrado" -ForegroundColor Yellow
-        return [PSCustomObject]@{
-            approved = $false
-            reason = "Config not found"
-        }
+    # Envia mensagem de aprovacao com inline keyboard
+    $sent = Send-TgApprovalRequest -Gem $Gem -GemId $GemId -Token $Token -ChatId $ChatId -Enabled $Enabled
+    if (-not $sent.ok) {
+        return @{ decision="error"; from=$null; message_id=$null }
     }
+    $msgId    = $sent.message_id
+    $wasPhoto = $sent.was_photo
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    $lastOffset = 0
 
-    # Arquivo de estado para armazenar aprovações
-    $stateDir = Join-Path $PSScriptRoot "..\journal"
-    if (-not (Test-Path $stateDir)) { New-Item -ItemType Directory -Path $stateDir -Force | Out-Null }
-    
-    $approvalFile = Join-Path $stateDir "gem_approvals.json"
-    $startTime = Get-Date
-
-    Write-Host "[CALLBACK] Aguardando aprovação para $GemMarket (timeout: $($TimeoutSeconds)s)..." -ForegroundColor Cyan
-
-    # Loop de polling (a cada 5 segundos)
-    while ((Get-Date) -lt $startTime.AddSeconds($TimeoutSeconds)) {
-        if (Test-Path $approvalFile) {
-            $approvals = Get-Content $approvalFile -Raw | ConvertFrom-Json -ErrorAction SilentlyContinue
-            
-            if ($approvals -and $approvals.PSObject.Properties[$GemMarket]) {
-                $approval = $approvals.$GemMarket
-                
-                # Remover após consumir
-                $approvals.PSObject.Properties.Remove($GemMarket)
-                $approvals | ConvertTo-Json | Set-Content $approvalFile -Encoding UTF8
-
-                Write-Host "[CALLBACK] Aprovação recebida para $GemMarket`: $($approval.approved)" -ForegroundColor Green
-                return [PSCustomObject]@{
-                    approved = $approval.approved
-                    reason = $approval.reason
-                    timestamp = $approval.timestamp
-                }
+    while ((Get-Date) -lt $deadline) {
+        $updates = Receive-TelegramUpdates -Offset $lastOffset -Token $Token -Timeout ([math]::Min($PollSeconds, 5))
+        foreach ($upd in @($updates)) {
+            if ($upd.update_id -gt $lastOffset) { $lastOffset = $upd.update_id }
+            $cb = $upd.callback_query
+            if (-not $cb) { continue }
+            $data = [string]$cb.data
+            $from = if ($cb.from -and $cb.from.first_name) { $cb.from.first_name } else { "user" }
+            if ($data -eq "approve:$GemId") {
+                if (Get-Command Confirm-TgCallback -EA SilentlyContinue) { Confirm-TgCallback -CallbackId $cb.id -Text "Executando..." -Token $Token | Out-Null }
+                if ($msgId -and (Get-Command Update-TgCaption -EA SilentlyContinue)) { Update-TgCaption -MessageId $msgId -Caption "APROVADO por $from" -WasPhoto:$wasPhoto -Token $Token -ChatId $ChatId | Out-Null }
+                return @{ decision="approve"; from=$from; message_id=$msgId }
+            }
+            if ($data -eq "reject:$GemId") {
+                if (Get-Command Confirm-TgCallback -EA SilentlyContinue) { Confirm-TgCallback -CallbackId $cb.id -Text "Cancelado." -Token $Token | Out-Null }
+                if ($msgId -and (Get-Command Update-TgCaption -EA SilentlyContinue)) { Update-TgCaption -MessageId $msgId -Caption "CANCELADO por $from" -WasPhoto:$wasPhoto -Token $Token -ChatId $ChatId | Out-Null }
+                return @{ decision="reject"; from=$from; message_id=$msgId }
             }
         }
-
-        Start-Sleep -Seconds 5
+        if ((Get-Date) -lt $deadline) { Start-Sleep -Seconds $PollSeconds }
     }
-
-    Write-Host "[CALLBACK] Timeout aguardando aprovação para $GemMarket" -ForegroundColor Yellow
-    return [PSCustomObject]@{
-        approved = $false
-        reason = "Timeout"
-    }
+    return @{ decision="timeout"; from=$null; message_id=$msgId }
 }
 
 # ==============================================================================
@@ -797,7 +874,7 @@ function Send-HeartbeatIfDue {
     # do daemon. Store em journal/tg_dedup_heartbeat.json.
     $hbDedupPath = Join-Path $PSScriptRoot "..\journal\tg_dedup_heartbeat.json"
     $result = Send-TelegramAlert -Message $msg -DedupSeconds 3600 -DedupStorePath $hbDedupPath
-    if ($result -and $result.success -and $LastHeartbeatFile) {
+    if ($result -and $LastHeartbeatFile) {
         # Atualiza timestamp do ultimo heartbeat
         $dir = Split-Path $LastHeartbeatFile
         if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
@@ -1061,4 +1138,119 @@ function Format-TgTradeOpenedHighlight {
     if ($cap) { $lines += "💰 Capital: <code>`$$cap</code>" }
 
     return ($lines -join "`n")
+}
+
+# ============================================================================
+# New-TgApprovalKeyboard - Inline keyboard para aprovacao de GEM
+# ============================================================================
+function New-TgApprovalKeyboard {
+    param([Parameter(Mandatory=$true)][string]$GemId)
+    # Unary comma (,) preserva o array nested — sem isso PS5.1 unwraps e vira flat
+    $row = @(
+        @{ text = "EXECUTAR"; callback_data = "approve:$GemId" },
+        @{ text = "CANCELAR"; callback_data = "reject:$GemId"  }
+    )
+    return @{ inline_keyboard = @(,$row) }
+}
+
+# ============================================================================
+# Send-TgApprovalRequest - Envia mensagem de aprovacao com inline keyboard
+# ============================================================================
+function Send-TgApprovalRequest {
+    param(
+        [Parameter(Mandatory=$true)]  $Gem,
+        [Parameter(Mandatory=$true)]  [string]$GemId,
+        [Parameter(Mandatory=$true)]  [string]$Token,
+        [Parameter(Mandatory=$true)]  [string]$ChatId,
+        [Parameter(Mandatory=$false)] [string]$Enabled = "true"
+    )
+    if ($Enabled -ne "true") {
+        return @{ ok=$false; message_id=$null; was_photo=$false }
+    }
+    $kb = New-TgApprovalKeyboard -GemId $GemId
+    $replyMarkup = $kb | ConvertTo-Json -Depth 5 -Compress
+    $logoUrl = if ($Gem.PSObject.Properties["logo_url"]) { $Gem.logo_url } else { $null }
+    $baseUrl = "https://api.telegram.org/bot$Token"
+    $inv = [System.Globalization.CultureInfo]::InvariantCulture
+    $score = if ($Gem.score) { $Gem.score } else { 0 }
+    $mode  = if ($Gem.mode)  { $Gem.mode }  else { "DISCOVERY" }
+    $caption = "GEM: $($Gem.market) | Score: $score | Modo: $mode`nAprovar execucao?"
+    $bodyMsg = @{ chat_id=$ChatId; text=$caption; reply_markup=$replyMarkup } | ConvertTo-Json -Compress
+    try {
+        if ($logoUrl) {
+            $bodyPhoto = @{ chat_id=$ChatId; photo=$logoUrl; caption=$caption; reply_markup=$replyMarkup } | ConvertTo-Json -Compress
+            $r = Invoke-RestMethod -Uri "$baseUrl/sendPhoto" -Method POST -Body $bodyPhoto -ContentType "application/json; charset=utf-8" -ErrorAction Stop
+            if ($r.ok) { return @{ ok=$true; message_id=$r.result.message_id; was_photo=$true } }
+            # sendPhoto retornou ok=false — fallback para sendMessage
+            $r2 = Invoke-RestMethod -Uri "$baseUrl/sendMessage" -Method POST -Body $bodyMsg -ContentType "application/json; charset=utf-8" -ErrorAction Stop
+            if ($r2.ok) { return @{ ok=$true; message_id=$r2.result.message_id; was_photo=$false } }
+            return @{ ok=$false; message_id=$null; was_photo=$false }
+        } else {
+            $r = Invoke-RestMethod -Uri "$baseUrl/sendMessage" -Method POST -Body $bodyMsg -ContentType "application/json; charset=utf-8" -ErrorAction Stop
+            if ($r.ok) { return @{ ok=$true; message_id=$r.result.message_id; was_photo=$false } }
+            return @{ ok=$false; message_id=$null; was_photo=$false }
+        }
+    } catch {
+        # sendPhoto threw — fallback para sendMessage
+        if ($logoUrl) {
+            try {
+                $r2 = Invoke-RestMethod -Uri "$baseUrl/sendMessage" -Method POST -Body $bodyMsg -ContentType "application/json; charset=utf-8" -ErrorAction Stop
+                if ($r2.ok) { return @{ ok=$true; message_id=$r2.result.message_id; was_photo=$false } }
+            } catch {}
+        }
+        return @{ ok=$false; message_id=$null; was_photo=$false }
+    }
+}
+
+# ============================================================================
+# Confirm-TgCallback - Confirma callback_query (evita loading spinner no bot)
+# ============================================================================
+function Confirm-TgCallback {
+    param(
+        [Parameter(Mandatory=$true)]  [string]$CallbackId,
+        [Parameter(Mandatory=$false)] [string]$Text  = "",
+        [Parameter(Mandatory=$false)] [string]$Token = $env:TELEGRAM_BOT_TOKEN
+    )
+    if (-not $Token) { return $false }
+    try {
+        $body = @{ callback_query_id=$CallbackId; text=$Text } | ConvertTo-Json -Compress
+        $r = Invoke-RestMethod -Uri "https://api.telegram.org/bot$Token/answerCallbackQuery" -Method POST -Body $body -ContentType "application/json" -ErrorAction Stop
+        return ($r.ok -eq $true)
+    } catch { return $false }
+}
+
+# ============================================================================
+# Update-TgCaption - Edita caption/texto de mensagem existente
+# ============================================================================
+function Update-TgCaption {
+    param(
+        [Parameter(Mandatory=$true)]  [long]$MessageId,
+        [Parameter(Mandatory=$true)]  [string]$Caption,
+        [switch]$WasPhoto,
+        [Parameter(Mandatory=$false)] [string]$Token  = $env:TELEGRAM_BOT_TOKEN,
+        [Parameter(Mandatory=$false)] [string]$ChatId = $env:TELEGRAM_CHAT_ID
+    )
+    if (-not $Token -or -not $ChatId) { return $false }
+    $endpoint = if ($WasPhoto) { "editMessageCaption" } else { "editMessageText" }
+    $bodyKey  = if ($WasPhoto) { "caption" } else { "text" }
+    try {
+        $body = @{ chat_id=$ChatId; message_id=$MessageId; $bodyKey=$Caption } | ConvertTo-Json -Compress
+        $r = Invoke-RestMethod -Uri "https://api.telegram.org/bot$Token/$endpoint" -Method POST -Body $body -ContentType "application/json" -ErrorAction Stop
+        return ($r.ok -eq $true)
+    } catch { return $false }
+}
+
+# ============================================================================
+# Receive-TelegramUpdates - Polling de updates (wrapper testavel)
+# ============================================================================
+function Receive-TelegramUpdates {
+    param(
+        [long]  $Offset  = 0,
+        [string]$Token   = $env:TELEGRAM_BOT_TOKEN,
+        [int]   $Timeout = 5
+    )
+    try {
+        $r = Invoke-RestMethod -Uri "https://api.telegram.org/bot$Token/getUpdates?offset=$($Offset+1)&timeout=$Timeout" -Method GET -ErrorAction Stop
+        if ($r.ok) { return $r.result } else { return @() }
+    } catch { return @() }
 }
