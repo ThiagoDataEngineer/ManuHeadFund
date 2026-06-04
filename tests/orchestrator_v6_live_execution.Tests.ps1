@@ -26,10 +26,11 @@ $global:STUB_PLACEORDER_THROW = $false
 $global:CALLED_TG_APPROVAL = $false
 $global:CALLED_PLACEORDER  = $false
 
-function Wait-TelegramApproval {
-    param([string]$Message, [int]$TimeoutSeconds)
+function Wait-TgCallbackApproval {
+    param([string]$GemMarket, [string]$GemId, [int]$TimeoutSeconds, [int]$PollSeconds, [string]$Token, [string]$ChatId, [string]$Enabled, [string]$GemMarket2, [string]$BotToken, $Gem)
     $global:CALLED_TG_APPROVAL = $true
-    return $global:STUB_TG_APPROVAL
+    $decision = if ($global:STUB_TG_APPROVAL) { "approve" } else { "reject" }
+    return @{ decision=$decision; from="Thiago"; message_id=42 }
 }
 function CoinEx-PlaceOrder {
     param($Market, $Side, $Type, $Amount, $Price, $StopLoss, $Target, $StpMode)

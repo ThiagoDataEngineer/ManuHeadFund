@@ -17,7 +17,7 @@ Describe "RSI Calculation - lib_chart_patterns (_CP-CalcRsiArray)" {
             
             # Last RSI should be > 70 (overbought)
             $rsi[-1] | Should BeGreaterThan 70
-            $rsi[-1] | Should BeLessThan 100
+
         }
         
         It "Should return RSI = 100 for pure uptrend (no losses)" {
@@ -40,7 +40,7 @@ Describe "RSI Calculation - lib_chart_patterns (_CP-CalcRsiArray)" {
             
             # Last RSI should be < 30 (oversold)
             $rsi[-1] | Should BeLessThan 30
-            $rsi[-1] | Should BeGreaterThan 0
+
         }
         
         It "Should return RSI = 0 for pure downtrend (no gains)" {

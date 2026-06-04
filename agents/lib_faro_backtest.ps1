@@ -1,4 +1,4 @@
-# lib_faro_backtest.ps1 — Backtest simulation engine with metrics calculation
+﻿# lib_faro_backtest.ps1 — Backtest simulation engine with metrics calculation
 
 function Run-BacktestSimulation {
     param(
@@ -32,13 +32,13 @@ function Run-BacktestSimulation {
     foreach ($trade in $Trades) {
         $entryPrice = [decimal]$trade.entry_price
         $exitPrice = [decimal]$trade.exit_price
-        $quantity = [decimal]$trade.quantity ?? 1
+        $quantity = if ($null -ne $trade.quantity) { [decimal]$trade.quantity } else { 1 }
 
         # Calculate raw profit
         $rawPnL = ($exitPrice - $entryPrice) * $quantity
 
-        # Apply commission on both entry and exit
-        $commission = $InitialCapital * $CommissionPercent * 2  # Both sides
+        # Apply commission on both entry and exit (based on trade value)
+        $commission = $entryPrice * $quantity * $CommissionPercent * 2
 
         $netPnL = $rawPnL - $commission
 
@@ -68,7 +68,8 @@ function Run-BacktestSimulation {
     $losses = @($tradeResults | Where-Object { $_.net_pnl -le 0 })
     $totalTrades = $tradeResults.Count
     $winRate = if ($totalTrades -gt 0) { [decimal]($wins.Count) / [decimal]($totalTrades) } else { 0 }
-    $totalPnL = ($tradeResults | Measure-Object -Property net_pnl -Sum).Sum ?? 0
+    $totalPnL = ($tradeResults | Measure-Object -Property net_pnl -Sum).Sum
+    if ($null -eq $totalPnL) { $totalPnL = 0 }
     $returnPct = ($totalPnL / $InitialCapital) * 100
     $avgWin = if ($wins.Count -gt 0) { ($wins | Measure-Object -Property net_pnl -Average).Average } else { 0 }
     $avgLoss = if ($losses.Count -gt 0) { ($losses | Measure-Object -Property net_pnl -Average).Average } else { 0 }
@@ -76,8 +77,10 @@ function Run-BacktestSimulation {
     # Profit factor (gross wins / gross losses)
     $profitFactor = 0
     if ($losses.Count -gt 0) {
-        $totalWins = ($wins | Measure-Object -Property gross_pnl -Sum).Sum ?? 0
-        $totalLosses = [Math]::Abs(($losses | Measure-Object -Property gross_pnl -Sum).Sum ?? 0)
+        $winsSum   = ($wins   | Measure-Object -Property gross_pnl -Sum).Sum; if ($null -eq $winsSum)   { $winsSum   = 0 }
+        $lossesSum = ($losses | Measure-Object -Property gross_pnl -Sum).Sum; if ($null -eq $lossesSum) { $lossesSum = 0 }
+        $totalWins   = $winsSum
+        $totalLosses = [Math]::Abs($lossesSum)
         if ($totalLosses -gt 0) {
             $profitFactor = $totalWins / $totalLosses
         }
