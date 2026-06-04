@@ -1,4 +1,4 @@
-# tests/lib_chart_patterns_rsi.Tests.ps1
+﻿# tests/lib_chart_patterns_rsi.Tests.ps1
 # Validar RSI calculation em lib_chart_patterns.ps1
 # Criado: 2026-05-23 (após descoberta do RSI bug em Python)
 
@@ -27,7 +27,7 @@ Describe "RSI Calculation - lib_chart_patterns (_CP-CalcRsiArray)" {
             $rsi = _CP-CalcRsiArray -Closes $closes -Period 14
             
             # Pure uptrend should approach RSI = 100
-            $rsi[-1] | Should -BeGreaterThan 95
+            $rsi[-1] | Should BeGreaterThan 95
         }
     }
     
@@ -39,8 +39,8 @@ Describe "RSI Calculation - lib_chart_patterns (_CP-CalcRsiArray)" {
             $rsi = _CP-CalcRsiArray -Closes $closes -Period 14
             
             # Last RSI should be < 30 (oversold)
-            $rsi[-1] | Should -BeLessThan 30
-            $rsi[-1] | Should -BeGreaterThan 0
+            $rsi[-1] | Should BeLessThan 30
+            $rsi[-1] | Should BeGreaterThan 0
         }
         
         It "Should return RSI = 0 for pure downtrend (no gains)" {
@@ -50,7 +50,7 @@ Describe "RSI Calculation - lib_chart_patterns (_CP-CalcRsiArray)" {
             $rsi = _CP-CalcRsiArray -Closes $closes -Period 14
             
             # Pure downtrend should approach RSI = 0
-            $rsi[-1] | Should -BeLessThan 5
+            $rsi[-1] | Should BeLessThan 5
         }
     }
     
@@ -62,8 +62,8 @@ Describe "RSI Calculation - lib_chart_patterns (_CP-CalcRsiArray)" {
             $rsi = _CP-CalcRsiArray -Closes $closes -Period 14
             
             # Sideways should have RSI around 50
-            $rsi[-1] | Should -BeGreaterThan 40
-            $rsi[-1] | Should -BeLessThan 60
+            $rsi[-1] | Should BeGreaterThan 40
+            $rsi[-1] | Should BeLessThan 60
         }
     }
     
@@ -79,11 +79,11 @@ Describe "RSI Calculation - lib_chart_patterns (_CP-CalcRsiArray)" {
             $rsi = _CP-CalcRsiArray -Closes $closes -Period 14
             
             # Should be in valid range (0-100)
-            $rsi[-1] | Should -BeGreaterThan 0
-            $rsi[-1] | Should -BeLessThan 100
+            $rsi[-1] | Should BeGreaterThan 0
+            $rsi[-1] | Should BeLessThan 100
             
             # Should be bullish (uptrend with pullbacks)
-            $rsi[-1] | Should -BeGreaterThan 50
+            $rsi[-1] | Should BeGreaterThan 50
         }
     }
     
@@ -95,7 +95,7 @@ Describe "RSI Calculation - lib_chart_patterns (_CP-CalcRsiArray)" {
             $rsi = _CP-CalcRsiArray -Closes $closes -Period 14
             
             # Should return default 50.0 for all values
-            $rsi | ForEach-Object { $_ | Should -Be 50.0 }
+            $rsi | ForEach-Object { $_ | Should Be 50.0 }
         }
         
         It "Should handle exact period+1 candles" {
@@ -105,9 +105,9 @@ Describe "RSI Calculation - lib_chart_patterns (_CP-CalcRsiArray)" {
             $rsi = _CP-CalcRsiArray -Closes $closes -Period 14
             
             # Should calculate RSI for last value
-            $rsi[-1] | Should -Not -Be 50.0
-            $rsi[-1] | Should -BeGreaterThan 0
-            $rsi[-1] | Should -BeLessThan 100
+            $rsi[-1] | Should Not Be 50.0
+            $rsi[-1] | Should BeGreaterThan 0
+            $rsi[-1] | Should BeLessThan 100
         }
         
         It "Should return array of same length as input" {
@@ -116,7 +116,7 @@ Describe "RSI Calculation - lib_chart_patterns (_CP-CalcRsiArray)" {
             $rsi = _CP-CalcRsiArray -Closes $closes -Period 14
             
             # Output array should have same length as input
-            $rsi.Length | Should -Be $closes.Length
+            $rsi.Length | Should Be $closes.Length
         }
     }
     
@@ -128,7 +128,7 @@ Describe "RSI Calculation - lib_chart_patterns (_CP-CalcRsiArray)" {
             $rsi = _CP-CalcRsiArray -Closes $closes -Period 14
             
             # Python test expects RSI > 70 for this uptrend
-            $rsi[-1] | Should -BeGreaterThan 70
+            $rsi[-1] | Should BeGreaterThan 70
         }
         
         It "Should match Python RSI for downtrend" {
@@ -138,7 +138,7 @@ Describe "RSI Calculation - lib_chart_patterns (_CP-CalcRsiArray)" {
             $rsi = _CP-CalcRsiArray -Closes $closes -Period 14
             
             # Python test expects RSI < 30 for this downtrend
-            $rsi[-1] | Should -BeLessThan 30
+            $rsi[-1] | Should BeLessThan 30
         }
         
         It "Should match Python RSI for sideways" {
@@ -148,8 +148,8 @@ Describe "RSI Calculation - lib_chart_patterns (_CP-CalcRsiArray)" {
             $rsi = _CP-CalcRsiArray -Closes $closes -Period 14
             
             # Python test expects RSI 40-60 for sideways
-            $rsi[-1] | Should -BeGreaterThan 40
-            $rsi[-1] | Should -BeLessThan 60
+            $rsi[-1] | Should BeGreaterThan 40
+            $rsi[-1] | Should BeLessThan 60
         }
     }
 }

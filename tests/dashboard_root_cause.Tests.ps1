@@ -1,4 +1,4 @@
-# dashboard_root_cause.Tests.ps1 - TDD para identificar causa raiz dos problemas do dashboard
+﻿# dashboard_root_cause.Tests.ps1 - TDD para identificar causa raiz dos problemas do dashboard
 # RED → GREEN → REFACTOR
 #
 # PROBLEMAS REPORTADOS:
@@ -30,7 +30,7 @@ Describe "Dashboard Root Cause Analysis" {
             
             CoinEx-GetPendingPositions
             
-            $script:capturedPath | Should -Be "/v2/futures/pending-position?market_type=FUTURES"
+            $script:capturedPath | Should Be "/v2/futures/pending-position?market_type=FUTURES"
         }
         
         It "Should return array when API returns single position" {
@@ -47,9 +47,9 @@ Describe "Dashboard Root Cause Analysis" {
             
             $result = CoinEx-GetPendingPositions
             
-            $result | Should -BeOfType [array]
-            $result.Count | Should -Be 1
-            $result[0].market | Should -Be "BNBUSDT"
+            $result | Should BeOfType [array]
+            $result.Count | Should Be 1
+            $result[0].market | Should Be "BNBUSDT"
         }
         
         It "Should return array when API returns multiple positions" {
@@ -65,8 +65,8 @@ Describe "Dashboard Root Cause Analysis" {
             
             $result = CoinEx-GetPendingPositions
             
-            $result | Should -BeOfType [array]
-            $result.Count | Should -Be 2
+            $result | Should BeOfType [array]
+            $result.Count | Should Be 2
         }
         
         It "Should return empty array when API returns empty" {
@@ -76,8 +76,8 @@ Describe "Dashboard Root Cause Analysis" {
             
             $result = CoinEx-GetPendingPositions
             
-            $result | Should -BeOfType [array]
-            $result.Count | Should -Be 0
+            $result | Should BeOfType [array]
+            $result.Count | Should Be 0
         }
         
         It "Should return empty array when API fails" {
@@ -87,8 +87,8 @@ Describe "Dashboard Root Cause Analysis" {
             
             $result = CoinEx-GetPendingPositions
             
-            $result | Should -BeOfType [array]
-            $result.Count | Should -Be 0
+            $result | Should BeOfType [array]
+            $result.Count | Should Be 0
         }
     }
     
@@ -109,10 +109,10 @@ Describe "Dashboard Root Cause Analysis" {
             
             # Dashboard deve usar avg_entry_price
             $entryPrice = [double]$mockPosition.avg_entry_price
-            $entryPrice | Should -Be 647.06
+            $entryPrice | Should Be 647.06
             
             # Dashboard NAO deve usar open_price (nao existe)
-            $mockPosition.PSObject.Properties.Name | Should -Not -Contain "open_price"
+            $mockPosition.PSObject.Properties.Name | Should Not Contain "open_price"
         }
         
         It "Should fetch current price via ticker not latest_price" {
@@ -135,10 +135,10 @@ Describe "Dashboard Root Cause Analysis" {
             
             $ticker = CoinEx-GetTickerFresh -market $mockPosition.market
             $currentPrice = [double]$ticker.ticker.last
-            $currentPrice | Should -Be 650.00
+            $currentPrice | Should Be 650.00
             
             # Dashboard NAO deve usar latest_price (nao existe)
-            $mockPosition.PSObject.Properties.Name | Should -Not -Contain "latest_price"
+            $mockPosition.PSObject.Properties.Name | Should Not Contain "latest_price"
         }
         
         It "Should use liq_price not liquidation_price" {
@@ -150,10 +150,10 @@ Describe "Dashboard Root Cause Analysis" {
             
             # Dashboard deve usar liq_price
             $liqPrice = [double]$mockPosition.liq_price
-            $liqPrice | Should -Be 0
+            $liqPrice | Should Be 0
             
             # Dashboard NAO deve usar liquidation_price (nao existe)
-            $mockPosition.PSObject.Properties.Name | Should -Not -Contain "liquidation_price"
+            $mockPosition.PSObject.Properties.Name | Should Not Contain "liquidation_price"
         }
     }
     
@@ -176,12 +176,12 @@ Describe "Dashboard Root Cause Analysis" {
 "@
             
             # HTML deve conter meta charset UTF-8
-            $html | Should -Match '<meta charset="UTF-8">'
+            $html | Should Match '<meta charset="UTF-8">'
             
             # HTML deve conter caracteres UTF-8 corretos
-            $html | Should -Match '📊'
-            $html | Should -Match 'Última'
-            $html | Should -Match 'Posições'
+            $html | Should Match '📊'
+            $html | Should Match 'Última'
+            $html | Should Match 'Posições'
         }
         
         It "Should save HTML file with UTF-8 encoding" {
@@ -204,8 +204,8 @@ Describe "Dashboard Root Cause Analysis" {
             # Ler arquivo e verificar encoding
             $content = Get-Content -Path $testPath -Raw -Encoding UTF8
             
-            $content | Should -Match '📊'
-            $content | Should -Match 'Última'
+            $content | Should Match '📊'
+            $content | Should Match 'Última'
         }
         
         It "Should detect current HTML encoding issue" {
@@ -214,11 +214,11 @@ Describe "Dashboard Root Cause Analysis" {
             # Se HTML atual tem problemas de encoding, vai conter caracteres corrompidos
             if ($currentHtml -match 'ðŸ"Š' -or $currentHtml -match 'Ãšltima' -or $currentHtml -match 'PosiÃ§Ãµes') {
                 # PROBLEMA CONFIRMADO: HTML foi salvo com encoding errado
-                $true | Should -Be $true
+                $true | Should Be $true
             } else {
                 # HTML esta correto
-                $currentHtml | Should -Match '📊'
-                $currentHtml | Should -Match 'Última'
+                $currentHtml | Should Match '📊'
+                $currentHtml | Should Match 'Última'
             }
         }
     }
@@ -253,18 +253,18 @@ Describe "Dashboard Root Cause Analysis" {
             
             # Simular logica do dashboard
             $positions = CoinEx-GetPendingPositions
-            $positions.Count | Should -Be 1
+            $positions.Count | Should Be 1
             
             $pos = $positions[0]
             $entryPrice = [double]$pos.avg_entry_price
-            $entryPrice | Should -Be 647.06
+            $entryPrice | Should Be 647.06
             
             $ticker = CoinEx-GetTickerFresh -market $pos.market
             $currentPrice = [double]$ticker.ticker.last
-            $currentPrice | Should -Be 650.00
+            $currentPrice | Should Be 650.00
             
             $liqPrice = [double]$pos.liq_price
-            $liqPrice | Should -Be 0
+            $liqPrice | Should Be 0
             
             # Calcular PnL%
             $pnlPct = if ($pos.side -eq "long") {
@@ -274,8 +274,8 @@ Describe "Dashboard Root Cause Analysis" {
             }
             $pnlPct = [math]::Round($pnlPct, 2)
             
-            $pnlPct | Should -BeGreaterThan 0
-            $pnlPct | Should -BeLessThan 1  # ~0.45%
+            $pnlPct | Should BeGreaterThan 0
+            $pnlPct | Should BeLessThan 1  # ~0.45%
         }
     }
 }

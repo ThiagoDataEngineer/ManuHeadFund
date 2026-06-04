@@ -1,4 +1,4 @@
-# whale_detection.Tests.ps1 - TDD para Whale Detection
+﻿# whale_detection.Tests.ps1 - TDD para Whale Detection
 # Teste ANTES do código (TDD rigoroso)
 
 $ErrorActionPreference = "Stop"
@@ -25,9 +25,9 @@ Describe "Get-WhaleTransactions" {
         $result = Test-WhaleTransaction -Transaction $mockTx -MinBtc 100
         
         # ASSERT
-        $result.isWhale | Should -Be $true
-        $result.btcAmount | Should -BeGreaterThan 100
-        $result.signal | Should -BeIn @("BULLISH", "BEARISH", "NEUTRAL")
+        $result.isWhale | Should Be $true
+        $result.btcAmount | Should BeGreaterThan 100
+        $result.signal | Should Match "BULLISH|BEARISH|NEUTRAL"
     }
     
     It "classifica exchange deposit como BEARISH" {
@@ -42,8 +42,8 @@ Describe "Get-WhaleTransactions" {
         $result = Test-WhaleTransaction -Transaction $mockTx -MinBtc 100
         
         # ASSERT
-        $result.signal | Should -Be "BEARISH"
-        $result.reason | Should -Match "exchange.*deposit"
+        $result.signal | Should Be "BEARISH"
+        $result.reason | Should Match "exchange.*deposit"
     }
     
     It "classifica exchange withdrawal como BULLISH" {
@@ -58,8 +58,8 @@ Describe "Get-WhaleTransactions" {
         $result = Test-WhaleTransaction -Transaction $mockTx -MinBtc 100
         
         # ASSERT
-        $result.signal | Should -Be "BULLISH"
-        $result.reason | Should -Match "exchange.*withdrawal"
+        $result.signal | Should Be "BULLISH"
+        $result.reason | Should Match "exchange.*withdrawal"
     }
     
     It "ignora transactions < 100 BTC" {
@@ -74,7 +74,7 @@ Describe "Get-WhaleTransactions" {
         $result = Test-WhaleTransaction -Transaction $mockTx -MinBtc 100
         
         # ASSERT
-        $result.isWhale | Should -Be $false
+        $result.isWhale | Should Be $false
     }
     
     It "calcula score impact correto" {
@@ -89,8 +89,8 @@ Describe "Get-WhaleTransactions" {
         $result = Test-WhaleTransaction -Transaction $mockTx -MinBtc 100
         
         # ASSERT
-        $result.scoreImpact | Should -BeLessThan 0  # Bearish = negativo
-        $result.scoreImpact | Should -BeGreaterThan -20  # Max -15pts
+        $result.scoreImpact | Should BeLessThan 0  # Bearish = negativo
+        $result.scoreImpact | Should BeGreaterThan -20  # Max -15pts
     }
 }
 
@@ -108,9 +108,9 @@ Describe "Get-WhaleSignals" {
         $result = Get-WhaleSignals -Transactions $mockTxs
         
         # ASSERT
-        $result.netSignal | Should -Be "BEARISH"  # 2 bearish > 1 bullish
-        $result.totalBtc | Should -Be 450
-        $result.scoreImpact | Should -BeLessThan 0
+        $result.netSignal | Should Be "BEARISH"  # 2 bearish > 1 bullish
+        $result.totalBtc | Should Be 450
+        $result.scoreImpact | Should BeLessThan 0
     }
     
     It "retorna NEUTRAL quando sem whale activity" {
@@ -121,8 +121,8 @@ Describe "Get-WhaleSignals" {
         $result = Get-WhaleSignals -Transactions $mockTxs
         
         # ASSERT
-        $result.netSignal | Should -Be "NEUTRAL"
-        $result.scoreImpact | Should -Be 0
+        $result.netSignal | Should Be "NEUTRAL"
+        $result.scoreImpact | Should Be 0
     }
 }
 
@@ -142,8 +142,8 @@ Describe "Integration com ChainAgent" {
         $finalScore = $baseScore + ($whaleData.scoreImpact * $whaleWeight)
         
         # ASSERT
-        $finalScore | Should -BeLessThan $baseScore
-        $finalScore | Should -BeGreaterOrEqual 68  # 70 - (12 * 0.10) = 68.8
+        $finalScore | Should BeLessThan $baseScore
+        $finalScore | Should BeGreaterThan 68  # 70 - (12 * 0.10) = 68.8
     }
 }
 
@@ -163,8 +163,8 @@ Describe "Validação com Whale Real" {
         $result = Test-WhaleTransaction -Transaction $realTx -MinBtc 100
         
         # ASSERT
-        $result.isWhale | Should -Be $true
-        $result.btcAmount | Should -BeGreaterThan 400
+        $result.isWhale | Should Be $true
+        $result.btcAmount | Should BeGreaterThan 400
         Write-Host "  Whale real detectado: $($result.btcAmount) BTC → $($result.signal)" -ForegroundColor Cyan
     }
 }

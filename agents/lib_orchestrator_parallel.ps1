@@ -75,6 +75,7 @@ function Invoke-OrchestratorCandidatesParallel {
                 "lib_mentor_invariants.ps1",
                 "lib_gem_safety.ps1",
                 "lib_gem_auto_approve.ps1",
+                "tech_agent_ai.ps1",
                 "gem_agent.ps1",
                 "gem_executor.ps1",
                 "lib_cycle_indicators.ps1",

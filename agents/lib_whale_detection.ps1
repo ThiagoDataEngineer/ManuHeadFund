@@ -79,8 +79,8 @@ function Test-WhaleTransaction {
         $Transaction.out[0].addr
     } else { $null }
     
-    $fromExchange = $EXCHANGE_ADDRESSES.ContainsKey($fromAddr)
-    $toExchange = $EXCHANGE_ADDRESSES.ContainsKey($toAddr)
+    $fromExchange = ($null -ne $fromAddr) -and $EXCHANGE_ADDRESSES.ContainsKey($fromAddr)
+    $toExchange   = ($null -ne $toAddr)   -and $EXCHANGE_ADDRESSES.ContainsKey($toAddr)
     
     $signal = "NEUTRAL"
     $reason = "whale_to_whale_transfer"

@@ -48,19 +48,19 @@ Describe "Whitelist v3 - SHORT live em regimes bearish" {
             $r.tier | Should Be "skip"
         }
 
-        It "TRANSITION_UP + SHORT + live -> skip" {
+        It "TRANSITION_UP + SHORT + live -> observe (Block2: bounce failure edge comprovado, forward validation)" {
             $r = Test-RegimeDirectionAllowed -Regime "TRANSITION_UP" -Direction "SHORT" -DayOfWeekBRT 1 -Mode "live"
-            $r.tier | Should Be "skip"
-        }
-
-        It "SIDEWAYS + SHORT + paper -> observe (ainda dado valioso)" {
-            $r = Test-RegimeDirectionAllowed -Regime "SIDEWAYS" -Direction "SHORT" -DayOfWeekBRT 3 -Mode "paper"
             $r.tier | Should Be "observe"
         }
 
-        It "SIDEWAYS + SHORT + live -> skip (ranging, alto risco)" {
+        It "SIDEWAYS + SHORT + paper -> execute (Block2: edge +0.34R PF 1.54)" {
+            $r = Test-RegimeDirectionAllowed -Regime "SIDEWAYS" -Direction "SHORT" -DayOfWeekBRT 3 -Mode "paper"
+            $r.tier | Should Be "execute"
+        }
+
+        It "SIDEWAYS + SHORT + live -> observe (Block2: aguarda 30d forward validation)" {
             $r = Test-RegimeDirectionAllowed -Regime "SIDEWAYS" -Direction "SHORT" -DayOfWeekBRT 3 -Mode "live"
-            $r.tier | Should Be "skip"
+            $r.tier | Should Be "observe"
         }
     }
 

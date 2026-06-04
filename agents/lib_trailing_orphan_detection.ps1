@@ -330,7 +330,9 @@ function Detect-PhantomPositions {
 
 function Reconcile-PhantomPositions {
     [CmdletBinding()]
-    param()
+    param(
+        [string] $GemSafetyStatePath = "journal/gem_safety_state.json"
+    )
     $closed = 0
     $errors = 0
     $details = @()
@@ -345,6 +347,13 @@ function Reconcile-PhantomPositions {
                 } catch {}
 
                 Close-TrailingPosition -Market $p.market -Reason "phantom_reconciliation" -ExitPrice $exitPrice
+
+                # Sincroniza gem_safety_state: remove exposure para que gem_loop
+                # nao recompre o mesmo ativo (causa raiz do loop ENA×5, 2026-06-04)
+                if (Get-Command Remove-OpenGemPosition -ErrorAction SilentlyContinue) {
+                    try { Remove-OpenGemPosition -Market $p.market -StateFilePath $GemSafetyStatePath } catch {}
+                }
+
                 $closed++
                 $details += [PSCustomObject]@{ market = $p.market; closed = $true; exitPrice = $exitPrice }
             } catch {

@@ -1,4 +1,4 @@
-# lib_performance_analyzer.Tests.ps1 - Testes TDD para Performance Analyzer
+﻿# lib_performance_analyzer.Tests.ps1 - Testes TDD para Performance Analyzer
 # Rodar: Invoke-Pester -Path .\tests\lib_performance_analyzer.Tests.ps1
 
 . "$PSScriptRoot\..\agents\lib_performance_analyzer.ps1"
@@ -6,8 +6,8 @@
 Describe "Calculate-SharpeRatio" {
     It "Retorna sharpe ratio 0 para array vazio" {
         $result = Calculate-SharpeRatio -Trades @()
-        $result.sharpe_ratio | Should -Be 0
-        $result.trades_count | Should -Be 0
+        $result.sharpe_ratio | Should Be 0
+        $result.trades_count | Should Be 0
     }
     
     It "Calcula sharpe ratio corretamente para trades positivos" {
@@ -18,9 +18,9 @@ Describe "Calculate-SharpeRatio" {
         )
         
         $result = Calculate-SharpeRatio -Trades $trades
-        $result.sharpe_ratio | Should -BeGreaterThan 0
-        $result.avg_return | Should -Be 15
-        $result.trades_count | Should -Be 3
+        $result.sharpe_ratio | Should BeGreaterThan 0
+        $result.avg_return | Should Be 15
+        $result.trades_count | Should Be 3
     }
     
     It "Calcula sharpe ratio corretamente para trades mistos" {
@@ -32,9 +32,9 @@ Describe "Calculate-SharpeRatio" {
         )
         
         $result = Calculate-SharpeRatio -Trades $trades
-        $result.avg_return | Should -Be 2.5
-        $result.std_dev | Should -BeGreaterThan 0
-        $result.trades_count | Should -Be 4
+        $result.avg_return | Should Be 2.5
+        $result.std_dev | Should BeGreaterThan 0
+        $result.trades_count | Should Be 4
     }
     
     It "Retorna sharpe ratio 0 para 1 trade apenas" {
@@ -43,16 +43,16 @@ Describe "Calculate-SharpeRatio" {
         )
         
         $result = Calculate-SharpeRatio -Trades $trades
-        $result.sharpe_ratio | Should -Be 0
-        $result.std_dev | Should -Be 0
+        $result.sharpe_ratio | Should Be 0
+        $result.std_dev | Should Be 0
     }
 }
 
 Describe "Calculate-MaxDrawdown" {
     It "Retorna drawdown 0 para array vazio" {
         $result = Calculate-MaxDrawdown -Trades @()
-        $result.max_drawdown_pct | Should -Be 0
-        $result.max_drawdown_usd | Should -Be 0
+        $result.max_drawdown_pct | Should Be 0
+        $result.max_drawdown_usd | Should Be 0
     }
     
     It "Calcula drawdown corretamente para sequencia de perdas" {
@@ -63,9 +63,9 @@ Describe "Calculate-MaxDrawdown" {
         )
         
         $result = Calculate-MaxDrawdown -Trades $trades
-        $result.max_drawdown_usd | Should -Be 80
-        $result.peak_equity | Should -Be 100
-        $result.valley_equity | Should -Be 20
+        $result.max_drawdown_usd | Should Be 80
+        $result.peak_equity | Should Be 100
+        $result.valley_equity | Should Be 20
     }
     
     It "Calcula drawdown corretamente com recuperacao" {
@@ -77,8 +77,8 @@ Describe "Calculate-MaxDrawdown" {
         )
         
         $result = Calculate-MaxDrawdown -Trades $trades
-        $result.max_drawdown_usd | Should -Be 50
-        $result.peak_equity | Should -Be 100
+        $result.max_drawdown_usd | Should Be 50
+        $result.peak_equity | Should Be 100
     }
     
     It "Retorna drawdown 0 para apenas trades positivos" {
@@ -89,15 +89,15 @@ Describe "Calculate-MaxDrawdown" {
         )
         
         $result = Calculate-MaxDrawdown -Trades $trades
-        $result.max_drawdown_usd | Should -Be 0
+        $result.max_drawdown_usd | Should Be 0
     }
 }
 
 Describe "Calculate-WinStreaks" {
     It "Retorna streaks 0 para array vazio" {
         $result = Calculate-WinStreaks -Trades @()
-        $result.max_win_streak | Should -Be 0
-        $result.max_loss_streak | Should -Be 0
+        $result.max_win_streak | Should Be 0
+        $result.max_loss_streak | Should Be 0
     }
     
     It "Calcula win streak corretamente" {
@@ -109,8 +109,8 @@ Describe "Calculate-WinStreaks" {
         )
         
         $result = Calculate-WinStreaks -Trades $trades
-        $result.max_win_streak | Should -Be 3
-        $result.max_loss_streak | Should -Be 1
+        $result.max_win_streak | Should Be 3
+        $result.max_loss_streak | Should Be 1
     }
     
     It "Calcula loss streak corretamente" {
@@ -122,8 +122,8 @@ Describe "Calculate-WinStreaks" {
         )
         
         $result = Calculate-WinStreaks -Trades $trades
-        $result.max_win_streak | Should -Be 1
-        $result.max_loss_streak | Should -Be 3
+        $result.max_win_streak | Should Be 1
+        $result.max_loss_streak | Should Be 3
     }
     
     It "Calcula streaks alternados corretamente" {
@@ -135,8 +135,8 @@ Describe "Calculate-WinStreaks" {
         )
         
         $result = Calculate-WinStreaks -Trades $trades
-        $result.max_win_streak | Should -Be 1
-        $result.max_loss_streak | Should -Be 1
+        $result.max_win_streak | Should Be 1
+        $result.max_loss_streak | Should Be 1
     }
     
     It "Identifica current streak corretamente" {
@@ -147,15 +147,15 @@ Describe "Calculate-WinStreaks" {
         )
         
         $result = Calculate-WinStreaks -Trades $trades
-        $result.current_streak | Should -Be 3
-        $result.current_streak_type | Should -Be "win"
+        $result.current_streak | Should Be 3
+        $result.current_streak_type | Should Be "win"
     }
 }
 
 Describe "Analyze-PerformanceByMarket" {
     It "Retorna array vazio para trades vazios" {
         $result = Analyze-PerformanceByMarket -Trades @()
-        $result.Count | Should -Be 0
+        $result.Count | Should Be 0
     }
     
     It "Agrupa trades por market corretamente" {
@@ -166,13 +166,13 @@ Describe "Analyze-PerformanceByMarket" {
         )
         
         $result = Analyze-PerformanceByMarket -Trades $trades
-        $result.Count | Should -Be 2
+        $result.Count | Should Be 2
         
         $btc = $result | Where-Object { $_.market -eq "BTCUSDT" }
-        $btc.trades | Should -Be 2
-        $btc.wins | Should -Be 1
-        $btc.losses | Should -Be 1
-        $btc.total_pnl | Should -Be 5
+        $btc.trades | Should Be 2
+        $btc.wins | Should Be 1
+        $btc.losses | Should Be 1
+        $btc.total_pnl | Should Be 5
     }
     
     It "Calcula win rate por market corretamente" {
@@ -185,7 +185,7 @@ Describe "Analyze-PerformanceByMarket" {
         
         $result = Analyze-PerformanceByMarket -Trades $trades
         $btc = $result | Where-Object { $_.market -eq "BTCUSDT" }
-        $btc.win_rate | Should -Be 75
+        $btc.win_rate | Should Be 75
     }
     
     It "Ordena markets por total_pnl decrescente" {
@@ -196,16 +196,16 @@ Describe "Analyze-PerformanceByMarket" {
         )
         
         $result = Analyze-PerformanceByMarket -Trades $trades
-        $result[0].market | Should -Be "ETHUSDT"
-        $result[1].market | Should -Be "XRPUSDT"
-        $result[2].market | Should -Be "BTCUSDT"
+        $result[0].market | Should Be "ETHUSDT"
+        $result[1].market | Should Be "XRPUSDT"
+        $result[2].market | Should Be "BTCUSDT"
     }
 }
 
 Describe "Analyze-PerformanceByHour" {
     It "Retorna array vazio para trades vazios" {
         $result = Analyze-PerformanceByHour -Trades @()
-        $result.Count | Should -Be 0
+        $result.Count | Should Be 0
     }
     
     It "Agrupa trades por hora corretamente" {
@@ -221,7 +221,7 @@ Describe "Analyze-PerformanceByHour" {
         )
         
         $result = Analyze-PerformanceByHour -Trades $trades
-        $result.Count | Should -BeGreaterThan 0
+        $result.Count | Should BeGreaterThan 0
     }
     
     It "Calcula metricas por hora corretamente" {
@@ -237,9 +237,9 @@ Describe "Analyze-PerformanceByHour" {
         $hour10 = $result | Where-Object { $_.hour -eq 10 }
         
         if ($hour10) {
-            $hour10.trades | Should -Be 3
-            $hour10.wins | Should -Be 2
-            $hour10.total_pnl | Should -Be 25
+            $hour10.trades | Should Be 3
+            $hour10.wins | Should Be 2
+            $hour10.total_pnl | Should Be 25
         }
     }
 }

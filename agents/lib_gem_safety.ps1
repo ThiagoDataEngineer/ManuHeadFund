@@ -291,6 +291,21 @@ function Add-OpenGemPosition {
     Update-GemSafetyState -State $state -StateFilePath $StateFilePath
 }
 
+function Remove-OpenGemPosition {
+    # Remove posicao do safety state sem alterar contadores de throttle.
+    # Chamado por phantom_reconciliation para liberar exposure quando posicao
+    # foi fechada externamente (SL/TP/manual) sem passar pelo gem_executor.
+    param(
+        [Parameter(Mandatory)] [string] $Market,
+        [string] $StateFilePath = "journal/gem_safety_state.json"
+    )
+    try { $state = Get-GemSafetyState -StateFilePath $StateFilePath } catch { return }
+    if ($state.open_positions) {
+        $state.open_positions = @($state.open_positions | Where-Object { $_.market -ne $Market })
+    }
+    Update-GemSafetyState -State $state -StateFilePath $StateFilePath
+}
+
 function Initialize-GemSafetyStateFile {
     param([string] $StateFilePath = "journal/gem_safety_state.json")
 

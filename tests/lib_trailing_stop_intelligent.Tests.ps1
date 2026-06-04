@@ -1,4 +1,4 @@
-# tests\lib_trailing_stop_intelligent.Tests.ps1
+﻿# tests\lib_trailing_stop_intelligent.Tests.ps1
 # Testes TDD para Trailing Stop Inteligente
 # 2026-05-24
 # Compat: escrito em Pester 5.x syntax. Skipped para Pester 3.4 (operadores -BeGreaterThan/-Throw indisponiveis).
@@ -35,8 +35,8 @@ Describe "Calculate-ATR" {
         
         $atr = Calculate-ATR -Candles $candles -Period 14
         
-        $atr | Should -BeGreaterThan 0
-        $atr | Should -BeLessThan 10
+        $atr | Should BeGreaterThan 0
+        $atr | Should BeLessThan 10
     }
     
     It "Should throw error with insufficient candles" {
@@ -45,7 +45,7 @@ Describe "Calculate-ATR" {
             [PSCustomObject]@{ high=102; low=97; close=100 }
         )
         
-        { Calculate-ATR -Candles $candles -Period 14 } | Should -Throw
+        { Calculate-ATR -Candles $candles -Period 14 } | Should Throw
     }
     
     It "Should handle high volatility correctly" {
@@ -69,7 +69,7 @@ Describe "Calculate-ATR" {
         
         $atr = Calculate-ATR -Candles $candles -Period 14
         
-        $atr | Should -BeGreaterThan 10
+        $atr | Should BeGreaterThan 10
     }
 }
 
@@ -100,8 +100,8 @@ Describe "Find-SupportLevels" {
         
         $supports = Find-SupportLevels -Candles $candles -LookbackPeriod 20
         
-        $supports.Count | Should -BeGreaterThan 0
-        $supports[0] | Should -BeLessThan 77  # Current price
+        $supports.Count | Should BeGreaterThan 0
+        $supports[0] | Should BeLessThan 77  # Current price
     }
     
     It "Should return empty array with insufficient candles" {
@@ -112,7 +112,7 @@ Describe "Find-SupportLevels" {
         
         $supports = Find-SupportLevels -Candles $candles -LookbackPeriod 20
         
-        $supports.Count | Should -Be 0
+        $supports.Count | Should Be 0
     }
     
     It "Should group nearby supports" {
@@ -142,7 +142,7 @@ Describe "Find-SupportLevels" {
         $supports = Find-SupportLevels -Candles $candles -LookbackPeriod 20 -Tolerance 0.005
         
         # Deve agrupar os dois suportes próximos em um só
-        $supports.Count | Should -BeLessThan 2
+        $supports.Count | Should BeLessThan 2
     }
 }
 
@@ -179,8 +179,8 @@ Describe "Calculate-TrailingStopPrice" {
             -CurrentStopLoss 95 `
             -MinProfitPctToActivate 3.0
         
-        $result.should_update | Should -Be $false
-        $result.reason | Should -Match "below activation threshold"
+        $result.should_update | Should Be $false
+        $result.reason | Should Match "below activation threshold"
     }
     
     It "Should calculate tighter trailing for high leverage (50x)" {
@@ -215,9 +215,9 @@ Describe "Calculate-TrailingStopPrice" {
             -CurrentStopLoss 95 `
             -MinProfitPctToActivate 3.0
         
-        $result.should_update | Should -Be $true
-        $result.trailing_pct | Should -BeLessThan 3.0  # Tight trailing for 50x
-        $result.new_stop_price | Should -BeGreaterThan 95
+        $result.should_update | Should Be $true
+        $result.trailing_pct | Should BeLessThan 3.0  # Tight trailing for 50x
+        $result.new_stop_price | Should BeGreaterThan 95
     }
     
     It "Should calculate wider trailing for low leverage (5x)" {
@@ -252,9 +252,9 @@ Describe "Calculate-TrailingStopPrice" {
             -CurrentStopLoss 95 `
             -MinProfitPctToActivate 3.0
         
-        $result.should_update | Should -Be $true
-        $result.trailing_pct | Should -BeGreaterThan 3.0  # Wider trailing for 5x
-        $result.new_stop_price | Should -BeGreaterThan 95
+        $result.should_update | Should Be $true
+        $result.trailing_pct | Should BeGreaterThan 3.0  # Wider trailing for 5x
+        $result.new_stop_price | Should BeGreaterThan 95
     }
     
     It "Should never move stop down for LONG position" {
@@ -291,7 +291,7 @@ Describe "Calculate-TrailingStopPrice" {
             -CurrentStopLoss $currentStop `
             -MinProfitPctToActivate 3.0
         
-        $result.new_stop_price | Should -BeGreaterOrEqual $currentStop
+        $result.new_stop_price | Should BeGreaterThan $currentStop
     }
     
     It "Should adjust trailing based on nearby support" {
@@ -327,8 +327,8 @@ Describe "Calculate-TrailingStopPrice" {
             -CurrentStopLoss 95 `
             -MinProfitPctToActivate 3.0
         
-        $result.nearest_support | Should -Not -BeNullOrEmpty
-        $result.reason | Should -Match "support"
+        $result.nearest_support | Should Not BeNullOrEmpty
+        $result.reason | Should Match "support"
     }
 }
 
@@ -359,9 +359,9 @@ Describe "Integration Tests" {
             -CurrentStopLoss $position.stop_loss_price `
             -MinProfitPctToActivate 3.0
         
-        $result.pnl_pct | Should -BeGreaterThan 1.0
-        $result.trailing_pct | Should -BeLessThan 3.0  # Tight for 50x
-        $result.should_update | Should -Be $true
-        $result.new_stop_price | Should -BeGreaterThan 627.82
+        $result.pnl_pct | Should BeGreaterThan 1.0
+        $result.trailing_pct | Should BeLessThan 3.0  # Tight for 50x
+        $result.should_update | Should Be $true
+        $result.new_stop_price | Should BeGreaterThan 627.82
     }
 }

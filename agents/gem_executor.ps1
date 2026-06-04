@@ -24,16 +24,18 @@ $__trackerPath = Join-Path $PSScriptRoot "lib_ladder_tracker.ps1"
 if (Test-Path $__trackerPath) { . $__trackerPath }
 
 # Carrega tech_agent_ai (provedor de Get-ToriTrendlineSignal) se ainda nao dot-sourced.
+# Usa multiplos fallbacks de path pois $PSScriptRoot e vazio em runspace isolado.
 if (-not (Get-Command Get-ToriTrendlineSignal -ErrorAction SilentlyContinue)) {
-    $__toriPath = Join-Path $PSScriptRoot "tech_agent_ai.ps1"
-    if (Test-Path $__toriPath) {
-        try {
-            . $__toriPath -ErrorAction Stop
-        } catch {
-            Write-Host "[WARN] Falha ao carregar tech_agent_ai.ps1: $($_.Exception.Message)" -ForegroundColor Yellow
-        }
+    $__toriCandidates = @(
+        (Join-Path $PSScriptRoot "tech_agent_ai.ps1"),
+        (Join-Path $agentsDir    "tech_agent_ai.ps1"),
+        (Join-Path (Split-Path $MyInvocation.MyCommand.Path -Parent) "tech_agent_ai.ps1")
+    ) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+    if ($__toriCandidates) {
+        try   { . $__toriCandidates -ErrorAction Stop }
+        catch { Write-Host "[WARN] Falha ao carregar tech_agent_ai.ps1: $($_.Exception.Message)" -ForegroundColor Yellow }
     } else {
-        Write-Host "[WARN] tech_agent_ai.ps1 nao encontrado em $__toriPath" -ForegroundColor Yellow
+        Write-Host "[WARN] tech_agent_ai.ps1 nao encontrado (PSScriptRoot='$PSScriptRoot' agentsDir='$agentsDir')" -ForegroundColor Yellow
     }
 }
 

@@ -231,10 +231,10 @@ function Send-TelegramAlert {
     param(
         [Parameter(Mandatory=$true)]
         [string]$Message,
-        
+
         [Parameter(Mandatory=$false)]
         [string]$BotToken = $env:TELEGRAM_BOT_TOKEN,
-        
+
         [Parameter(Mandatory=$false)]
         [string]$ChatId = $env:TELEGRAM_CHAT_ID,
 

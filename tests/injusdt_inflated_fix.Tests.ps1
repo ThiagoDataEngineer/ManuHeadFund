@@ -1,4 +1,4 @@
-# injusdt_inflated_fix.Tests.ps1 - Validar que INJUSDT nao esta mais inflado
+﻿# injusdt_inflated_fix.Tests.ps1 - Validar que INJUSDT nao esta mais inflado
 # 
 # Problemas corrigidos:
 # 1. isWhitelistForced nao estava sendo setado -> Select-TopCandidates nao conseguia diferenciar
@@ -31,8 +31,8 @@ Describe "INJUSDT Inflated Fix" {
             
             # BTC deve estar nos resultados com isWhitelistForced=true
             $btc = $result | Where-Object { $_.market -eq "BTCUSDT" }
-            $btc | Should -Not -BeNullOrEmpty
-            $btc.isWhitelistForced | Should -Be $true
+            $btc | Should Not BeNullOrEmpty
+            $btc.isWhitelistForced | Should Be $true
         }
 
         It "Select-TopCandidates diferencia forcados de organicos" {
@@ -45,9 +45,9 @@ Describe "INJUSDT Inflated Fix" {
             $result = Select-TopCandidates -Candidates $candidates -OrganicTopN 1
             
             # Resultado deve ser: BTC (forcado) + ETHUSDT (top-1 organico)
-            $result.Count | Should -Be 2
-            $result[0].market | Should -Be "BTCUSDT"
-            $result[1].market | Should -Be "ETHUSDT"
+            $result.Count | Should Be 2
+            $result[0].market | Should Be "BTCUSDT"
+            $result[1].market | Should Be "ETHUSDT"
         }
     }
 
@@ -66,7 +66,7 @@ Describe "INJUSDT Inflated Fix" {
             
             $regime = Get-MarketRegimeFromCache -Market "INJUSDT" -JournalDir $tempDir
             
-            $regime | Should -Be "BEAR_WEAK"
+            $regime | Should Be "BEAR_WEAK"
             
             Remove-Item $testFile -Force
         }
@@ -83,11 +83,11 @@ Describe "INJUSDT Inflated Fix" {
             
             # BTC deve ter tier_level=1 (Tier A, nao rebaixado)
             $btc = $result | Where-Object { $_.market -eq "BTCUSDT" }
-            $btc.tier_level | Should -Be 1
+            $btc.tier_level | Should Be 1
             
             # INJUSDT deve ter tier_level=3 (rebaixado em BEAR)
             $inj = $result | Where-Object { $_.market -eq "INJUSDT" }
-            $inj.tier_level | Should -Be 3
+            $inj.tier_level | Should Be 3
         }
     }
 
@@ -126,18 +126,18 @@ Describe "INJUSDT Inflated Fix" {
             
             # Contar forcados
             $forcedCount = @($result | Where-Object { $_.isWhitelistForced -eq $true }).Count
-            $forcedCount | Should -Be 1  # Apenas BTC
+            $forcedCount | Should Be 1  # Apenas BTC
             
             # Selecionar top-20 organicos
             $topResult = Select-TopCandidates -Candidates $result -OrganicTopN 20
             
             # Resultado: BTC + 20 organicos (ALT6-ALT25, os com maior compScore)
-            $topResult.Count | Should -Be 21
-            $topResult[0].market | Should -Be "BTCUSDT"
+            $topResult.Count | Should Be 21
+            $topResult[0].market | Should Be "BTCUSDT"
             
             # INJUSDT nao deve estar no top
             $inj = $topResult | Where-Object { $_.market -eq "INJUSDT" }
-            $inj | Should -BeNullOrEmpty
+            $inj | Should BeNullOrEmpty
         }
 
         It "vol field consistencia em forcados" {
@@ -149,8 +149,8 @@ Describe "INJUSDT Inflated Fix" {
             
             # Todos os forcados devem ter campo 'vol' (nao 'volume')
             $btc = $result | Where-Object { $_.market -eq "BTCUSDT" }
-            $btc.PSObject.Properties['vol'] | Should -Not -BeNullOrEmpty
-            $btc.vol | Should -Be 0.0
+            $btc.PSObject.Properties['vol'] | Should Not BeNullOrEmpty
+            $btc.vol | Should Be 0.0
         }
 
         It "compScore field presente em forcados" {
@@ -162,8 +162,8 @@ Describe "INJUSDT Inflated Fix" {
             
             # Todos os forcados devem ter compScore para Select-TopCandidates ordenar
             $btc = $result | Where-Object { $_.market -eq "BTCUSDT" }
-            $btc.PSObject.Properties['compScore'] | Should -Not -BeNullOrEmpty
-            $btc.compScore | Should -Be 100
+            $btc.PSObject.Properties['compScore'] | Should Not BeNullOrEmpty
+            $btc.compScore | Should Be 100
         }
     }
 
@@ -176,7 +176,7 @@ Describe "INJUSDT Inflated Fix" {
             
             # Sem -AnchorMarkets, deve retornar todos os Tier A/B forcados
             $forcedCount = @($result | Where-Object { $_.isWhitelistForced -eq $true }).Count
-            $forcedCount | Should -BeGreaterThan 0
+            $forcedCount | Should BeGreaterThan 0
         }
 
         It "AnchorMarkets=@() explicitamente desativa forcados" {
@@ -188,7 +188,7 @@ Describe "INJUSDT Inflated Fix" {
             
             # Com -AnchorMarkets @(), nenhum forcado
             $forcedCount = @($result | Where-Object { $_.isWhitelistForced -eq $true }).Count
-            $forcedCount | Should -Be 0
+            $forcedCount | Should Be 0
         }
     }
 }

@@ -31,81 +31,156 @@ try {
     exit 1
 }
 
-Write-TrailingLog "INFO" "Trailing Stop Manager iniciado. Check=$($CheckInterval)s"
+Write-TrailingLog "INFO" "Trailing Stop Manager iniciado. Check=$($CheckInterval)s (FUTURES + SPOT)"
 
-# Estado: último SL que foi colocado (evita spam de updates)
-$lastSlPerMarket = @{}
+$gemTradesPath = Join-Path $journalDir "gem_trades.csv"
+$inv = [System.Globalization.CultureInfo]::InvariantCulture
+$trailing_pct = 0.03   # 3% abaixo do peak
+$activate_pct = 0.05   # ativa trailing apenas quando ganho >= 5%
+
+# Estado por mercado: ultimo SL colocado + peak price
+$state = @{}  # mkt -> @{ last_sl; peak }
+
+# ─── helpers ──────────────────────────────────────────────────────────────────
+
+function Update-TrailingFutures($mkt, $entry, $mark, $current_sl) {
+    $pnl_pct = ($mark - $entry) / $entry
+    if ($pnl_pct -lt $activate_pct) {
+        Write-TrailingLog "HOLD" "FUTURES ${mkt}: ganho $([math]::Round($pnl_pct*100,1))pct < 5pct, aguardando"
+        return
+    }
+    if (-not $state[$mkt]) { $state[$mkt] = @{ peak = $mark; last_sl = $current_sl } }
+    if ($mark -gt $state[$mkt].peak) { $state[$mkt].peak = $mark }
+
+    $new_sl = [math]::Round($state[$mkt].peak * (1 - $trailing_pct), 8)
+    if ($new_sl -le $current_sl) {
+        Write-TrailingLog "HOLD" "FUTURES ${mkt}: SL protegido (atual=$current_sl, novo=$new_sl)"
+        return
+    }
+    try {
+        $r = CoinEx-Post "/v2/futures/set-position-stop-loss" @{
+            market          = $mkt
+            market_type     = "FUTURES"
+            stop_loss_type  = "mark_price"
+            stop_loss_price = $new_sl.ToString($inv)
+        }
+        if ($r.code -eq 0) {
+            Write-TrailingLog "SL_UPDATED" "FUTURES ${mkt}: $current_sl -> $new_sl (peak=$($state[$mkt].peak) +$([math]::Round($pnl_pct*100,1))pct)"
+            $state[$mkt].last_sl = $new_sl
+            $gain = [math]::Round($pnl_pct*100,1)
+            Send-TelegramAlert -Message "TRAILING $mkt SL=$new_sl (+${gain}pct, peak=$($state[$mkt].peak))" | Out-Null
+        } else {
+            Write-TrailingLog "ERROR" "FUTURES ${mkt}: CoinEx rejeitou (code=$($r.code) $($r.message))"
+        }
+    } catch {
+        Write-TrailingLog "ERROR" "FUTURES ${mkt}: $_"
+    }
+}
+
+function Update-TrailingSpot($mkt, $entry, $current_price, $current_sl_id, $qty) {
+    $pnl_pct = ($current_price - $entry) / $entry
+    if ($pnl_pct -lt $activate_pct) {
+        Write-TrailingLog "HOLD" "SPOT ${mkt}: ganho $([math]::Round($pnl_pct*100,1))pct < 5pct, aguardando"
+        return $current_sl_id
+    }
+    if (-not $state["SPOT_$mkt"]) { $state["SPOT_$mkt"] = @{ peak = $current_price; last_sl = 0 } }
+    if ($current_price -gt $state["SPOT_$mkt"].peak) { $state["SPOT_$mkt"].peak = $current_price }
+
+    $new_sl = [math]::Round($state["SPOT_$mkt"].peak * (1 - $trailing_pct), 8)
+    if ($new_sl -le $state["SPOT_$mkt"].last_sl) {
+        Write-TrailingLog "HOLD" "SPOT ${mkt}: SL protegido (last=$($state["SPOT_$mkt"].last_sl), novo=$new_sl)"
+        return $current_sl_id
+    }
+
+    # SPOT: cancela stop antiga e cria nova
+    $new_sl_id = $null
+    try {
+        # 1. Cancela stop order anterior (se existir)
+        if ($current_sl_id) {
+            $rc = CoinEx-Post "/v2/spot/cancel-stop-order" @{ market=$mkt; market_type="SPOT"; stop_id=[long]$current_sl_id }
+            if ($rc.code -eq 0) {
+                Write-TrailingLog "CANCEL" "SPOT ${mkt}: stop $current_sl_id cancelada"
+            }
+        }
+        # 2. Cria nova stop order com SL atualizado
+        $base = $mkt -replace "USDT$",""
+        $r = CoinEx-Post "/v2/spot/stop-order" @{
+            market        = $mkt
+            market_type   = "SPOT"
+            side          = "sell"
+            type          = "market"
+            amount        = ([math]::Round($qty, 6)).ToString($inv)
+            ccy           = $base
+            trigger_price = $new_sl.ToString($inv)
+            trigger_type  = "price_less_equal"
+        }
+        if ($r.code -eq 0) {
+            $new_sl_id = $r.data.stop_id
+            Write-TrailingLog "SL_UPDATED" "SPOT ${mkt}: SL $($state["SPOT_$mkt"].last_sl) -> $new_sl stop_id=$new_sl_id (peak=$($state["SPOT_$mkt"].peak))"
+            $state["SPOT_$mkt"].last_sl = $new_sl
+            $gain = [math]::Round($pnl_pct*100,1)
+            Send-TelegramAlert -Message "TRAILING SPOT $mkt SL=$new_sl (+${gain}pct, peak=$($state["SPOT_$mkt"].peak))" | Out-Null
+            return $new_sl_id
+        } else {
+            Write-TrailingLog "ERROR" "SPOT ${mkt}: nova stop falhou (code=$($r.code) $($r.message))"
+        }
+    } catch {
+        Write-TrailingLog "ERROR" "SPOT ${mkt}: $_"
+    }
+    return $current_sl_id
+}
+
+# Estado das stop orders SPOT ativas por market (stop_id)
+$spotStopIds = @{}
+
+# ─── loop principal ───────────────────────────────────────────────────────────
 
 while ($true) {
     try {
+        # ── FUTURES ──────────────────────────────────────────────────────────
         $positions = CoinEx-GetPendingPositions -ErrorAction SilentlyContinue
+        foreach ($pos in @($positions)) {
+            $mkt   = $pos.market
+            $entry = [double]$pos.avg_entry_price
+            $mark  = [double]$pos.mark_price
+            $sl    = [double]$pos.stop_loss_price
+            if ($mark -le 0) { Write-TrailingLog "SKIP" "FUTURES ${mkt}: mark=0, pulando"; continue }
+            if ($entry -le 0) { continue }
+            Update-TrailingFutures $mkt $entry $mark $sl
+        }
 
-        if ($positions -and @($positions).Count -gt 0) {
-            foreach ($pos in @($positions)) {
-                $mkt = $pos.market
-                $entry = [double]$pos.avg_entry_price
-                $mark = [double]$pos.mark_price
-                $current_sl = [double]$pos.stop_loss_price
-                $qty = [double]$pos.qty
-                $side = [string]$pos.side
+        # ── SPOT ─────────────────────────────────────────────────────────────
+        if (Test-Path $gemTradesPath) {
+            $openSpot = @(Import-Csv $gemTradesPath -EA SilentlyContinue |
+                          Where-Object { $_.market_type -eq "SPOT" -and $_.status -eq "OPEN" })
+            foreach ($t in $openSpot) {
+                $mkt   = $t.market
+                $entry = [double]$t.price_entry
+                $sl    = [double]$t.stop_price
+                $qty   = [double]$t.qty
+                if ($entry -le 0) { continue }
 
-                # Valida dados — se mark=0, pula (API bug com mark_price)
-                # TODO: CoinEx API retorna mark=0 em algumas respostas
-                if ($mark -le 0) {
-                    Write-TrailingLog "SKIP" "${mkt}: mark_price invalido ($mark), API bug — aguardando próximo ciclo"
-                    continue
-                }
+                try {
+                    $ticker = Invoke-RestMethod "https://api.coinex.com/v2/spot/ticker?market=$mkt" -EA Stop
+                    $price  = [double]$ticker.data.last
+                } catch { continue }
+                if ($price -le 0) { continue }
 
-                if ($entry -le 0) {
-                    Write-TrailingLog "ERROR" "${mkt}: entry invalido ($entry), não pode calcular trailing"
-                    continue
-                }
+                # Busca stop_id atual (da última vez que foi atualizado ou do estado inicial)
+                if (-not $spotStopIds[$mkt]) { $spotStopIds[$mkt] = 0 }
 
-                # Calcula trailing stop (3% abaixo do mark price)
-                $trailing_pct = 0.03  # 3%
-                $new_sl = [math]::Round($mark * (1 - $trailing_pct), 8)
-
-                # Se posição em GANHO, atualiza SL (lock-in de lucro)
-                $pnl_pct = ($mark - $entry) / $entry
-                if ($pnl_pct -gt 0.05) {  # Pelo menos 5% ganho antes de ativar trailing
-
-                    # Se novo SL é MAIOR que atual (mais proteção), atualiza
-                    if ($new_sl -gt $current_sl) {
-                        $sl_improvement = $new_sl - $current_sl
-
-                        Write-TrailingLog "UPDATE" "${mkt}: atualizando SL de $current_sl para $new_sl (ganho: $([math]::Round($pnl_pct*100,1))%)"
-
-                        # Tenta colocar novo SL na CoinEx
-                        try {
-                            $inv = [System.Globalization.CultureInfo]::InvariantCulture
-                            $body = @{
-                                market = $mkt
-                                market_type = "FUTURES"
-                                stop_loss_type = "mark_price"
-                                stop_loss_price = $new_sl.ToString($inv)
-                            } | ConvertTo-Json
-
-                            $response = CoinEx-Post -path "/v2/futures/set-position-stop-loss" -bodyObj ([hashtable]$body) -ErrorAction SilentlyContinue
-
-                            if ($response.code -eq 0) {
-                                Write-TrailingLog "SL_UPDATED" "${mkt}: SL atualizado com sucesso ($new_sl)"
-                                $lastSlPerMarket[$mkt] = $new_sl
-
-                                # Alerta Telegram (1x por mudança)
-                                $change_pct = [math]::Round(($mark - $entry)/$entry*100, 1)
-                                Send-TelegramAlert -Message "📈 $mkt | Trailing SL atualizado: $new_sl (+$change_pct% ganho, proteção 3%)" | Out-Null
-                            } else {
-                                Write-TrailingLog "ERROR" "${mkt}: CoinEx rejeitou SL update (code=$($response.code))"
-                            }
-                        } catch {
-                            Write-TrailingLog "ERROR" "${mkt}: Falha ao atualizar SL: $_"
+                # Verifica stop ativas na exchange para pegar o stop_id real
+                if ($spotStopIds[$mkt] -eq 0) {
+                    try {
+                        $sr = CoinEx-Get "/v2/spot/pending-stop-order?market=$mkt&limit=5"
+                        if ($sr.code -eq 0 -and @($sr.data.items).Count -gt 0) {
+                            $stopItem = $sr.data.items | Sort-Object created_at -Descending | Select-Object -First 1
+                            $spotStopIds[$mkt] = $stopItem.stop_id
                         }
-                    } else {
-                        Write-TrailingLog "HOLD" "${mkt}: SL já está protegido (atual=$current_sl, novo=$new_sl)"
-                    }
-                } else {
-                    Write-TrailingLog "HOLD" "${mkt}: ganho insuficiente ($([math]::Round($pnl_pct*100,1))%), não ativar trailing"
+                    } catch {}
                 }
+
+                $spotStopIds[$mkt] = Update-TrailingSpot $mkt $entry $price $spotStopIds[$mkt] $qty
             }
         }
 

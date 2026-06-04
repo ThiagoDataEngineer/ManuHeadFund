@@ -1,4 +1,4 @@
-# tests/lib_tori_proximity_rsi.Tests.ps1
+﻿# tests/lib_tori_proximity_rsi.Tests.ps1
 # Validar RSI calculation em lib_tori_proximity.ps1
 # Criado: 2026-05-23 (após descoberta do RSI bug em Python)
 
@@ -16,8 +16,8 @@ Describe "RSI Calculation - lib_tori_proximity (_ToriProx-CalcRSI)" {
             $rsi = _ToriProx-CalcRSI -Closes $closes -Period 14
             
             # Last RSI should be > 70 (overbought)
-            $rsi | Should -BeGreaterThan 70
-            $rsi | Should -BeLessThan 100
+            $rsi | Should BeGreaterThan 70
+            $rsi | Should BeLessThan 100
         }
         
         It "Should return RSI = 100 for pure uptrend (no losses)" {
@@ -27,7 +27,7 @@ Describe "RSI Calculation - lib_tori_proximity (_ToriProx-CalcRSI)" {
             $rsi = _ToriProx-CalcRSI -Closes $closes -Period 14
             
             # Pure uptrend should approach RSI = 100
-            $rsi | Should -BeGreaterThan 95
+            $rsi | Should BeGreaterThan 95
         }
     }
     
@@ -39,8 +39,8 @@ Describe "RSI Calculation - lib_tori_proximity (_ToriProx-CalcRSI)" {
             $rsi = _ToriProx-CalcRSI -Closes $closes -Period 14
             
             # Last RSI should be < 30 (oversold)
-            $rsi | Should -BeLessThan 30
-            $rsi | Should -BeGreaterThan 0
+            $rsi | Should BeLessThan 30
+            $rsi | Should BeGreaterThan 0
         }
         
         It "Should return RSI = 0 for pure downtrend (no gains)" {
@@ -50,7 +50,7 @@ Describe "RSI Calculation - lib_tori_proximity (_ToriProx-CalcRSI)" {
             $rsi = _ToriProx-CalcRSI -Closes $closes -Period 14
             
             # Pure downtrend should approach RSI = 0
-            $rsi | Should -BeLessThan 5
+            $rsi | Should BeLessThan 5
         }
     }
     
@@ -62,8 +62,8 @@ Describe "RSI Calculation - lib_tori_proximity (_ToriProx-CalcRSI)" {
             $rsi = _ToriProx-CalcRSI -Closes $closes -Period 14
             
             # Sideways should have RSI around 50
-            $rsi | Should -BeGreaterThan 40
-            $rsi | Should -BeLessThan 60
+            $rsi | Should BeGreaterThan 40
+            $rsi | Should BeLessThan 60
         }
     }
     
@@ -79,11 +79,11 @@ Describe "RSI Calculation - lib_tori_proximity (_ToriProx-CalcRSI)" {
             $rsi = _ToriProx-CalcRSI -Closes $closes -Period 14
             
             # Should be in valid range (0-100)
-            $rsi | Should -BeGreaterThan 0
-            $rsi | Should -BeLessThan 100
+            $rsi | Should BeGreaterThan 0
+            $rsi | Should BeLessThan 100
             
             # Should be bullish (uptrend with pullbacks)
-            $rsi | Should -BeGreaterThan 50
+            $rsi | Should BeGreaterThan 50
         }
     }
     
@@ -95,7 +95,7 @@ Describe "RSI Calculation - lib_tori_proximity (_ToriProx-CalcRSI)" {
             $rsi = _ToriProx-CalcRSI -Closes $closes -Period 14
             
             # Should return default 50.0
-            $rsi | Should -Be 50.0
+            $rsi | Should Be 50.0
         }
         
         It "Should handle exact period+1 candles" {
@@ -105,9 +105,9 @@ Describe "RSI Calculation - lib_tori_proximity (_ToriProx-CalcRSI)" {
             $rsi = _ToriProx-CalcRSI -Closes $closes -Period 14
             
             # Should calculate RSI
-            $rsi | Should -Not -Be 50.0
-            $rsi | Should -BeGreaterThan 0
-            $rsi | Should -BeLessThan 100
+            $rsi | Should Not Be 50.0
+            $rsi | Should BeGreaterThan 0
+            $rsi | Should BeLessThan 100
         }
     }
     
@@ -119,7 +119,7 @@ Describe "RSI Calculation - lib_tori_proximity (_ToriProx-CalcRSI)" {
             $rsi = _ToriProx-CalcRSI -Closes $closes -Period 14
             
             # Python test expects RSI > 70 for this uptrend
-            $rsi | Should -BeGreaterThan 70
+            $rsi | Should BeGreaterThan 70
         }
         
         It "Should match Python RSI for downtrend" {
@@ -129,7 +129,7 @@ Describe "RSI Calculation - lib_tori_proximity (_ToriProx-CalcRSI)" {
             $rsi = _ToriProx-CalcRSI -Closes $closes -Period 14
             
             # Python test expects RSI < 30 for this downtrend
-            $rsi | Should -BeLessThan 30
+            $rsi | Should BeLessThan 30
         }
         
         It "Should match Python RSI for sideways" {
@@ -139,8 +139,8 @@ Describe "RSI Calculation - lib_tori_proximity (_ToriProx-CalcRSI)" {
             $rsi = _ToriProx-CalcRSI -Closes $closes -Period 14
             
             # Python test expects RSI 40-60 for sideways
-            $rsi | Should -BeGreaterThan 40
-            $rsi | Should -BeLessThan 60
+            $rsi | Should BeGreaterThan 40
+            $rsi | Should BeLessThan 60
         }
     }
     
@@ -157,7 +157,7 @@ Describe "RSI Calculation - lib_tori_proximity (_ToriProx-CalcRSI)" {
             # _ToriProx-CalcRSI returns last value
             # _CP-CalcRsiArray returns array
             # They should match
-            $rsi_tori | Should -Be $rsi_cp[-1]
+            $rsi_tori | Should Be $rsi_cp[-1]
         }
     }
 }

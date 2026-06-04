@@ -36,9 +36,37 @@ Write-WatchLog "INFO" "Position Watcher iniciado | Check=${CheckInterval}s | FOC
 $positionState = @{}  # mkt -> {entry, qty, highest_price, ...}
 $lastAlert = @{}      # mkt -> timestamp da última alerta
 
+$gemTradesPath = Join-Path $journalDir "gem_trades.csv"
+
+function Get-OpenSpotPositions {
+    # Lê gem_trades.csv, filtra SPOT OPEN, verifica balance na exchange
+    if (-not (Test-Path $gemTradesPath)) { return @() }
+    $trades = Import-Csv $gemTradesPath -EA SilentlyContinue
+    $openSpot = @($trades | Where-Object { $_.market_type -eq "SPOT" -and $_.status -eq "OPEN" })
+    $result = @()
+    foreach ($t in $openSpot) {
+        $base = $t.market -replace "USDT$",""
+        try {
+            $bal = CoinEx-Get "/v2/assets/spot/balance" -EA SilentlyContinue
+            $coin = if ($bal.code -eq 0) { $bal.data | Where-Object { $_.ccy -eq $base } | Select-Object -First 1 } else { $null }
+            $qty = if ($coin) { [double]$coin.available + [double]$coin.frozen } else { [double]$t.qty }
+            if ($qty -lt 0.0001) { continue }  # posição já fechada
+            $result += [PSCustomObject]@{
+                market      = $t.market
+                entry_price = [double]$t.price_entry
+                stop_price  = [double]$t.stop_price
+                target_price= [double]$t.target_price
+                qty         = $qty
+                side        = "LONG"
+            }
+        } catch {}
+    }
+    return $result
+}
+
 while ($true) {
     try {
-        # 1. Tentar obter posições via API
+        # 1a. Posições FUTURES
         $positions = CoinEx-GetPendingPositions -ErrorAction SilentlyContinue
 
         if ($positions -and @($positions).Count -gt 0) {
@@ -52,13 +80,16 @@ while ($true) {
                 $tp = [double]$pos.take_profit_price
                 $sl = [double]$pos.stop_loss_price
 
-                # 2. Se mark=0 (API bug), usar last-known price como fallback
+                # 2. Se mark=0 (API bug), pula este ciclo e tenta no próximo
+                if ($mark -le 0) {
+                    Write-WatchLog "SKIP" "${mkt}: mark_price=0 (API bug), aguardando próximo ciclo"
+                    continue
+                }
+
                 $price_to_use = $mark
-                if ($mark -le 0 -or $mark -le $entry * 0.9) {
-                    # Mark price inválido — usar TradingView price via history
-                    # Por enquanto, usa entry como fallback (conservador)
-                    $price_to_use = $entry
-                    Write-WatchLog "WARN" "${mkt}: mark inválido ($mark), usando entry como fallback"
+                if ($mark -le $entry * 0.9) {
+                    # Mark price anormalmente baixo (>10% down) — verificar se é SL real
+                    Write-WatchLog "WARN" "${mkt}: mark suspeito ($mark vs entry $entry), verificando SL"
                 }
 
                 # 3. Atualiza estado local
@@ -83,21 +114,60 @@ while ($true) {
                 # 5. Alerta se chegou perto do TP
                 $tp_distance = (($tp - $price_to_use) / $price_to_use) * 100
                 if ($tp_distance -lt 2 -and -not $lastAlert["${mkt}_TP"]) {
-                    Write-WatchLog "ALERT" "${mkt}: PRÓXIMO DO TP! Distance=$([math]::Round($tp_distance,2))%"
-                    Send-TelegramAlert -Message "⚠️ $mkt muito perto do TP ($([math]::Round($tp_distance,2))% restante)" | Out-Null
+                    $tp_dist_str = "$([math]::Round($tp_distance,2))pct"
+                    Write-WatchLog "ALERT" "${mkt}: PROXIMO DO TP! Distance=$tp_dist_str"
+                    Send-TelegramAlert -Message "ATENCAO: $mkt perto do TP ($tp_dist_str restante)" | Out-Null
                     $lastAlert["${mkt}_TP"] = Get-Date
                 }
 
                 # 6. Alerta se atingiu SL (esperado que fecha automaticamente)
                 if ($price_to_use -le $sl) {
                     Write-WatchLog "SL_HIT" "${mkt}: SL ATIVADO! Price=$price_to_use vs SL=$sl"
-                    Send-TelegramAlert -Message "🛑 $mkt SL ATIVADO | Perda: $([math]::Round($pnl_pct,2))% ($pnl_usd USD)" | Out-Null
+                    Send-TelegramAlert -Message "SL ATIVADO $mkt | Perda: $([math]::Round($pnl_pct,2))% ($pnl_usd USD)" | Out-Null
                     $positionState.Remove($mkt)
                 }
 
                 # 7. Log contínuo conciso
-                $pnl_emoji = if ($pnl_pct -gt 0) { "📈" } elseif ($pnl_pct -lt 0) { "📉" } else { "➡️" }
-                Write-WatchLog "WATCH" "${pnl_emoji} ${mkt}: Price=$([math]::Round($price_to_use,6)) | PnL=$([math]::Round($pnl_pct,2))% ($pnl_usd USD) | TP=$tp | SL=$sl"
+                $pnl_dir = if ($pnl_pct -gt 0) { "UP" } elseif ($pnl_pct -lt 0) { "DOWN" } else { "FLAT" }
+                $pnl_str = "$([math]::Round($pnl_pct,2))pct"
+                Write-WatchLog "WATCH" "[$pnl_dir] ${mkt}: Price=$([math]::Round($price_to_use,6)) | PnL=$pnl_str ($pnl_usd USD) | TP=$tp | SL=$sl"
+            }
+        }
+
+        # 1b. Posições SPOT (via gem_trades.csv)
+        $spotPositions = Get-OpenSpotPositions
+        foreach ($spos in $spotPositions) {
+            $mkt = $spos.market
+            try {
+                $ticker = Invoke-RestMethod "https://api.coinex.com/v2/spot/ticker?market=$mkt" -EA Stop
+                $currentPrice = [double]$ticker.data.last
+            } catch { continue }
+
+            if ($currentPrice -le 0) { continue }
+
+            $entry  = $spos.entry_price
+            $sl     = $spos.stop_price
+            $tp     = $spos.target_price
+            $qty    = $spos.qty
+            $pnl_pct = if ($entry -gt 0) { [math]::Round(($currentPrice - $entry) / $entry * 100, 2) } else { 0 }
+            $pnl_usd = [math]::Round(($currentPrice - $entry) * $qty, 2)
+
+            if (-not $positionState["SPOT_$mkt"]) {
+                $positionState["SPOT_$mkt"] = @{ entry=$entry; qty=$qty; highest_price=$currentPrice; opened_at=Get-Date }
+                Write-WatchLog "OPEN" "SPOT ${mkt}: Entry=$entry | Qty=$qty | SL=$sl | TP=$tp"
+            }
+            if ($currentPrice -gt $positionState["SPOT_$mkt"].highest_price) {
+                $positionState["SPOT_$mkt"].highest_price = $currentPrice
+            }
+
+            $pnl_emoji = if ($pnl_pct -gt 0) { "GANHO" } elseif ($pnl_pct -lt 0) { "PERDA" } else { "FLAT" }
+            Write-WatchLog "SPOT" "[$pnl_emoji] ${mkt}: Price=$currentPrice | PnL=$pnl_pct% ($pnl_usd USD) | SL=$sl | TP=$tp"
+
+            # Alerta se próximo do SL
+            if ($sl -gt 0 -and $currentPrice -le ($sl * 1.05) -and -not $lastAlert["${mkt}_SL_WARN"]) {
+                Send-TelegramAlert -Message "SPOT $mkt PROXIMO DO SL! Price=$currentPrice SL=$sl PnL=$pnl_pct%" | Out-Null
+                $lastAlert["${mkt}_SL_WARN"] = Get-Date
+                Write-WatchLog "WARN" "SPOT ${mkt}: Proximo do SL ($currentPrice vs $sl)"
             }
         }
 

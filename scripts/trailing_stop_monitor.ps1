@@ -102,7 +102,8 @@ try {
     # que nao existem na exchange (oposto de orphan - position fechada externamente).
     if (Get-Command Reconcile-PhantomPositions -ErrorAction SilentlyContinue) {
         Write-CrossPlatformLog "--- PHANTOM RECONCILIATION ---" -LogFile "trailing_stop_monitor.log"
-        $phantomSync = Reconcile-PhantomPositions
+        $safetyPath = Join-Path $journalDir "gem_safety_state.json"
+        $phantomSync = Reconcile-PhantomPositions -GemSafetyStatePath $safetyPath
         Write-CrossPlatformLog "Phantoms detected: $($phantomSync.phantoms_detected) closed: $($phantomSync.closed) errors: $($phantomSync.errors)" -LogFile "trailing_stop_monitor.log"
         foreach ($d in $phantomSync.details) {
             $level = if ($d.closed) { "INFO" } else { "WARN" }
