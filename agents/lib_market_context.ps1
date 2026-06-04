@@ -370,7 +370,11 @@ function Format-MarketContextPanel {
         [PSObject]$IntradayContext = $null,
         [PSObject]$AllocationContext = $null
     )
-    if (-not $HalvingPhase)     { $HalvingPhase     = Get-HalvingPhase }
+    if (-not $HalvingPhase) {
+        if (Get-Command Get-HalvingPhase -EA SilentlyContinue) {
+            try { $HalvingPhase = Get-HalvingPhase -DateBrt (Get-Date) } catch { $HalvingPhase = "unknown" }
+        } else { $HalvingPhase = "unknown" }
+    }
     if (-not $EtfContext)       { $EtfContext       = Get-EtfFlowContext }
     if (-not $MiningContext)    { $MiningContext    = Get-MiningCostContext }
     if (-not $WhaleContext)     { $WhaleContext     = Get-WhaleAccumulationContext }

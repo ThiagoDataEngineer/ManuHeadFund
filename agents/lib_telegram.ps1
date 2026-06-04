@@ -644,9 +644,9 @@ function Format-HeartbeatMessage {
         [int]   $CyclesQuiet = 0,
         [switch]$DryRun
     )
-    $modeTag = if ($DryRun) { " [DRY]" } else { "" }
+    $modeTag  = if ($DryRun) { " DRY" } else { " LIVE" }
     $quietStr = if ($CyclesQuiet -eq 1) { "1 ciclo sem novidade" } else { "$CyclesQuiet ciclos sem novidade" }
-    return "[HEARTBEAT]$modeTag $Window | $WatchCount pares | $quietStr | prox ${NextMin}min ($NextTime)"
+    return "[HEARTBEAT]$modeTag | $Window | $WatchCount pares | $quietStr | prox ${NextMin}min ($NextTime)"
 }
 
 # ==============================================================================
@@ -833,6 +833,35 @@ function Send-TelegramAlertFiltered {
     }
 }
 
+# ============================================================================
+# Test-HeartbeatDue - retorna $true se passou o intervalo desde o ultimo heartbeat
+# ============================================================================
+function Test-HeartbeatDue {
+    param(
+        [string]$LastHeartbeatFile = "",
+        [int]   $IntervalMinutes   = 60
+    )
+    if (-not $LastHeartbeatFile -or -not (Test-Path $LastHeartbeatFile)) { return $true }
+    try {
+        $raw = Get-Content $LastHeartbeatFile -TotalCount 1 -Encoding UTF8 -EA Stop
+        $ts  = [datetime]::Parse($raw.Trim(), $null, [System.Globalization.DateTimeStyles]::RoundtripKind)
+        return ((Get-Date) - $ts).TotalMinutes -gt $IntervalMinutes
+    } catch { return $true }
+}
+
+# ============================================================================
+# Save-HeartbeatTimestamp - grava timestamp ISO no arquivo de heartbeat
+# ============================================================================
+function Save-HeartbeatTimestamp {
+    param([string]$LastHeartbeatFile = "")
+    if (-not $LastHeartbeatFile) { return }
+    try {
+        $dir = Split-Path $LastHeartbeatFile -Parent
+        if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+        (Get-Date).ToUniversalTime().ToString("o") | Set-Content $LastHeartbeatFile -Encoding UTF8
+    } catch {}
+}
+
 # ==============================================================================
 # Send-HeartbeatIfDue — envia heartbeat se passou o intervalo configurado
 # Chamado em scan_master quando ciclo nao tem novidades
@@ -847,10 +876,11 @@ function Send-HeartbeatIfDue {
         [int]   $WatchCount        = 0,
         [int]   $CyclesQuiet       = 0,
         [switch]$DryRun,
-        [bool]  $Enabled           = $true
+        [switch]$Enabled  # quando omitido usa $global:HEARTBEAT_ENABLED (default off)
     )
 
-    if (-not $Enabled) { return $false }
+    $isEnabled = if ($Enabled.IsPresent) { $true } else { [bool]$global:HEARTBEAT_ENABLED }
+    if (-not $isEnabled) { return $false }
 
     # 2026-06-01: Usar intervalo da configuração (default 360 min = 6h)
     $interval = if ($global:TELEGRAM_HEARTBEAT_INTERVAL_MIN) {
@@ -859,10 +889,9 @@ function Send-HeartbeatIfDue {
         $IntervalMinutes
     }
 
-    # Verifica se passou o intervalo desde o ultimo heartbeat
-    if ($LastHeartbeatFile -and (Test-Path $LastHeartbeatFile)) {
-        $lastAge = ((Get-Date) - (Get-Item $LastHeartbeatFile).LastWriteTime).TotalMinutes
-        if ($lastAge -lt $interval) { return $false }
+    # Verifica se passou o intervalo desde o ultimo heartbeat (usa conteudo ISO do arquivo)
+    if (-not (Test-HeartbeatDue -LastHeartbeatFile $LastHeartbeatFile -IntervalMinutes $interval)) {
+        return $false
     }
 
     # Monta e envia
@@ -874,12 +903,8 @@ function Send-HeartbeatIfDue {
     # do daemon. Store em journal/tg_dedup_heartbeat.json.
     $hbDedupPath = Join-Path $PSScriptRoot "..\journal\tg_dedup_heartbeat.json"
     $result = Send-TelegramAlert -Message $msg -DedupSeconds 3600 -DedupStorePath $hbDedupPath
-    if ($result -and $LastHeartbeatFile) {
-        # Atualiza timestamp do ultimo heartbeat
-        $dir = Split-Path $LastHeartbeatFile
-        if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
-        (Get-Date).ToString("o") | Set-Content $LastHeartbeatFile -Encoding UTF8
-    }
+    # Atualiza timestamp via Save-HeartbeatTimestamp (escreve ISO no arquivo)
+    if ($LastHeartbeatFile) { Save-HeartbeatTimestamp -LastHeartbeatFile $LastHeartbeatFile }
     return $true
 }
 
@@ -1253,4 +1278,65 @@ function Receive-TelegramUpdates {
         $r = Invoke-RestMethod -Uri "https://api.telegram.org/bot$Token/getUpdates?offset=$($Offset+1)&timeout=$Timeout" -Method GET -ErrorAction Stop
         if ($r.ok) { return $r.result } else { return @() }
     } catch { return @() }
+}
+
+# ============================================================================
+# Format-TgLiveSetupRisk - Painel de risco para setup Mode 2 LIVE
+# ============================================================================
+function Format-TgLiveSetupRisk {
+    param(
+        [Parameter(Mandatory=$true)]  [string]$Market,
+        [Parameter(Mandatory=$true)]  [string]$Direction,
+        [Parameter(Mandatory=$true)]  [string]$Tier,
+        [Parameter(Mandatory=$true)]  [double]$Entry,
+        [Parameter(Mandatory=$true)]  [double]$Stop,
+        [Parameter(Mandatory=$true)]  [double]$Target,
+        [Parameter(Mandatory=$true)]  [double]$SizeUsd,
+        [Parameter(Mandatory=$true)]  [double]$Sharpe,
+        [Parameter(Mandatory=$true)]  [double]$DSR,
+        [Parameter(Mandatory=$true)]  [double]$PSR,
+        [Parameter(Mandatory=$true)]  [double]$PBO,
+        [Parameter(Mandatory=$true)]  [double]$WinRatePct,
+        [Parameter(Mandatory=$true)]  [double]$MeanR,
+        [Parameter(Mandatory=$false)] [int]   $WfPositive  = 0,
+        [Parameter(Mandatory=$false)] [int]   $WfTotal     = 0,
+        [Parameter(Mandatory=$false)] [int]   $SampleN     = 0,
+        [Parameter(Mandatory=$false)] [string]$SampleYears = "",
+        [Parameter(Mandatory=$false)] [string]$MentorMsg   = "",
+        [Parameter(Mandatory=$false)] [int]   $MentorConf  = 0,
+        [switch]$DryRun
+    )
+
+    $inv   = [System.Globalization.CultureInfo]::InvariantCulture
+    $tierLabel = if ($Tier -eq "A") { "TIER A LIVE" } else { "TIER B PAPER" }
+    $dryTag    = if ($DryRun) { " [DRY - sem ordem real]" } else { "" }
+
+    $stopPct   = if ($Entry -gt 0) { [math]::Round(($Entry - $Stop) / $Entry * 100, 1) } else { 0 }
+    $targetPct = if ($Entry -gt 0) { [math]::Round(($Target - $Entry) / $Entry * 100, 1) } else { 0 }
+
+    # R-multiple approach: worst = lose full size, best = size × RR_ratio, expected = size × MeanR
+    $rrRatio  = if ($stopPct -gt 0) { $targetPct / $stopPct } else { 1 }
+    $worst    = -[math]::Round($SizeUsd, 0)
+    $best     = [math]::Round($SizeUsd * $rrRatio, 0)
+    $expected = [math]::Round($SizeUsd * $MeanR, 0)
+
+    $dsrIcon  = if ($DSR -ge 1.0) { "OK" } else { "WARN" }
+    $psrIcon  = if ($PSR -ge 0.95) { "OK" } else { "WARN" }
+    $pboIcon  = if ($PBO -le 0.25) { "OK" } else { "WARN" }
+    $wfIcon   = if ($WfTotal -gt 0 -and $WfPositive -ge $WfTotal * 0.6) { "OK" } else { "WARN" }
+    $wfStr    = if ($WfTotal -gt 0) { "WF: $WfPositive/$WfTotal [$wfIcon]" } else { "" }
+
+    $lines = @(
+        "<b>$Market $Direction — $tierLabel$dryTag</b>",
+        "Entry: <code>$Entry</code> | Stop: <code>$Stop</code> (-$stopPct%) | Target: <code>$Target</code> (+$targetPct%)",
+        "Size: `$$SizeUsd | Worst: -`$$(-$worst) | Best: +`$$best | Expected: +`$$expected",
+        "Sharpe: $Sharpe | DSR: $DSR [$dsrIcon] | PSR: $PSR [$psrIcon]",
+        "PBO: $PBO [$pboIcon] | WinRate: $WinRatePct% | MeanR: $MeanR"
+    )
+    if ($wfStr) { $lines += $wfStr }
+    if ($SampleN -gt 0) { $lines += "Sample: $SampleN trades / $SampleYears" }
+    if ($Tier -eq "B") { $lines += "AVISO: edge marginal, paper only" }
+    if ($MentorMsg) { $lines += "Mentor: $MentorMsg (confianca: $MentorConf%)" }
+
+    return ($lines -join "`n")
 }

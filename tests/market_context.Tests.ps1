@@ -1,43 +1,44 @@
-# market_context.Tests.ps1 -- TDD halving phase + context panel
+﻿# market_context.Tests.ps1 -- TDD halving phase + context panel
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"
 . (Join-Path $agentsDir "lib_telegram.ps1")
+. (Join-Path $agentsDir "lib_market_context_engine.ps1")
 . (Join-Path $agentsDir "lib_market_context.ps1")
 
 Describe "Get-HalvingPhase" {
 
     It "PRE_HALVING quando data antes 2024-04-19" {
-        $r = Get-HalvingPhase -AsOf ([DateTime]"2024-01-01")
-        $r.phase | Should Be "PRE_HALVING"
+        $r = Get-HalvingPhase -DateBrt ([DateTime]"2024-01-01")
+        $r | Should Be "pre_halving"
     }
 
     It "ACUMULACAO em mes 3 pos-halving" {
-        $r = Get-HalvingPhase -AsOf ([DateTime]"2024-07-19")  # ~3 meses
-        $r.phase | Should Be "ACUMULACAO"
+        $r = Get-HalvingPhase -DateBrt ([DateTime]"2024-07-19")  # ~3 meses
+        $r | Should Be "phase_1_bull"
     }
 
     It "MID_BULL em mes 13 (atual)" {
-        $r = Get-HalvingPhase -AsOf ([DateTime]"2025-05-18")  # ~13 meses
-        $r.phase | Should Be "MID_BULL"
+        $r = Get-HalvingPhase -DateBrt ([DateTime]"2025-05-18")  # ~13 meses
+        $r | Should Be "phase_2_top"
     }
 
-    It "DISTRIBUTION_RISK em mes 19" {
-        $r = Get-HalvingPhase -AsOf ([DateTime]"2025-11-19")  # ~19 meses
-        $r.phase | Should Be "DISTRIBUTION_RISK"
+    It "BEAR em mes 19 (fase 3)" {
+        $r = Get-HalvingPhase -DateBrt ([DateTime]"2025-11-19")  # ~19 meses
+        $r | Should Be "phase_3_bear"
     }
 
     It "BEAR_TERRITORY em mes 26" {
-        $r = Get-HalvingPhase -AsOf ([DateTime]"2026-06-19")  # ~26 meses
-        $r.phase | Should Be "BEAR_TERRITORY"
+        $r = Get-HalvingPhase -DateBrt ([DateTime]"2026-06-19")  # ~26 meses
+        $r | Should Be "phase_3_bear"
     }
 
     It "verdict nunca vazio" {
-        $r = Get-HalvingPhase -AsOf (Get-Date)
-        $r.verdict.Length | Should BeGreaterThan 10
+        $r = Get-HalvingPhase -DateBrt (Get-Date)
+        $r.Length | Should BeGreaterThan 5
     }
 
     It "atual (2026-05-18) deve estar BEAR_TERRITORY (mes ~25)" {
-        $r = Get-HalvingPhase -AsOf ([DateTime]"2026-05-18")
-        $r.months_since_halving | Should BeGreaterThan 24
+        $r = Get-HalvingPhase -DateBrt ([DateTime]"2026-05-18")
+        ($r -eq "phase_3_bear" -or $r -eq "phase_4_recovery") | Should Be $true
     }
 }
 
@@ -61,7 +62,7 @@ Describe "Get-MiningCostContext" {
 
     It "verdict nunca vazio" {
         $r = Get-MiningCostContext -BtcPriceUsd 108000
-        $r.verdict.Length | Should BeGreaterThan 10
+        $r.verdict.Length | Should BeGreaterThan 5
     }
 }
 

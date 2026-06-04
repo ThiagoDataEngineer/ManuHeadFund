@@ -1,5 +1,7 @@
 # lib_layer4_tori_timestop.ps1 -- Layer 4: stagnation time-stop + adaptive thresholds
 # PS 5.1. UTF-8 BOM.
+# Flag LAYER4_AUTO_EXECUTE: quando $true, Update-Layer4Review executa fechamento real na exchange.
+# Default: $false (advisory only — envia alerta mas nao fecha).
 
 # ============================================================================
 # Get-StagnationThresholds - Thresholds de horas por regime (SOFT/MEDIUM/HARD)
@@ -34,9 +36,9 @@ function Classify-StagnationTier {
     if ($PeakProgress -ge 0.005) { return "NONE" }
 
     $t = Get-StagnationThresholds -Regime $Regime
-    if ($HoursElapsed -gt $t.hard)   { return "HARD" }
-    if ($HoursElapsed -gt $t.medium) { return "MEDIUM" }
-    if ($HoursElapsed -gt $t.soft)   { return "SOFT" }
+    if ($HoursElapsed -ge $t.hard)   { return "HARD" }
+    if ($HoursElapsed -ge $t.medium) { return "MEDIUM" }
+    if ($HoursElapsed -ge $t.soft)   { return "SOFT" }
     return "NONE"
 }
 
@@ -46,31 +48,48 @@ function Classify-StagnationTier {
 function Get-Layer4Decision {
     param(
         [Parameter(Mandatory=$true)] [PSCustomObject]$Position,
-        [string]$Regime = "SIDEWAYS"
+        [string]$Regime       = "SIDEWAYS",
+        [string]$MentorAction = ""  # override: CLOSE_NOW, HOLD, HARVEST_PARTIAL
     )
-    $entry       = [double]$Position.entry
-    $peak        = [double]$Position.peak
-    $current     = [double]$Position.currentPrice
-    $openedAt    = [datetime]$Position.openedAt
-    $hoursOpen   = ([datetime]::Now - $openedAt).TotalHours
+    $entry      = [double]$Position.entry
+    $peak       = [double]$Position.peak
+    $current    = [double]$Position.currentPrice
+    $target     = if ($Position.PSObject.Properties["target"])     { [double]$Position.target }     else { 0 }
+    $resistance = if ($Position.PSObject.Properties["resistance"]) { [double]$Position.resistance } else { 0 }
+    $openedAt   = [datetime]$Position.openedAt
+    $hoursOpen  = ([datetime]::Now - $openedAt).TotalHours
     $peakProgress = if ($entry -gt 0) { ($peak - $entry) / $entry } else { 0 }
+
+    # Mentor override: CLOSE_NOW → Layer 4 defere para Mentor
+    if ($MentorAction -eq "CLOSE_NOW") {
+        return [PSCustomObject]@{ action="DEFER_TO_MENTOR"; tier="NONE"; confidence=0.95; hoursOpen=[math]::Round($hoursOpen,1); peakProgress=[math]::Round($peakProgress,4); regime=$Regime; market=$Position.market }
+    }
+
+    # Detecta oportunidade de harvest: perto da resistência com lucro significativo
+    $nearResistance = $resistance -gt 0 -and $current -gt 0 -and (($resistance - $current) / $current) -lt 0.03
+    $profitPct = if ($entry -gt 0) { ($current - $entry) / $entry } else { 0 }
+    if ($nearResistance -and $profitPct -gt 0.02 -and $MentorAction -ne "HOLD") {
+        return [PSCustomObject]@{ action="HARVEST_PARTIAL"; harvestPct=0.40; confidence=0.85; tier="NONE"; hoursOpen=[math]::Round($hoursOpen,1); peakProgress=[math]::Round($peakProgress,4); regime=$Regime; market=$Position.market }
+    }
 
     $tier = Classify-StagnationTier -HoursElapsed $hoursOpen -PeakProgress $peakProgress -Regime $Regime
 
-    $action = switch ($tier) {
-        "HARD"   { "CLOSE_TIME_STOP" }
-        "MEDIUM" { "REVIEW_STAGNATION" }
-        "SOFT"   { "WARN_STAGNATION" }
+    $action     = "HOLD"
+    $confidence = 0.50
+    switch ($tier) {
+        "HARD"   { $action = "CLOSE_TIME_STOP";    $confidence = 0.90 }
+        "MEDIUM" { $action = "REVIEW_STAGNATION";   $confidence = 0.60 }
+        "SOFT"   { $action = "WARN_STAGNATION";     $confidence = 0.40 }
         default  {
-            # Mesmo sem estagnacao, checar se esta em lucro para harvest
-            $profitPct = if ($entry -gt 0) { ($current - $entry) / $entry } else { 0 }
-            if ($profitPct -ge 0.15) { "HARVEST" } else { "HOLD" }
+            if ($profitPct -ge 0.15) { $action = "HARVEST"; $confidence = 0.70 }
+            else                     { $action = "HOLD";     $confidence = 0.50 }
         }
     }
 
     return [PSCustomObject]@{
         action       = $action
         tier         = $tier
+        confidence   = $confidence
         hoursOpen    = [math]::Round($hoursOpen, 1)
         peakProgress = [math]::Round($peakProgress, 4)
         regime       = $Regime
