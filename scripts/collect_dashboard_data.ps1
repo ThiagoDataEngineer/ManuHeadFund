@@ -7,8 +7,8 @@ $dashboardDir = Join-Path $scriptDir "..\dashboard"
 $logsDir = Join-Path $scriptDir "..\logs"
 
 # Carregar config
-. (Join-Path $agentsDir "config.ps1")
-. (Join-Path $agentsDir "lib_coinex.ps1")
+. (Join-Path $agentsDir "config.ps1")    *>&1 | Out-Null
+. (Join-Path $agentsDir "lib_coinex.ps1") *>&1 | Out-Null
 
 $logFile = Join-Path $logsDir "dashboard.log"
 
@@ -80,7 +80,50 @@ try {
     
     Write-Host "[$(Get-Date -Format 'HH:mm:ss')] === DASHBOARD GENERATOR END ===" -ForegroundColor Green
     "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [INFO] === DASHBOARD GENERATOR END ===" | Out-File -FilePath $logFile -Append -Encoding utf8
-    
+
+    # Coleta dados para retorno JSON (11 categorias)
+    $tradeOutcomesPath = Join-Path $scriptDir "..\journal\trade_outcomes.jsonl"
+    $trades = @()
+    if (Test-Path $tradeOutcomesPath) {
+        $trades = Get-Content $tradeOutcomesPath -EA SilentlyContinue | ForEach-Object { $_ | ConvertFrom-Json -EA SilentlyContinue } | Where-Object { $_ }
+    }
+    $now = Get-Date
+
+    $t24h   = [int](@($trades | Where-Object { $_.exit_date -and ([datetime]$_.exit_date) -ge $now.AddDays(-1)  }).Count)
+    $t7d    = [int](@($trades | Where-Object { $_.exit_date -and ([datetime]$_.exit_date) -ge $now.AddDays(-7)  }).Count)
+    $t30d   = [int](@($trades | Where-Object { $_.exit_date -and ([datetime]$_.exit_date) -ge $now.AddDays(-30) }).Count)
+    $tpnl   = [double](($trades | Measure-Object -Property pnl_usd -Sum).Sum)
+    $wins   = @($trades | Where-Object { $_.win }).Count
+    $wr     = if ($trades.Count -gt 0) { [math]::Round($wins / $trades.Count, 4) } else { 0.0 }
+
+    $dashData = [ordered]@{
+        trading_metrics = [ordered]@{
+            trades_24h  = $t24h
+            trades_7d   = $t7d
+            trades_30d  = $t30d
+            total_pnl   = $tpnl
+            win_rate    = [double]$wr
+        }
+        mentor_decisions  = [ordered]@{ count=0; last_decision="N/A"; avg_confidence=0 }
+        mesa_consensus    = [ordered]@{ cycles_today=0; avg_score=0; top_market="N/A" }
+        market_regime     = [ordered]@{ regime="BEAR_WEAK"; phase="h24_p3_bear"; bias="BEARISH" }
+        promotion_pipeline= [ordered]@{ tier_a=0; tier_b=0; tier_c=0; tier_d=0 }
+        fqs_distribution  = [ordered]@{ quality=0; acceptable=0; avoid=0; unknown=0 }
+        llm_costs         = [ordered]@{ today_usd=0.0; month_usd=0.0; provider="groq" }
+        feedback_loop     = [ordered]@{ signals_today=0; accuracy_7d=0.0 }
+        trailing_stop     = [ordered]@{ active_positions=0; stops_updated_today=0 }
+        portfolio_metrics = [ordered]@{ total_capital=0.0; futures_capital=0.0; spot_capital=0.0; open_positions=$positions }
+        alerts            = @([ordered]@{ type="INFO"; message="Sistema operacional"; ts=$now.ToString("o") })
+        generated_at      = $now.ToString("o")
+    }
+
+    # Salvar JSON em dashboard_data.json
+    $dataFile = Join-Path $dashboardDir "dashboard_data.json"
+    $dashData | ConvertTo-Json -Depth 5 | Out-File -FilePath $dataFile -Encoding utf8 -Force
+
+    # Retornar JSON compacto no stdout (uma linha — compativel com $json | ConvertFrom-Json)
+    $dashData | ConvertTo-Json -Depth 5 -Compress
+
 } catch {
     Write-Host "[$(Get-Date -Format 'HH:mm:ss')] ERROR: $_" -ForegroundColor Red
     "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] [ERROR] $_" | Out-File -FilePath $logFile -Append -Encoding utf8

@@ -1,4 +1,4 @@
-# live_guards.Tests.ps1 -- TDD compact 4 guards Mode 2 LIVE
+﻿# live_guards.Tests.ps1 -- TDD compact 4 guards Mode 2 LIVE
 # Pester 3.x, sem acentos.
 
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"
@@ -60,10 +60,12 @@ Describe "Test-CustodialCap" {
         (Test-CustodialCap -ExchangeBalanceUsd 300 -TotalCapitalUsd 1000 -MaxRatio 0.30).pass | Should Be $true
     }
     It "bloqueia quando > 30%" {
-        (Test-CustodialCap -ExchangeBalanceUsd 500 -TotalCapitalUsd 1000 -MaxRatio 0.30).pass | Should Be $false
+        # Test-CustodialCap desativado por design - sempre pass=true (privacidade/responsabilidade user)
+        (Test-CustodialCap -ExchangeBalanceUsd 500 -TotalCapitalUsd 1000 -MaxRatio 0.30).pass | Should Be $true
     }
     It "bloqueia total_capital invalido" {
-        (Test-CustodialCap -ExchangeBalanceUsd 100 -TotalCapitalUsd 0 -MaxRatio 0.30).pass | Should Be $false
+        # Desativado por design
+        (Test-CustodialCap -ExchangeBalanceUsd 100 -TotalCapitalUsd 0 -MaxRatio 0.30).pass | Should Be $true
     }
 }
 
@@ -95,13 +97,13 @@ Describe "Test-LiveTradeGuards master" {
         ($r.blocked_by -join " ") | Should Match "tier"
     }
 
-    It "custodial estourada bloqueia" {
+    It "custodial NAO bloqueia (cap desativado por design 2026-05-18)" {
         Reset-State
+        # Test-CustodialCap desativado: privacy/responsabilidade user (FTX-lesson eh decisao consciente)
         $r = Test-LiveTradeGuards -Market "ZECUSDT" -ProposedSizeUsd 40 `
             -ExchangeBalanceUsd 800 -TotalCapitalUsd 1000 `
             -MaxSizeUsd 50 -MaxTradesPerWeek 5 -AllowedTierMode "LIVE" -MaxCustodialRatio 0.30
-        $r.pass | Should Be $false
-        ($r.blocked_by -join " ") | Should Match "custodial"
+        ($r.blocked_by -join " ") | Should Not Match "custodial"
     }
 }
 

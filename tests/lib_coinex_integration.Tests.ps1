@@ -7,6 +7,12 @@ $projectRoot = Split-Path -Parent $PSScriptRoot
 . (Join-Path $projectRoot "agents\lib_rate_limiter.ps1")
 . (Join-Path $projectRoot "agents\lib_coinex_retry.ps1")
 
+# Stub credentials para testes (evita RuntimeException credenciais nao configuradas)
+if (-not $env:COINEX_ACCESS_ID)  { $env:COINEX_ACCESS_ID  = "TEST_ACCESS_ID" }
+if (-not $env:COINEX_SECRET_KEY) { $env:COINEX_SECRET_KEY = "TEST_SECRET_KEY_FOR_TESTS_ONLY" }
+$global:COINEX_ACCESS_ID  = $env:COINEX_ACCESS_ID
+$global:COINEX_SECRET_KEY = $env:COINEX_SECRET_KEY
+
 Describe "CoinEx-Post - Integração com Rate Limiter" {
     
     BeforeEach {

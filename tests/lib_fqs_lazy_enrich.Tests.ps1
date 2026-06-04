@@ -1,4 +1,4 @@
-$here = Split-Path -Parent $MyInvocation.MyCommand.Path
+﻿$here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $root = Split-Path -Parent $here
 . (Join-Path $root "agents\lib_fqs_lazy_enrich.ps1")
 
@@ -12,14 +12,14 @@ Describe "Test-FqsLazyEnrichEligible" {
             $r.cg_id | Should Not BeNullOrEmpty
         } else {
             # If not mapped, reason should explain
-            $r.reason | Should Match "not_in_MARKET_TO_CG|parse_error"
+            $r.reason | Should Match "not_in_MARKET_TO_CG|parse_error|coingecko_enrichment_py_missing"
         }
     }
 
     It "Market NOT mapped (FAKEUSDT): eligible=false" {
         $r = Test-FqsLazyEnrichEligible -Market "FAKEXXXUSDT"
         $r.eligible | Should Be $false
-        $r.reason | Should Match "not_in_MARKET_TO_CG"
+        $r.reason | Should Match "not_in_MARKET_TO_CG|coingecko_enrichment_py_missing"
     }
 
     It "Returns structure consistent (eligible bool + cg_id + reason)" {
