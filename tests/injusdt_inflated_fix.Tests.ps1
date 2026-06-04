@@ -10,13 +10,12 @@
 # - Select-TopCandidates coloca INJUSDT fora do top-N (apenas BTC anchor)
 # - INJUSDT so aparece se scanner o encontrar organicamente com score alto
 
+# Carrega libs aqui (Pester 3.x: BeforeAll nao exporta variaveis para It blocks)
+$script:agentsDir = Join-Path (Split-Path -Parent $PSScriptRoot) "agents"
+. (Join-Path $script:agentsDir "lib_quant_whitelist.ps1")
+. (Join-Path $script:agentsDir "lib_top_candidates.ps1")
+
 Describe "INJUSDT Inflated Fix" {
-    BeforeAll {
-        $testDir = Split-Path -Parent $PSScriptRoot
-        $agentsDir = Join-Path $testDir "agents"
-        . (Join-Path $agentsDir "lib_quant_whitelist.ps1")
-        . (Join-Path $agentsDir "lib_top_candidates.ps1")
-    }
 
     Context "isWhitelistForced field" {
         It "Merge-QuantWhitelistIntoCandidates adiciona isWhitelistForced=true aos forcados" {
@@ -55,7 +54,7 @@ Describe "INJUSDT Inflated Fix" {
         It "Get-MarketRegimeFromCache retorna regime global quando nao ha chave por-mercado" {
             # Simular regime_state.json com schema global (producao real)
             $tempDir = [System.IO.Path]::GetTempPath()
-            $testFile = Join-Path $tempDir "test_regime_state.json"
+            $testFile = Join-Path $tempDir "regime_state.json"
             
             @{
                 regime = "BEAR_WEAK"
