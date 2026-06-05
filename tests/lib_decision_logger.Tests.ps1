@@ -74,15 +74,16 @@ Describe "Add-Decision - CSV safety" {
         if (Test-Path $script:tmpFile) { Remove-Item $script:tmpFile -Force }
     }
 
-    It "Comma no reason eh escapado (replaced por ;)" {
+    It "Comma no reason eh CSV-safe (RFC4180 quoting preserva campos)" {
         Add-Decision -DecFile $script:tmpFile -Market "BTCUSDT" -Decision "ABORTAR" `
                      -Reason "score baixo, macro neutra, regime fraco" -AbortStage "triagem" `
                      -Regime "NEUTRAL" -Direction "-" -ScannerScore 30 -WhitelistTier "skip"
-        $content = Get-Content $script:tmpFile -Encoding utf8
-        # Conta vírgulas em row 1 — deve bater com num de campos - 1 (sem vírgula extra do reason)
-        $row = $content[1]
-        $fields = $row -split ','
-        $fields.Count | Should Be ($content[0] -split ',').Count
+        # Import-Csv respeita RFC4180: reason com virgulas fica num unico campo, sem quebrar colunas
+        $rows = @(Import-Csv $script:tmpFile)
+        $rows.Count | Should Be 1
+        $rows[0].reason | Should Be "score baixo, macro neutra, regime fraco"
+        $rows[0].market | Should Be "BTCUSDT"
+        $rows[0].decision | Should Be "ABORTAR"
     }
 }
 

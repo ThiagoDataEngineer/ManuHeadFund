@@ -12,16 +12,16 @@ Describe "R3 - Tech agent usa cascade Groq-primary" {
         $src | Should Match 'function Invoke-TechCascadeJson'
     }
 
-    It "Invoke-TechCascadeJson ordem cascade: Groq -> Gemini -> Haiku" {
+    It "Invoke-TechCascadeJson ordem cascade: Groq -> Mistral -> Haiku" {
         $src = Get-Content (Join-Path $cost_root "agents\lib_claude.ps1") -Raw -Encoding UTF8
         $func = [regex]::Match($src, 'function Invoke-TechCascadeJson[\s\S]+?(?=function\s+Invoke-)').Value
-        # Ordem: Groq apparece antes de Gemini antes de Haiku
+        # Ordem: Groq antes de Mistral antes de Haiku (Gemini deprecated commit 6f6e02b)
         $groqPos = $func.IndexOf('Invoke-Groq')
-        $geminiPos = $func.IndexOf('Invoke-Gemini')
+        $mistralPos = $func.IndexOf('Invoke-Mistral')
         $claudePos = $func.IndexOf('claude-haiku')
         ($groqPos -gt 0) | Should Be $true
-        ($geminiPos -gt $groqPos) | Should Be $true
-        ($claudePos -gt $geminiPos) | Should Be $true
+        ($mistralPos -gt $groqPos) | Should Be $true
+        ($claudePos -gt $mistralPos) | Should Be $true
     }
 
     It "Tech agent (tech_agent_ai.ps1) chama Invoke-TechCascadeJson" {

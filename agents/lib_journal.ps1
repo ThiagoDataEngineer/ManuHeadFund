@@ -87,7 +87,7 @@ function Write-GemJournalEntry {
         sizing_usd       = if ($sz) { $sz.sizing_usd } else { 0 }
         stop_pct         = if ($sz) { $sz.stop_pct   } else { "" }
         target_pct       = if ($sz) { $sz.target_pct } else { "" }
-        alerta           = (ConvertTo-CsvField $GemResult.alerta)   # B11 fix DRY (era inline RFC4180, agora helper unico)
+        alerta           = $GemResult.alerta   # raw — _Format-CsvRow (linha 100) ja faz RFC4180 uniforme; pre-escapar aqui causava double-escape
         scan_id          = $ScanId
     }
 

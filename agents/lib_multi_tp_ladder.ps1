@@ -174,7 +174,7 @@ function Place-LadderExitOrders {
         # TP1 (25%)
         Write-Host "    TP1: $($Ladder.tp1.price) ($($Ladder.tp1.qty) = $([math]::Round($Ladder.tp1.pct*100))%)" -ForegroundColor Green
         if (-not $DryRun) {
-            $order1 = CoinEx-PlaceFuturesOrder -Market $Market -Side $orderSide `
+            $order1 = CoinEx-PlaceOrder -Market $Market -Side $orderSide `
                 -Type "limit" -Amount $Ladder.tp1.qty -Price $Ladder.tp1.price
             $orders += [PSCustomObject]@{ level = "TP1"; order = $order1 }
         }
@@ -182,7 +182,7 @@ function Place-LadderExitOrders {
         # TP2 (35%)
         Write-Host "    TP2: $($Ladder.tp2.price) ($($Ladder.tp2.qty) = $([math]::Round($Ladder.tp2.pct*100))%)" -ForegroundColor Green
         if (-not $DryRun) {
-            $order2 = CoinEx-PlaceFuturesOrder -Market $Market -Side $orderSide `
+            $order2 = CoinEx-PlaceOrder -Market $Market -Side $orderSide `
                 -Type "limit" -Amount $Ladder.tp2.qty -Price $Ladder.tp2.price
             $orders += [PSCustomObject]@{ level = "TP2"; order = $order2 }
         }
@@ -190,7 +190,7 @@ function Place-LadderExitOrders {
         # TP3 (25%)
         Write-Host "    TP3: $($Ladder.tp3.price) ($($Ladder.tp3.qty) = $([math]::Round($Ladder.tp3.pct*100))%)" -ForegroundColor Green
         if (-not $DryRun) {
-            $order3 = CoinEx-PlaceFuturesOrder -Market $Market -Side $orderSide `
+            $order3 = CoinEx-PlaceOrder -Market $Market -Side $orderSide `
                 -Type "limit" -Amount $Ladder.tp3.qty -Price $Ladder.tp3.price
             $orders += [PSCustomObject]@{ level = "TP3"; order = $order3 }
         }
@@ -198,7 +198,7 @@ function Place-LadderExitOrders {
         # TP4 (15% runner)
         Write-Host "    TP4: $($Ladder.tp4.price) ($($Ladder.tp4.qty) = $([math]::Round($Ladder.tp4.pct*100))% runner)" -ForegroundColor Green
         if (-not $DryRun) {
-            $order4 = CoinEx-PlaceFuturesOrder -Market $Market -Side $orderSide `
+            $order4 = CoinEx-PlaceOrder -Market $Market -Side $orderSide `
                 -Type "limit" -Amount $Ladder.tp4.qty -Price $Ladder.tp4.price
             $orders += [PSCustomObject]@{ level = "TP4"; order = $order4 }
         }
@@ -422,8 +422,10 @@ function Invoke-LadderExitStrategy {
                 
                 $tr = [math]::Max(
                     ($high - $low),
-                    [math]::Abs($high - $prevClose),
-                    [math]::Abs($low - $prevClose)
+                    [math]::Max(
+                        [math]::Abs($high - $prevClose),
+                        [math]::Abs($low - $prevClose)
+                    )
                 )
                 $atrSum += $tr
             }
@@ -447,9 +449,9 @@ function Invoke-LadderExitStrategy {
         $orders = Place-LadderExitOrders -Market $Market -Side $Side -Ladder $ladder -DryRun:$DryRun
         
         if ($orders.success) {
-            Write-Host "âœ“ Ordens colocadas com sucesso" -ForegroundColor Green
+            Write-Host "[OK] Ordens colocadas com sucesso" -ForegroundColor Green
         } else {
-            Write-Host "âœ— Falha ao colocar ordens" -ForegroundColor Red
+            Write-Host "[X] Falha ao colocar ordens" -ForegroundColor Red
         }
         
         Write-Host "`n=== LADDER CONFIGURADO ===" -ForegroundColor Cyan
@@ -467,7 +469,7 @@ function Invoke-LadderExitStrategy {
         }
     }
     catch {
-        Write-Host "`nâœ— ERRO: $_" -ForegroundColor Red
+        Write-Host "`n[X] ERRO: $_" -ForegroundColor Red
         return [PSCustomObject]@{
             success = $false
             error = $_.Exception.Message

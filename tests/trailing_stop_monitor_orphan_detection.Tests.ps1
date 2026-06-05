@@ -93,9 +93,9 @@ Describe "Detect-OrphanPositions - Detecção de posições órfãs" {
         $exchangePos = New-MockPosition -Market "BTCUSDT" -Side "long" -Entry 76000
         Mock-CoinExPositions -Positions @($exchangePos)
         
-        # Act: detectar órfãs
-        $orphans = Detect-OrphanPositions
-        
+        # Act: detectar órfãs (wrap @() = mesmo padrao que Sync-OrphanPositions usa em producao)
+        $orphans = @(Detect-OrphanPositions)
+
         # Assert
         $orphans.Count | Should Be 1
         $orphans[0].market | Should Be "BTCUSDT"

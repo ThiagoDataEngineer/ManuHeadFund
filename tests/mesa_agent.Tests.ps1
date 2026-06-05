@@ -144,9 +144,9 @@ Describe "Invoke-MesaDrone - modelo correto por drone" {
         Invoke-MesaDrone -Drone "radar" -UserContent "{}" | Out-Null
         $script:lastModel | Should Be "llama-3.1-8b-instant"
     }
-    It "B3 lidar usa gemma2-9b-it" {
+    It "B3 lidar usa openai/gpt-oss-20b (gemma2-9b-it decommissioned por Groq 2026-06)" {
         Invoke-MesaDrone -Drone "lidar" -UserContent "{}" | Out-Null
-        $script:lastModel | Should Be "gemma2-9b-it"
+        $script:lastModel | Should Be "openai/gpt-oss-20b"
     }
     It "B4 termal usa Agent label mesa_termal" {
         Invoke-MesaDrone -Drone "termal" -UserContent "{}" | Out-Null

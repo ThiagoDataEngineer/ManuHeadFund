@@ -25,9 +25,15 @@ Describe "B9 GEM recent-decision cache" {
             # TTL 0 minutos = sempre stale
             (Test-GemRecentlyRejected -Path $cachePath -Market "DASH" -Reason "MCE_BLOCK 0.1823" -TtlMinutes 0) | Should Be $false
         }
-        It "reason diferente: NAO rejected (mesmo market)" {
+        It "reason diferente + MatchReason: NAO rejected (mesmo market)" {
+            # Default = match-by-market-only (2026-05-21). Reason-discrimination e opt-in
+            # via -MatchReason (reason era inconsistente entre write/read sem o switch).
             Add-GemRejection -Path $cachePath -Market "DASH" -Reason "MCE_BLOCK 0.1823"
-            (Test-GemRecentlyRejected -Path $cachePath -Market "DASH" -Reason "FQS_LOW" -TtlMinutes 60) | Should Be $false
+            (Test-GemRecentlyRejected -Path $cachePath -Market "DASH" -Reason "FQS_LOW" -TtlMinutes 60 -MatchReason) | Should Be $false
+        }
+        It "reason diferente SEM MatchReason: rejected (market-only default 2026-05-21)" {
+            Add-GemRejection -Path $cachePath -Market "DASH" -Reason "MCE_BLOCK 0.1823"
+            (Test-GemRecentlyRejected -Path $cachePath -Market "DASH" -Reason "FQS_LOW" -TtlMinutes 60) | Should Be $true
         }
         It "market diferente: NAO rejected (mesma reason)" {
             Add-GemRejection -Path $cachePath -Market "DASH" -Reason "MCE_BLOCK 0.1823"

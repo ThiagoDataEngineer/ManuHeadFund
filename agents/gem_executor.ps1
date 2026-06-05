@@ -26,11 +26,17 @@ if (Test-Path $__trackerPath) { . $__trackerPath }
 # Carrega tech_agent_ai (provedor de Get-ToriTrendlineSignal) se ainda nao dot-sourced.
 # Usa multiplos fallbacks de path pois $PSScriptRoot e vazio em runspace isolado.
 if (-not (Get-Command Get-ToriTrendlineSignal -ErrorAction SilentlyContinue)) {
+    # Bases de path (algumas podem ser null em runspace/dot-source standalone).
+    # Join-Path lanca com base null, entao filtra bases ANTES de compor o path.
+    $__invPath = $MyInvocation.MyCommand.Path
+    $__toriBases = @(
+        $PSScriptRoot,
+        $agentsDir,
+        $(if ($__invPath) { Split-Path $__invPath -Parent } else { $null })
+    ) | Where-Object { $_ }
     $__toriCandidates = @(
-        (Join-Path $PSScriptRoot "tech_agent_ai.ps1"),
-        (Join-Path $agentsDir    "tech_agent_ai.ps1"),
-        (Join-Path (Split-Path $MyInvocation.MyCommand.Path -Parent) "tech_agent_ai.ps1")
-    ) | Where-Object { $_ -and (Test-Path $_) } | Select-Object -First 1
+        $__toriBases | ForEach-Object { Join-Path $_ "tech_agent_ai.ps1" }
+    ) | Where-Object { Test-Path $_ } | Select-Object -First 1
     if ($__toriCandidates) {
         try   { . $__toriCandidates -ErrorAction Stop }
         catch { Write-Host "[WARN] Falha ao carregar tech_agent_ai.ps1: $($_.Exception.Message)" -ForegroundColor Yellow }

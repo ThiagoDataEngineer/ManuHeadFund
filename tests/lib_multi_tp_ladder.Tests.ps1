@@ -1,4 +1,4 @@
-# lib_multi_tp_ladder.Tests.ps1 - Testes para Multi-TP Ladder Exits
+﻿# lib_multi_tp_ladder.Tests.ps1 - Testes para Multi-TP Ladder Exits
 # Rodar: Invoke-Pester .\tests\lib_multi_tp_ladder.Tests.ps1 -Verbose
 
 $global:COINEX_BASE_URL   = "https://api.coinex.com"
@@ -96,7 +96,7 @@ Describe "Get-LadderExitLevels - calculo de niveis de TP" {
 Describe "Place-LadderExitOrders - colocacao de ordens" {
 
     BeforeEach {
-        Mock CoinEx-PlaceFuturesOrder {
+        Mock CoinEx-PlaceOrder {
             param($Market, $Side, $Type, $Amount, $Price)
             return [PSCustomObject]@{
                 order_id = "mock_order_$(Get-Random)"
@@ -116,8 +116,8 @@ Describe "Place-LadderExitOrders - colocacao de ordens" {
         $result.success | Should Be $true
         $result.orders.Count | Should Be 4
         
-        # Verificar que CoinEx-PlaceFuturesOrder foi chamado 4 vezes
-        Assert-MockCalled CoinEx-PlaceFuturesOrder -Times 4
+        # Verificar que CoinEx-PlaceOrder foi chamado 4 vezes
+        Assert-MockCalled CoinEx-PlaceOrder -Times 4 -Scope It
     }
 
     It "usa side correto (sell para LONG, buy para SHORT)" {
@@ -126,7 +126,7 @@ Describe "Place-LadderExitOrders - colocacao de ordens" {
         Place-LadderExitOrders -Market "BTCUSDT" -Side "long" -Ladder $ladder
         
         # LONG deve usar sell para fechar
-        Assert-MockCalled CoinEx-PlaceFuturesOrder -Times 4 -ParameterFilter { $Side -eq "sell" }
+        Assert-MockCalled CoinEx-PlaceOrder -Times 4 -ParameterFilter { $Side -eq "sell" } -Scope It
     }
 
     It "dry run nao coloca ordens reais" {
@@ -139,11 +139,11 @@ Describe "Place-LadderExitOrders - colocacao de ordens" {
         $result.orders.Count | Should Be 0
         
         # Não deve chamar API
-        Assert-MockCalled CoinEx-PlaceFuturesOrder -Times 0
+        Assert-MockCalled CoinEx-PlaceOrder -Times 0 -Scope It
     }
 
     It "retorna erro quando API falha" {
-        Mock CoinEx-PlaceFuturesOrder {
+        Mock CoinEx-PlaceOrder {
             throw "API Error: Rate limit exceeded"
         }
         
@@ -332,7 +332,7 @@ Describe "Invoke-LadderExitStrategy - estrategia completa" {
             return $candles
         }
         
-        Mock CoinEx-PlaceFuturesOrder {
+        Mock CoinEx-PlaceOrder {
             return [PSCustomObject]@{
                 order_id = "mock_order_$(Get-Random)"
             }
@@ -351,7 +351,7 @@ Describe "Invoke-LadderExitStrategy - estrategia completa" {
         $result.atr_value | Should BeGreaterThan 0
         
         # Verificar que candles foram buscados
-        Assert-MockCalled CoinEx-GetFuturesCandles -Times 1
+        Assert-MockCalled CoinEx-GetFuturesCandles -Times 1 -Scope It
     }
 
     It "usa ATR fornecido se especificado" {
@@ -367,7 +367,7 @@ Describe "Invoke-LadderExitStrategy - estrategia completa" {
         $result.atr_value | Should Be 800
         
         # Não deve buscar candles
-        Assert-MockCalled CoinEx-GetFuturesCandles -Times 0
+        Assert-MockCalled CoinEx-GetFuturesCandles -Times 0 -Scope It
     }
 
     It "retorna ladder completo com 4 niveis" {
@@ -399,7 +399,7 @@ Describe "Invoke-LadderExitStrategy - estrategia completa" {
         $result.dry_run | Should Be $true
         
         # Não deve chamar API de ordens
-        Assert-MockCalled CoinEx-PlaceFuturesOrder -Times 0
+        Assert-MockCalled CoinEx-PlaceOrder -Times 0 -Scope It
     }
 
     It "coloca ordens reais quando nao dry run" {
@@ -414,7 +414,7 @@ Describe "Invoke-LadderExitStrategy - estrategia completa" {
         $result.dry_run | Should Be $false
         
         # Deve chamar API 4 vezes (4 TPs)
-        Assert-MockCalled CoinEx-PlaceFuturesOrder -Times 4
+        Assert-MockCalled CoinEx-PlaceOrder -Times 4 -Scope It
     }
 
     It "retorna erro quando dados insuficientes para ATR" {

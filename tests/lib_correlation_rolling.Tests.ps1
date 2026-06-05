@@ -1,4 +1,4 @@
-param([string] $ModulePath = "$PSScriptRoot\..\agents")
+﻿param([string] $ModulePath = "$PSScriptRoot\..\agents")
 
 Describe "lib_correlation_rolling — Beta rolling correlation (1h)" {
     . "$ModulePath\lib_correlation_rolling.ps1"

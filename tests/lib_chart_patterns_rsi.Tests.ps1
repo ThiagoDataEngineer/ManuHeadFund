@@ -99,12 +99,14 @@ Describe "RSI Calculation - lib_chart_patterns (_CP-CalcRsiArray)" {
         }
         
         It "Should handle exact period+1 candles" {
-            # Exactly 15 candles (period=14)
-            $closes = @(0..14 | ForEach-Object { 100 + $_ })
-            
+            # Exactly 15 candles (period=14). Mixed (uptrend com pullbacks) para
+            # exercitar gains E losses — monotonic puro daria RSI=100 (correto, mas
+            # nao testa o caminho de losses).
+            $closes = @(100,101,103,102,104,106,105,107,109,108,110,112,111,113,112)
+
             $rsi = _CP-CalcRsiArray -Closes $closes -Period 14
-            
-            # Should calculate RSI for last value
+
+            # Should calculate RSI for last value (high but nao saturado em 100)
             $rsi[-1] | Should Not Be 50.0
             $rsi[-1] | Should BeGreaterThan 0
             $rsi[-1] | Should BeLessThan 100

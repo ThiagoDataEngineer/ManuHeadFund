@@ -150,13 +150,13 @@ Describe "Wave2 whitelist gate - SKIP em live, OBSERVE em paper" {
         ($global:CALLED_MENTOR) | Should Be $false
     }
 
-    It "SHORT em SIDEWAYS + paper -> cascade roda MAS telegramFire=false (observe, v3)" {
+    It "SHORT em SIDEWAYS + paper -> execute + telegramFire=true (Block2 2026-05-28 +0.34R PF 1.54)" {
         Set-Triagem -Tier "B" -Regime "SIDEWAYS" -Direction "SHORT"
         Set-Mesa "FORTE_3" "SHORT" 70
         $ctx = New-IntegrationContext -Mode "paper"
         $out = Invoke-V6Cascade -Market "BTCUSDT" -Context $ctx -Setup $setup
         ($out.decisao) | Should Be "EXECUTAR"
-        ($out.telegramFire) | Should Be $false
+        ($out.telegramFire) | Should Be $true
     }
 
     It "SIDEWAYS + LONG -> ABORTAR razao whitelist:skip em ambos modos" {
@@ -193,12 +193,15 @@ Describe "Wave2 whitelist gate - SKIP em live, OBSERVE em paper" {
         ($out.telegramFire) | Should Be $false
     }
 
-    It "BULL_WEAK + LONG + live -> ABORTAR (blacklist)" {
+    It "BULL_WEAK + LONG + live -> observe (revalidated 2026-05-23: EXECUTAR sem tg, nao live-fire)" {
+        # SKIP->OBSERVE em ambos os modos. Observe = paper execute, telegramFire=false
+        # (NAO dispara capital live). Rollback via env BULL_WEAK_LONG_SKIP=1.
         Set-Triagem -Tier "B" -Regime "BULL_WEAK" -Direction "LONG"
+        Set-Mesa "FORTE_3" "LONG" 70
         $ctx = New-IntegrationContext -Mode "live"
         $out = Invoke-V6Cascade -Market "BTCUSDT" -Context $ctx -Setup $setup
-        ($out.decisao) | Should Be "ABORTAR"
-        ($out.motivo -match "whitelist:skip") | Should Be $true
+        ($out.decisao) | Should Be "EXECUTAR"
+        ($out.telegramFire) | Should Be $false
     }
 
     It "BEAR_STRONG + LONG + live -> skip" {

@@ -72,10 +72,12 @@ Describe "Test-RegimeDirectionAllowed - OBSERVE paper, SKIP live" {
         ($r.allowed) | Should Be $true
     }
 
-    It "BULL_WEAK + LONG + Monday + live = skip (blacklist live)" {
+    It "BULL_WEAK + LONG + Monday + live = observe (RE-VALIDATED 2026-05-23 +2.08pp EV)" {
+        # SKIP->OBSERVE revalidado (docs/backtest/BLACKLIST_BULL_WEAK_REVALIDATION.md).
+        # Rollback via env BULL_WEAK_LONG_SKIP=1.
         $r = _r 'BULL_WEAK' 'LONG' 1 'live'
-        ($r.tier)    | Should Be 'skip'
-        ($r.allowed) | Should Be $false
+        ($r.tier)    | Should Be 'observe'
+        ($r.allowed) | Should Be $true
     }
 
     It "BULL_STRONG + SHORT + Wednesday + paper = skip (v3 anti-trend)" {
@@ -93,9 +95,10 @@ Describe "Test-RegimeDirectionAllowed - OBSERVE paper, SKIP live" {
         ($r.tier) | Should Be 'execute'
     }
 
-    It "SIDEWAYS + SHORT + paper = observe (ranging permanece passivo)" {
+    It "SIDEWAYS + SHORT + paper = execute (Block2 2026-05-28: +0.34R PF 1.54)" {
+        # SIDEWAYS+SHORT edge comprovado -> execute paper, observe live (aguarda 30d forward)
         $r = _r 'SIDEWAYS' 'SHORT' 1 'paper'
-        ($r.tier) | Should Be 'observe'
+        ($r.tier) | Should Be 'execute'
     }
 
     It "CAPITULATION + SHORT + Saturday + paper = execute (v3 bidirecional)" {

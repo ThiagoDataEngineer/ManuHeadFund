@@ -32,7 +32,7 @@ Describe "B28c TimeoutSec presente em Invoke-WebRequest cascade" {
         $src = Get-Content (Join-Path $projectRoot "agents\lib_claude.ps1") -Raw -Encoding UTF8
         # Match dentro do escopo da funcao Invoke-Groq
         $groq = [regex]::Match($src, 'function Invoke-Groq[\s\S]+?(?=function\s+Invoke-)').Value
-        $groq | Should Match '-TimeoutSec\s+10'
+        $groq | Should Match '-TimeoutSec\s+30'
     }
     It "Invoke-Gemini tem TimeoutSec explicito (fallback 1)" {
         $src = Get-Content (Join-Path $projectRoot "agents\lib_claude.ps1") -Raw -Encoding UTF8

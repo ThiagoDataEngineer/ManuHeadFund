@@ -1,4 +1,4 @@
-param([string] $ModulePath = "$PSScriptRoot\..\agents")
+﻿param([string] $ModulePath = "$PSScriptRoot\..\agents")
 
 Describe "lib_cycle_memory_decision — Reflection cache to reduce LLM calls" {
     . "$ModulePath\lib_cycle_memory_decision.ps1"

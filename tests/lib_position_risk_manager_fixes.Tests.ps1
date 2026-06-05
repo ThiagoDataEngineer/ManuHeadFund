@@ -1,4 +1,4 @@
-# tests/lib_position_risk_manager_fixes.Tests.ps1
+﻿# tests/lib_position_risk_manager_fixes.Tests.ps1
 # TDD: Testes para correcoes do Risk Manager
 
 $ErrorActionPreference = "Stop"
@@ -179,6 +179,3 @@ Describe "Risk Manager - Formatacao e NaN Fixes" {
         }
     }
 }
-
-Write-Host "`n=== EXECUTANDO TESTES ===" -ForegroundColor Cyan
-Invoke-Pester -Path $PSCommandPath -Output Detailed

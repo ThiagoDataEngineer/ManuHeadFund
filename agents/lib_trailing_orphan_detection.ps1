@@ -271,7 +271,11 @@ function Sync-OrphanPositions {
             }
         }
         
-        # 5. Retornar estatÃ­sticas
+        # 5. Posicoes da exchange ja rastreadas localmente (nao-orfas) = skipped.
+        #    Disjunto dos orphans, entao nao ha double-count com o loop acima.
+        $skipped += ($totalExchange - $orphans.Count)
+
+        # 6. Retornar estatÃ­sticas
         return [PSCustomObject]@{
             success = $true
             total_exchange = $totalExchange

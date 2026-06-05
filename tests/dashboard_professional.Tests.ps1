@@ -139,12 +139,12 @@ Capital: `$2,757.93 USDT
         
         It "Should track trailing stop progression" {
             $entryPrice = 647.06
-            $currentPrice = 660.00
+            $currentPrice = 670.00   # +3.55% > trailingPct 3% -> trailing ATIVA
             $trailingPct = 3.0
-            
+
             # Calcular trailing stop
             $profitPct = (($currentPrice - $entryPrice) / $entryPrice) * 100
-            
+
             $trailingStop = if ($profitPct -gt $trailingPct) {
                 # Trailing ativado
                 $currentPrice * (1 - ($trailingPct / 100))
@@ -152,9 +152,10 @@ Capital: `$2,757.93 USDT
                 # Trailing nao ativado, usar stop inicial
                 $entryPrice * (1 - ($trailingPct / 100))
             }
-            
+
             $trailingStop = [math]::Round($trailingStop, 2)
-            
+
+            # Trailing ativado: stop sobe acima do stop inicial (647.06*0.97=627.65)
             $trailingStop | Should BeGreaterThan 627.82
         }
     }

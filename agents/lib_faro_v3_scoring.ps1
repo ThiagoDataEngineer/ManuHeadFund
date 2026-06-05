@@ -13,13 +13,13 @@ function Get-FaroConviction {
 
 function Get-FaroScoreV3 {
     param([decimal] $VolScore = 0, [decimal] $PatternScore = 0, [decimal] $SentimentScore = 0, [decimal] $WhaleScore = 0, [decimal] $MomentumScore = 0, [decimal] $FingerprintScore = 0, [decimal] $TimingScore = 0)
-    $vol = [decimal]($VolScore ?? 0)
-    $pat = [decimal]($PatternScore ?? 0)
-    $sent = [decimal]($SentimentScore ?? 0)
-    $whale = [decimal]($WhaleScore ?? 0)
-    $mom = [decimal]($MomentumScore ?? 0)
-    $fp = [decimal]($FingerprintScore ?? 0)
-    $timing = [decimal]($TimingScore ?? 0)
+    $vol = $VolScore
+    $pat = $PatternScore
+    $sent = $SentimentScore
+    $whale = $WhaleScore
+    $mom = $MomentumScore
+    $fp = $FingerprintScore
+    $timing = $TimingScore
     $signalCount = 0
     if ($vol -gt 0) { $signalCount++ }
     if ($pat -gt 0) { $signalCount++ }

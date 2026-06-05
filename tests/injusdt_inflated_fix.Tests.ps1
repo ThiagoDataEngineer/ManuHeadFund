@@ -97,9 +97,12 @@ Describe "INJUSDT Inflated Fix" {
                 "BTCUSDT", "INJUSDT", "RENDERUSDT", "CFGUSDT", "ZECUSDT",
                 "PENDLEUSDT", "SUIUSDT", "SKYUSDT", "XRPUSDT", "BCHUSDT", "XMRUSDT"
             ) | ForEach-Object {
+                # INJ recebe compScore organico REAL (nao inflado=45) pra provar que,
+                # de-forcado (anchor so BTC), cai fora do top por merito. Demais=100.
+                $cs = if ($_ -eq "INJUSDT") { 45 } else { 100 }
                 [PSCustomObject]@{
                     market = $_
-                    compScore = 100
+                    compScore = $cs
                     vol = 5
                     isWhitelistForced = $true
                     tierLevel = if ($_ -eq "BTCUSDT") { 1 } else { 2 }

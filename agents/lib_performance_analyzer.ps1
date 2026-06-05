@@ -30,6 +30,7 @@ function Calculate-SharpeRatio {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
+        [AllowEmptyCollection()]
         [array]$Trades,
         
         [Parameter(Mandatory=$false)]
@@ -103,6 +104,7 @@ function Calculate-MaxDrawdown {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
+        [AllowEmptyCollection()]
         [array]$Trades
     )
     
@@ -172,6 +174,7 @@ function Calculate-WinStreaks {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
+        [AllowEmptyCollection()]
         [array]$Trades
     )
     
@@ -246,6 +249,7 @@ function Analyze-PerformanceByMarket {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
+        [AllowEmptyCollection()]
         [array]$Trades
     )
     
@@ -315,6 +319,7 @@ function Analyze-PerformanceByHour {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory=$true)]
+        [AllowEmptyCollection()]
         [array]$Trades
     )
     

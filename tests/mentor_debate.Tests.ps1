@@ -125,13 +125,15 @@ Describe "Invoke-MentorDebate - contrato basico" {
         ($global:LAST_MENTOR_AGENT) | Should Be "mentor"
     }
 
-    It "prompt compacto: max tokens output <= 500 (custo baixo)" {
+    It "prompt: max tokens output <= 1500 (cost-guard; debate usa 1200 pos Mentor evolutions)" {
+        # Budget subiu 500->1200 com Mentor evolutions (multishot/self-consistency/5-tier).
+        # Guard em 1500 ainda pega runaway growth.
         $global:MOCK_MENTOR_RESPONSE = [PSCustomObject]@{
             decision="APROVAR"; confianca=70; mentor_mensagem="ok"; knowledge_cited=@()
         }
         $null = Invoke-MentorDebate -Market "BTCUSDT" -TriagemResult (New-Triagem) `
             -MesaResult (New-Mesa) -Setup (New-Setup) -KnowledgeContext "mock"
-        ($global:LAST_MENTOR_MAXTOK -le 500) | Should Be $true
+        ($global:LAST_MENTOR_MAXTOK -le 1500) | Should Be $true
     }
 
     It "prompt menciona tier da Triagem" {

@@ -20,7 +20,7 @@ if (-not $script:_MESA_AGENT_DIR) {
 # DRONES (todos via Groq free tier - custo $0):
 #   - termal : llama-3.3-70b-versatile  (Al Brooks - price action puro)
 #   - radar  : qwen-qwq-32b             (Druckenmiller - macro/sentimento)
-#   - lidar  : gemma2-9b-it             (risk manager - R:R real apos fees)
+#   - lidar  : openai/gpt-oss-20b       (risk manager - R:R real apos fees)
 #
 # PARALELISMO:
 #   Start-Job + Wait-Job (timeout 8s). 1 drone falha -> degraded=true.
@@ -151,10 +151,12 @@ $MESA_MODELS = @{
     # Estratégia: 3 buckets RPM separados = 3x30 RPM efetivo.
     # termal = 70b (Brooks - heavy)
     # radar  = 8b instant (Druckenmiller - rápido, bucket diferente)
-    # lidar  = gemma2-9b-it (Risk - modelo Google, bucket diferente)
+    # lidar  = openai/gpt-oss-20b (Risk - gemma2-9b-it DECOMMISSIONED por Groq 2026-06;
+    #          retornava 400 -> drone_returned_empty. gpt-oss-20b: 1.9s, JSON limpo,
+    #          familia diferente dos llamas = diversidade de consenso, bucket separado)
     termal = "llama-3.3-70b-versatile"
     radar  = "llama-3.1-8b-instant"
-    lidar  = "gemma2-9b-it"
+    lidar  = "openai/gpt-oss-20b"
 }
 
 $MESA_SYSTEMS = @{

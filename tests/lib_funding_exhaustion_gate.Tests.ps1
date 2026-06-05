@@ -1,4 +1,4 @@
-param([string] $ModulePath = "$PSScriptRoot\..\agents")
+﻿param([string] $ModulePath = "$PSScriptRoot\..\agents")
 
 Describe "lib_funding_exhaustion_gate — Dead-hand divergence hunt" {
     . "$ModulePath\lib_funding_exhaustion_gate.ps1"

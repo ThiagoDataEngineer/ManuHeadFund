@@ -104,8 +104,8 @@ function Test-AlphaCorrelationGate {
     $test = Test-CorrelationThreshold -Correlation $Correlation -Threshold $threshold
 
     if (-not $test.pass) {
-        $trendInfo = $Trend.direction ?? "UNKNOWN"
-        $trendingUp = $Trend.trending_up ?? $false
+        $trendInfo = if ($null -ne $Trend.direction) { $Trend.direction } else { "UNKNOWN" }
+        $trendingUp = if ($null -ne $Trend.trending_up) { $Trend.trending_up } else { $false }
 
         # Demote if high correlation AND trending up (worsening)
         if ($trendingUp) {
