@@ -13,14 +13,17 @@ Describe "register_wss_forward_resolve.ps1 (idempotent + dryrun)" {
         (Test-Path $f) | Should Be $true
     }
 
-    It "DryRun executa sem erro + nao cria task" {
+    It "DryRun executa sem erro + nao modifica estado da task" {
         $f = Join-Path $root "scripts\register_wss_forward_resolve.ps1"
+        # Estado antes (pode haver task residual de execucao real elevada — env-dependent)
+        $before = $null -ne (Get-ScheduledTask -TaskName "CoinExWssForwardResolve" -ErrorAction SilentlyContinue)
         $out = & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $f -DryRun 2>&1
         ($out -join "`n") | Should Match "DRYRUN"
         ($out -join "`n") | Should Match "CoinExWssForwardResolve"
-        # Verifica que NAO criou task real
-        $task = Get-ScheduledTask -TaskName "CoinExWssForwardResolve" -ErrorAction SilentlyContinue
-        $task | Should Be $null
+        ($out -join "`n") | Should Match "Nenhuma task criada"
+        # DryRun nao altera o estado: existencia da task igual antes/depois
+        $after = $null -ne (Get-ScheduledTask -TaskName "CoinExWssForwardResolve" -ErrorAction SilentlyContinue)
+        $after | Should Be $before
     }
 
     It "Calculo de proximo Sabado eh consistente" {
