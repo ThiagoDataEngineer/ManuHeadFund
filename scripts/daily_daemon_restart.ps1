@@ -54,11 +54,23 @@ if (Test-Path $refreshPath) {
 }
 
 $daemons = @(
-    @{ name = "gem_loop";       pattern = "*gem_loop.ps1*";       script = "scripts\gem_loop.ps1" },
-    @{ name = "scan_master";    pattern = "*scan_master.ps1*";    script = "scripts\scan_master.ps1" },
-    @{ name = "tg_listener";    pattern = "*telegram_listener.ps1*"; script = "scripts\telegram_listener.ps1" },
-    @{ name = "watchdog_paper"; pattern = "*watchdog_paper.ps1*"; script = "scripts\watchdog_paper.ps1" }
+    @{ name = "gem_loop";         pattern = "*gem_loop.ps1*";          script = "scripts\gem_loop.ps1";         lock = "gem_loop" },
+    @{ name = "scan_master";      pattern = "*scan_master.ps1*";       script = "scripts\scan_master.ps1";      lock = "scan_master" },
+    @{ name = "tg_listener";      pattern = "*telegram_listener.ps1*"; script = "scripts\telegram_listener.ps1"; lock = "telegram_listener" },
+    @{ name = "position_watcher"; pattern = "*position_watcher.ps1*";  script = "scripts\position_watcher.ps1"; lock = "position_watcher" },
+    @{ name = "watchdog_paper";   pattern = "*watchdog_paper.ps1*";    script = "scripts\watchdog_paper.ps1";   lock = "watchdog_paper" }
 )
+
+# Kill ROBUSTO por lock (PID exato) ANTES do pattern-kill -- pega ate ghost S4U/elevado.
+$lockDir = Join-Path $projectRoot "journal\daemon_locks"
+$singletonLib = Join-Path $projectRoot "agents\lib_daemon_singleton.ps1"
+if (Test-Path $singletonLib) {
+    . $singletonLib
+    foreach ($d in $daemons) {
+        $k = Stop-DaemonByLock -Name $d.lock -LockDir $lockDir
+        if ($k) { Log "  [lock] Killed $($d.name) PID=$k" }
+    }
+}
 
 foreach ($d in $daemons) {
     Log "[$($d.name)] checking..."
