@@ -471,6 +471,31 @@ do {
         }
     }
 
+    # ── 4. position_watcher (NEW 2026-06-05) ────────────────────────────────
+    # Mantem o watcher de posicoes de pe (nao tinha keeper -> caia no reboot).
+    # Deteccao via singleton lock (robusta vs sessao S4U/elevada).
+    $pwAlive = $false
+    if (Get-Command Test-DaemonRunning -ErrorAction SilentlyContinue) {
+        $pwAlive = Test-DaemonRunning -Name "position_watcher" -LockDir $__lockDir
+    }
+    if (-not $pwAlive) {
+        Write-WatchdogLog $watchdogLog "WARN" "position_watcher morto, respawn..."
+        if (Get-Command Stop-DaemonByLock -ErrorAction SilentlyContinue) {
+            Stop-DaemonByLock -Name "position_watcher" -LockDir $__lockDir | Out-Null
+        }
+        $pwPath  = Join-Path $scriptRoot "position_watcher.ps1"
+        $pwProc  = Start-Process powershell.exe -ArgumentList @("-NoProfile","-ExecutionPolicy","Bypass","-File",$pwPath) `
+                       -WorkingDirectory $projectRoot -WindowStyle Hidden -PassThru
+        Start-Sleep 5
+        if (Get-Process -Id $pwProc.Id -ErrorAction SilentlyContinue) {
+            Write-WatchdogLog $watchdogLog "RESPAWN" "position_watcher ressuscitado: PID=$($pwProc.Id)"
+        } else {
+            Write-WatchdogLog $watchdogLog "INFO" "position_watcher respawn: PID saiu (singleton OK ou erro)"
+        }
+    } else {
+        Write-WatchdogLog $watchdogLog "INFO" "position_watcher OK (lock ativo)"
+    }
+
     if ($Once) { break }
     Start-Sleep -Seconds $CheckInterval
 } while ($true)
