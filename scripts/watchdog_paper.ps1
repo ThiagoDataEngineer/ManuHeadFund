@@ -37,26 +37,19 @@ $logDir       = Join-Path $projectRoot "logs"
 $watchdogLog  = Join-Path $projectRoot "journal\watchdog.log"
 $gemLog       = Join-Path $projectRoot "journal\gem_loop.log"
 
-# IDEMPOTENT: se outro watchdog ja esta rodando E vivo, exit gracefully.
-# -Force bypassa o check (util quando CIM tem cache stale).
+# IDEMPOTENT ROBUSTO via lib_daemon_singleton (lockfile PID+start_ticks; imune ao
+# blindspot de CommandLine NULL em processos elevados). -Force virou no-op aqui.
 $myPid = $PID
-if (-not $Force) {
-    try {
-        $others = @(Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
-                    Where-Object { $_.CommandLine -like "*watchdog_paper*" -and $_.ProcessId -ne $myPid })
-        # Filtra apenas WDs que realmente ESTAO vivos (Get-Process valida CIM stale data)
-        $aliveOthers = @($others | Where-Object {
-            $null -ne (Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue)
-        })
-        if ($aliveOthers.Count -gt 0) {
-            $ts = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
-            $msg = "[$ts] [SKIP] Outro watchdog VIVO ja rodando (PID=$($aliveOthers[0].ProcessId)); este PID=$myPid exit."
-            Add-Content -Path $watchdogLog -Value $msg -Encoding UTF8 -ErrorAction SilentlyContinue
-            Write-Host $msg
-            exit 0
-        }
-    } catch {
-        # Se CIM falhar, segue adiante (fallback safe)
+$__lockDir = Join-Path $projectRoot "journal\daemon_locks"
+$__singletonLib = Join-Path $projectRoot "agents\lib_daemon_singleton.ps1"
+if (Test-Path $__singletonLib) {
+    . $__singletonLib
+    if (-not (Enter-DaemonSingleton -Name "watchdog_paper" -LockDir $__lockDir)) {
+        $ts = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+        $msg = "[$ts] [SKIP] Outro watchdog VIVO ja detem o singleton lock; este PID=$myPid exit."
+        Add-Content -Path $watchdogLog -Value $msg -Encoding UTF8 -ErrorAction SilentlyContinue
+        Write-Host $msg
+        exit 0
     }
 }
 
@@ -64,6 +57,11 @@ if (-not $Force) {
 function Test-PaperAlive {
     [CmdletBinding()]
     param([string]$ProcessFilter = "*scan_master.ps1*")
+    # Lock-based primeiro (imune ao blindspot de CommandLine NULL em elevados):
+    # evita false-"morto" que causava respawn de duplicata.
+    if (Get-Command Test-DaemonRunning -ErrorAction SilentlyContinue) {
+        if (Test-DaemonRunning -Name "scan_master" -LockDir $__lockDir) { return $true }
+    }
     $procs = @(Get-PaperProcess -ProcessFilter $ProcessFilter)
     return ($procs.Count -gt 0)
 }
@@ -114,6 +112,13 @@ function Start-Paper {
     $psArgs = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$ScanMasterPath)
     if (-not (Test-Path $liveFlag)) {
         $psArgs += "-DryRun"
+    }
+
+    # Mata instancia antiga (hung) por PID do lock ANTES de respawnar, liberando o
+    # singleton pro novo processo. Sem isso, o novo se auto-mataria (lock detido).
+    if (Get-Command Stop-DaemonByLock -ErrorAction SilentlyContinue) {
+        $k = Stop-DaemonByLock -Name "scan_master" -LockDir $__lockDir
+        if ($k) { Write-WatchdogLog $watchdogLog "INFO" "scan_master antigo PID=$k morto via lock pre-respawn" }
     }
 
     $p = Start-Process -FilePath "powershell.exe" `
@@ -178,6 +183,9 @@ function Get-GemLoopProcess {
 function Test-GemLoopAlive {
     [CmdletBinding()]
     param()
+    if (Get-Command Test-DaemonRunning -ErrorAction SilentlyContinue) {
+        if (Test-DaemonRunning -Name "gem_loop" -LockDir $__lockDir) { return $true }
+    }
     return ((Get-GemLoopProcess).Count -gt 0)
 }
 
@@ -189,6 +197,10 @@ function Start-GemLoop {
     # ao watchdog que mata o child quando pipe fica idle/full. gem_loop tem
     # logger proprio em journal/gem_loop.log via Add-Content (nao precisa redirect).
     # -WindowStyle Hidden roda detached sem console parent dependency.
+    if (Get-Command Stop-DaemonByLock -ErrorAction SilentlyContinue) {
+        $k = Stop-DaemonByLock -Name "gem_loop" -LockDir $__lockDir
+        if ($k) { Write-WatchdogLog $watchdogLog "INFO" "gem_loop antigo PID=$k morto via lock pre-respawn" }
+    }
     $psArgs = @("-NoProfile","-ExecutionPolicy","Bypass","-File",$GemLoopPath)
     $p = Start-Process -FilePath "powershell.exe" `
         -ArgumentList $psArgs `

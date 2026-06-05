@@ -28,20 +28,20 @@ param(
 
 $ErrorActionPreference = "Continue"
 
-# B8 fix 2026-05-20 PM6+: idempotent lock (mesmo pattern gem_loop.ps1:39-51).
-# Resolve race condition: 2x ciclos quase simultaneos em 2026-05-20 14:29 desperdicaram $0.05.
+# Anti-duplicata ROBUSTO via lib_daemon_singleton (lockfile PID+start_ticks).
+# Substitui o check antigo por CommandLine -like "*scan_master*", que falhava com
+# processos ELEVADOS (CommandLine=NULL pra shell normal -> nao casava -> DUPLICATAS).
+# O lockfile e imune a esse blindspot: qualquer duplicata se auto-mata no startup.
 $myPid = $PID
-try {
-    $others = @(Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
-                Where-Object { $_.CommandLine -like "*scan_master*" -and $_.ProcessId -ne $myPid })
-    $aliveOthers = @($others | Where-Object {
-        $null -ne (Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue)
-    })
-    if ($aliveOthers.Count -gt 0) {
-        Write-Host "[SKIP] Outro scan_master VIVO ja rodando (PID=$($aliveOthers[0].ProcessId)); este PID=$myPid exit." -ForegroundColor Yellow
+$__singletonLib = Join-Path (Split-Path $PSScriptRoot -Parent) "agents\lib_daemon_singleton.ps1"
+$__lockDir      = Join-Path (Split-Path $PSScriptRoot -Parent) "journal\daemon_locks"
+if (Test-Path $__singletonLib) {
+    . $__singletonLib
+    if (-not (Enter-DaemonSingleton -Name "scan_master" -LockDir $__lockDir)) {
+        Write-Host "[SKIP] Outro scan_master VIVO ja detem o singleton lock; este PID=$myPid exit." -ForegroundColor Yellow
         exit 0
     }
-} catch {}
+}
 
 "[DBG1 line22] DryRun=$DryRun PSBound=$($PSBoundParameters.Keys -join ',')" | Out-File -FilePath "$env:TEMP\dryrun_trace.log" -Append -Encoding utf8
 [Console]::OutputEncoding = [System.Text.Encoding]::UTF8

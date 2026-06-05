@@ -34,20 +34,19 @@ function Write-GemLog {
     Write-Host $line
 }
 
-# IDEMPOTENT: se outro gem_loop ja esta rodando E vivo, exit gracefully
+# IDEMPOTENT ROBUSTO via lib_daemon_singleton (lockfile PID+start_ticks).
+# Antes: CommandLine -like "*gem_loop*" falhava com processos elevados (CommandLine
+# NULL) -> DUPLICATAS. -Force NAO bypassa mais o guard (nunca queremos duplicata;
+# o singleton ja toma lock stale automaticamente, entao -Force virou no-op aqui).
 $myPid = $PID
-if (-not $Force) {
-    try {
-        $others = @(Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
-                    Where-Object { $_.CommandLine -like "*gem_loop*" -and $_.ProcessId -ne $myPid })
-        $aliveOthers = @($others | Where-Object {
-            $null -ne (Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue)
-        })
-        if ($aliveOthers.Count -gt 0) {
-            Write-GemLog "SKIP" "Outro gem_loop VIVO ja rodando (PID=$($aliveOthers[0].ProcessId)); este PID=$myPid exit."
-            exit 0
-        }
-    } catch {}
+$__singletonLib = Join-Path $agentsDir "lib_daemon_singleton.ps1"
+$__lockDir      = Join-Path $projectRoot "journal\daemon_locks"
+if (Test-Path $__singletonLib) {
+    . $__singletonLib
+    if (-not (Enter-DaemonSingleton -Name "gem_loop" -LockDir $__lockDir)) {
+        Write-GemLog "SKIP" "Outro gem_loop VIVO ja detem o singleton lock; este PID=$myPid exit."
+        exit 0
+    }
 }
 
 # Verifica LIVE mode flag (mesmo flag do scan_master)

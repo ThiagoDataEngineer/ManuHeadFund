@@ -15,18 +15,17 @@ function Write-TgLog { param([string]$Level, [string]$Msg)
     "$ts [$Level] $Msg" | Out-File $logFile -Append -Encoding utf8
 }
 
-# Idempotent
+# Idempotent ROBUSTO via lib_daemon_singleton (lockfile PID+start_ticks; imune ao
+# blindspot de CommandLine NULL em processos elevados que causava DUPLICATAS).
 $myPid = $PID
-if (-not $Force) {
-    try {
-        $others = @(Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
-                    Where-Object { $_.CommandLine -like "*telegram_listener*" -and $_.ProcessId -ne $myPid })
-        $alive = @($others | Where-Object { $null -ne (Get-Process -Id $_.ProcessId -ErrorAction SilentlyContinue) })
-        if ($alive.Count -gt 0) {
-            Write-TgLog "SKIP" "Outro tg_listener PID=$($alive[0].ProcessId) ja rodando; exit."
-            exit 0
-        }
-    } catch {}
+$__singletonLib = Join-Path $agentsDir "lib_daemon_singleton.ps1"
+$__lockDir      = Join-Path $journalDir "daemon_locks"
+if (Test-Path $__singletonLib) {
+    . $__singletonLib
+    if (-not (Enter-DaemonSingleton -Name "telegram_listener" -LockDir $__lockDir)) {
+        Write-TgLog "SKIP" "Outro tg_listener ja detem o singleton lock; PID=$myPid exit."
+        exit 0
+    }
 }
 
 Set-Location $projectRoot

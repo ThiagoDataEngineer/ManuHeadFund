@@ -139,3 +139,6 @@ DASHBOARD_FINAL.ps1
 locks/*.lock
 
 !scripts/update_dashboard_json.ps1
+
+# Daemon singleton locks (runtime state)
+journal/daemon_locks/
