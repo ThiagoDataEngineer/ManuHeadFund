@@ -35,11 +35,12 @@ function Mock-CoinExPositions {
     param([array]$Positions)
     
     $global:__orphan_mock_positions = $Positions
-    
-    # Override global function
-    function global:CoinEx-GetPendingPositions {
-        return $global:__orphan_mock_positions
-    }
+
+    # Set-Item no script scope (1 level up de Mock-CoinExPositions) onde lib_coinex
+    # foi dot-sourced. Scope 1 = caller (script scope do arquivo de teste).
+    Set-Item -Path "function:CoinEx-GetPendingPositions" -Value ([scriptblock]::Create('return $global:__orphan_mock_positions')) -Force
+    # Tambem replica no global para cobertura de ambos lookups
+    Set-Item -Path "function:global:CoinEx-GetPendingPositions" -Value ([scriptblock]::Create('return $global:__orphan_mock_positions')) -Force
 }
 
 # Helper: criar posição mock
@@ -78,12 +79,15 @@ function New-MockPosition {
 Describe "Detect-OrphanPositions - Detecção de posições órfãs" {
     
     BeforeEach {
-        # Limpar trailing_positions.json
+        # Desabilita state_store (forca legacy file path) + limpa arquivo
+        $global:TRAILING_USE_STATE_STORE = $false
+        $env:TRAILING_USE_STATE_STORE = "0"
         if (Test-Path $global:TRAILING_FILE) {
             Remove-Item $global:TRAILING_FILE -Force
         }
+        "[]" | Set-Content $global:TRAILING_FILE -Encoding utf8
     }
-    
+
     It "Detecta posição órfã (na exchange mas não registrada localmente)" {
         # Arrange: posição na exchange
         $exchangePos = New-MockPosition -Market "BTCUSDT" -Side "long" -Entry 76000
