@@ -78,11 +78,11 @@ Describe "Get-WhaleTransactions" {
     }
     
     It "calcula score impact correto" {
-        # ARRANGE: 200 BTC deposit (bearish)
+        # ARRANGE: 200 BTC deposit para exchange real (bearish) - usa addr do EXCHANGE_ADDRESSES
         $mockTx = @{
             hash = "large_deposit"
-            inputs = @( @{ prev_out = @{ addr = "whale"; value = 20000000000 } } )
-            out = @( @{ addr = "exchange"; value = 20000000000 } )
+            inputs = @( @{ prev_out = @{ addr = "whale_address_xyz"; value = 20000000000 } } )
+            out = @( @{ addr = "34xp4vRoCGJym3xR7yCVPFHoCNxv4Twseo"; value = 20000000000 } )
         }
         
         # ACT
