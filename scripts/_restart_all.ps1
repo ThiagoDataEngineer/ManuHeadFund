@@ -94,6 +94,18 @@ if (-not $SkipTests) {
 Log "" White
 Log "=== 3. PARANDO DAEMONS ===" Yellow
 
+# Kill ROBUSTO por lock (PID exato, imune ao blindspot de CommandLine NULL em
+# processos elevados que sobreviviam ao pattern-kill -> duplicatas).
+$lockDir = Join-Path $journalDir "daemon_locks"
+$singletonLib = Join-Path $projectRoot "agents\lib_daemon_singleton.ps1"
+if (Test-Path $singletonLib) {
+    . $singletonLib
+    foreach ($dn in @("watchdog_paper","scan_master","gem_loop","telegram_listener")) {
+        $k = Stop-DaemonByLock -Name $dn -LockDir $lockDir
+        if ($k) { Log ("  Killed " + $dn + " PID=" + $k + " (via lock)") Yellow }
+    }
+}
+
 $killPatterns = @(
     @{ name = "watchdog_paper";    pattern = "*watchdog_paper*" },
     @{ name = "scan_master";       pattern = "*scan_master.ps1*" },
@@ -171,6 +183,23 @@ foreach ($d in $spawns) {
         Log ("  ERRO ao spawnar " + $d.name + ": " + $_) Red
     }
     Start-Sleep -Seconds 2
+}
+
+# ── 5b. FARO V3 SEMPRE DE PE (scheduled tasks) ───────────────────────────────
+Log "" White
+Log "=== 5b. FARO V3 (scheduled tasks) ===" Yellow
+$faroTasks = @(Get-ScheduledTask -ErrorAction SilentlyContinue | Where-Object { $_.TaskName -match 'FARO' })
+if ($faroTasks.Count -ge 3) {
+    Log ("  FARO ja instalado: " + $faroTasks.Count + " tasks (" + (($faroTasks | ForEach-Object { $_.State }) -join ',') + ")") Green
+} else {
+    Log ("  FARO incompleto (" + $faroTasks.Count + "/3) -- reinstalando...") Yellow
+    $faroSched = Join-Path $scriptsDir "faro_v3_schedule.ps1"
+    if (Test-Path $faroSched) {
+        & powershell.exe -NoProfile -ExecutionPolicy Bypass -File $faroSched -Action install 2>&1 |
+            ForEach-Object { Log ("    " + $_) Gray }
+    } else {
+        Log "  faro_v3_schedule.ps1 nao encontrado" Red
+    }
 }
 
 # ── 6. VERIFICACAO POS-RESTART ───────────────────────────────────────────────

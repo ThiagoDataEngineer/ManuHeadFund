@@ -1,4 +1,4 @@
-# faro_v3_schedule.ps1 — Setup Windows Task Scheduler for FARO V3 daemons
+﻿# faro_v3_schedule.ps1 — Setup Windows Task Scheduler for FARO V3 daemons
 # Creates recurring tasks for engine (every 6h), entry (every 30m), manager (every 1h)
 
 param([string] $Action = "install", [string] $ProjectRoot)
@@ -28,7 +28,7 @@ if ($Action -eq "install") {
     $enginePath = Join-Path $scriptsDir "faro_v3_engine.ps1"
     $engineTask = Get-TaskName "engine_agg"
     $engineAction = New-ScheduledTaskAction -Execute $psPath -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$enginePath`""
-    $engineTrigger = New-ScheduledTaskTrigger -Daily -At "00:00:00" -RepetitionInterval (New-TimeSpan -Hours 3) -RepetitionDuration ([timespan]::MaxValue)
+    $engineTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Hours 3)
     $engineSettings = New-ScheduledTaskSettingsSet -RunOnlyIfNetworkAvailable -WakeToRun -AllowStartIfOnBatteries
     try {
         Register-ScheduledTask -TaskName $engineTask -Action $engineAction -Trigger $engineTrigger -Settings $engineSettings -Force -ErrorAction Stop | Out-Null
@@ -41,7 +41,7 @@ if ($Action -eq "install") {
     $entryPath = Join-Path $scriptsDir "faro_v3_entry_aggressive.ps1"
     $entryTask = Get-TaskName "entry_agg"
     $entryAction = New-ScheduledTaskAction -Execute $psPath -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$entryPath`""
-    $entryTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 10) -RepetitionDuration ([timespan]::MaxValue)
+    $entryTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 10)
     $entrySettings = New-ScheduledTaskSettingsSet -RunOnlyIfNetworkAvailable -WakeToRun
     try {
         Register-ScheduledTask -TaskName $entryTask -Action $entryAction -Trigger $entryTrigger -Settings $entrySettings -Force -ErrorAction Stop | Out-Null
@@ -54,7 +54,7 @@ if ($Action -eq "install") {
     $managerPath = Join-Path $scriptsDir "faro_v3_manager_aggressive.ps1"
     $managerTask = Get-TaskName "manager_agg"
     $managerAction = New-ScheduledTaskAction -Execute $psPath -Argument "-NoProfile -ExecutionPolicy Bypass -File `"$managerPath`""
-    $managerTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 3) -RepetitionDuration ([timespan]::MaxValue)
+    $managerTrigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 3)
     $managerSettings = New-ScheduledTaskSettingsSet -RunOnlyIfNetworkAvailable -WakeToRun
     try {
         Register-ScheduledTask -TaskName $managerTask -Action $managerAction -Trigger $managerTrigger -Settings $managerSettings -Force -ErrorAction Stop | Out-Null
@@ -87,8 +87,8 @@ elseif ($Action -eq "status") {
         $taskName = Get-TaskName $t
         try {
             $task = Get-ScheduledTask -TaskName $taskName -ErrorAction Stop
-            $lastRun = $task.LastRunTime ?? "Never"
-            $nextRun = $task.NextRunTime ?? "Not scheduled"
+            $lastRun = if ($task.LastRunTime) { $task.LastRunTime } else { "Never" }
+            $nextRun = if ($task.NextRunTime) { $task.NextRunTime } else { "Not scheduled" }
             $state = $task.State
             Write-Host "  $taskName : $state | last=$lastRun | next=$nextRun" -ForegroundColor Cyan
         } catch {
