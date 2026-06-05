@@ -1,4 +1,4 @@
-param([string] $ModulePath = "$PSScriptRoot\..\agents")
+﻿param([string] $ModulePath = "$PSScriptRoot\..\agents")
 
 Describe "lib_vol_climax_gate — SHORT signal detection" {
     . "$ModulePath\lib_vol_climax_gate.ps1"
@@ -12,19 +12,19 @@ Describe "lib_vol_climax_gate — SHORT signal detection" {
             $result.adx_pass | Should Be $true
         }
 
-        It "fails when RSI < 80 (not extreme)" {
+        It "fails when RSI abaixo de 80 (not extreme)" {
             $result = Test-VolClimaxGate -RSI 75 -CurrentVolume 260000 -Avg3dVolume 100000 -ADX 68
             $result.passes | Should Be $false
             $result.rsi_pass | Should Be $false
         }
 
-        It "fails when vol < 2.5x (no panic)" {
+        It "fails when vol abaixo de 2.5x (no panic)" {
             $result = Test-VolClimaxGate -RSI 82 -CurrentVolume 200000 -Avg3dVolume 100000 -ADX 68
             $result.passes | Should Be $false
             $result.vol_pass | Should Be $false
         }
 
-        It "fails when ADX <= 60 (no trend)" {
+        It "fails when ADX ate 60 (no trend)" {
             $result = Test-VolClimaxGate -RSI 82 -CurrentVolume 260000 -Avg3dVolume 100000 -ADX 58
             $result.passes | Should Be $false
             $result.adx_pass | Should Be $false

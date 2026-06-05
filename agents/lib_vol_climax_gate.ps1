@@ -49,7 +49,7 @@ function Add-VolClimaxObservation {
     }
 
     $entry = [PSCustomObject]@{
-        ts = (Get-Date -AsUTC).ToString("O")
+        ts = (Get-Date).ToUniversalTime().ToString("O")
         market = $Market
         signal_type = "vol_climax"
         rsi = [int]$GateResult.signal_strength.rsi
