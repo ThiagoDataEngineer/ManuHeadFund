@@ -93,6 +93,44 @@ Describe "B26 Get-MesaConsensus preserva semantica com drone-error-object" {
     }
 }
 
+Describe "B25/B27 degraded-rate calc (DETERMINISTICO, fixtures)" {
+    # TDD rigoroso: testa a LOGICA de calculo da degraded rate com dados fixos
+    # (independente de estado live). O monitor de dados runtime fica separado abaixo.
+    function Measure-DegradedRate {
+        param([object[]]$Entries, [int]$Window = 30)
+        $recent = @($Entries | Select-Object -Last $Window)
+        if ($recent.Count -eq 0) { return 0.0 }
+        $deg = @($recent | Where-Object { $_.degraded -eq $true }).Count
+        return [double]($deg / $recent.Count)
+    }
+
+    It "0 degraded em 30 = 0%" {
+        $fx = 1..30 | ForEach-Object { [PSCustomObject]@{ degraded = $false } }
+        Measure-DegradedRate -Entries $fx | Should Be 0.0
+    }
+    It "9 degraded em 30 = 30% (no limite)" {
+        $fx = @(1..9 | ForEach-Object { [PSCustomObject]@{ degraded = $true } }) +
+              @(1..21 | ForEach-Object { [PSCustomObject]@{ degraded = $false } })
+        Measure-DegradedRate -Entries $fx | Should Be 0.30
+    }
+    It "15 degraded em 30 = 50% (infra quebrada, acima do limite 30%)" {
+        $fx = @(1..15 | ForEach-Object { [PSCustomObject]@{ degraded = $true } }) +
+              @(1..15 | ForEach-Object { [PSCustomObject]@{ degraded = $false } })
+        $rate = Measure-DegradedRate -Entries $fx
+        $rate | Should Be 0.50
+        ($rate -gt 0.30) | Should Be $true
+    }
+    It "janela so considera ultimas N (degradados antigos saem)" {
+        # 30 degradados ANTIGOS + 30 saudaveis recentes -> window 30 = 0%
+        $fx = @(1..30 | ForEach-Object { [PSCustomObject]@{ degraded = $true } }) +
+              @(1..30 | ForEach-Object { [PSCustomObject]@{ degraded = $false } })
+        Measure-DegradedRate -Entries $fx -Window 30 | Should Be 0.0
+    }
+    It "lista vazia = 0% (sem divisao por zero)" {
+        Measure-DegradedRate -Entries @() | Should Be 0.0
+    }
+}
+
 Describe "B25/B27 Infra health: mesa_drones.jsonl degraded rate" {
     # Anti-regression: se >30% das ultimas 30 entries forem degraded, infra cascade LLM
     # esta quebrando e fixes B25-B27 precisam ser revisitados.
