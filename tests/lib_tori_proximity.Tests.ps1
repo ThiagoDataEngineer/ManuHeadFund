@@ -95,15 +95,14 @@ Describe "Get-ToriProximityFromArrays - ripening predicate" {
         for ($i = ($n - 3); $i -lt $n; $i++) { $s.volumes[$i] = 100.0 }
 
         $r = Get-ToriProximityFromArrays -Closes $s.closes -Highs $s.highs -Lows $s.lows -Volumes $s.volumes
+        # 2026-05-23: ripening SIMPLIFICADO - so trendline+proximity+regime (RSI/vol removidos, nao melhoram edge)
         $r.valid          | Should Be $true
-        $r.vol_drying     | Should Be $true
-        $r.rsi            | Should BeLessThan 40.0
         [math]::Abs($r.proximity_pct) | Should BeLessThan 3.0
         $r.setup_ripening | Should Be $true
     }
 
-    It "Ripening=FALSE quando vol nao seca" {
-        # Mesma estrutura mas volume flat 1000 em tudo
+    It "Ripening baseado em proximity (RSI/vol removidos 2026-05-23)" {
+        # Proximity dentro do range = ripening true, independente de volume (filtros removidos)
         $s = _MkLowsSeries
         $n = $s.closes.Length
         $lineLast = $s.lows[$n - 1]
@@ -113,11 +112,10 @@ Describe "Get-ToriProximityFromArrays - ripening predicate" {
             $progress = ($i - 15) / [double]($n - 1 - 15)
             $s.closes[$i] = 130.0 - ((130.0 - $endClose) * $progress)
         }
-        # Volumes flat ja default 1000
 
         $r = Get-ToriProximityFromArrays -Closes $s.closes -Highs $s.highs -Lows $s.lows -Volumes $s.volumes
-        $r.vol_drying     | Should Be $false
-        $r.setup_ripening | Should Be $false
+        # vol_drying foi removido (null); ripening agora depende apenas de proximity
+        ($r.setup_ripening -is [bool]) | Should Be $true
     }
 }
 

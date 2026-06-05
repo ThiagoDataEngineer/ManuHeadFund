@@ -50,10 +50,12 @@ $script:TORI_PROX_MIN_HISTORY    = 20
 $script:TORI_PROX_PCT_MIN     = -3.0   # preco ate 3% abaixo da linha
 $script:TORI_PROX_PCT_MAX     =  5.0   # preco ate 5% acima da linha
 
-# FILTERS REMOVED (validated as unnecessary):
+# FILTERS REMOVED do LONG (validated as unnecessary):
 # - RSI filter: NO improvement (median +0.70% vs +0.70%)
 # - Vol drying: NO improvement (blocks all signals)
 # USE REGIME FILTER + TAKE-PROFIT instead (validated +4.30pp improvement)
+# NOTA: SHORT-side ainda usa RSI + vol_drying (mirror nao re-validado isoladamente).
+$script:TORI_PROX_VOL_RATIO   = 0.5    # vol recente < 50% do anterior = secando (usado no SHORT-side)
 
 # Regime filter (VALIDATED 2026-05-23 TDD)
 # Other years (consolidation): median +3.20% vs +0.70% baseline
