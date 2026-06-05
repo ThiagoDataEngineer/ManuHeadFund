@@ -25,9 +25,20 @@ try {
     . (Join-Path $agentsDir "config.local.ps1") -ErrorAction SilentlyContinue
     . (Join-Path $agentsDir "lib_coinex.ps1") -ErrorAction Stop
     . (Join-Path $agentsDir "lib_telegram.ps1") -ErrorAction SilentlyContinue
+    . (Join-Path $agentsDir "lib_position_price.ps1") -ErrorAction Stop
+    . (Join-Path $agentsDir "lib_daemon_singleton.ps1") -ErrorAction SilentlyContinue
 } catch {
     Write-WatchLog "ERROR" "Falha ao carregar libs: $_"
     exit 1
+}
+
+# Anti-duplicata: position_watcher tambem e singleton (estava duplicando).
+if (Get-Command Enter-DaemonSingleton -ErrorAction SilentlyContinue) {
+    $__lockDir = Join-Path $journalDir "daemon_locks"
+    if (-not (Enter-DaemonSingleton -Name "position_watcher" -LockDir $__lockDir)) {
+        Write-WatchLog "SKIP" "Outro position_watcher ja detem o singleton lock; PID=$PID exit."
+        exit 0
+    }
 }
 
 Write-WatchLog "INFO" "Position Watcher iniciado | Check=${CheckInterval}s | FOCO: DADOS REAIS"
@@ -80,10 +91,23 @@ while ($true) {
                 $tp = [double]$pos.take_profit_price
                 $sl = [double]$pos.stop_loss_price
 
-                # 2. Se mark=0 (API bug), pula este ciclo e tenta no próximo
+                # 2. Se mark=0 (API bug comum em micro-caps), busca o ticker 'last'
+                #    como fallback em vez de pular. Pular deixava a posicao SEM gestao
+                #    de stop (capital cego). Ver lib_position_price + lib_position_price.Tests.
                 if ($mark -le 0) {
-                    Write-WatchLog "SKIP" "${mkt}: mark_price=0 (API bug), aguardando próximo ciclo"
-                    continue
+                    $tickerLast = 0
+                    try {
+                        $ft = Invoke-RestMethod "https://api.coinex.com/v2/futures/ticker?market=$mkt" -TimeoutSec 8 -EA Stop
+                        if ($ft.data) { $tickerLast = [double]$ft.data[0].last }
+                    } catch { }
+                    $mark = Resolve-MarkPrice -Mark $mark -TickerLast $tickerLast
+                    if (-not (Test-PriceUsable -Price $mark)) {
+                        Write-WatchLog "SKIP" "${mkt}: mark=0 E ticker last=0 (sem preco valido), aguardando proximo ciclo"
+                        continue
+                    }
+                    # Recomputa pnl% price-based a partir do last real (pos.pnl_pct vinha 0/furado)
+                    $pnl_pct = Get-PositionPnlPct -Price $mark -Entry $entry -Side $pos.side
+                    Write-WatchLog "FALLBACK" "${mkt}: mark=0 -> ticker last=$mark | pnl(price)=$([math]::Round($pnl_pct,2))%"
                 }
 
                 $price_to_use = $mark
