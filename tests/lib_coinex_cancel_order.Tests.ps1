@@ -213,17 +213,48 @@ Describe "CoinEx-CancelStopOrder - cancelamento de ordem condicional" {
             param($path, $bodyObj)
             $path | Should Be "/v2/futures/cancel-stop-order"
             $bodyObj.market_type | Should Be "FUTURES"
-            
+
             return [PSCustomObject]@{
                 code = 0
                 message = "Success"
                 data = [PSCustomObject]@{ stop_id = "stop-456"; status = "cancelled" }
             }
         }
-        
+
         $result = CoinEx-CancelStopOrder -Market "ETHUSDT" -StopId "stop-456" -MarketType "FUTURES"
-        
+
         $result.success | Should Be $true
+    }
+
+    # 2026-06-05: bug real -- stop_id numerico enviado como STRING retornava
+    # "Invalid Parameter" e o stop NUNCA cancelava (orphan stops no incidente FIRO).
+    It "envia stop_id NUMERICO (int64) quando id e' todo digitos" {
+        $script:capturedStopId = $null
+        Mock CoinEx-Post {
+            param($path, $bodyObj)
+            $script:capturedStopId = $bodyObj.stop_id
+            return [PSCustomObject]@{ code = 0; message = "Success"; data = [PSCustomObject]@{ stop_id = "171807267312"; status = "cancelled" } }
+        }
+
+        $result = CoinEx-CancelStopOrder -Market "FIROUSDT" -StopId "171807267312" -MarketType "SPOT"
+
+        $result.success | Should Be $true
+        ($script:capturedStopId -is [int64]) | Should Be $true
+        ([int64]$script:capturedStopId) | Should Be 171807267312
+    }
+
+    It "mantem stop_id como STRING quando id NAO e' numerico (back-compat)" {
+        $script:capturedStopId2 = $null
+        Mock CoinEx-Post {
+            param($path, $bodyObj)
+            $script:capturedStopId2 = $bodyObj.stop_id
+            return [PSCustomObject]@{ code = 0; message = "Success"; data = [PSCustomObject]@{ status = "cancelled" } }
+        }
+
+        $result = CoinEx-CancelStopOrder -Market "BTCUSDT" -StopId "stop-abc" -MarketType "SPOT"
+
+        $result.success | Should Be $true
+        ($script:capturedStopId2 -is [string]) | Should Be $true
     }
 }
 

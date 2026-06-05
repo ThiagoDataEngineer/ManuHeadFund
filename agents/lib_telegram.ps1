@@ -388,6 +388,55 @@ function Send-GemAlert {
 
 
 # ==============================================================================
+# Test-TelegramGemDedup — dedup CROSS-PROCESSO de alerta de gem (2026-06-05)
+# ==============================================================================
+# Incidente: gem_loop E scan_master rodam Invoke-GemScan -> mesmo gem alertado 2x.
+# Dedup in-memory (TG_DEDUP_STORE) nao cruza processos. Esta versao persiste em
+# arquivo JSON (market:score:mode -> epoch). Retorna $true se ja alertado dentro
+# do TTL (= SUPRIMIR). Se nao, registra agora e retorna $false (= ENVIAR).
+function Test-TelegramGemDedup {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)] [string] $Key,
+        [string] $StorePath = "",
+        [int] $TtlSeconds = 300
+    )
+    if ($TtlSeconds -le 0) { return $false }
+    if (-not $StorePath) {
+        $jd = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path (Split-Path $PSScriptRoot -Parent) "journal" }
+        $StorePath = Join-Path $jd "gem_alert_dedup.json"
+    }
+    $now = [int](([datetime]::UtcNow) - [datetime]'1970-01-01').TotalSeconds
+
+    $store = @{}
+    if (Test-Path $StorePath) {
+        try {
+            $raw = Get-Content $StorePath -Raw -ErrorAction Stop
+            if ($raw -and $raw.Trim()) {
+                ($raw | ConvertFrom-Json).PSObject.Properties | ForEach-Object { $store[$_.Name] = [int]$_.Value }
+            }
+        } catch { $store = @{} }
+    }
+
+    $last = if ($store.ContainsKey($Key)) { [int]$store[$Key] } else { 0 }
+    if ($last -gt 0 -and ($now - $last) -lt $TtlSeconds) {
+        return $true   # dup recente -> suprimir
+    }
+
+    # nao dup: registra now + purga entries > 2*TTL
+    $store[$Key] = $now
+    $fresh = @{}
+    foreach ($k in @($store.Keys)) { if (($now - [int]$store[$k]) -lt (2 * $TtlSeconds)) { $fresh[$k] = $store[$k] } }
+    try {
+        $dir = Split-Path $StorePath -Parent
+        if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+        ($fresh | ConvertTo-Json -Compress) | Out-File -FilePath $StorePath -Encoding utf8 -Force
+    } catch {}
+    return $false
+}
+
+
+# ==============================================================================
 # Format-TgGemApproval — Formata mensagem de aprovação de gem (COMPACTO)
 # ==============================================================================
 function Format-TgGemApproval {

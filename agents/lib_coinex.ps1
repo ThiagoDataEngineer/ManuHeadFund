@@ -649,8 +649,14 @@ function CoinEx-PlaceSpotStopOrder {
         type          = "market"
         amount        = ([math]::Round($Amount, 6)).ToString($inv)
         ccy           = $base
-        trigger_price = ([math]::Round($TriggerPrice, 8)).ToString($inv)
+        # 2026-06-05 fix: Round(,8) ZERAVA precos sub-1e-8 (PEPE2 trigger 1.006e-9
+        # -> "0" -> API rejeita -> posicao NUA). Usa decimal+12 casas pra preservar
+        # sub-nano. Defensivo abaixo: nunca enviar trigger 0 (regra de ouro #1).
+        trigger_price = ([math]::Round([decimal]$TriggerPrice, 12)).ToString($inv)
         trigger_type  = "price_less_equal"
+    }
+    if ([double]$body.trigger_price -le 0) {
+        throw "SpotStopOrder ${Market}: trigger_price formatou para '$($body.trigger_price)' (origem=$TriggerPrice) -- abortando pra nao criar posicao sem stop."
     }
     if ($clientId) { $body.client_id = $clientId }
     if ($StpMode -ne "none") {
@@ -1141,10 +1147,14 @@ function CoinEx-CancelStopOrder {
 
     $endpoint = if ($MarketType -eq "SPOT") { "/v2/spot/cancel-stop-order" } else { "/v2/futures/cancel-stop-order" }
     
+    # 2026-06-05 fix: API v2 exige stop_id NUMERICO. Enviar como string retorna
+    # "Invalid Parameter" (code != 0) e o stop NUNCA cancela -> orphan stops.
+    $stopIdNum = $StopId
+    if ($StopId -match '^\d+$') { $stopIdNum = [int64]$StopId }
     $body = @{
         market      = $Market
         market_type = $MarketType
-        stop_id     = $StopId
+        stop_id     = $stopIdNum
     }
 
     try {

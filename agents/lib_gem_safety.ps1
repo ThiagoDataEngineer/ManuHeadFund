@@ -136,6 +136,7 @@ function Test-GemSafetyGuards {
     param(
         [Parameter(Mandatory)] [double]    $TradeSizeUsdt,
         [Parameter(Mandatory)] [double]    $TotalCapitalUsdt,
+        [string]                           $Market        = "",
         [string]                           $StateFilePath = "journal/gem_safety_state.json",
         [hashtable]                        $Config        = $null
     )
@@ -182,6 +183,20 @@ function Test-GemSafetyGuards {
         weekly_count            = [int]$state.weekly_count
         consecutive_stops       = [int]$state.consecutive_stops
         telegram_message        = ""
+    }
+
+    # 0) Dedup per-market (2026-06-05): se ja temos posicao aberta neste mercado,
+    # NAO re-entrar. Fecha o buraco que causou FIRO 4x / PEPE2 2x / BABY 4x
+    # (re-entrada a cada ciclo de scan). No-op quando -Market nao fornecido
+    # (back-compat com callers antigos). Falha segura: skip > duplicar.
+    if ($Market -and $state.open_positions) {
+        $alreadyOpen = @($state.open_positions | Where-Object { [string]$_.market -eq [string]$Market })
+        if ($alreadyOpen.Count -gt 0) {
+            $base.allowed          = $false
+            $base.reason           = "market_already_open"
+            $base.telegram_message = "Posicao ja aberta em ${Market} -- re-entrada bloqueada (anti-duplicata)."
+            return $base
+        }
     }
 
     # 1) Circuit breaker

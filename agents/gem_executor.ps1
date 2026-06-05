@@ -364,7 +364,7 @@ function Invoke-GemExecute {
     # ── 1. GEM SAFETY GUARDS (block runaway exposure) ────────────────────────
     # Aplica em DryRun tambem para sinalizar bloqueios em paper trade.
     $safetyStatePath = Join-Path $global:JOURNAL_DIR "gem_safety_state.json"
-    $safety = Test-GemSafetyGuards -TradeSizeUsdt $usd_size -TotalCapitalUsdt $capital -StateFilePath $safetyStatePath
+    $safety = Test-GemSafetyGuards -TradeSizeUsdt $usd_size -TotalCapitalUsdt $capital -Market $mkt -StateFilePath $safetyStatePath
     if (-not $safety.allowed) {
         Write-Host "  [GEM SAFETY BLOCK] ${mkt}: $($safety.reason)" -ForegroundColor Red
         try { Send-TelegramAlert -Message "GEM bloqueado: $($safety.reason)`n$($safety.telegram_message)" | Out-Null } catch {}

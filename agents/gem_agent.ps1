@@ -889,6 +889,12 @@ function Invoke-GemScan {
         foreach ($a in $top) {
             $hasFut = CoinEx-HasFuturesMarket $a.market
             $mktType = if ($hasFut) { "FUTURES" } else { "SPOT" }
+            # 2026-06-05: dedup cross-processo. gem_loop E scan_master rodam este
+            # scan; sem dedup persistido alertavam o mesmo gem 2x no Telegram.
+            if (Get-Command Test-TelegramGemDedup -ErrorAction SilentlyContinue) {
+                $dedupKey = "$($a.market):$($a.score):$($a.mode)"
+                if (Test-TelegramGemDedup -Key $dedupKey -TtlSeconds 300) { continue }
+            }
             Send-GemAlert -Gem $a -MarketType $mktType | Out-Null
         }
     }
