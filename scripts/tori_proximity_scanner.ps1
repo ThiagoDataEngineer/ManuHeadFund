@@ -106,6 +106,8 @@ foreach ($mkt in $Markets) {
         rsi            = $p.rsi
         vol_drying     = $p.vol_drying
         setup_ripening = [bool]$p.setup_ripening
+        setup_staging  = [bool]$p.setup_staging
+        conviction     = if ($p.PSObject.Properties['conviction']) { [int]$p.conviction } else { 0 }
         long_side      = $p.long_side          # sub-objeto completo (Mentor consulta)
         short_side     = $p.short_side
     }

@@ -285,32 +285,26 @@ function Get-ToriProximityFromArrays {
 
     $proximity_pct = (($price - $action_line) / $action_line) * 100
 
-    # 4. Regime filter (VALIDATED 2026-05-23 TDD)
-    # Other years (consolidation): +2.50pp improvement
-    # Bull/bear years: negative edge (avoid)
-    $currentYear = (Get-Date).Year
-    $regime_ok = $currentYear -in $script:TORI_OTHER_YEARS
-    
-    if (-not $regime_ok) {
-        return [PSCustomObject]@{
-            valid          = $false
-            reason         = "regime_filter_bull_or_bear"
-            touches        = $touches
-            slope_deg      = [Math]::Round($slope_deg, 2)
-            price          = $Closes[-1]
-            action_line    = $action_line
-            proximity_pct  = [Math]::Round($proximity_pct, 2)
-            rsi            = $null
-            vol_drying     = $null
-            setup_ripening = $false
-        }
-    }
+    # 4. Regime filter (2026-06-05: DISABLED for LONG, enable more assertive timing)
+    # SHORT-side still uses regime filter (conservative). LONG: removed per 2026-06-05.
+    # Historical note: Other years +2.50pp improvement, but now prioritize entry assertiveness.
+    # Regime filter was causing missed entries in BEAR_WEAK (e.g. BTCUSDT -5.45% SHORT setup).
+    # COMMENTED: keep for audit trail, remove in next refactor if stable.
+    #
+    # $currentYear = (Get-Date).Year
+    # $regime_ok = $currentYear -in $script:TORI_OTHER_YEARS
+    # if (-not $regime_ok) { return blocked ... }
     
     # 5. Setup ripening (SIMPLIFIED - no RSI/vol filters)
     # VALIDATED: RSI and vol_drying do NOT improve edge
     # Only trendline quality + proximity + regime matter
     $ripening = ($proximity_pct -ge $script:TORI_PROX_PCT_MIN) -and `
                 ($proximity_pct -le $script:TORI_PROX_PCT_MAX)
+
+    # 2026-06-05: conviction mapping (0-100) for gem_executor signal routing
+    # ripening -> 75; staging (valid but prox < -3%) -> 40; else 0 (skip)
+    $setup_staging = (-not $ripening) -and ($proximity_pct -ge -10.0)
+    $conviction = if ($ripening) { 75 } elseif ($setup_staging) { 40 } else { 0 }
 
     return [PSCustomObject]@{
         valid          = $true
@@ -324,6 +318,8 @@ function Get-ToriProximityFromArrays {
         rsi            = $null  # Removed (not used)
         vol_drying     = $null  # Removed (not used)
         setup_ripening = $ripening
+        setup_staging  = $setup_staging
+        conviction     = $conviction
         take_profit    = [math]::Round($price * (1 + $script:TORI_TAKE_PROFIT_PCT / 100), 6)  # +5% TP (VALIDATED)
         stop_loss      = [math]::Round($action_line * 0.98, 6)  # -2% below trendline
     }
@@ -423,12 +419,18 @@ function Get-ToriShortProximityFromArrays {
     }
 
     # SHORT ripening: preco aproximando da linha DESCENDENTE FROM BELOW
-    # prox de -5% (5% abaixo da linha = se aproximando) ate +3% (acabou de tocar/passou levemente)
+    # 2026-06-05: expanded range -10% a +3% (was -5% a +3%) for MORE ASSERTIVE EARLY ENTRY
+    # prox de -10% (10% abaixo da linha = pullback, setup ripening) ate +3% (toque/passou)
     # RSI > 60 (overbought rally em bear) | vol secando (forca da subida exaurindo)
-    $ripening = ($proximity_pct -ge -5.0) -and `
+    $ripening = ($proximity_pct -ge -10.0) -and `
                 ($proximity_pct -le 3.0) -and `
                 ($rsi -gt 60.0) -and `
                 $vol_drying
+
+    # 2026-06-05: conviction mapping (0-100) replaces pure boolean ripening
+    # ripening -> conviction 70 (enter); staging (valid but prox -10% to -5%) -> 35 (wait); else 0 (skip)
+    $setup_staging = (-not $ripening) -and ($proximity_pct -ge -10.0) -and ($proximity_pct -le -5.0)
+    $conviction = if ($ripening) { 70 } elseif ($setup_staging) { 35 } else { 0 }
 
     return [PSCustomObject]@{
         valid          = $true
@@ -442,6 +444,8 @@ function Get-ToriShortProximityFromArrays {
         rsi            = [math]::Round($rsi, 1)
         vol_drying     = $vol_drying
         setup_ripening = $ripening
+        setup_staging  = $setup_staging
+        conviction     = $conviction
     }
 }
 

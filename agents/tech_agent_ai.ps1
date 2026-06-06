@@ -152,9 +152,22 @@ function Get-ToriTrendlineSignal {
     )
     $r = Invoke-TechAgent -Market $Market
     if (-not $r) {
-        return [PSCustomObject]@{ signal = "WAIT"; reason = "tech_agent_null" }
+        return [PSCustomObject]@{ signal = "WAIT"; conviction = 0; reason = "tech_agent_null" }
     }
-    # Tori FORÇA ENTER: ignora SKIP de Claude por falta de trendline
+
+    # Extrai conviction de tori_proximity (0-100 gradation)
+    $conviction = 0
+    if (Get-Command Get-ToriProximityForMarket -ErrorAction SilentlyContinue) {
+        try {
+            $statePath = Join-Path $global:JOURNAL_DIR "tori_proximity_state.json"
+            $tp = Get-ToriProximityForMarket -Market $Market -StatePath $statePath -MaxAgeMinutes 60
+            if ($tp -and $tp.PSObject.Properties['conviction']) {
+                $conviction = [int]$tp.conviction
+            }
+        } catch {}
+    }
+
+    # Tori FORÇA ENTRY: deixa gem_executor mapear conviction→signal via gem_executor
     # Mentor faz filtragem secundaria (gem_executor chama Mentor DEPOIS de Tori)
     # Gems com score alto merecem chance mesmo sem trendline perfeita
     if ($r.trendline -and $r.trendline.verdict) {
@@ -166,7 +179,7 @@ function Get-ToriTrendlineSignal {
     }
     # SEMPRE ENTER — deixa Mentor decidir tudo (Tori é só info)
     $reasonTxt = if ($r.trendline -and $r.trendline.reason) { "$($r.trendline.reason)" } else { "tori_force_entry_mentor_decides" }
-    return [PSCustomObject]@{ signal = "ENTER"; reason = $reasonTxt }
+    return [PSCustomObject]@{ signal = "ENTER"; conviction = $conviction; reason = $reasonTxt }
 }
 
 function Invoke-TechAgent {

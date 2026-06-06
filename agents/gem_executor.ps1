@@ -393,10 +393,13 @@ function Invoke-GemExecute {
     }
 
     $tori_signal = "ENTER"
+    $tori_conviction = 0
     $tori_reason = ""
     try {
         $tori = Get-ToriTrendlineSignal -Market $mkt
-        $tori_signal = "$($tori.signal)".ToUpper()
+        $tori_conviction = if ($tori.PSObject.Properties['conviction']) { [int]$tori.conviction } else { 0 }
+        # Mapear conviction → signal: 0=SKIP, 1-40=WAIT, 41+=ENTER
+        $tori_signal = if ($tori_conviction -eq 0) { "SKIP" } elseif ($tori_conviction -le 40) { "WAIT" } else { "ENTER" }
         $tori_reason = "$($tori.reason)"
     } catch {
         Write-Host "  [GEM TORI ERROR] ${mkt}: $_" -ForegroundColor Red
