@@ -25,6 +25,8 @@ if (Test-Path $configLocal) {
 
 # Inicializar ambiente
 $cpEnv = Initialize-CrossPlatformEnvironment
+$journalDir = Join-Path $projectRoot "journal"
+$logsDir = Join-Path $projectRoot "logs"
 
 Write-CrossPlatformLog "=== TRAILING STOP MONITOR START ===" -LogFile "trailing_stop_monitor.log"
 Write-CrossPlatformLog "OS: $(if ($cpEnv.IsLinux) { 'Linux' } else { 'Windows' })" -LogFile "trailing_stop_monitor.log"
