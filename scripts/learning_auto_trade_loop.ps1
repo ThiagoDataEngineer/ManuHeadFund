@@ -4,7 +4,7 @@
 
 param(
     [int]$IntervalSeconds = 60,
-    [double]$ConfidenceThreshold = 0.40,
+    [double]$ConfidenceThreshold = 0.30,  # Abaixado de 0.40 para mais aprendizado (2026-06-07)
     [switch]$PaperOnly = $true
 )
 
