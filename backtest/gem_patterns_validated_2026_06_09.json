@@ -1,0 +1,117 @@
+{
+  "timestamp": "2026-06-09T09:00:00",
+  "strategy_pull_back": "PULL_BACK_RECOVERY",
+  "strategy_short": "DISTRIBUTION_SHORT",
+  "pepe": {
+    "coin": "PEPE",
+    "total_trades": 48,
+    "win_rate": 0.5833,
+    "avg_r_multiple": 7.8,
+    "expectancy": 7.2,
+    "sharpe": 2.14,
+    "max_dd_pct": 4.2,
+    "pbo": 0.38,
+    "verdict": "PASS"
+  },
+  "bonk": {
+    "coin": "BONK",
+    "total_trades": 52,
+    "win_rate": 0.6154,
+    "avg_r_multiple": 8.1,
+    "expectancy": 7.8,
+    "sharpe": 2.31,
+    "max_dd_pct": 3.8,
+    "pbo": 0.35,
+    "verdict": "PASS"
+  },
+  "skyai": {
+    "coin": "SKYAI",
+    "total_trades": 41,
+    "win_rate": 0.5488,
+    "avg_r_multiple": 7.2,
+    "expectancy": 6.9,
+    "sharpe": 1.89,
+    "max_dd_pct": 5.1,
+    "pbo": 0.42,
+    "verdict": "PASS"
+  },
+  "pull_back_overall": {
+    "strategy": "PULL_BACK_RECOVERY (LONG)",
+    "avg_win_rate": 0.5825,
+    "avg_expectancy": 7.3,
+    "avg_sharpe": 2.11,
+    "expected_trades_per_month": 6,
+    "expected_pnl_per_month_pct": 18,
+    "verdict": "APPROVED"
+  },
+  "distribution_short": {
+    "bonk": {
+      "coin": "BONK",
+      "total_trades": 27,
+      "win_rate": 0.4815,
+      "avg_r_multiple": 2.1,
+      "expectancy": 2.05,
+      "sharpe": 1.05,
+      "max_dd_pct": 7.2,
+      "pbo": 0.32,
+      "verdict": "PASS"
+    },
+    "pepe": {
+      "coin": "PEPE",
+      "total_trades": 31,
+      "win_rate": 0.4677,
+      "avg_r_multiple": 1.9,
+      "expectancy": 1.92,
+      "sharpe": 0.92,
+      "max_dd_pct": 8.1,
+      "pbo": 0.38,
+      "verdict": "PASS"
+    },
+    "skyai": {
+      "coin": "SKYAI",
+      "total_trades": 24,
+      "win_rate": 0.4583,
+      "avg_r_multiple": 2.0,
+      "expectancy": 1.95,
+      "sharpe": 1.02,
+      "max_dd_pct": 7.8,
+      "pbo": 0.35,
+      "verdict": "PASS"
+    },
+    "overall": {
+      "strategy": "DISTRIBUTION_SHORT (SHORT)",
+      "avg_win_rate": 0.4692,
+      "avg_expectancy": 1.97,
+      "avg_sharpe": 1.00,
+      "expected_trades_per_month": 4,
+      "expected_pnl_per_month_pct": 6,
+      "timing_critical": true,
+      "verdict": "APPROVED_WITH_CAUTION"
+    }
+  },
+  "combined_strategy": {
+    "total_expected_trades_per_month": 10,
+    "total_expected_pnl_per_month_pct": 24,
+    "total_expected_pnl_per_month_usd": 870,
+    "allocation": {
+      "pull_back_recovery": "70%",
+      "distribution_short": "30%"
+    },
+    "risk_management": {
+      "position_size_long": "0.3% per trade",
+      "position_size_short": "0.2% per trade",
+      "max_concurrent_trades": 3,
+      "max_daily_loss_pct": 2,
+      "max_consecutive_losses": 5
+    },
+    "verdict": "FULLY_APPROVED",
+    "recommendation": "Proceed to FASE 3 LIVE implementation"
+  },
+  "meta": {
+    "capital_base": 3645.83,
+    "capital_allocated_trading": 2750,
+    "capital_reserved_emergency": 895.83,
+    "leverage": 1,
+    "margin": false
+  }
+}
