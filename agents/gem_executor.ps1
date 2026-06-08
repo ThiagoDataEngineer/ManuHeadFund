@@ -484,12 +484,16 @@ function Invoke-GemExecute {
     $cachedTag = if ($precision) { "true" } else { "false" }
     Write-Host "  [PRECISION] $mkt $precType quote=$pricePrec base=$basePrec cached=$cachedTag" -ForegroundColor DarkGray
 
+    # 2026-06-08: Suporta LONG ou SHORT baseado no direction field
+    $direction = if ($Gem.PSObject.Properties['direction']) { [string]$Gem.direction } else { "LONG" }
+    $direction = if ($direction -in @("LONG","SHORT")) { $direction } else { "LONG" }
+
     try {
         $st = Calculate-StopTarget `
             -Entry     ([double]$price) `
             -StopPct   ([double]$sz.stop_pct) `
             -TargetPct ([double]$sz.target_pct) `
-            -Direction "LONG" `
+            -Direction $direction `
             -Precision $pricePrec
     } catch {
         Write-Host "BLOQUEADO: Calculate-StopTarget falhou para ${mkt}: $_" -ForegroundColor Red
@@ -634,22 +638,20 @@ function Invoke-GemExecute {
 
     # ── Alerta PRE-ordem ─────────────────────────────────────────────────────
     $mktType = if ($hasFutures) { "FUTURES" } else { "SPOT" }
-    $ts = (Get-Date).ToString("HH:mm dd/MM/yy")
-    $preMsg = "*EXECUTANDO GEM* -- $mkt [$mktType]`nEntrada: $price | Stop: $stop_price | Alvo: $tgt_price`nSizing: $usd_size USDT`n_$ts_"
+    $directionLabel = if ($direction -eq "SHORT") { "SHORT 📉" } else { "LONG 📈" }
+    $preMsg = "*EXECUTANDO GEM* -- $mkt [$mktType] $directionLabel`nEntrada: $price | Stop: $stop_price | Alvo: $tgt_price`nSizing: $usd_size USDT"
     Send-TelegramAlert -Message $preMsg | Out-Null
 
     # ── Execucao via Invoke-OrderRouted (2026-05-20 wire) ──────────────────
-    # Antes: chamava CoinEx-PlaceOrder/PlaceSpotOrder direto (bypass router).
-    # Agora: route unified via Invoke-OrderRouted (futures|spot). Mesmo comportamento.
-    $route = if ($hasFutures) { "futures" } else { "spot" }
+    # 2026-06-08: Suporta SHORT em adicao a LONG
+    $side = if ($direction -eq "SHORT") { "sell" } else { "buy" }
     $orderTypeLabel = if ($hasFutures) { "FUTURES" } else { "SPOT (fallback)" }
-    Write-Host "  Enviando ordem $orderTypeLabel..." -ForegroundColor Cyan
+    Write-Host "  Enviando ordem $orderTypeLabel [$direction]..." -ForegroundColor Cyan
     if ($hasFutures) {
-        $order = Invoke-OrderRouted -Route "futures" -Market $mkt -Side "buy" -Type "market" `
+        $order = Invoke-OrderRouted -Route "futures" -Market $mkt -Side $side -Type "market" `
                                      -Amount $qty -StopLoss $stop_price
     } else {
-        # Market BUY usa quote currency (USDT): QuoteAmountUsd carrega o sizing
-        $order = Invoke-OrderRouted -Route "spot" -Market $mkt -Side "buy" -Type "market" `
+        $order = Invoke-OrderRouted -Route "spot" -Market $mkt -Side $side -Type "market" `
                                      -Amount $qty -QuoteAmountUsd $usd_size
     }
     Write-Host "  Ordem: id=$($order.order_id)" -ForegroundColor Green
@@ -784,7 +786,7 @@ function Invoke-GemExecute {
         }
     }
 
-    Write-Host "=== ENTRADA REGISTRADA ===" -ForegroundColor Cyan
+    Write-Host "=== ENTRADA REGISTRADA ($direction) ===" -ForegroundColor Cyan
     return [PSCustomObject]@{
         market      = $mkt
         market_type = $marketType
@@ -795,6 +797,7 @@ function Invoke-GemExecute {
         target      = $tgt_price
         sizing_usd  = $usd_size
         dry_run     = $false
+        direction   = $direction
         trailing_stop_job_id = if ($trailingJob) { $trailingJob.Id } else { $null }
     }
 }

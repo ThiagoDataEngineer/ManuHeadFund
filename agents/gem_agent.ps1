@@ -695,6 +695,59 @@ function Get-GemFingerprintScore {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
+# 2026-06-08: Resolve-BidirectionalDirection
+# Detecta LONG vs SHORT baseado em MinMax detection + momentum
+function Resolve-BidirectionalDirection {
+    param(
+        [object] $Gem,
+        [object[]] $DailyCandles
+    )
+
+    $results = @($Gem)
+
+    if (-not (Get-Command Test-LongGate -ErrorAction SilentlyContinue)) { return $results }
+    if (-not (Get-Command Test-ShortGate -ErrorAction SilentlyContinue)) { return $results }
+
+    try {
+        $closes = $DailyCandles | ForEach-Object { [double]$_.close }
+        if ($closes.Count -lt 5) { return $results }
+
+        $min24h = ($closes | Measure-Object -Minimum).Minimum
+        $max24h = ($closes | Measure-Object -Maximum).Maximum
+        $currPrice = $closes[-1]
+        $strength = if ($max24h -gt $min24h) { [math]::Round(($currPrice - $min24h) / ($max24h - $min24h) * 100, 1) } else { 50 }
+
+        $pctAboveMin = if ($min24h -gt 0) { ($currPrice - $min24h) / $min24h * 100 } else { 0 }
+        $pctBelowMax = if ($max24h -gt 0) { ($max24h - $currPrice) / $max24h * 100 } else { 0 }
+
+        $longOk = Test-LongGate -Score ([double]$Gem.score) -PctAboveMin ([double]$pctAboveMin)
+        $shortOk = Test-ShortGate -Score ([double]$Gem.score) -PctBelowMax ([double]$pctBelowMax)
+
+        if ($longOk -and $shortOk) {
+            if ($strength -gt 50) {
+                $Gem | Add-Member -NotePropertyName direction -NotePropertyValue "SHORT" -Force
+                $shortGem = $Gem.PSObject.Copy()
+                $Gem | Add-Member -NotePropertyName direction -NotePropertyValue "LONG" -Force
+                $results = @($shortGem, $Gem)
+            } else {
+                $Gem | Add-Member -NotePropertyName direction -NotePropertyValue "LONG" -Force
+                $shortGem = $Gem.PSObject.Copy()
+                $shortGem | Add-Member -NotePropertyName direction -NotePropertyValue "SHORT" -Force
+                $results = @($Gem, $shortGem)
+            }
+        } elseif ($shortOk) {
+            $Gem | Add-Member -NotePropertyName direction -NotePropertyValue "SHORT" -Force
+        } else {
+            $Gem | Add-Member -NotePropertyName direction -NotePropertyValue "LONG" -Force
+        }
+
+        Write-Host "      [MINMAX] $($Gem.market) min=$([math]::Round($min24h,6)) max=$([math]::Round($max24h,6)) curr=$([math]::Round($currPrice,6)) str=$strength% long=$longOk short=$shortOk" -ForegroundColor DarkCyan
+
+    } catch { }
+
+    return $results
+}
+
 # Invoke-GemScan
 # Pipeline completo: todos os pares CoinEx → 7 gates → alertas ranqueados
 #
@@ -870,7 +923,12 @@ function Invoke-GemScan {
             if ($gem.score -gt 0) {
                 $sz = Get-GemSizing -Mode $gem.mode -Capital $Capital -BtcDominance 0
                 $gem | Add-Member -NotePropertyName sizing -NotePropertyValue $sz -Force
-                $alerts += $gem
+
+                # 2026-06-08: Bidirecional LONG+SHORT detection via MinMax
+                $directions = Resolve-BidirectionalDirection -Gem $gem -DailyCandles $c.daily
+                foreach ($dirGem in $directions) {
+                    $alerts += $dirGem
+                }
             }
             $all_scan_results += $gem
         } catch {

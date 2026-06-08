@@ -9,6 +9,20 @@ if (Test-Path $_localConfig) { . $_localConfig }
 $_telegramFilterConfig = Join-Path $PSScriptRoot "config.telegram_filter.ps1"
 if (Test-Path $_telegramFilterConfig) { . $_telegramFilterConfig }
 
+# 2026-06-08: MinMax Surfer System — Bidirecional LONG+SHORT
+$_minmaxLibs = @(
+    "lib_minmax_detector.ps1",
+    "lib_momentum_surfer.ps1",
+    "lib_bidirectional_gates.ps1",
+    "lib_router_spot_futures.ps1"
+)
+foreach ($lib in $_minmaxLibs) {
+    $libPath = Join-Path $PSScriptRoot $lib
+    if (Test-Path $libPath) {
+        . $libPath
+    }
+}
+
 # ── API Keys ──────────────────────────────────────────────────────────────────
 
 # Claude / Anthropic
