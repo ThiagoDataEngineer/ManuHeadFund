@@ -23,6 +23,26 @@ foreach ($lib in $_minmaxLibs) {
     }
 }
 
+# 2026-06-08: REGIME-SPECIFIC ALLOCATION (Backtest Validated)
+# Current regime: BEAR_WEAK (post-halving) — SHORT is profit driver
+$CURRENT_REGIME = "BEAR_WEAK"
+$REGIME_ALLOCATION = @{
+    BULL_STRONG = @{ LONG_PCT = 0.90; SHORT_PCT = 0.10; LONG_LEVERAGE = 3; SHORT_LEVERAGE = 2 }
+    BULL_WEAK   = @{ LONG_PCT = 0.40; SHORT_PCT = 0.60; LONG_LEVERAGE = 2; SHORT_LEVERAGE = 2 }
+    BEAR_WEAK   = @{ LONG_PCT = 0.20; SHORT_PCT = 0.80; LONG_LEVERAGE = 1; SHORT_LEVERAGE = 2 }
+    BEAR_STRONG = @{ LONG_PCT = 0.00; SHORT_PCT = 0.00; LONG_LEVERAGE = 1; SHORT_LEVERAGE = 1 }  # SKIP
+}
+
+# Get current allocation
+$_current = $REGIME_ALLOCATION[$CURRENT_REGIME]
+$ALLOCATION_LONG_PCT = $_current.LONG_PCT
+$ALLOCATION_SHORT_PCT = $_current.SHORT_PCT
+$LEVERAGE_LONG = $_current.LONG_LEVERAGE
+$LEVERAGE_SHORT = $_current.SHORT_LEVERAGE
+
+# Feature flag: Regime-specific routing enabled
+$REGIME_SPECIFIC_ENABLED = $true
+
 # ── API Keys ──────────────────────────────────────────────────────────────────
 
 # Claude / Anthropic
