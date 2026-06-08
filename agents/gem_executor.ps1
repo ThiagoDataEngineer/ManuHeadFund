@@ -6,6 +6,7 @@
 . (Join-Path $PSScriptRoot "lib_journal.ps1")
 . (Join-Path $PSScriptRoot "lib_telegram.ps1")
 . (Join-Path $PSScriptRoot "lib_gem_safety.ps1")
+. (Join-Path $PSScriptRoot "lib_market_router.ps1")
 # 2026-05-21: B9 cache TTL (Add-GemRejection + Test-GemRecentlyRejected).
 # Bug encontrado: scan_master dot-sourced gem_executor mas NAO lib_gem_decision_cache,
 # entao Get-Command Test-GemRecentlyRejected returnava null silently -> cache check
