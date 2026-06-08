@@ -1,4 +1,4 @@
-﻿# GitHub Actions - ManuHeadFund Trading Pipeline COMPLETO
+# GitHub Actions - ManuHeadFund Trading Pipeline COMPLETO
 # Sistema 100% independente da mÃ¡quina local
 # Roda na nuvem 24/7
 
@@ -985,4 +985,5 @@ jobs:
           } catch {
             Write-Host "Failed to send alert: $_" -ForegroundColor Red
           }
+
 
