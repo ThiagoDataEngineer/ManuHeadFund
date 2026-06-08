@@ -479,6 +479,45 @@ function Invoke-GemCycle {
                     continue
                 }
 
+                # 2026-06-08: DETECT CORRECT DIRECTION BEFORE APPROVAL
+                # Testa qual direção (LONG ou SHORT) vai passar os gates
+                $suggestedDirection = "LONG"
+                $longWillBlock = $false
+                $shortWillPass = $false
+
+                if (Get-Command Invoke-GemExecute -ErrorAction SilentlyContinue) {
+                    # Teste LONG
+                    try {
+                        $testLong = $g.PSObject.Copy()
+                        $testLong | Add-Member -MemberType NoteProperty -Name direction -Value "LONG" -Force
+                        $testResult = Invoke-GemExecute -Gem $testLong
+                        if ($testResult -and $testResult.blocked) {
+                            $longWillBlock = $true
+                            Write-MasterLog "GEM direction test: LONG blocked for $($g.market) -- $($testResult.blocked_by -join ' | ')" "GEM"
+                        }
+                    } catch { }
+
+                    # Teste SHORT (se LONG vai bloquear)
+                    if ($longWillBlock) {
+                        try {
+                            $testShort = $g.PSObject.Copy()
+                            $testShort | Add-Member -MemberType NoteProperty -Name direction -Value "SHORT" -Force
+                            $testResult = Invoke-GemExecute -Gem $testShort
+                            if ($testResult -and -not $testResult.blocked) {
+                                $shortWillPass = $true
+                                $suggestedDirection = "SHORT"
+                                Write-MasterLog "GEM direction test: SHORT passes for $($g.market)" "GEM"
+                            }
+                        } catch { }
+                    }
+                }
+
+                # Atualiza gem com direção sugerida ANTES de pedir aprovação
+                if ($suggestedDirection -eq "SHORT") {
+                    $g | Add-Member -MemberType NoteProperty -Name direction -Value "SHORT" -Force
+                    Write-MasterLog "GEM direction corrected: $($g.market) LONG→SHORT (mostrando SHORT para aprovação)" "GEM"
+                }
+
                 $approvalMsg = Format-TgGemApproval -Gem $g -DryRun:$DryRun
                 if ($DryRun) {
                     Send-TelegramAlert -Message $approvalMsg | Out-Null
@@ -524,36 +563,6 @@ function Invoke-GemCycle {
                             } elseif ($execResult.blocked) {
                                 $reasons = ($execResult.blocked_by -join ' | ')
                                 Write-MasterLog "GEM bloqueada por guards: $($g.market) -- $reasons" "GEM"
-
-                                # 2026-06-08: FALLBACK LONG→SHORT
-                                # Se LONG bloqueado por HTF downtrend (regime/tori_short), rotar SHORT automaticamente
-                                # Princípio bidirecional: cada direção tem seu próprio contexto de sinal
-                                $shouldTryShort = $false
-                                if (-not $g.PSObject.Properties['direction'] -or $g.direction -eq "LONG") {
-                                    # Detecciona se bloqueio foi por regime/HTF (vs. other reasons como FQS missing)
-                                    foreach ($reason in $execResult.blocked_by) {
-                                        if ($reason -match "tori_short|regime.*bear|htf.*down|downtrend") {
-                                            $shouldTryShort = $true
-                                            break
-                                        }
-                                    }
-
-                                    if ($shouldTryShort) {
-                                        $shortGem = $g.PSObject.Copy()
-                                        $shortGem.direction = "SHORT"
-                                        Write-MasterLog "GEM ROTATION: LONG bloqueado por downtrend, tentando SHORT para $($g.market)" "GEM"
-                                        try {
-                                            $execResultShort = Invoke-GemExecute -Gem $shortGem
-                                            if ($execResultShort -and -not $execResultShort.blocked) {
-                                                Write-MasterLog "✅ GEM SHORT executado (fallback): $($g.market) ordem=$($execResultShort.order_id)" "GEM"
-                                                Send-TelegramAlert -Message "✅ GEM SHORT (fallback) -- $($g.market)`nScore: $($g.score)`nDirection: SHORT (LONG bloqueado)" | Out-Null
-                                            } elseif ($execResultShort.blocked) {
-                                                Write-MasterLog "GEM SHORT também bloqueado: $($g.market) -- $($execResultShort.blocked_by -join ' | ')" "GEM"
-                                            }
-                                        } catch { Write-MasterLog "GEM SHORT fallback error: $($g.market) $_" "WARN" }
-                                    }
-                                }
-
                                 # A fix 2026-05-21: TG verbose pos-aprovacao bloqueada (user precisa saber!)
                                 $isAutoApproved = ($tgResult.source -eq 'auto')
                                 $approvalNote = if ($isAutoApproved) { "auto-approved" } else { "VOCE aprovou via TG" }
