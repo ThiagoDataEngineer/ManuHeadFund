@@ -1329,6 +1329,43 @@ function Wait-WithCommands {
     return $null
 }
 
+# ── GEM STRATEGIES INTEGRATION (2026-06-09) ────────────────────────────────────
+
+function Invoke-GemStrategies {
+    <#
+    .SYNOPSIS
+        Run GEM discovery + execution (PULL_BACK_RECOVERY + DISTRIBUTION_SHORT)
+    #>
+    param([PSCustomObject] $Seasonal)
+
+    # Load GEM libraries
+    . (Join-Path (Split-Path $PSScriptRoot -Parent) "agents\lib_gem_discovery.ps1") 2>$null
+    . (Join-Path (Split-Path $PSScriptRoot -Parent) "agents\lib_gem_router.ps1") 2>$null
+
+    # Discover patterns
+    $discoveries = Start-GemDiscoveryScanner -MaxResults 5
+
+    if ($discoveries -and $discoveries.Count -gt 0) {
+        Write-Host "`n📊 GEM STRATEGIES: $($discoveries.Count) discovery(ies) encontrada(s)" -ForegroundColor Green
+
+        # Route each to execution
+        foreach ($signal in $discoveries) {
+            try {
+                $result = Invoke-GemRouter -Signal $signal
+                if ($result.executed) {
+                    Write-Host "   ✅ Executado: $($signal.market) $($signal.strategy)" -ForegroundColor Green
+                } else {
+                    Write-Host "   ⚠️ Skipped: $($signal.market) - $($result.reason)" -ForegroundColor Yellow
+                }
+            } catch {
+                Write-Host "   ❌ Error: $($signal.market) - $_" -ForegroundColor Red
+            }
+        }
+    } else {
+        Write-Host "`n⭕ GEM STRATEGIES: Nenhum padrão detectado neste ciclo" -ForegroundColor Gray
+    }
+}
+
 # ── Loop principal ────────────────────────────────────────────────────────────
 
 Write-Host ""
@@ -1353,6 +1390,13 @@ do {
     if (-not $global:MASTER_PAUSED) {
         try {
             Invoke-MasterCycle -Seasonal $seasonal
+
+            # GEM STRATEGIES: PULL_BACK_RECOVERY + DISTRIBUTION_SHORT (2026-06-09)
+            try {
+                Invoke-GemStrategies -Seasonal $seasonal
+            } catch {
+                Write-MasterLog "Erro em GEM STRATEGIES: $_" "WARN"
+            }
         } catch {
             Write-MasterLog "Erro no ciclo $iteration`: $_" "ERROR"
             Send-TelegramAlert -Message "<b>ERRO</b> ScanMaster ciclo $iteration`n<i>$_</i>" | Out-Null
