@@ -36,12 +36,32 @@ function Place-Order {
         [string] $ClientId = ""                             # UUID for dedup
     )
 
+    # Fetch LIVE capital (detects manual trades on CoinEx)
+    . (Join-Path (Get-Location) "agents\lib_hybrid_orchestrator.ps1") 2>$null
+    $capital = Get-DynamicCapital
+
     # Generate client_id if not provided (for idempotency)
     if ([string]::IsNullOrWhiteSpace($ClientId)) {
         $ClientId = "order_$(Get-Date -Format 'yyyyMMdd_HHmmss')_$(Get-Random -Minimum 1000 -Maximum 9999)"
     }
 
+    $marketCapital = if ($Type -eq "SPOT") { $capital.spot_capital } else { $capital.futures_capital }
+    $positionValue = $Quantity * $Price
+    $maxPosition = $marketCapital * 0.01
+
+    # Validate position size against current capital
+    if ($positionValue -gt $maxPosition) {
+        Write-Host "⚠️ Position `$$([Math]::Round($positionValue, 2)) exceeds 1% cap `$$([Math]::Round($maxPosition, 2)) of $Type capital" -ForegroundColor Yellow
+        return @{
+            status = "REJECTED"
+            reason = "position_size_exceeds_cap"
+            max_allowed = $maxPosition
+            requested = $positionValue
+        }
+    }
+
     Write-Host "📍 Place-Order: $Market $Type $Side qty=$Quantity@$Price (client_id=$ClientId)" -ForegroundColor Cyan
+    Write-Host "  Capital: $Type `$$([Math]::Round($marketCapital, 2)) | Position: `$$([Math]::Round($positionValue, 2)) | Cap: `$$([Math]::Round($maxPosition, 2))" -ForegroundColor Gray
 
     if (-not $script:PlaceOrderConfig.trading_enabled) {
         Write-Host "  ⚠️ PAPER MODE: Order not actually submitted" -ForegroundColor Yellow
