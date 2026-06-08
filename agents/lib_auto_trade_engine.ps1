@@ -17,6 +17,42 @@
 #>
 
 # ════════════════════════════════════════════════════════════════
+# CAPITAL FETCH — Always ONCHAIN, never hardcoded
+# ════════════════════════════════════════════════════════════════
+
+function Get-CurrentCapitalOnchain {
+    param(
+        [double] $FallbackValue = 2700.85
+    )
+
+    $total = 0
+
+    # Fetch SPOT
+    try {
+        $spotUrl = "https://api.coinex.com/v2/spot/balance"
+        $resp = Invoke-RestMethod -Uri $spotUrl -Method GET -TimeoutSec 3
+        if ($resp.code -eq 0 -and $resp.data) {
+            foreach ($asset in $resp.data) {
+                if ($asset.ccy -eq "USDT") { $total += [double]($asset.available ?? 0) }
+            }
+        }
+    } catch { }
+
+    # Fetch FUTURES
+    try {
+        $futUrl = "https://api.coinex.com/v2/futures/balance"
+        $resp = Invoke-RestMethod -Uri $futUrl -Method GET -TimeoutSec 3
+        if ($resp.code -eq 0 -and $resp.data) {
+            foreach ($asset in $resp.data) {
+                if ($asset.ccy -eq "USDT") { $total += [double]($asset.available ?? 0) }
+            }
+        }
+    } catch { }
+
+    return if ($total -gt 0) { $total } else { $FallbackValue }
+}
+
+# ════════════════════════════════════════════════════════════════
 # HISTÓRICO DE APRENDIZADO (persistente)
 # ════════════════════════════════════════════════════════════════
 
@@ -104,7 +140,9 @@ function New-AutoTrade {
 
     # Tamanho da posição: variar por confiança
     $size_pct = 0.005 + ($confidence * 0.005)  # 0.5% a 1% por confiança
-    $capital = 3700  # Capital total aproximado
+
+    # Get REAL capital from ONCHAIN (or fallback)
+    $capital = Get-CurrentCapitalOnchain -FallbackValue 2700.85
     $size_usdt = $capital * $size_pct
 
     return [PSCustomObject]@{
