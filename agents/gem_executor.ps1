@@ -7,6 +7,9 @@
 . (Join-Path $PSScriptRoot "lib_telegram.ps1")
 . (Join-Path $PSScriptRoot "lib_gem_safety.ps1")
 . (Join-Path $PSScriptRoot "lib_market_router.ps1")
+# 2026-06-08: Multi-TF alignment validation before execution
+. (Join-Path $PSScriptRoot "lib_multiframe_analysis.ps1")
+. (Join-Path $PSScriptRoot "lib_candle_fetcher.ps1")
 # 2026-05-21: B9 cache TTL (Add-GemRejection + Test-GemRecentlyRejected).
 # Bug encontrado: scan_master dot-sourced gem_executor mas NAO lib_gem_decision_cache,
 # entao Get-Command Test-GemRecentlyRejected returnava null silently -> cache check
@@ -641,6 +644,43 @@ function Invoke-GemExecute {
     $directionLabel = if ($direction -eq "SHORT") { "SHORT 📉" } else { "LONG 📈" }
     $preMsg = "*EXECUTANDO GEM* -- $mkt [$mktType] $directionLabel`nEntrada: $price | Stop: $stop_price | Alvo: $tgt_price`nSizing: $usd_size USDT"
     Send-TelegramAlert -Message $preMsg | Out-Null
+
+    # ── 2026-06-08: VALIDAÇÃO MULTI-TIMEFRAME (Phase 2 integration) ────────────
+    # Enforça LONG/SHORT em seu próprio contexto de sinal: LONG requer HTF uptrend,
+    # SHORT requer HTF downtrend (ou neutral). Cada direção tem suas próprias regras.
+    if (Get-Command Get-TrendDirection -ErrorAction SilentlyContinue) {
+        try {
+            Write-Host "  [MULTI-TF] Fetching candles para $mkt (1D, 4H, 1H)..." -ForegroundColor Cyan
+
+            # Fetch candles for all timeframes
+            $candles1D = Get-CoinExCandles -Market $mkt -Period "1day" -Limit 50 -IsFutures $hasFutures
+            $candles4H = Get-CoinExCandles -Market $mkt -Period "4hour" -Limit 50 -IsFutures $hasFutures
+            $candles1H = Get-CoinExCandles -Market $mkt -Period "1hour" -Limit 50 -IsFutures $hasFutures
+
+            if ($candles1D.Count -lt 20 -or $candles4H.Count -lt 20 -or $candles1H.Count -lt 5) {
+                Write-Host "  [MULTI-TF WARN] Insuficientes candles: 1D=$($candles1D.Count) 4H=$($candles4H.Count) 1H=$($candles1H.Count) — pulando validacao" -ForegroundColor Yellow
+            } else {
+                # Analyze trends
+                $trend1D = Get-TrendDirection -Candles $candles1D -Timeframe "1D"
+                $trend4H = Get-TrendDirection -Candles $candles4H -Timeframe "4H"
+                $trend1H = Get-TrendDirection -Candles $candles1H -Timeframe "1H"
+
+                # Test alignment
+                $aligned = Test-MultiTimeframeAlignment -Trend1D $trend1D -Trend4H $trend4H -Trend1H $trend1H -Direction $direction
+
+                if (-not $aligned) {
+                    Write-Host "  [GEM BLOQUEADO] Multi-TF misalignment: 1D=$trend1D | 4H=$trend4H | 1H=$trend1H | Dir=$direction | Aligned=$aligned" -ForegroundColor Red
+                    $blockMsg = "*GEM BLOQUEADO* -- $mkt`nMotivo: Multi-TF misalignment`nTrend 1D: $trend1D | 4H: $trend4H | 1H: $trend1H`nDirection: $direction"
+                    try { Send-TelegramAlert -Message $blockMsg | Out-Null } catch {}
+                    return [PSCustomObject]@{ blocked = $true; blocked_by = @("multi_tf_misalignment:$direction-$trend1D-$trend4H"); market = $mkt }
+                }
+
+                Write-Host "  [MULTI-TF OK] $mkt aligned: 1D=$trend1D | 4H=$trend4H | 1H=$trend1H | Dir=$direction" -ForegroundColor Green
+            }
+        } catch {
+            Write-Host "  [MULTI-TF ERROR] $_" -ForegroundColor Yellow
+        }
+    }
 
     # ── Execucao via Invoke-OrderRouted (2026-05-20 wire) ──────────────────
     # 2026-06-08: Suporta SHORT em adicao a LONG
