@@ -524,6 +524,36 @@ function Invoke-GemCycle {
                             } elseif ($execResult.blocked) {
                                 $reasons = ($execResult.blocked_by -join ' | ')
                                 Write-MasterLog "GEM bloqueada por guards: $($g.market) -- $reasons" "GEM"
+
+                                # 2026-06-08: FALLBACK LONG→SHORT
+                                # Se LONG bloqueado por HTF downtrend (regime/tori_short), rotar SHORT automaticamente
+                                # Princípio bidirecional: cada direção tem seu próprio contexto de sinal
+                                $shouldTryShort = $false
+                                if (-not $g.PSObject.Properties['direction'] -or $g.direction -eq "LONG") {
+                                    # Detecciona se bloqueio foi por regime/HTF (vs. other reasons como FQS missing)
+                                    foreach ($reason in $execResult.blocked_by) {
+                                        if ($reason -match "tori_short|regime.*bear|htf.*down|downtrend") {
+                                            $shouldTryShort = $true
+                                            break
+                                        }
+                                    }
+
+                                    if ($shouldTryShort) {
+                                        $shortGem = $g.PSObject.Copy()
+                                        $shortGem.direction = "SHORT"
+                                        Write-MasterLog "GEM ROTATION: LONG bloqueado por downtrend, tentando SHORT para $($g.market)" "GEM"
+                                        try {
+                                            $execResultShort = Invoke-GemExecute -Gem $shortGem
+                                            if ($execResultShort -and -not $execResultShort.blocked) {
+                                                Write-MasterLog "✅ GEM SHORT executado (fallback): $($g.market) ordem=$($execResultShort.order_id)" "GEM"
+                                                Send-TelegramAlert -Message "✅ GEM SHORT (fallback) -- $($g.market)`nScore: $($g.score)`nDirection: SHORT (LONG bloqueado)" | Out-Null
+                                            } elseif ($execResultShort.blocked) {
+                                                Write-MasterLog "GEM SHORT também bloqueado: $($g.market) -- $($execResultShort.blocked_by -join ' | ')" "GEM"
+                                            }
+                                        } catch { Write-MasterLog "GEM SHORT fallback error: $($g.market) $_" "WARN" }
+                                    }
+                                }
+
                                 # A fix 2026-05-21: TG verbose pos-aprovacao bloqueada (user precisa saber!)
                                 $isAutoApproved = ($tgResult.source -eq 'auto')
                                 $approvalNote = if ($isAutoApproved) { "auto-approved" } else { "VOCE aprovou via TG" }
