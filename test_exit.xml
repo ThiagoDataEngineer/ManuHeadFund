@@ -1,0 +1,42 @@
+﻿<?xml version="1.0" encoding="utf-8" standalone="no"?>
+<test-results xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="nunit_schema_2.5.xsd" name="Pester" total="29" errors="0" failures="0" not-run="0" inconclusive="0" ignored="0" skipped="0" invalid="0" date="2026-06-08" time="11:34:35">
+  <environment clr-version="" cwd="C:\Users\thiag\Coinex_AI_USER_API" platform="Microsoft Windows 11 Pro|C:\Windows|\Device\Harddisk0\Partition3" user="thiag" os-version="10.0.26200" machine-name="CASA" nunit-version="2.5.8.0" user-domain="CASA" />
+  <culture-info current-culture="pt-BR" current-uiculture="pt-BR" />
+  <test-suite type="Powershell" name="Pester" executed="True" result="Success" success="True" time="1.1257" asserts="0">
+    <results>
+      <test-suite type="TestFixture" name="Exit Logic Library" executed="True" result="Success" success="True" time="1.1257" asserts="0" description="Exit Logic Library">
+        <results>
+          <test-case description="Opens a position" name="Exit Logic Library.Opens a position" time="0.4318" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="Calculates TP price (+2%)" name="Exit Logic Library.Calculates TP price (+2%)" time="0.0415" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="Calculates SL price (-1%)" name="Exit Logic Library.Calculates SL price (-1%)" time="0.0089" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="Tracks entry time" name="Exit Logic Library.Tracks entry time" time="0.0077" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="Initializes trailing SL equal to regular SL" name="Exit Logic Library.Initializes trailing SL equal to regular SL" time="0.0073" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="Detects TP hit" name="Exit Logic Library.Detects TP hit" time="0.1167" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="Closes only 50% at TP" name="Exit Logic Library.Closes only 50% at TP" time="0.0095" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="TP price is entry * 1.02" name="Exit Logic Library.TP price is entry * 1.02" time="0.0127" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="Calculates PnL correctly at TP" name="Exit Logic Library.Calculates PnL correctly at TP" time="0.0097" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="Detects SL hit" name="Exit Logic Library.Detects SL hit" time="0.0456" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="Closes 100% at SL" name="Exit Logic Library.Closes 100% at SL" time="0.007" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="Calculates loss correctly at SL" name="Exit Logic Library.Calculates loss correctly at SL" time="0.008" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="SL has higher priority than TP" name="Exit Logic Library.SL has higher priority than TP" time="0.0093" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="Updates max price on price increase" name="Exit Logic Library.Updates max price on price increase" time="0.0616" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="Moves SL up by 50% of gain" name="Exit Logic Library.Moves SL up by 50% of gain" time="0.0147" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="Doesn't move SL down" name="Exit Logic Library.Doesn't move SL down" time="0.0097" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="Triggers trailing SL if breached" name="Exit Logic Library.Triggers trailing SL if breached" time="0.0203" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="Opens position with entry time" name="Exit Logic Library.Opens position with entry time" time="0.0412" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="Detects if position held &gt;60 min" name="Exit Logic Library.Detects if position held &gt;60 min" time="0.0128" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="Returns status of specific position" name="Exit Logic Library.Returns status of specific position" time="0.0402" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="Returns status of all positions" name="Exit Logic Library.Returns status of all positions" time="0.0094" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="Changes TP percentage" name="Exit Logic Library.Changes TP percentage" time="0.05" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="Changes SL percentage" name="Exit Logic Library.Changes SL percentage" time="0.0056" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="Changes trailing stop config" name="Exit Logic Library.Changes trailing stop config" time="0.0155" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="Changes max hold time" name="Exit Logic Library.Changes max hold time" time="0.0615" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="Handles position not found" name="Exit Logic Library.Handles position not found" time="0.0461" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="Handles already closed position" name="Exit Logic Library.Handles already closed position" time="0.0075" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="Handles very small quantities" name="Exit Logic Library.Handles very small quantities" time="0.0073" asserts="0" success="True" result="Success" executed="True" />
+          <test-case description="Handles large quantities" name="Exit Logic Library.Handles large quantities" time="0.0065" asserts="0" success="True" result="Success" executed="True" />
+        </results>
+      </test-suite>
+    </results>
+  </test-suite>
+</test-results>

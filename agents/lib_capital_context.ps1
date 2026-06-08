@@ -97,7 +97,14 @@ function Get-CapitalContext {
         if ($cached -and $cached.snapshot_ts) {
             try {
                 $cachedTs = [System.DateTimeOffset]::Parse($cached.snapshot_ts).UtcDateTime
-                $ageMin = ((Get-Date).ToUniversalTime() - $cachedTs).TotalMinutes
+                $nowUtc = (Get-Date).ToUniversalTime()
+                $ageMin = ($nowUtc - $cachedTs).TotalMinutes
+
+                # Debug: log cache freshness check (only in tests)
+                if ($global:DEBUG_CAPITAL_CONTEXT -eq $true) {
+                    Write-Host "[capital_context] Cache check: ageMin=$([Math]::Round($ageMin, 2)) MaxAge=$MaxAgeMinutes Pass=$(if ($ageMin -le $MaxAgeMinutes) { 'YES' } else { 'NO' })"
+                }
+
                 if ($ageMin -le $MaxAgeMinutes) {
                     return [PSCustomObject]@{
                         spot = [double]$cached.spot
@@ -107,7 +114,11 @@ function Get-CapitalContext {
                         source = "cached"
                     }
                 }
-            } catch { }
+            } catch {
+                if ($global:DEBUG_CAPITAL_CONTEXT -eq $true) {
+                    Write-Host "[capital_context] Error parsing timestamp: $_"
+                }
+            }
         }
     }
 
@@ -115,6 +126,7 @@ function Get-CapitalContext {
     # Bug fix 2026-05-25: CoinEx-GetTotalCapitalUSDT retorna escalar (soma), nao
     # objeto. Chamamos os 2 fetchers individuais que populam $global:CAPITAL_SPOT
     # e $global:CAPITAL_FUTURES como side effect.
+    # Bug fix 2026-06-08: Se cache stale, tenta usar globals (fallback) ao invés de falhar
     $spot = 0.0; $futures = 0.0
     $source = "fallback"
 

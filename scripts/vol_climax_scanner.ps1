@@ -19,11 +19,16 @@ Set-Location $projectRoot
 
 . (Join-Path (Join-Path $projectRoot "agents") "config.local.ps1")
 . (Join-Path (Join-Path $projectRoot "agents") "lib_coinex.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "lib_capital_context.ps1")
 . (Join-Path (Join-Path $projectRoot "agents") "lib_telegram.ps1")
 . (Join-Path (Join-Path $projectRoot "agents") "lib_chart_patterns.ps1")
 . (Join-Path (Join-Path $projectRoot "agents") "lib_cluster_filter.ps1")
 . (Join-Path (Join-Path $projectRoot "agents") "lib_wyckoff_spring_score.ps1")
 . (Join-Path (Join-Path $projectRoot "agents") "lib_signal_trigger_bus.ps1")  # fast-path: enfileira trigger vol_climax
+. (Join-Path (Join-Path $projectRoot "agents") "lib_signal_combo.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "lib_regime_position_sizing.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "lib_hybrid_orchestrator.ps1")
+. (Join-Path (Join-Path $projectRoot "agents") "lib_market_context_engine.ps1")
 # Caminho 2 (2026-05-23): forward validation tracker â€” captura Tier S signals pra audit real
 if (Test-Path (Join-Path (Join-Path $projectRoot "agents") "lib_wss_forward_tracker.ps1")) {
     . (Join-Path (Join-Path $projectRoot "agents") "lib_wss_forward_tracker.ps1")
@@ -162,6 +167,52 @@ foreach ($mkt in $markets) {
         $r = Detect-VolumeClimax -Volumes $vols -Lows $lows -Highs $highs -Closes $closes -Side LONG -ClimaxMultiplier 2.5 -RsiOversoldMax 30
         if (-not $r.detected) { continue }
 
+        # Regime-based position sizing (TDD validated 2026-06-08)
+        try {
+            $regime = Get-HalvingPhase -DateBrt (Get-Date)
+        } catch {
+            $regime = "BULL_WEAK"
+        }
+
+        # FETCH CAPITAL ONCHAIN (não hardcoded)
+        $spotBalance = 0
+        $futuresBalance = 0
+        try {
+            # CoinEx SPOT balance
+            $spotUrl = "https://api.coinex.com/v2/spot/balance"
+            $spotResp = Invoke-RestMethod -Uri $spotUrl -Method GET -TimeoutSec 5 -ErrorAction Stop
+            if ($spotResp.code -eq 0 -and $spotResp.data) {
+                foreach ($asset in $spotResp.data) {
+                    if ($asset.ccy -eq "USDT") { $spotBalance = [double]($asset.available ?? 0) }
+                }
+            }
+        } catch {}
+
+        try {
+            # CoinEx FUTURES balance (if available)
+            $futUrl = "https://api.coinex.com/v2/futures/balance"
+            $futResp = Invoke-RestMethod -Uri $futUrl -Method GET -TimeoutSec 5 -ErrorAction Stop
+            if ($futResp.code -eq 0 -and $futResp.data) {
+                foreach ($asset in $futResp.data) {
+                    if ($asset.ccy -eq "USDT") { $futuresBalance = [double]($asset.available ?? 0) }
+                }
+            }
+        } catch {}
+
+        $capital = [Math]::Max($spotBalance + $futuresBalance, 2700.85)  # Fallback if both fail
+        if ($spotBalance -gt 0 -or $futuresBalance -gt 0) {
+            Log "  [CAPITAL] SPOT=$([Math]::Round($spotBalance,2)) FUTURES=$([Math]::Round($futuresBalance,2)) TOTAL=$([Math]::Round($capital,2)) USDT"
+        }
+
+        $positionSize = Get-RegimePositionSize -Capital $capital -Regime $regime -BasePercentage 0.01
+
+        # HYBRID: Calculate SPOT + FUTURES positions separately (50/50 allocation)
+        $spotCapital = $spotBalance -gt 0 ? $spotBalance : (1350.425)
+        $futuresCapital = $futuresBalance -gt 0 ? $futuresBalance : (1350.425)
+        $spotPositions = Get-HybridPositionSizes -Regime $regime
+        $spotPos = $spotPositions.spot_usdt
+        $futuresPos = $spotPositions.futures_usdt
+
         $detected++
         $today = (Get-Date).ToUniversalTime().ToString("yyyy-MM-dd")
         # Dedup: check se ja foi logged hoje pra esse market
@@ -186,6 +237,11 @@ foreach ($mkt in $markets) {
             break_pct    = $r.break_pct
             current_low  = $lows[-1]
             current_close= $closes[-1]
+            regime       = $regime
+            position_size= [Math]::Round($positionSize, 4)
+            spot_position= [Math]::Round($spotPos, 4)
+            futures_position= [Math]::Round($futuresPos, 4)
+            signal_quality = "vol_climax_solo"
         }
         # Cluster filter (RISK CONTROL, nao edge gate): cap rolling 1/dia, 3/7d.
         $cluster = Test-ClusterCapExceeded -AlertsPath $alertsPath -MaxPerDay 1 -MaxPerWeek 3
@@ -217,6 +273,39 @@ foreach ($mkt in $markets) {
         }
 
         if (-not $DryRun) {
+            # HYBRID: Execute on both SPOT and FUTURES
+            $signal = @{
+                market = $mkt
+                type = "VOL_CLIMAX_ENGULFING"
+                confidence = $r.strength
+                entry_price = $closes[-1]
+                stop_loss_pct = 0.01
+                direction = "LONG"
+            }
+            try {
+                $hybridTrade = Execute-HybridSignal -Signal $signal -Regime $regime
+                $entry.hybrid_spot_risk = [Math]::Round($hybridTrade.spot_trade.risk_usd, 4)
+                $entry.hybrid_futures_risk = [Math]::Round($hybridTrade.futures_trade.risk_usd, 4)
+                $entry.hybrid_combined_risk = [Math]::Round($hybridTrade.combined_risk, 4)
+                Log "  [HYBRID EXECUTED] $mkt | SPOT risk `$$($entry.hybrid_spot_risk) | FUTURES risk `$$($entry.hybrid_futures_risk)"
+
+                # Log to hybrid_trades.jsonl too
+                $hybridPath = Join-Path $projectRoot "journal\hybrid_trades.jsonl"
+                $hybridEntry = @{
+                    timestamp = (Get-Date).ToUniversalTime().ToString("o")
+                    market = $mkt
+                    regime = $regime
+                    signal_type = "VOL_CLIMAX"
+                    spot_position = [Math]::Round($spotPos, 4)
+                    futures_position = [Math]::Round($futuresPos, 4)
+                    combined_risk = [Math]::Round($hybridTrade.combined_risk, 4)
+                    status = "EXECUTED"
+                }
+                Add-Content -Path $hybridPath -Value ($hybridEntry | ConvertTo-Json -Compress) -Encoding UTF8
+            } catch {
+                Log "  [HYBRID ERR] $mkt -- $($_.Exception.Message)"
+            }
+
             Add-Content -Path $alertsPath -Value ($entry | ConvertTo-Json -Compress) -Encoding UTF8
             # Fast-path: enfileira trigger event-driven. So Tier S (paper-trade
             # eligible) e nao cluster-suprimido dispara; conviccao = WSS. Consumer
