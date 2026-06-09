@@ -38,7 +38,7 @@ function Invoke-LearningCycle {
     $skips = @()
     if (Get-Command Get-StateRecords -ErrorAction SilentlyContinue) {
         try {
-            $skips = @(Get-StateRecords -Table "signal_skips")
+            $skips = @(Get-StateRecords -Table "trade_rejections")
         } catch {
             # Supabase failed, try local
             $skips = @(Read-JsonLines -Path $skipsPath)
