@@ -121,6 +121,8 @@ try {
     . (Join-Path $agentsDir "lib_market_context_engine.ps1") -ErrorAction SilentlyContinue
     . (Join-Path $agentsDir "lib_halving_phase_alert.ps1") -ErrorAction SilentlyContinue
     . (Join-Path $agentsDir "lib_trailing_peak_update.ps1") -ErrorAction SilentlyContinue
+    . (Join-Path $agentsDir "lib_dca_accumulator.ps1") -ErrorAction SilentlyContinue
+    . (Join-Path $agentsDir "lib_pyramid_exit.ps1") -ErrorAction SilentlyContinue
     if (Get-Command Get-MacroContext -ErrorAction SilentlyContinue) {
         $ctx = Get-MacroContext
         $phase = if ($ctx.halving_phase) { $ctx.halving_phase } else { "unknown" }
@@ -186,6 +188,34 @@ function Invoke-GemCycle-Once {
             }
         }
 
+        # DCA daily check (once per day, ~1-3% of capital)
+        if (Get-Command Invoke-DcaBuy -ErrorAction SilentlyContinue) {
+            try {
+                $dcaState = Get-DcaState
+                $lastBuyDate = if ($dcaState.last_buy -is [string]) {
+                    [datetime]$dcaState.last_buy
+                } else { $dcaState.last_buy }
+                $today = (Get-Date).Date
+
+                if ($lastBuyDate.Date -lt $today) {
+                    # Get BTC price for DCA decision
+                    $btcResp = Invoke-CoinexApi -Endpoint "/v2/public/market/detail" -Params @{symbol="BTCUSDT"} 2>&1
+                    if ($btcResp -and $btcResp.data.last) {
+                        $btcPrice = [double]$btcResp.data.last
+                        $shouldBuy = Test-DcaShouldBuy -BtcPrice $btcPrice
+                        if ($shouldBuy -and -not $DryRun) {
+                            $dcaResult = Invoke-DcaBuy -JournalDir $global:JOURNAL_DIR
+                            Write-GemLog "DCA" "Compra executada: symbol=$($dcaResult.symbol) qty=$($dcaResult.qty) usd=$($dcaResult.usd)"
+                        } elseif ($shouldBuy) {
+                            Write-GemLog "DCA" "DRY: simulado DCA compra (não executado em modo DRY)"
+                        }
+                    }
+                }
+            } catch {
+                Write-GemLog "WARN" "DCA check failed (non-critical): $($_.Exception.Message)"
+            }
+        }
+
         Write-GemLog "CYCLE" "Iniciando GemScan (mode=$(if ($DryRun) {'DRY'} else {'LIVE'}))"
         $gems = @(Invoke-GemScan -TopN 5)
         # R4 fix 2026-05-21: cache check ANTES do log "encontrados" + Invoke-GemExecute.
@@ -218,6 +248,17 @@ function Invoke-GemCycle-Once {
                     Write-GemLog "BLOCKED" "$mkt -- $($r.blocked_by -join '; ')"
                 } elseif ($r.order_id) {
                     Write-GemLog "EXEC" "$mkt order=$($r.order_id) qty=$($r.qty)"
+                    # Pyramid exit mock: register intention if score >= 80 (high conviction)
+                    if ($score -ge 80 -and (Get-Command Invoke-PyramidExit -ErrorAction SilentlyContinue)) {
+                        try {
+                            $pyramidResult = Invoke-PyramidExit -Market $mkt -EntryPrice $r.entry_price -JournalDir $global:JOURNAL_DIR -DryRun $DryRun
+                            if ($pyramidResult.registered) {
+                                Write-GemLog "PYRAMID" "$mkt registered for pyramid exit (score=$score)"
+                            }
+                        } catch {
+                            Write-GemLog "DEBUG" "Pyramid exit mock: $mkt score=$score (no-op yet)"
+                        }
+                    }
                 } elseif ($r.dry_run) {
                     Write-GemLog "DRY" "$mkt simulado (sizing=$($r.sizing_usd))"
                 }
