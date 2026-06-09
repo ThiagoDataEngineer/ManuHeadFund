@@ -479,44 +479,19 @@ function Invoke-GemCycle {
                     continue
                 }
 
-                # 2026-06-08: DETECT CORRECT DIRECTION BEFORE APPROVAL
-                # Testa qual direção (LONG ou SHORT) vai passar os gates
+                # 2026-06-08: AUTO-SELECT DIRECTION BASED ON REGIME
+                # Em BEAR_WEAK (regime atual), SHORT é primary. Se LONG vai bloquear por HTF,
+                # prefira SHORT automaticamente
                 $suggestedDirection = "LONG"
-                $longWillBlock = $false
-                $shortWillPass = $false
 
-                if (Get-Command Invoke-GemExecute -ErrorAction SilentlyContinue) {
-                    # Teste LONG
-                    try {
-                        $testLong = $g.PSObject.Copy()
-                        $testLong | Add-Member -MemberType NoteProperty -Name direction -Value "LONG" -Force
-                        $testResult = Invoke-GemExecute -Gem $testLong
-                        if ($testResult -and $testResult.blocked) {
-                            $longWillBlock = $true
-                            Write-MasterLog "GEM direction test: LONG blocked for $($g.market) -- $($testResult.blocked_by -join ' | ')" "GEM"
-                        }
-                    } catch { }
-
-                    # Teste SHORT (se LONG vai bloquear)
-                    if ($longWillBlock) {
-                        try {
-                            $testShort = $g.PSObject.Copy()
-                            $testShort | Add-Member -MemberType NoteProperty -Name direction -Value "SHORT" -Force
-                            $testResult = Invoke-GemExecute -Gem $testShort
-                            if ($testResult -and -not $testResult.blocked) {
-                                $shortWillPass = $true
-                                $suggestedDirection = "SHORT"
-                                Write-MasterLog "GEM direction test: SHORT passes for $($g.market)" "GEM"
-                            }
-                        } catch { }
-                    }
+                # Se regime é BEAR_WEAK/BEAR_STRONG, start com SHORT bias
+                if ($global:CURRENT_REGIME -match "BEAR") {
+                    $suggestedDirection = "SHORT"
+                    Write-MasterLog "GEM direction auto-select: $($g.market) → SHORT (regime=$($global:CURRENT_REGIME) favors SHORT)" "GEM"
                 }
 
                 # Atualiza gem com direção sugerida ANTES de pedir aprovação
-                if ($suggestedDirection -eq "SHORT") {
-                    $g | Add-Member -MemberType NoteProperty -Name direction -Value "SHORT" -Force
-                    Write-MasterLog "GEM direction corrected: $($g.market) LONG→SHORT (mostrando SHORT para aprovação)" "GEM"
-                }
+                $g | Add-Member -MemberType NoteProperty -Name direction -Value $suggestedDirection -Force
 
                 $approvalMsg = Format-TgGemApproval -Gem $g -DryRun:$DryRun
                 if ($DryRun) {
