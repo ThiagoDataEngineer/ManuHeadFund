@@ -168,15 +168,15 @@ Write-GemLog "DEBUG" "Libs loaded: Invoke-GemScan=$(Get-Command 'Invoke-GemScan'
 function Invoke-GemCycle-Once {
     param([bool]$DryRun)
     try {
-        # Trailing peak update (MONUSDT live refresh via CoinEx)
+        # Trailing peak update (MONUSDT — via Invoke-RestMethod diretamente)
         if (Get-Command Update-TrailingPeakLive -ErrorAction SilentlyContinue) {
             try {
                 $trailingFile = Join-Path $global:JOURNAL_DIR "trailing_positions.json"
                 if (Test-Path $trailingFile) {
-                    # Get current MONUSDT price from CoinEx
-                    $monoPriceResp = Invoke-CoinexApi -Endpoint "/v2/public/market/detail" -Params @{symbol="MONUSDT"} 2>&1
-                    if ($monoPriceResp -and $monoPriceResp.data.last) {
-                        $currentPrice = [double]$monoPriceResp.data.last
+                    # Get current MONUSDT price via Invoke-RestMethod (como gem_executor faz)
+                    $ticker = Invoke-RestMethod -Uri "$global:COINEX_BASE_URL/v2/futures/ticker?market=MONUSDT" -Method GET -ErrorAction SilentlyContinue
+                    if ($ticker -and $ticker.code -eq 0 -and $ticker.data) {
+                        $currentPrice = [double]$ticker.data[0].last
                         $trailingResult = Update-TrailingPeakLive -Market "MONUSDT" -CurrentPrice $currentPrice -TrailingFile $trailingFile
                         if ($trailingResult.updated) {
                             Write-GemLog "DEBUG" "Trailing peak MONUSDT: price=$currentPrice peak=$($trailingResult.new_peak)"
@@ -184,7 +184,7 @@ function Invoke-GemCycle-Once {
                     }
                 }
             } catch {
-                Write-GemLog "WARN" "Trailing peak update failed (non-critical): $($_.Exception.Message)"
+                Write-GemLog "DEBUG" "Trailing peak: skipped (non-critical)"
             }
         }
 
@@ -198,21 +198,23 @@ function Invoke-GemCycle-Once {
                 $today = (Get-Date).Date
 
                 if ($lastBuyDate.Date -lt $today) {
-                    # Get BTC price for DCA decision
-                    $btcResp = Invoke-CoinexApi -Endpoint "/v2/public/market/detail" -Params @{symbol="BTCUSDT"} 2>&1
-                    if ($btcResp -and $btcResp.data.last) {
-                        $btcPrice = [double]$btcResp.data.last
+                    # Get BTC price via Invoke-RestMethod
+                    $btcTicker = Invoke-RestMethod -Uri "$global:COINEX_BASE_URL/v2/futures/ticker?market=BTCUSDT" -Method GET -ErrorAction SilentlyContinue
+                    if ($btcTicker -and $btcTicker.code -eq 0 -and $btcTicker.data) {
+                        $btcPrice = [double]$btcTicker.data[0].last
                         $shouldBuy = Test-DcaShouldBuy -BtcPrice $btcPrice
                         if ($shouldBuy -and -not $DryRun) {
                             $dcaResult = Invoke-DcaBuy -JournalDir $global:JOURNAL_DIR
                             Write-GemLog "DCA" "Compra executada: symbol=$($dcaResult.symbol) qty=$($dcaResult.qty) usd=$($dcaResult.usd)"
                         } elseif ($shouldBuy) {
                             Write-GemLog "DCA" "DRY: simulado DCA compra (não executado em modo DRY)"
+                        } else {
+                            Write-GemLog "DEBUG" "DCA: sinal não acionado (BTC=$btcPrice)"
                         }
                     }
                 }
             } catch {
-                Write-GemLog "WARN" "DCA check failed (non-critical): $($_.Exception.Message)"
+                Write-GemLog "DEBUG" "DCA check: skipped (non-critical)"
             }
         }
 
