@@ -5,7 +5,7 @@
 if (-not (Get-Command Invoke-LearningUpdate -ErrorAction SilentlyContinue)) {
     . (Join-Path $PSScriptRoot "lib_direction_learning.ps1")
 }
-if (-not (Get-Command Get-State -ErrorAction SilentlyContinue)) {
+if (-not (Get-Command Get-StateRecords -ErrorAction SilentlyContinue)) {
     . (Join-Path $PSScriptRoot "lib_state_store.ps1")
 }
 
@@ -36,9 +36,9 @@ function Invoke-LearningCycle {
     # Parte 2: Aprender com skips (counterfactual -- rejeicoes que performaram bem)
     # Try Supabase first, fallback to local JSONL
     $skips = @()
-    if (Get-Command Get-State -ErrorAction SilentlyContinue) {
+    if (Get-Command Get-StateRecords -ErrorAction SilentlyContinue) {
         try {
-            $skips = @(Get-State -Table "signal_skips")
+            $skips = @(Get-StateRecords -Table "signal_skips")
         } catch {
             # Supabase failed, try local
             $skips = @(Read-JsonLines -Path $skipsPath)

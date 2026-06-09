@@ -361,9 +361,9 @@ function Write-SignalSkip {
     }
 
     # Try Supabase first (if available)
-    if (Get-Command Save-State -ErrorAction SilentlyContinue) {
+    if (Get-Command Save-StateRecords -ErrorAction SilentlyContinue) {
         try {
-            Save-State -Table "signal_skips" -Records @($skip) -PrimaryKey "ts"
+            Save-StateRecords -Table "signal_skips" -Records @($skip) -PrimaryKey "ts"
             return $true
         } catch {
             # Supabase failed, fallback to local
