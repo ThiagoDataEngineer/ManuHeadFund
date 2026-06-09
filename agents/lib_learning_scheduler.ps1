@@ -1,9 +1,12 @@
 # lib_learning_scheduler.ps1 -- Retroalimentacao periodica (counterfactual learning)
 # 2026-06-09: Computa stats dos snapshots+outcomes+skips a cada 6 ciclos (~180min)
 
-# Load direction learning lib se nao estiver ja carregado
+# Load libs se nao carregados
 if (-not (Get-Command Invoke-LearningUpdate -ErrorAction SilentlyContinue)) {
     . (Join-Path $PSScriptRoot "lib_direction_learning.ps1")
+}
+if (-not (Get-Command Get-State -ErrorAction SilentlyContinue)) {
+    . (Join-Path $PSScriptRoot "lib_state_store.ps1")
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
@@ -31,7 +34,18 @@ function Invoke-LearningCycle {
     Write-Host "  [TRADES] $($result1.snapshots) snapshots, $($result1.outcomes) outcomes, $($result1.joined) matched, $($result1.reliable_keys) reliable keys" -ForegroundColor Gray
 
     # Parte 2: Aprender com skips (counterfactual -- rejeicoes que performaram bem)
-    $skips = Read-JsonLines -Path $skipsPath
+    # Try Supabase first, fallback to local JSONL
+    $skips = @()
+    if (Get-Command Get-State -ErrorAction SilentlyContinue) {
+        try {
+            $skips = @(Get-State -Table "signal_skips")
+        } catch {
+            # Supabase failed, try local
+            $skips = @(Read-JsonLines -Path $skipsPath)
+        }
+    } else {
+        $skips = @(Read-JsonLines -Path $skipsPath)
+    }
     if ($skips -and @($skips).Count -gt 0) {
         Write-Host "  [SKIPS] $(@($skips).Count) rejeicoes capturadas; waiting 24h+ para avaliar counterfactual..." -ForegroundColor DarkCyan
     } else {

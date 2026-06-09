@@ -337,7 +337,8 @@ function Write-SignalSnapshot {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Write-SignalSkip (I/O) -- append JSONL de rejeicoes. Default journal/signal_skips.jsonl.
+# Write-SignalSkip (I/O) -- persiste rejeicoes em Supabase (ou local JSONL fallback).
+# 2026-06-09: Supabase pra sincronizar entre daemons locais e GH Actions learning job.
 # Usado p/ counterfactual: depois quando moeda sobe, avalia se veto custou oportunidade.
 # ─────────────────────────────────────────────────────────────────────────────
 function Write-SignalSkip {
@@ -358,6 +359,18 @@ function Write-SignalSkip {
         regime        = $Regime
         source        = $Source
     }
+
+    # Try Supabase first (if available)
+    if (Get-Command Save-State -ErrorAction SilentlyContinue) {
+        try {
+            Save-State -Table "signal_skips" -Records @($skip) -PrimaryKey "ts"
+            return $true
+        } catch {
+            # Supabase failed, fallback to local
+        }
+    }
+
+    # Fallback: local JSONL
     $base = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path $PSScriptRoot ".." "journal" }
     $path = Join-Path $base "signal_skips.jsonl"
     try {
