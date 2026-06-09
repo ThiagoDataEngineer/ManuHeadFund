@@ -115,6 +115,20 @@ try {
     Write-GemLog "DEBUG" "Governance libs carregadas (circuit breaker + human approval)"
 } catch { }
 
+# Macro + Halving aware (2026-06-09 — WIRE halving cycle + DCA strategy)
+try {
+    . (Join-Path $agentsDir "lib_macro.ps1") -ErrorAction SilentlyContinue
+    . (Join-Path $agentsDir "lib_market_context_engine.ps1") -ErrorAction SilentlyContinue
+    . (Join-Path $agentsDir "lib_halving_phase_alert.ps1") -ErrorAction SilentlyContinue
+    if (Get-Command Get-MacroContext -ErrorAction SilentlyContinue) {
+        $ctx = Get-MacroContext
+        $phase = if ($ctx.halving_phase) { $ctx.halving_phase } else { "unknown" }
+        Write-GemLog "DEBUG" "Macro context ativo (macro_bias=$($ctx.macro_bias), halving_phase=$phase)"
+    }
+} catch {
+    Write-GemLog "WARN" "Macro libs carregamento falhou (non-critical): $($_.Exception.Message)"
+}
+
 # Tech agent (precisa estar disponivel para gem_executor)
 # Carrega com erro visivel (Stop) — catch loga + continua (fallback no gem_executor)
 try {

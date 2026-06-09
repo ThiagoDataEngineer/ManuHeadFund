@@ -1,1 +1,10 @@
-{"requested_at":"2026-06-09T00:05:44.4005130-03:00","size_usd":250.0,"status":"PENDING","market":"GEMTEST"}
+{
+  "market": "TEST1",
+  "status": "PENDING",
+  "size_usd": 100
+}
+{
+  "market": "TEST2",
+  "status": "PENDING",
+  "size_usd": 200
+}
