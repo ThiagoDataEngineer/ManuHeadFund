@@ -21,10 +21,14 @@ function Invoke-LearningCycle {
         $JournalDir = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path $PSScriptRoot ".." "journal" }
     }
 
+    if (-not (Test-Path $JournalDir)) { return $false }
+
     $snapshotsPath = Join-Path $JournalDir "signal_snapshots.jsonl"
     $skipsPath     = Join-Path $JournalDir "signal_skips.jsonl"
     $outcomesPath  = Join-Path $JournalDir "trade_outcomes.jsonl"
     $learnedPath   = Join-Path $JournalDir "learned_multipliers.json"
+
+    Write-Host "[LEARNING] Paths: snapshots=$snapshotsPath skips=$skipsPath" -ForegroundColor DarkGray
 
     Write-Host "[LEARNING] Iniciando ciclo de aprendizado..." -ForegroundColor Cyan
     $start = Get-Date

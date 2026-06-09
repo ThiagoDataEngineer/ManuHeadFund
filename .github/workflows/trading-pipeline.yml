@@ -36,6 +36,39 @@ jobs:
           $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
           $content | Out-File "agents/config.local.ps1" -Encoding UTF8
       
+      - name: Create trade_rejections Table
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $url = "${{ secrets.SUPABASE_URL }}"
+          $key = "${{ secrets.SUPABASE_SERVICE_KEY }}"
+
+          if (-not $url -or -not $key) { exit 0 }
+
+          $headers = @{
+            "Authorization" = "Bearer $key"
+            "apikey" = $key
+            "Content-Type" = "application/json"
+          }
+
+          # Test if table exists by trying to insert
+          try {
+            $record = @{
+              ts = [datetime]::UtcNow.ToString("o")
+              market = "INIT"
+              direction = "INIT"
+              gate = "init"
+              entry_price = 0
+              regime = "INIT"
+              source = "init"
+            } | ConvertTo-Json
+
+            $response = Invoke-RestMethod -Uri "$url/rest/v1/trade_rejections" -Method POST -Headers $headers -Body $record -ErrorAction Stop
+            Write-Host "✓ trade_rejections table OK" -ForegroundColor Green
+          } catch {
+            Write-Host "⚠ trade_rejections table criar manualmente no Supabase Dashboard" -ForegroundColor Yellow
+          }
+
       - name: Initialize Supabase Data
         shell: pwsh
         run: |
