@@ -365,6 +365,26 @@ function Invoke-GemExecute {
         Write-Host "  LEMBRETE: margem isolated deve estar configurada para $mkt" -ForegroundColor DarkYellow
     }
 
+    # ── 0. MARKET SAFETY (aviso "nao atacar" da CoinEx) ──────────────────────
+    # 2026-06-08: respeita delisting/suspend/swap/maintenance que a CoinEx sinaliza.
+    # CoinEx-GetMarketInfo ja expoe isSafe + notices; antes nao era consumido.
+    # Gate mais cedo possivel (antes de qualquer custo LLM). Fail-safe: so bloqueia
+    # quando explicitamente unsafe (info disponivel e isSafe=false).
+    if ($marketType -eq "FUTURES" -and (Get-Command CoinEx-GetMarketInfo -ErrorAction SilentlyContinue)) {
+        try {
+            $mktInfo = CoinEx-GetMarketInfo $mkt
+            if ($mktInfo -and ($mktInfo.isSafe -eq $false)) {
+                $noticeTxt = if ($mktInfo.notices -and @($mktInfo.notices).Count -gt 0) { ($mktInfo.notices -join "; ") } else { "status=$($mktInfo.status)" }
+                Write-Host "  [GEM BLOQUEADO] MARKET UNSAFE (CoinEx aviso): $mkt -- $noticeTxt" -ForegroundColor Red
+                try { Send-TelegramAlert -Message "*GEM BLOQUEADO* -- $mkt`nMotivo: CoinEx sinaliza 'nao atacar'`n$noticeTxt" | Out-Null } catch {}
+                if (Get-Command Add-GemRejection -ErrorAction SilentlyContinue) {
+                    try { Add-GemRejection -Path (Join-Path $global:JOURNAL_DIR "gem_recent_decisions.json") -Market $mkt -Reason "market_unsafe:$noticeTxt" } catch {}
+                }
+                return [PSCustomObject]@{ blocked = $true; blocked_by = @("market_unsafe_coinex:$noticeTxt"); market = $mkt }
+            }
+        } catch { }  # API falha -> nao bloqueia (degradacao graciosa; outros gates seguem)
+    }
+
     # ── 1. GEM SAFETY GUARDS (block runaway exposure) ────────────────────────
     # Aplica em DryRun tambem para sinalizar bloqueios em paper trade.
     $safetyStatePath = Join-Path $global:JOURNAL_DIR "gem_safety_state.json"
