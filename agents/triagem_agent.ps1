@@ -405,7 +405,34 @@ function Invoke-Triagem {
 
     $regime    = _Compute-RegimeFromContext -Score $score -MacroBias $macroBias -PairChange24h $pairChange24h `
                     -CurrentPrice $hyCurrentPrice -Ema200 $hyEma200 -Adx $hyAdx -Pdi $hyPdi -Ndi $hyNdi
-    $direction = _Compute-DirectionFromRegime -Regime $regime
+
+    # 2026-06-08: BIDIRECIONAL -- avalia LONG e SHORT, detecta bear/bull traps por confluencia.
+    # Carrega lib central (defensivo) se ainda nao disponivel no escopo.
+    if (-not (Get-Command Resolve-TradeDirection -ErrorAction SilentlyContinue)) {
+        $__bidirLib = Join-Path $PSScriptRoot "lib_bidirectional_direction.ps1"
+        if (Test-Path $__bidirLib) { . $__bidirLib }
+    }
+    $direction = $null
+    $directionMeta = $null
+    if (Get-Command Resolve-TradeDirection -ErrorAction SilentlyContinue) {
+        try {
+            $directionMeta = Resolve-TradeDirection -Regime $regime `
+                -Change24h ([double]$pairChange24h) `
+                -Pdi (if ($null -ne $hyPdi) { [double]$hyPdi } else { 0 }) `
+                -Ndi (if ($null -ne $hyNdi) { [double]$hyNdi } else { 0 }) `
+                -Adx (if ($null -ne $hyAdx) { [double]$hyAdx } else { 0 }) `
+                -CurrentPrice (if ($null -ne $hyCurrentPrice) { [double]$hyCurrentPrice } else { 0 }) `
+                -Ema200 (if ($null -ne $hyEma200) { [double]$hyEma200 } else { 0 })
+            $direction = $directionMeta.direction
+            if ($directionMeta.source -ne "regime") {
+                Write-Host "  [Triagem BIDIR] $Market $($directionMeta.source): $($directionMeta.reason)" -ForegroundColor Magenta
+            }
+        } catch {
+            $direction = $null
+        }
+    }
+    # Fallback legado: regime puro (se lib indisponivel ou erro)
+    if (-not $direction) { $direction = _Compute-DirectionFromRegime -Regime $regime }
 
     # ── 3. Knowledge retrieval para enriquecer prompt ─────────────────────────
     $tags = _Derive-Tags -MacroBias $macroBias -DayOfWeek $dow -MarketTier $tier_mkt -Score $score
