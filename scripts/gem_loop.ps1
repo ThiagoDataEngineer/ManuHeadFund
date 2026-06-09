@@ -120,6 +120,7 @@ try {
     . (Join-Path $agentsDir "lib_macro.ps1") -ErrorAction SilentlyContinue
     . (Join-Path $agentsDir "lib_market_context_engine.ps1") -ErrorAction SilentlyContinue
     . (Join-Path $agentsDir "lib_halving_phase_alert.ps1") -ErrorAction SilentlyContinue
+    . (Join-Path $agentsDir "lib_trailing_peak_update.ps1") -ErrorAction SilentlyContinue
     if (Get-Command Get-MacroContext -ErrorAction SilentlyContinue) {
         $ctx = Get-MacroContext
         $phase = if ($ctx.halving_phase) { $ctx.halving_phase } else { "unknown" }
@@ -165,6 +166,26 @@ Write-GemLog "DEBUG" "Libs loaded: Invoke-GemScan=$(Get-Command 'Invoke-GemScan'
 function Invoke-GemCycle-Once {
     param([bool]$DryRun)
     try {
+        # Trailing peak update (MONUSDT live refresh via CoinEx)
+        if (Get-Command Update-TrailingPeakLive -ErrorAction SilentlyContinue) {
+            try {
+                $trailingFile = Join-Path $global:JOURNAL_DIR "trailing_positions.json"
+                if (Test-Path $trailingFile) {
+                    # Get current MONUSDT price from CoinEx
+                    $monoPriceResp = Invoke-CoinexApi -Endpoint "/v2/public/market/detail" -Params @{symbol="MONUSDT"} 2>&1
+                    if ($monoPriceResp -and $monoPriceResp.data.last) {
+                        $currentPrice = [double]$monoPriceResp.data.last
+                        $trailingResult = Update-TrailingPeakLive -Market "MONUSDT" -CurrentPrice $currentPrice -TrailingFile $trailingFile
+                        if ($trailingResult.updated) {
+                            Write-GemLog "DEBUG" "Trailing peak MONUSDT: price=$currentPrice peak=$($trailingResult.new_peak)"
+                        }
+                    }
+                }
+            } catch {
+                Write-GemLog "WARN" "Trailing peak update failed (non-critical): $($_.Exception.Message)"
+            }
+        }
+
         Write-GemLog "CYCLE" "Iniciando GemScan (mode=$(if ($DryRun) {'DRY'} else {'LIVE'}))"
         $gems = @(Invoke-GemScan -TopN 5)
         # R4 fix 2026-05-21: cache check ANTES do log "encontrados" + Invoke-GemExecute.
