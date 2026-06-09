@@ -107,6 +107,14 @@ try {
     Write-GemLog "DEBUG" "Trailing stop ativado"
 } catch { }
 
+# Governance: Circuit breaker + Human approval + TG handler (2026-06-09)
+try {
+    . (Join-Path $agentsDir "lib_circuit_breaker_simple.ps1") -ErrorAction SilentlyContinue
+    . (Join-Path $agentsDir "lib_human_approval_simple.ps1") -ErrorAction SilentlyContinue
+    . (Join-Path $agentsDir "lib_tg_approval_handler.ps1") -ErrorAction SilentlyContinue
+    Write-GemLog "DEBUG" "Governance libs carregadas (circuit breaker + human approval)"
+} catch { }
+
 # Tech agent (precisa estar disponivel para gem_executor)
 # Carrega com erro visivel (Stop) — catch loga + continua (fallback no gem_executor)
 try {
