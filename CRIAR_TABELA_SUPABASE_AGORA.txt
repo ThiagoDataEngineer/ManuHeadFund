@@ -1,0 +1,61 @@
+═══════════════════════════════════════════════════════════════════════════
+  CRIAR TABELA trade_rejections NO SUPABASE - PASSO A PASSO RÁPIDO
+═══════════════════════════════════════════════════════════════════════════
+
+⏱️  TEMPO: 2 MINUTOS
+
+PASSO 1: Abra Supabase
+  URL: https://app.supabase.com
+
+PASSO 2: Selecione projeto ManuHeadFund
+  (ou qualquer que tenha suas credenciais)
+
+PASSO 3: Vá para SQL Editor
+  Menu esquerdo → "SQL Editor" → "+ New Query"
+
+PASSO 4: COPIE E COLE este SQL:
+
+═════════════════════════════════════════════════════════════════════════════
+
+CREATE TABLE IF NOT EXISTS public.trade_rejections (
+    id BIGSERIAL PRIMARY KEY,
+    ts TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    market TEXT NOT NULL,
+    direction TEXT NOT NULL,
+    gate TEXT NOT NULL,
+    entry_price NUMERIC NOT NULL,
+    regime TEXT,
+    source TEXT DEFAULT 'regime'
+);
+
+CREATE INDEX IF NOT EXISTS idx_trade_rejections_ts ON public.trade_rejections(ts DESC);
+CREATE INDEX IF NOT EXISTS idx_trade_rejections_market ON public.trade_rejections(market);
+
+═════════════════════════════════════════════════════════════════════════════
+
+PASSO 5: Clique no botão ► "Execute" (canto superior direito)
+
+PASSO 6: Aguarde ~5 segundos
+  Verá: "Success" ou número de linhas
+
+PRONTO! ✓
+  → Tabela criada
+  → write-signalskip vai gravar em Supabase
+  → Learning cycle vai sincronizar automaticamente
+  → Counterfactual learning ativado
+
+═════════════════════════════════════════════════════════════════════════════
+
+DEPOIS: Volta aqui (Claude Code) e executa:
+
+  cd C:\Users\thiag\Coinex_AI_USER_API
+  . agents/config.ps1
+  . agents/lib_learning_scheduler.ps1
+  Invoke-LearningCycle -JournalDir "journal"
+
+Vai exibir:
+  [SKIPS] 9+ rejeicoes capturadas; waiting 24h+ para avaliar counterfactual...
+
+E PRONTO! Sistema está 100% integro e rodando.
+
+═══════════════════════════════════════════════════════════════════════════
