@@ -43,7 +43,7 @@ $here = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvoca
 $script:TORI_PROX_SLOPE_DEG_MIN  = 5.0    # uptrend gentil (validated)
 $script:TORI_PROX_SLOPE_DEG_MAX  = 35.0   # uptrend moderado (validated)
 $script:TORI_PROX_TOUCH_TOL_PCT  = 1.5    # +-1.5% da linha = touch
-$script:TORI_PROX_MIN_TOUCHES    = 3      # MINIMUM 3 touches (knowledge-based)
+$script:TORI_PROX_MIN_TOUCHES    = 2      # MINIMUM 2 touches (relaxed 2026-06-09 — HUSDT entry gate)
 $script:TORI_PROX_MIN_HISTORY    = 20
 
 # Ripening predicate (VALIDATED 2026-05-23 TDD)
