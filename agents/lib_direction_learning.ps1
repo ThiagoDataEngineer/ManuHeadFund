@@ -269,3 +269,69 @@ function Get-SkipQualityStats {
     }
     return $out
 }
+
+# ═════════════════════════════════════════════════════════════════════════════
+# SIGNAL SNAPSHOT -- captura a decisao + sinais no momento, p/ alimentar o loop.
+# Sem isso o motor nao tem o que aprender. Liga decisao -> outcome (futuro).
+# ═════════════════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────────────────────
+# New-SignalSnapshot (PURA) -- monta o registro normalizado da decisao.
+# Captura APROVAR e VETAR/SKIP. entry_price e crucial p/ counterfactual depois.
+# ─────────────────────────────────────────────────────────────────────────────
+function New-SignalSnapshot {
+    param(
+        [Parameter(Mandatory)] [string]$Market,
+        [Parameter(Mandatory)] [string]$Direction,
+        [Parameter(Mandatory)] [string]$Source,
+        [Parameter(Mandatory)] [string]$Regime,
+        [Parameter(Mandatory)] [string]$Decision,     # APROVAR | VETAR | SKIP
+        [Parameter(Mandatory)] [double]$EntryPrice,
+        [string]$MesaConsensus    = "",
+        [bool]$ReversalVsRegime   = $false,
+        [int]$SignalsLong         = 0,
+        [int]$SignalsShort        = 0,
+        [int]$Conviction          = 0,
+        [string]$Gate             = "",
+        [string]$TradeId          = ""
+    )
+    return [ordered]@{
+        ts                 = (Get-Date).ToUniversalTime().ToString("o")
+        trade_id           = $TradeId
+        market             = $Market
+        direction          = $Direction
+        source             = $Source
+        regime             = $Regime
+        decision           = $Decision
+        entry_price        = $EntryPrice
+        mesa_consensus     = $MesaConsensus
+        reversal_vs_regime = $ReversalVsRegime
+        signals_long       = $SignalsLong
+        signals_short      = $SignalsShort
+        conviction         = $Conviction
+        gate               = $Gate
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Write-SignalSnapshot (I/O) -- append JSONL. Default journal/signal_snapshots.jsonl.
+# ─────────────────────────────────────────────────────────────────────────────
+function Write-SignalSnapshot {
+    param(
+        [Parameter(Mandatory)] [object]$Entry,
+        [string]$Path
+    )
+    if (-not $Path) {
+        $base = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path $PSScriptRoot ".." "journal" }
+        $Path = Join-Path $base "signal_snapshots.jsonl"
+    }
+    try {
+        $dir = Split-Path -Parent $Path
+        if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+        Add-Content -Path $Path -Value ($Entry | ConvertTo-Json -Compress -Depth 5) -Encoding UTF8
+        return $true
+    } catch {
+        Write-Host "  [SIGNAL-SNAPSHOT] falha ao gravar: $_" -ForegroundColor Yellow
+        return $false
+    }
+}

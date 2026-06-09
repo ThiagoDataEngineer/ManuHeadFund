@@ -91,6 +91,8 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 . (Join-Path $agentsDir "lib_hit_rate.ps1")
 . (Join-Path $agentsDir "lib_observation_logger.ps1")
 . (Join-Path $agentsDir "lib_self_recovery.ps1")  # 2026-06-08: auto-healing (diagnostica log + auto-corrige)
+. (Join-Path $agentsDir "lib_bidirectional_direction.ps1")  # 2026-06-08: direcao bidirecional (bear/bull trap)
+. (Join-Path $agentsDir "lib_direction_learning.ps1")  # 2026-06-08: motor aprendizado + signal snapshot
 . (Join-Path $agentsDir "lib_mentor_invariants.ps1")  # B4 prevention
 . (Join-Path $agentsDir "lib_gem_safety.ps1")
 . (Join-Path $agentsDir "lib_gem_auto_approve.ps1")

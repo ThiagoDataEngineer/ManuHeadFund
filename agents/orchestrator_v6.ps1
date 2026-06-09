@@ -415,6 +415,28 @@ function Invoke-V6Cascade {
     $decisao = if ($mentor.decision -eq "APROVAR") { "EXECUTAR" } else { "ABORTAR" }
     $motivo  = if ($mentor.decision -eq "VETAR") { $mentor.mentor_mensagem } else { "" }
 
+    # 2026-06-08: SIGNAL SNAPSHOT -- captura decisao (APROVAR/VETAR) + sinais p/ aprendizado.
+    # Fecha o loop: depois Join-SignalOutcomes(snapshots, trade_outcomes) -> Get-DirectionStats.
+    # entry_price habilita counterfactual (medir forward return das nao-entradas).
+    if (Get-Command New-SignalSnapshot -ErrorAction SilentlyContinue) {
+        try {
+            $snapEntry = if ($setupForMentor -and $setupForMentor.entry -gt 0) { [double]$setupForMentor.entry } elseif ($Setup -and $Setup.entry -gt 0) { [double]$Setup.entry } else { 0 }
+            $snapDir   = if ($triagem -and $triagem.direction) { [string]$triagem.direction } elseif ($mesa -and $mesa.sinal_consenso -in @("LONG","SHORT")) { [string]$mesa.sinal_consenso } else { "LONG" }
+            $snapSrc   = if ($triagem -and $triagem.PSObject.Properties['direction_source'] -and $triagem.direction_source) { [string]$triagem.direction_source } elseif ($mesa -and $mesa.PSObject.Properties['reversal_vs_regime'] -and $mesa.reversal_vs_regime) { [string]$mesa.reversal_type } else { "regime" }
+            $snapReg   = if ($triagem -and $triagem.regime) { [string]$triagem.regime } else { "UNKNOWN" }
+            $snapGate  = if ($mentor.decision -eq "VETAR") { $mentor.mentor_mensagem } else { "" }
+            $snap = New-SignalSnapshot -Market $Market -Direction $snapDir -Source $snapSrc `
+                -Regime $snapReg -Decision $mentor.decision -EntryPrice $snapEntry `
+                -MesaConsensus $(if ($mesa) { [string]$mesa.consensus } else { "" }) `
+                -ReversalVsRegime $(if ($mesa -and $mesa.PSObject.Properties['reversal_vs_regime']) { [bool]$mesa.reversal_vs_regime } else { $false }) `
+                -SignalsLong  $(if ($triagem -and $triagem.PSObject.Properties['signals_long'])  { [int]$triagem.signals_long }  else { 0 }) `
+                -SignalsShort $(if ($triagem -and $triagem.PSObject.Properties['signals_short']) { [int]$triagem.signals_short } else { 0 }) `
+                -Conviction   $(if ($triagem -and $triagem.PSObject.Properties['conviction'])   { [int]$triagem.conviction }   else { 0 }) `
+                -Gate ([string]$snapGate)
+            Write-SignalSnapshot -Entry $snap | Out-Null
+        } catch { }  # snapshot e best-effort; nunca bloqueia decisao
+    }
+
     # === MCE gate (Market Context Engine 2026-05-19) ===
     # Aplica filtro contextual APOS Mentor: se contexto BLOCK, sobrepoe APROVAR.
     # Se contexto LIVE_REDUCED, propaga size_multiplier pro sizing downstream.

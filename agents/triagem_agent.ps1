@@ -561,5 +561,10 @@ Responda APENAS JSON valido (sem markdown).
         latency_ms       = $latency
         regime           = $regime
         direction        = $direction
+        # 2026-06-08: expoe metadados bidirecionais p/ signal snapshot (aprendizado)
+        direction_source = if ($directionMeta) { $directionMeta.source } else { "regime" }
+        signals_long     = if ($directionMeta) { [int]$directionMeta.signals_long } else { 0 }
+        signals_short    = if ($directionMeta) { [int]$directionMeta.signals_short } else { 0 }
+        conviction       = if ($directionMeta) { [int]$directionMeta.conviction } else { 0 }
     }
 }

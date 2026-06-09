@@ -265,3 +265,78 @@ Describe "Learning: Get-SkipQualityStats (quais gates custam oportunidade)" {
         @($stats).Count | Should Be 0
     }
 }
+
+Describe "Learning: New-SignalSnapshot (pura) -- captura decisao p/ aprender" {
+
+    It "captura campos essenciais da decisao" {
+        $s = New-SignalSnapshot -Market "PIPPINUSDT" -Direction "SHORT" -Source "bear_trap_reversal" `
+                                -Regime "BEAR_WEAK" -Decision "VETAR" -EntryPrice 0.123
+        $s.market | Should Be "PIPPINUSDT"
+        $s.direction | Should Be "SHORT"
+        $s.source | Should Be "bear_trap_reversal"
+        $s.decision | Should Be "VETAR"
+        $s.entry_price | Should Be 0.123
+    }
+
+    It "entry_price preservado (crucial p/ counterfactual)" {
+        $s = New-SignalSnapshot -Market "AUSDT" -Direction "LONG" -Source "regime" `
+                                -Regime "BULL_WEAK" -Decision "APROVAR" -EntryPrice 42.5
+        $s.entry_price | Should Be 42.5
+    }
+
+    It "ts em formato ISO (ordenavel)" {
+        $s = New-SignalSnapshot -Market "AUSDT" -Direction "LONG" -Source "regime" `
+                                -Regime "BULL_WEAK" -Decision "APROVAR" -EntryPrice 1
+        ($s.ts -match '^\d{4}-\d{2}-\d{2}T') | Should Be $true
+    }
+
+    It "campos opcionais com defaults sensatos" {
+        $s = New-SignalSnapshot -Market "AUSDT" -Direction "SHORT" -Source "regime" `
+                                -Regime "BEAR_WEAK" -Decision "VETAR" -EntryPrice 1
+        $s.signals_long | Should Be 0
+        $s.signals_short | Should Be 0
+        $s.conviction | Should Be 0
+    }
+
+    It "captura gate/reason p/ counterfactual de nao-entradas" {
+        $s = New-SignalSnapshot -Market "AUSDT" -Direction "SHORT" -Source "regime" `
+                                -Regime "BEAR_WEAK" -Decision "VETAR" -EntryPrice 1 -Gate "tori_skip"
+        $s.gate | Should Be "tori_skip"
+    }
+
+    It "captura metadados Mesa (consensus + reversal)" {
+        $s = New-SignalSnapshot -Market "AUSDT" -Direction "SHORT" -Source "regime" `
+                                -Regime "BEAR_WEAK" -Decision "APROVAR" -EntryPrice 1 `
+                                -MesaConsensus "FORTE_3" -ReversalVsRegime $true
+        $s.mesa_consensus | Should Be "FORTE_3"
+        $s.reversal_vs_regime | Should Be $true
+    }
+}
+
+Describe "Learning: Write-SignalSnapshot (I/O) -- persiste JSONL" {
+
+    It "cria arquivo e grava linha JSON valida" {
+        $tmp = Join-Path $env:TEMP "sig_snap_test.jsonl"
+        Remove-Item $tmp -Force -ErrorAction SilentlyContinue
+        $s = New-SignalSnapshot -Market "AUSDT" -Direction "SHORT" -Source "regime" `
+                                -Regime "BEAR_WEAK" -Decision "VETAR" -EntryPrice 1.5
+        $ok = Write-SignalSnapshot -Entry $s -Path $tmp
+        $ok | Should Be $true
+        (Test-Path $tmp) | Should Be $true
+        $parsed = Get-Content $tmp -Raw | ConvertFrom-Json
+        $parsed.market | Should Be "AUSDT"
+        Remove-Item $tmp -Force -ErrorAction SilentlyContinue
+    }
+
+    It "append acumula multiplas linhas" {
+        $tmp = Join-Path $env:TEMP "sig_snap_append.jsonl"
+        Remove-Item $tmp -Force -ErrorAction SilentlyContinue
+        $s1 = New-SignalSnapshot -Market "A" -Direction "LONG" -Source "regime" -Regime "BULL_WEAK" -Decision "APROVAR" -EntryPrice 1
+        $s2 = New-SignalSnapshot -Market "B" -Direction "SHORT" -Source "regime" -Regime "BEAR_WEAK" -Decision "VETAR" -EntryPrice 2
+        Write-SignalSnapshot -Entry $s1 -Path $tmp | Out-Null
+        Write-SignalSnapshot -Entry $s2 -Path $tmp | Out-Null
+        $lines = @(Get-Content $tmp)
+        $lines.Count | Should Be 2
+        Remove-Item $tmp -Force -ErrorAction SilentlyContinue
+    }
+}
