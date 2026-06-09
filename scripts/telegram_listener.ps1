@@ -38,6 +38,7 @@ try {
     . (Join-Path $agentsDir "lib_promotion_gates.ps1") -ErrorAction SilentlyContinue
     . (Join-Path $agentsDir "lib_market_context_engine.ps1") -ErrorAction SilentlyContinue
     . (Join-Path $agentsDir "lib_idea_triggers.ps1") -ErrorAction SilentlyContinue
+    . (Join-Path $agentsDir "lib_tg_approval_handler.ps1") -ErrorAction SilentlyContinue
 } catch {
     Write-TgLog "ERROR" "Load libs falhou: $($_.Exception.Message)"
     exit 1
@@ -325,13 +326,17 @@ function Process-Update {
             "scan"          { $reply = Cmd-Scan }
             "promote"       { $reply = Cmd-Scan }
             "halt"          { $reply = Cmd-Halt }
-            "resume"        { $reply = Cmd-Resume }
+            "resume"        { $reply = if (Get-Command Process-ApprovalCommand -ErrorAction SilentlyContinue) { (Process-ApprovalCommand -Command "/resume" -JournalDir $journalDir).message } else { Cmd-Resume } }
             "ask"           { $reply = Cmd-Ask -Question $arg }
             "idea"          { $reply = Cmd-Idea -Arg $arg }
             "ideas"         { $reply = Cmd-Ideas }
             "idea_cancel"   { $reply = Cmd-IdeaCancel -Arg $arg }
             "demote"        { $reply = Cmd-Demote -Arg $arg }
             "keep"          { $reply = Cmd-Keep -Arg $arg }
+            # 2026-06-09: Approval handlers
+            "approve"       { $reply = if (Get-Command Process-ApprovalCommand -ErrorAction SilentlyContinue) { (Process-ApprovalCommand -Command "/approve" -Market $arg -JournalDir $journalDir).message } else { "Approval handler indisponivel" } }
+            "reject"        { $reply = if (Get-Command Process-ApprovalCommand -ErrorAction SilentlyContinue) { (Process-ApprovalCommand -Command "/reject" -Market $arg -JournalDir $journalDir).message } else { "Approval handler indisponivel" } }
+            "pause"         { $reply = if (Get-Command Process-ApprovalCommand -ErrorAction SilentlyContinue) { (Process-ApprovalCommand -Command "/pause" -JournalDir $journalDir).message } else { "Approval handler indisponivel" } }
             default         { $reply = "Comando desconhecido. /help" }
         }
     } else {
