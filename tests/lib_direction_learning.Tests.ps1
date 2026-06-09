@@ -172,3 +172,96 @@ Describe "Learning: Join-SignalOutcomes (fecha o loop sinais->outcome)" {
         @($joined).Count | Should Be 0
     }
 }
+
+Describe "Learning: Get-ForwardReturn (pura) -- o que TERIAMOS ganho" {
+
+    It "LONG: preco subiu = retorno positivo" {
+        (Get-ForwardReturn -EntryPrice 100 -ExitPrice 110 -Direction "LONG") | Should Be 10
+    }
+    It "LONG: preco caiu = retorno negativo" {
+        (Get-ForwardReturn -EntryPrice 100 -ExitPrice 90 -Direction "LONG") | Should Be -10
+    }
+    It "SHORT: preco caiu = retorno positivo (lucro do short)" {
+        (Get-ForwardReturn -EntryPrice 100 -ExitPrice 90 -Direction "SHORT") | Should Be 10
+    }
+    It "SHORT: preco subiu = retorno negativo" {
+        (Get-ForwardReturn -EntryPrice 100 -ExitPrice 110 -Direction "SHORT") | Should Be -10
+    }
+    It "entry zero nao quebra (retorna 0)" {
+        (Get-ForwardReturn -EntryPrice 0 -ExitPrice 110 -Direction "LONG") | Should Be 0
+    }
+}
+
+Describe "Learning: Test-MissedWinner (skip foi otimo? counterfactual)" {
+
+    It "rejeitou SHORT e preco caiu 30% = MISSED WINNER (skip custou)" {
+        $r = Test-MissedWinner -EntryPrice 100 -ExitPrice 70 -Direction "SHORT" -MinReturnPct 3
+        $r.missed_winner | Should Be $true
+        $r.good_skip | Should Be $false
+    }
+    It "rejeitou LONG e preco subiu 20% = MISSED WINNER" {
+        $r = Test-MissedWinner -EntryPrice 100 -ExitPrice 120 -Direction "LONG" -MinReturnPct 3
+        $r.missed_winner | Should Be $true
+    }
+    It "rejeitou LONG e preco caiu 20% = GOOD SKIP (gate acertou)" {
+        $r = Test-MissedWinner -EntryPrice 100 -ExitPrice 80 -Direction "LONG" -MinReturnPct 3
+        $r.missed_winner | Should Be $false
+        $r.good_skip | Should Be $true
+    }
+    It "movimento pequeno (<MinReturn) = inconclusive (nem missed nem good)" {
+        $r = Test-MissedWinner -EntryPrice 100 -ExitPrice 101 -Direction "LONG" -MinReturnPct 3
+        $r.missed_winner | Should Be $false
+        $r.good_skip | Should Be $false
+        $r.verdict | Should Be "inconclusive"
+    }
+    It "verdict textual exposto" {
+        $r = Test-MissedWinner -EntryPrice 100 -ExitPrice 70 -Direction "SHORT" -MinReturnPct 3
+        $r.verdict | Should Be "missed_winner"
+    }
+}
+
+Describe "Learning: Get-SkipQualityStats (quais gates custam oportunidade)" {
+
+    It "agrega missed_rate por gate|direction|regime" {
+        $skips = @(
+            [PSCustomObject]@{ gate="tori_skip"; direction="SHORT"; regime="BEAR_WEAK"; entry_price=100; exit_price=70 },
+            [PSCustomObject]@{ gate="tori_skip"; direction="SHORT"; regime="BEAR_WEAK"; entry_price=100; exit_price=60 },
+            [PSCustomObject]@{ gate="tori_skip"; direction="SHORT"; regime="BEAR_WEAK"; entry_price=100; exit_price=105 }
+        )
+        $stats = Get-SkipQualityStats -Skips $skips -MinReturnPct 3 -MinSamples 1
+        $k = $stats | Where-Object { $_.key -eq "tori_skip|SHORT|BEAR_WEAK" }
+        $k.n | Should Be 3
+        $k.missed_winners | Should Be 2
+    }
+
+    It "gate com missed_rate alto sinalizado como costly (afrouxar candidato)" {
+        $skips = 1..10 | ForEach-Object {
+            [PSCustomObject]@{ gate="mcap_limit"; direction="SHORT"; regime="BEAR_WEAK"; entry_price=100; exit_price=70 }
+        }
+        $stats = Get-SkipQualityStats -Skips $skips -MinReturnPct 3 -MinSamples 5
+        $k = $stats | Where-Object { $_.key -eq "mcap_limit|SHORT|BEAR_WEAK" }
+        $k.costly | Should Be $true
+    }
+
+    It "gate que acerta os bloqueios NAO e costly" {
+        $skips = 1..10 | ForEach-Object {
+            [PSCustomObject]@{ gate="good_gate"; direction="LONG"; regime="BEAR_WEAK"; entry_price=100; exit_price=80 }
+        }
+        $stats = Get-SkipQualityStats -Skips $skips -MinReturnPct 3 -MinSamples 5
+        $k = $stats | Where-Object { $_.key -eq "good_gate|LONG|BEAR_WEAK" }
+        $k.costly | Should Be $false
+    }
+
+    It "abaixo de MinSamples nao marca costly (anti-overfit)" {
+        $skips = @(
+            [PSCustomObject]@{ gate="x"; direction="SHORT"; regime="BEAR_WEAK"; entry_price=100; exit_price=50 }
+        )
+        $stats = Get-SkipQualityStats -Skips $skips -MinReturnPct 3 -MinSamples 5
+        $stats[0].costly | Should Be $false
+    }
+
+    It "lista vazia nao quebra" {
+        $stats = Get-SkipQualityStats -Skips @() -MinReturnPct 3 -MinSamples 5
+        @($stats).Count | Should Be 0
+    }
+}

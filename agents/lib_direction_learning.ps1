@@ -187,3 +187,85 @@ function Join-SignalOutcomes {
     }
     return $out
 }
+
+# ═════════════════════════════════════════════════════════════════════════════
+# COUNTERFACTUAL LEARNING -- aprender com NAO-ENTRADAS que eram otimas.
+# "Se rejeitei e a moeda fez o movimento que eu teria operado, o gate custou $$$."
+# O melhor aprendizado: falsos negativos (missed winners).
+# ═════════════════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Get-ForwardReturn (PURA) -- % que TERIAMOS ganho na direcao avaliada.
+# ─────────────────────────────────────────────────────────────────────────────
+function Get-ForwardReturn {
+    param([double]$EntryPrice, [double]$ExitPrice, [string]$Direction)
+    if ($EntryPrice -le 0) { return 0 }
+    $raw = ($ExitPrice - $EntryPrice) / $EntryPrice * 100
+    if ($Direction -eq "SHORT") { return [math]::Round(-$raw, 4) }
+    return [math]::Round($raw, 4)
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Test-MissedWinner (PURA) -- o skip foi otimo (missed) ou correto (good)?
+# missed_winner: forward return >= MinReturn (teria lucrado, gate custou).
+# good_skip: forward return <= -MinReturn (teria perdido, gate acertou).
+# entre os dois: inconclusive (movimento pequeno).
+# ─────────────────────────────────────────────────────────────────────────────
+function Test-MissedWinner {
+    param([double]$EntryPrice, [double]$ExitPrice, [string]$Direction, [double]$MinReturnPct = 3)
+    $fwd = Get-ForwardReturn -EntryPrice $EntryPrice -ExitPrice $ExitPrice -Direction $Direction
+    $missed = ($fwd -ge $MinReturnPct)
+    $good   = ($fwd -le (-$MinReturnPct))
+    $verdict = if ($missed) { "missed_winner" } elseif ($good) { "good_skip" } else { "inconclusive" }
+    return [PSCustomObject]@{
+        forward_return_pct = $fwd
+        missed_winner      = $missed
+        good_skip          = $good
+        verdict            = $verdict
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Get-SkipQualityStats (PURA) -- agrega rejeicoes por gate p/ achar quais custam
+# oportunidade. costly=true quando missed_rate alto e amostra suficiente.
+# Input: Skips[] com {gate, direction, regime, entry_price, exit_price}.
+# Output: { key, gate, direction, regime, n, missed_winners, good_skips, missed_rate, costly }
+# ─────────────────────────────────────────────────────────────────────────────
+function Get-SkipQualityStats {
+    param(
+        [object[]]$Skips,
+        [double]$MinReturnPct = 3,
+        [int]$MinSamples = 8,
+        [double]$CostlyThreshold = 0.5  # missed_rate acima disto = gate custando oportunidade
+    )
+    if (-not $Skips -or @($Skips).Count -eq 0) { return @() }
+
+    $groups = @{}
+    foreach ($s in $Skips) {
+        if (-not $s) { continue }
+        $gate = if ($s.PSObject.Properties['gate'] -and $s.gate) { [string]$s.gate } else { "unknown" }
+        $dir  = if ($s.PSObject.Properties['direction'] -and $s.direction) { [string]$s.direction } else { "LONG" }
+        $reg  = if ($s.PSObject.Properties['regime'] -and $s.regime) { [string]$s.regime } else { "UNKNOWN" }
+        $key  = "$gate|$dir|$reg"
+        if (-not $groups.ContainsKey($key)) {
+            $groups[$key] = [PSCustomObject]@{ key=$key; gate=$gate; direction=$dir; regime=$reg; n=0; missed=0; good=0 }
+        }
+        $mw = Test-MissedWinner -EntryPrice ([double]$s.entry_price) -ExitPrice ([double]$s.exit_price) -Direction $dir -MinReturnPct $MinReturnPct
+        $g = $groups[$key]
+        $g.n++
+        if ($mw.missed_winner) { $g.missed++ }
+        if ($mw.good_skip)     { $g.good++ }
+    }
+
+    $out = @()
+    foreach ($g in $groups.Values) {
+        $rate = if ($g.n -gt 0) { [math]::Round($g.missed / $g.n, 4) } else { 0 }
+        $costly = ($g.n -ge $MinSamples) -and ($rate -ge $CostlyThreshold)
+        $out += [PSCustomObject]@{
+            key=$g.key; gate=$g.gate; direction=$g.direction; regime=$g.regime
+            n=$g.n; missed_winners=$g.missed; good_skips=$g.good
+            missed_rate=$rate; costly=$costly
+        }
+    }
+    return $out
+}
