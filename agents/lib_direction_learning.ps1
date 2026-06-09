@@ -335,3 +335,132 @@ function Write-SignalSnapshot {
         return $false
     }
 }
+
+# ═════════════════════════════════════════════════════════════════════════════
+# JOB DE APRENDIZADO + CONSUMO -- computa stats do historico e aplica nas decisoes.
+# ═════════════════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Read-JsonLines (I/O) -- le JSONL tolerante (ignora linhas invalidas).
+# ─────────────────────────────────────────────────────────────────────────────
+function Read-JsonLines {
+    param([string]$Path)
+    if (-not $Path -or -not (Test-Path $Path)) { return @() }
+    $out = @()
+    foreach ($ln in (Get-Content -Path $Path -ErrorAction SilentlyContinue)) {
+        if ([string]::IsNullOrWhiteSpace($ln)) { continue }
+        try { $out += ($ln | ConvertFrom-Json) } catch { }
+    }
+    return $out
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Save-LearnedStats / Get-LearnedStats (I/O) -- persiste learned_multipliers.json.
+# ─────────────────────────────────────────────────────────────────────────────
+function Save-LearnedStats {
+    param([object[]]$Stats, [string]$Path)
+    try {
+        $dir = Split-Path -Parent $Path
+        if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+        $payload = @{ updated_at = (Get-Date).ToUniversalTime().ToString("o"); stats = @($Stats) }
+        ($payload | ConvertTo-Json -Depth 6) | Set-Content -Path $Path -Encoding UTF8
+        return $true
+    } catch { return $false }
+}
+
+function Get-LearnedStats {
+    param([string]$Path)
+    if (-not $Path -or -not (Test-Path $Path)) { return @() }
+    try {
+        $obj = Get-Content $Path -Raw | ConvertFrom-Json
+        if ($obj -and $obj.PSObject.Properties['stats']) { return @($obj.stats) }
+        return @()
+    } catch { return @() }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Apply-LearnedConviction (PURA) -- ajusta conviction base pelo multiplier aprendido.
+# Clamp [0,100]. Sem dados confiaveis -> mantem (multiplier 1.0).
+# ─────────────────────────────────────────────────────────────────────────────
+function Apply-LearnedConviction {
+    param(
+        [int]$BaseConviction,
+        [object[]]$Stats,
+        [string]$Source,
+        [string]$Direction,
+        [string]$Regime
+    )
+    $m = Get-LearnedMultiplier -Stats $Stats -Source $Source -Direction $Direction -Regime $Regime
+    $adj = [int][math]::Round($BaseConviction * $m)
+    if ($adj -lt 0)   { $adj = 0 }
+    if ($adj -gt 100) { $adj = 100 }
+    return $adj
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Get-CounterfactualSkips (I/O via fetcher injetavel) -- avalia NAO-ENTRADAS.
+# Para cada VETAR antigo (>= MinAgeHours), busca preco atual e monta skip record
+# p/ Get-SkipQualityStats. PriceFetcher e scriptblock {param($market) <preco>}.
+# ─────────────────────────────────────────────────────────────────────────────
+function Get-CounterfactualSkips {
+    param(
+        [object[]]$Snapshots,
+        [scriptblock]$PriceFetcher,
+        [int]$MinAgeHours = 24,
+        [double]$MinReturnPct = 3
+    )
+    if (-not $Snapshots -or -not $PriceFetcher) { return @() }
+    $now = Get-Date
+    $out = @()
+    foreach ($s in $Snapshots) {
+        if (-not $s) { continue }
+        $decision = if ($s.PSObject.Properties['decision']) { "$($s.decision)" } else { "" }
+        if ($decision -ne "VETAR" -and $decision -ne "SKIP") { continue }  # so nao-entradas
+        # idade
+        $ts = $null
+        if ($s.PSObject.Properties['ts'] -and $s.ts) { try { $ts = [datetime]::Parse($s.ts) } catch {} }
+        if (-not $ts) { continue }
+        if (($now - $ts).TotalHours -lt $MinAgeHours) { continue }  # ainda cedo p/ avaliar
+        $entry = if ($s.PSObject.Properties['entry_price']) { [double]$s.entry_price } else { 0 }
+        if ($entry -le 0) { continue }
+        $mkt = if ($s.PSObject.Properties['market']) { "$($s.market)" } else { "" }
+        $exit = $null
+        try { $exit = [double](& $PriceFetcher $mkt) } catch { $exit = $null }
+        if (-not $exit -or $exit -le 0) { continue }
+        $out += [PSCustomObject]@{
+            gate        = if ($s.PSObject.Properties['gate'] -and $s.gate) { "$($s.gate)" } else { "veto" }
+            direction   = if ($s.PSObject.Properties['direction']) { "$($s.direction)" } else { "LONG" }
+            regime      = if ($s.PSObject.Properties['regime']) { "$($s.regime)" } else { "UNKNOWN" }
+            entry_price = $entry
+            exit_price  = $exit
+            market      = $mkt
+        }
+    }
+    return $out
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Invoke-LearningUpdate (I/O orquestrador) -- fecha o ciclo periodico:
+# le snapshots + outcomes -> join -> Get-DirectionStats -> persiste learned stats.
+# Retorna resumo. Chamado periodicamente pelo scan_master.
+# ─────────────────────────────────────────────────────────────────────────────
+function Invoke-LearningUpdate {
+    param(
+        [string]$SnapshotsPath,
+        [string]$OutcomesPath,
+        [string]$OutPath,
+        [int]$MinTrades = 8
+    )
+    $snaps = Read-JsonLines -Path $SnapshotsPath
+    $outs  = Read-JsonLines -Path $OutcomesPath
+    $joined = Join-SignalOutcomes -Snapshots $snaps -Outcomes $outs
+    $stats  = Get-DirectionStats -Trades $joined -MinTrades $MinTrades
+    if ($OutPath) { Save-LearnedStats -Stats $stats -Path $OutPath | Out-Null }
+    return [PSCustomObject]@{
+        snapshots = @($snaps).Count
+        outcomes  = @($outs).Count
+        joined    = @($joined).Count
+        keys      = @($stats).Count
+        reliable_keys = @($stats | Where-Object { $_.reliable }).Count
+    }
+}

@@ -434,6 +434,25 @@ function Invoke-Triagem {
     # Fallback legado: regime puro (se lib indisponivel ou erro)
     if (-not $direction) { $direction = _Compute-DirectionFromRegime -Regime $regime }
 
+    # 2026-06-08: CONSUMO DO APRENDIZADO -- ajusta conviction pelo historico real.
+    # Carrega learned_multipliers.json (job periodico) e aplica multiplier por
+    # (source,direction,regime). Sem dados confiaveis -> neutro (nao altera).
+    if ($directionMeta -and (Get-Command Apply-LearnedConviction -ErrorAction SilentlyContinue)) {
+        try {
+            $statPath = Join-Path $global:JOURNAL_DIR "learned_multipliers.json"
+            $learned = Get-LearnedStats -Path $statPath
+            if (@($learned).Count -gt 0) {
+                $baseConv = [int]$directionMeta.conviction
+                $adjConv  = Apply-LearnedConviction -BaseConviction $baseConv -Stats $learned `
+                    -Source $directionMeta.source -Direction $direction -Regime $regime
+                if ($adjConv -ne $baseConv) {
+                    Write-Host "  [Triagem LEARN] $Market conviction $baseConv -> $adjConv (historico $($directionMeta.source)|$direction|$regime)" -ForegroundColor DarkCyan
+                    $directionMeta.conviction = $adjConv
+                }
+            }
+        } catch { }
+    }
+
     # ── 3. Knowledge retrieval para enriquecer prompt ─────────────────────────
     $tags = _Derive-Tags -MacroBias $macroBias -DayOfWeek $dow -MarketTier $tier_mkt -Score $score
     $kbChunks = @()

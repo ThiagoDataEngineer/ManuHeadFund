@@ -340,3 +340,130 @@ Describe "Learning: Write-SignalSnapshot (I/O) -- persiste JSONL" {
         Remove-Item $tmp -Force -ErrorAction SilentlyContinue
     }
 }
+
+Describe "Learning: Read-JsonLines (I/O tolerante)" {
+    It "le JSONL valido" {
+        $tmp = Join-Path $env:TEMP "rjl_ok.jsonl"
+        @('{"a":1}','{"a":2}') | Set-Content $tmp -Encoding UTF8
+        $r = Read-JsonLines -Path $tmp
+        @($r).Count | Should Be 2
+        Remove-Item $tmp -Force -ErrorAction SilentlyContinue
+    }
+    It "ignora linha invalida sem quebrar" {
+        $tmp = Join-Path $env:TEMP "rjl_bad.jsonl"
+        @('{"a":1}','LIXO NAO JSON','{"a":3}') | Set-Content $tmp -Encoding UTF8
+        $r = Read-JsonLines -Path $tmp
+        @($r).Count | Should Be 2
+        Remove-Item $tmp -Force -ErrorAction SilentlyContinue
+    }
+    It "arquivo inexistente -> array vazio" {
+        $r = Read-JsonLines -Path (Join-Path $env:TEMP "naoexiste_rjl.jsonl")
+        @($r).Count | Should Be 0
+    }
+}
+
+Describe "Learning: Apply-LearnedConviction (consumo do aprendizado)" {
+    It "boost historico aumenta conviction" {
+        $trades = 1..10 | ForEach-Object { New-Trade -Dir "SHORT" -Src "regime" -Reg "BEAR_WEAK" -Win $true -Pnl 2 }
+        $stats = Get-DirectionStats -Trades $trades -MinTrades 8
+        $adj = Apply-LearnedConviction -BaseConviction 50 -Stats $stats -Source "regime" -Direction "SHORT" -Regime "BEAR_WEAK"
+        ($adj -gt 50) | Should Be $true
+    }
+    It "corte historico reduz conviction" {
+        $trades = 1..10 | ForEach-Object { New-Trade -Dir "LONG" -Src "regime" -Reg "BEAR_WEAK" -Win $false -Pnl -1 }
+        $stats = Get-DirectionStats -Trades $trades -MinTrades 8
+        $adj = Apply-LearnedConviction -BaseConviction 50 -Stats $stats -Source "regime" -Direction "LONG" -Regime "BEAR_WEAK"
+        ($adj -lt 50) | Should Be $true
+    }
+    It "sem dados -> mantem conviction (neutro)" {
+        $adj = Apply-LearnedConviction -BaseConviction 50 -Stats @() -Source "regime" -Direction "LONG" -Regime "BEAR_WEAK"
+        $adj | Should Be 50
+    }
+    It "clamp em 100" {
+        $trades = 1..20 | ForEach-Object { New-Trade -Dir "SHORT" -Src "regime" -Reg "BEAR_WEAK" -Win $true -Pnl 5 }
+        $stats = Get-DirectionStats -Trades $trades -MinTrades 8
+        $adj = Apply-LearnedConviction -BaseConviction 90 -Stats $stats -Source "regime" -Direction "SHORT" -Regime "BEAR_WEAK"
+        ($adj -le 100) | Should Be $true
+    }
+}
+
+Describe "Learning: Save/Get-LearnedStats (persistencia roundtrip)" {
+    It "salva e le de volta" {
+        $tmp = Join-Path $env:TEMP "learned_stats_rt.json"
+        Remove-Item $tmp -Force -ErrorAction SilentlyContinue
+        $trades = 1..8 | ForEach-Object { New-Trade -Dir "SHORT" -Src "regime" -Reg "BEAR_WEAK" -Win $true -Pnl 2 }
+        $stats = Get-DirectionStats -Trades $trades -MinTrades 8
+        Save-LearnedStats -Stats $stats -Path $tmp | Out-Null
+        (Test-Path $tmp) | Should Be $true
+        $loaded = Get-LearnedStats -Path $tmp
+        @($loaded).Count | Should Be 1
+        $loaded[0].direction | Should Be "SHORT"
+        Remove-Item $tmp -Force -ErrorAction SilentlyContinue
+    }
+    It "Get de arquivo inexistente -> array vazio" {
+        $loaded = Get-LearnedStats -Path (Join-Path $env:TEMP "naoexiste_ls.json")
+        @($loaded).Count | Should Be 0
+    }
+}
+
+Describe "Learning: Invoke-LearningUpdate (job orquestrador)" {
+    It "le snapshots + outcomes, joina, computa stats, persiste" {
+        $snapP = Join-Path $env:TEMP "lu_snaps.jsonl"
+        $outP  = Join-Path $env:TEMP "lu_outs.jsonl"
+        $statP = Join-Path $env:TEMP "lu_stats.json"
+        Remove-Item $snapP,$outP,$statP -Force -ErrorAction SilentlyContinue
+        # 8 snapshots SHORT em BEAR + 8 outcomes win
+        1..8 | ForEach-Object {
+            $s = New-SignalSnapshot -Market "M$_" -Direction "SHORT" -Source "regime" -Regime "BEAR_WEAK" -Decision "APROVAR" -EntryPrice 1 -TradeId "T$_"
+            Write-SignalSnapshot -Entry $s -Path $snapP | Out-Null
+        }
+        1..8 | ForEach-Object {
+            ([ordered]@{ trade_id="T$_"; win=$true; pnl_pct=2 } | ConvertTo-Json -Compress) | Add-Content $outP -Encoding UTF8
+        }
+        $res = Invoke-LearningUpdate -SnapshotsPath $snapP -OutcomesPath $outP -OutPath $statP -MinTrades 8
+        $res.joined | Should Be 8
+        (Test-Path $statP) | Should Be $true
+        $stats = Get-LearnedStats -Path $statP
+        $k = $stats | Where-Object { $_.key -eq "regime|SHORT|BEAR_WEAK" }
+        $k.reliable | Should Be $true
+        Remove-Item $snapP,$outP,$statP -Force -ErrorAction SilentlyContinue
+    }
+    It "sem dados nao quebra (stats vazio)" {
+        $snapP = Join-Path $env:TEMP "lu_empty_s.jsonl"
+        $outP  = Join-Path $env:TEMP "lu_empty_o.jsonl"
+        $statP = Join-Path $env:TEMP "lu_empty_st.json"
+        Remove-Item $snapP,$outP,$statP -Force -ErrorAction SilentlyContinue
+        "" | Set-Content $snapP; "" | Set-Content $outP
+        $res = Invoke-LearningUpdate -SnapshotsPath $snapP -OutcomesPath $outP -OutPath $statP -MinTrades 8
+        $res.joined | Should Be 0
+        Remove-Item $snapP,$outP,$statP -Force -ErrorAction SilentlyContinue
+    }
+}
+
+Describe "Learning: Get-CounterfactualSkips (forward price injetavel)" {
+    It "VETAR SHORT que caiu = missed winner (via fetcher mock)" {
+        $snaps = @(
+            [PSCustomObject]@{ ts=(Get-Date).AddHours(-48).ToString("o"); market="XUSDT"; direction="SHORT"; decision="VETAR"; gate="tori_skip"; regime="BEAR_WEAK"; entry_price=100 }
+        )
+        $fetcher = { param($m) 70 }  # preco caiu p/ 70
+        $skips = Get-CounterfactualSkips -Snapshots $snaps -PriceFetcher $fetcher -MinAgeHours 24 -MinReturnPct 3
+        @($skips).Count | Should Be 1
+        $skips[0].exit_price | Should Be 70
+    }
+    It "ignora VETAR recente (< MinAgeHours)" {
+        $snaps = @(
+            [PSCustomObject]@{ ts=(Get-Date).AddHours(-1).ToString("o"); market="XUSDT"; direction="SHORT"; decision="VETAR"; gate="tori_skip"; regime="BEAR_WEAK"; entry_price=100 }
+        )
+        $fetcher = { param($m) 70 }
+        $skips = Get-CounterfactualSkips -Snapshots $snaps -PriceFetcher $fetcher -MinAgeHours 24
+        @($skips).Count | Should Be 0
+    }
+    It "ignora APROVAR (so analisa nao-entradas)" {
+        $snaps = @(
+            [PSCustomObject]@{ ts=(Get-Date).AddHours(-48).ToString("o"); market="XUSDT"; direction="SHORT"; decision="APROVAR"; gate=""; regime="BEAR_WEAK"; entry_price=100 }
+        )
+        $fetcher = { param($m) 70 }
+        $skips = Get-CounterfactualSkips -Snapshots $snaps -PriceFetcher $fetcher -MinAgeHours 24
+        @($skips).Count | Should Be 0
+    }
+}

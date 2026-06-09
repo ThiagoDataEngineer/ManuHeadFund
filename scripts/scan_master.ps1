@@ -1439,6 +1439,34 @@ do {
         } catch { Write-MasterLog "SELF-RECOVERY erro: $_" "WARN" }
     }
 
+    # 2026-06-08: LEARNING UPDATE -- a cada 6 ciclos, computa stats do historico
+    # (entradas via snapshot+outcome) + counterfactual das nao-entradas. Persiste
+    # learned_multipliers.json consumido pela Triagem. Barato (le JSONL + agrega).
+    if ($iteration % 6 -eq 1 -and (Get-Command Invoke-LearningUpdate -ErrorAction SilentlyContinue)) {
+        try {
+            $snapPath  = Join-Path $global:JOURNAL_DIR "signal_snapshots.jsonl"
+            $outPath   = Join-Path $global:JOURNAL_DIR "trade_outcomes.jsonl"
+            $statPath  = Join-Path $global:JOURNAL_DIR "learned_multipliers.json"
+            $lu = Invoke-LearningUpdate -SnapshotsPath $snapPath -OutcomesPath $outPath -OutPath $statPath -MinTrades 8
+            Write-MasterLog "LEARNING: snaps=$($lu.snapshots) outs=$($lu.outcomes) joined=$($lu.joined) keys=$($lu.keys) reliable=$($lu.reliable_keys)" "GEM"
+
+            # Counterfactual: nao-entradas (VETAR) antigas vs preco atual -> gates costly
+            if ((Get-Command Get-CounterfactualSkips -ErrorAction SilentlyContinue) -and (Get-Command CoinEx-GetTicker -ErrorAction SilentlyContinue)) {
+                $snaps = Read-JsonLines -Path $snapPath
+                $fetcher = { param($m) try { [double]((CoinEx-GetTicker $m).last) } catch { 0 } }
+                $cfSkips = Get-CounterfactualSkips -Snapshots $snaps -PriceFetcher $fetcher -MinAgeHours 24 -MinReturnPct 5
+                if (@($cfSkips).Count -gt 0) {
+                    $skipStats = Get-SkipQualityStats -Skips $cfSkips -MinReturnPct 5 -MinSamples 5
+                    $costly = @($skipStats | Where-Object { $_.costly })
+                    Save-LearnedStats -Stats $skipStats -Path (Join-Path $global:JOURNAL_DIR "skip_quality.json") | Out-Null
+                    if ($costly.Count -gt 0) {
+                        Write-MasterLog "LEARNING counterfactual: $($costly.Count) gate(s) custando oportunidade -- $(@($costly | ForEach-Object { $_.key }) -join ', ')" "WARN"
+                    }
+                }
+            }
+        } catch { Write-MasterLog "LEARNING erro: $_" "WARN" }
+    }
+
     if (-not $global:MASTER_PAUSED) {
         try {
             Invoke-MasterCycle -Seasonal $seasonal
