@@ -15,10 +15,10 @@
 
 
 $script:MIN_HISTORY = 20
-$script:SLOPE_DEG_MIN = 20
-$script:SLOPE_DEG_MAX = 35
-$script:TOUCH_TOLERANCE_PCT = 1.5  # +-1.5% da linha = touch
-$script:MIN_TOUCHES = 3
+$script:SLOPE_DEG_MIN = 15      # Relaxado: 20 → 15 (captura ramps mais suaves)
+$script:SLOPE_DEG_MAX = 40      # Relaxado: 35 → 40 (aceita steeper ramps)
+$script:TOUCH_TOLERANCE_PCT = 2.5  # Relaxado: 1.5 → 2.5 (low-cap noise tolerance)
+$script:MIN_TOUCHES = 2         # Relaxado: 3 → 2 (2 toques sólidos é suficiente)
 
 
 function _LinearRegression {
