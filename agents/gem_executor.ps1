@@ -10,6 +10,8 @@
 # 2026-06-08: Multi-TF alignment validation before execution
 . (Join-Path $PSScriptRoot "lib_multiframe_analysis.ps1")
 . (Join-Path $PSScriptRoot "lib_candle_fetcher.ps1")
+# 2026-06-09: Direction learning (counterfactual: learn from rejections)
+. (Join-Path $PSScriptRoot "lib_direction_learning.ps1")
 # 2026-05-21: B9 cache TTL (Add-GemRejection + Test-GemRecentlyRejected).
 # Bug encontrado: scan_master dot-sourced gem_executor mas NAO lib_gem_decision_cache,
 # entao Get-Command Test-GemRecentlyRejected returnava null silently -> cache check
@@ -299,6 +301,11 @@ function Invoke-GemExecute {
     $scoreMin = if ($Gem.mode -eq "DISCOVERY") { $global:GEM_SCORE_MIN_DISC } else { $global:GEM_SCORE_MIN_MOM }
     if ($Gem.score -lt $scoreMin) {
         Write-Host "BLOQUEADO: score $($Gem.score) abaixo do minimo $scoreMin" -ForegroundColor Red
+        # 2026-06-09: Captura skip pra counterfactual
+        if (Get-Command Write-SignalSkip -ErrorAction SilentlyContinue) {
+            $regime = if ($global:MARKET_REGIME) { "$($global:MARKET_REGIME)" } else { "UNKNOWN" }
+            try { Write-SignalSkip -Market $mkt -Direction "LONG" -Gate "score_below_$scoreMin" -EntryPrice $price -Regime $regime -Source "gem_score" | Out-Null } catch {}
+        }
         # Add to cache pra evitar re-veto
         if (Get-Command Add-GemRejection -ErrorAction SilentlyContinue) {
             try { Add-GemRejection -Path (Join-Path $global:JOURNAL_DIR "gem_recent_decisions.json") -Market $mkt -Reason "score_below_min $($Gem.score)" } catch {}
@@ -466,6 +473,12 @@ function Invoke-GemExecute {
         # 2026-05-21 fix: ainda retorna PSCustomObject blocked pra caller saber motivo.
         $reasonLower = "$tori_reason".ToLower()
         $isDataAbsent = ($reasonLower -match "n/a|no_trendline_data|no_verdict|tech_agent_null|impossivel identificar|impossível identificar|sem dados|sem pontos de ancoragem|retornaram n/a")
+
+        # 2026-06-09: Captura skip pra counterfactual learning (se tem entry_price)
+        if (-not $isDataAbsent -and (Get-Command Write-SignalSkip -ErrorAction SilentlyContinue)) {
+            $regime = if ($global:MARKET_REGIME) { "$($global:MARKET_REGIME)" } else { "UNKNOWN" }
+            try { Write-SignalSkip -Market $mkt -Direction "LONG" -Gate "tori_$($tori_signal.ToLower())" -EntryPrice $price -Regime $regime -Source "tori" | Out-Null } catch {}
+        }
 
         # A. MISSED log enriquecido 2026-05-22: quando Tori SKIP por timing missed,
         # cruza com snapshot tori_proximity pra capturar setup_ripening pre-spike.

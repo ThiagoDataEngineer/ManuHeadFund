@@ -336,6 +336,41 @@ function Write-SignalSnapshot {
     }
 }
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Write-SignalSkip (I/O) -- append JSONL de rejeicoes. Default journal/signal_skips.jsonl.
+# Usado p/ counterfactual: depois quando moeda sobe, avalia se veto custou oportunidade.
+# ─────────────────────────────────────────────────────────────────────────────
+function Write-SignalSkip {
+    param(
+        [Parameter(Mandatory)] [string]$Market,
+        [Parameter(Mandatory)] [string]$Direction,
+        [Parameter(Mandatory)] [string]$Gate,
+        [Parameter(Mandatory)] [double]$EntryPrice,
+        [Parameter(Mandatory)] [string]$Regime,
+        [string]$Source = "regime"
+    )
+    $skip = [ordered]@{
+        ts            = (Get-Date).ToUniversalTime().ToString("o")
+        market        = $Market
+        direction     = $Direction
+        gate          = $Gate
+        entry_price   = $EntryPrice
+        regime        = $Regime
+        source        = $Source
+    }
+    $base = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path $PSScriptRoot ".." "journal" }
+    $path = Join-Path $base "signal_skips.jsonl"
+    try {
+        $dir = Split-Path -Parent $path
+        if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+        Add-Content -Path $path -Value ($skip | ConvertTo-Json -Compress -Depth 5) -Encoding UTF8
+        return $true
+    } catch {
+        Write-Host "  [SIGNAL-SKIP] falha ao gravar: $_" -ForegroundColor Yellow
+        return $false
+    }
+}
+
 # ═════════════════════════════════════════════════════════════════════════════
 # JOB DE APRENDIZADO + CONSUMO -- computa stats do historico e aplica nas decisoes.
 # ═════════════════════════════════════════════════════════════════════════════
