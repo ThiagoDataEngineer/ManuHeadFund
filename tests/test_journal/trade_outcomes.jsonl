@@ -1,0 +1,54 @@
+{
+  "exit_date": "2026-06-09",
+  "pnl_usd": 50.0
+}
+{
+  "exit_date": "2026-06-09",
+  "pnl_usd": 30.0
+}
+{
+  "exit_date": "2026-06-08",
+  "pnl_usd": 100.0
+}
+{
+  "exit_date": "2026-06-09",
+  "pnl_usd": 50.0
+}
+{ invalid json
+System.Collections.Hashtable
+{
+  "exit_date": "2026-06-09",
+  "pnl_usd": 50.0
+}
+{
+  "exit_date": "2026-06-09",
+  "pnl_usd": 30.0
+}
+{
+  "exit_date": "2026-06-08",
+  "pnl_usd": 100.0
+}
+{
+  "exit_date": "2026-06-09",
+  "pnl_usd": 50.0
+}
+{ invalid json
+System.Collections.Hashtable
+{
+  "exit_date": "2026-06-09",
+  "pnl_usd": 50.0
+}
+{
+  "exit_date": "2026-06-09",
+  "pnl_usd": 30.0
+}
+{
+  "exit_date": "2026-06-08",
+  "pnl_usd": 100.0
+}
+{
+  "exit_date": "2026-06-09",
+  "pnl_usd": 50.0
+}
+{ invalid json
+System.Collections.Hashtable

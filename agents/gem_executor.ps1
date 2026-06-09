@@ -285,6 +285,16 @@ function Invoke-GemExecute {
         }
     }
 
+    # ── CIRCUIT BREAKER: -2% daily loss pause ──────────────────────────────────
+    # 2026-06-09: bloqueia trades se PnL < -2% do capital hoje
+    if (Get-Command Test-CircuitBreakerTriggered -ErrorAction SilentlyContinue) {
+        if (Test-CircuitBreakerTriggered -Capital $global:CAPITAL_TOTAL -DailyLossThreshold -0.02) {
+            Write-Host "CIRCUIT BREAKER ATIVADO: -2% daily loss. Nenhum trade hoje." -ForegroundColor Red
+            try { Send-TelegramAlert -Message "🚨 **CIRCUIT BREAKER ATIVADO** — Perdemos -2% do capital hoje. Sistema pausado." | Out-Null } catch {}
+            return [PSCustomObject]@{ blocked = $true; blocked_by = @("circuit_breaker_daily_loss"); market = $mkt }
+        }
+    }
+
     # ── Validacoes ────────────────────────────────────────────────────────────
     $scoreMin = if ($Gem.mode -eq "DISCOVERY") { $global:GEM_SCORE_MIN_DISC } else { $global:GEM_SCORE_MIN_MOM }
     if ($Gem.score -lt $scoreMin) {
@@ -303,6 +313,24 @@ function Invoke-GemExecute {
     if ($vd.spike_type -eq "BEARISH") {
         Write-Host "BLOQUEADO: spike BEARISH detectado (G1B)" -ForegroundColor Red
         return [PSCustomObject]@{ blocked = $true; blocked_by = @("spike_BEARISH_G1B"); market = $mkt }
+    }
+
+    # ── HUMAN APPROVAL: trades >$100 precisam confirmação ───────────────────────
+    # 2026-06-09: user approva via TG antes de executar
+    $capital     = if (Get-Command CoinEx-GetTotalCapitalUSDT -ErrorAction SilentlyContinue) {
+        CoinEx-GetTotalCapitalUSDT
+    } else { $global:CAPITAL_TOTAL }
+    $usd_size_check = [math]::Round($capital * $Gem.sizing.sizing_pct, 2)
+
+    if ($usd_size_check -ge 100 -and (Get-Command Request-HumanApproval -ErrorAction SilentlyContinue)) {
+        $approval = Request-HumanApproval -Market $mkt -SizeUsd $usd_size_check
+        if ($approval.approved -eq $false) {
+            Write-Host "BLOQUEADO: human approval rejeitou $mkt \$$usd_size_check" -ForegroundColor Red
+            return [PSCustomObject]@{ blocked = $true; blocked_by = @("human_approval_rejected"); market = $mkt }
+        } elseif ($approval.approved -eq $null) {
+            Write-Host "AGUARDANDO: human approval pra $mkt \$$usd_size_check (timeout 5min)" -ForegroundColor Yellow
+            return [PSCustomObject]@{ blocked = $true; blocked_by = @("human_approval_pending"); market = $mkt }
+        }
     }
 
     # ── Detectar tipo de mercado ──────────────────────────────────────────────
