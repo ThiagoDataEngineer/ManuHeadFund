@@ -52,6 +52,36 @@ Describe "Get-MesaConsensus - acordo total" {
     }
 }
 
+Describe "Get-MesaConsensus - trap-awareness (reversal_vs_regime)" {
+    It "BEAR + consenso SHORT = sem reversao (alinhado regime)" {
+        $r = Get-MesaConsensus -Termal (New-DroneOk -Sinal "SHORT") -Radar (New-DroneOk -Sinal "SHORT") `
+                               -Lidar (New-DroneOk -Sinal "SHORT") -Regime "BEAR_WEAK"
+        $r.reversal_vs_regime | Should Be $false
+    }
+    It "BEAR + consenso LONG = bear_trap detectado pelos drones" {
+        $r = Get-MesaConsensus -Termal (New-DroneOk -Sinal "LONG") -Radar (New-DroneOk -Sinal "LONG") `
+                               -Lidar (New-DroneOk -Sinal "LONG") -Regime "BEAR_STRONG"
+        $r.reversal_vs_regime | Should Be $true
+        $r.reversal_type | Should Be "bear_trap"
+    }
+    It "BULL + consenso SHORT = bull_trap detectado" {
+        $r = Get-MesaConsensus -Termal (New-DroneOk -Sinal "SHORT") -Radar (New-DroneOk -Sinal "SHORT") `
+                               -Lidar (New-DroneOk -Sinal "SHORT") -Regime "BULL_WEAK"
+        $r.reversal_vs_regime | Should Be $true
+        $r.reversal_type | Should Be "bull_trap"
+    }
+    It "sem Regime (backward-compat) = sem reversao" {
+        $r = Get-MesaConsensus -Termal (New-DroneOk -Sinal "LONG") -Radar (New-DroneOk -Sinal "LONG") `
+                               -Lidar (New-DroneOk -Sinal "LONG")
+        $r.reversal_vs_regime | Should Be $false
+    }
+    It "consenso NEUTRO nunca e reversao" {
+        $r = Get-MesaConsensus -Termal (New-DroneOk -Sinal "NEUTRO") -Radar (New-DroneOk -Sinal "NEUTRO") `
+                               -Lidar (New-DroneOk -Sinal "NEUTRO") -Regime "BEAR_WEAK"
+        $r.reversal_vs_regime | Should Be $false
+    }
+}
+
 Describe "Get-MesaConsensus - acordo parcial" {
     It "A4 2 LONG + 1 NEUTRO retorna MEDIO_2 LONG" {
         $r = Get-MesaConsensus -Termal (New-DroneOk -Sinal "LONG") `

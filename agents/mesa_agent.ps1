@@ -321,7 +321,8 @@ function Get-MesaConsensus {
     param(
         [PSCustomObject]$Termal,
         [PSCustomObject]$Radar,
-        [PSCustomObject]$Lidar
+        [PSCustomObject]$Lidar,
+        [string]$Regime = ""   # 2026-06-08: opcional p/ trap-awareness (reversal_vs_regime)
     )
     $drones = @($Termal, $Radar, $Lidar)
     $valid  = @($drones | Where-Object { $_ -ne $null -and ($MESA_VALID_SIGNALS -contains $_.sinal) })
@@ -370,11 +371,27 @@ function Get-MesaConsensus {
         $sigs = @($valid | ForEach-Object { $_.sinal })
         Write-Host ("  [MESA-CAOS-DBG] valid={0}/3 sigs=[{1}] degraded={2}" -f $valid.Count, ($sigs -join ','), $degraded) -ForegroundColor DarkMagenta
     }
+    # 2026-06-08: trap-awareness -- consenso tecnico contraria o regime macro?
+    # Sinaliza reversao (bear trap / bull trap) confirmada pelos drones, p/ Mentor
+    # avaliar como reversao explicita (nao como erro de direcao).
+    $reversal = $false
+    $reversalType = ""
+    if ($Regime -and $sinal -in @("LONG","SHORT")) {
+        $regimeBaseline = "LONG"
+        if ($Regime -like "BEAR_*" -or $Regime -eq "CAPITULATION" -or $Regime -eq "TRANSITION_DOWN") { $regimeBaseline = "SHORT" }
+        if ($sinal -ne $regimeBaseline) {
+            $reversal = $true
+            $reversalType = if ($regimeBaseline -eq "SHORT") { "bear_trap" } else { "bull_trap" }
+        }
+    }
+
     return [PSCustomObject]@{
-        consensus      = $consensus
-        sinal_consenso = $sinal
-        score_avg      = [int]$avg
-        degraded       = [bool]$degraded
+        consensus         = $consensus
+        sinal_consenso    = $sinal
+        score_avg         = [int]$avg
+        degraded          = [bool]$degraded
+        reversal_vs_regime = $reversal
+        reversal_type     = $reversalType
     }
 }
 
@@ -461,7 +478,13 @@ $($Context | ConvertTo-Json -Depth 8 -Compress)
         }
     }
 
-    $cons = Get-MesaConsensus -Termal $drones.termal -Radar $drones.radar -Lidar $drones.lidar
+    # 2026-06-08: passa regime (se Context tiver) p/ trap-awareness no consenso
+    $mesaRegime = ""
+    if ($Context) {
+        if ($Context.PSObject.Properties['regime'] -and $Context.regime) { $mesaRegime = [string]$Context.regime }
+        elseif ($Context.PSObject.Properties['triagem'] -and $Context.triagem -and $Context.triagem.PSObject.Properties['regime']) { $mesaRegime = [string]$Context.triagem.regime }
+    }
+    $cons = Get-MesaConsensus -Termal $drones.termal -Radar $drones.radar -Lidar $drones.lidar -Regime $mesaRegime
 
     # CC fix 2026-05-21 PM6+930min: logger persistente Mesa drones em JSONL.
     # Append-only audit pra diagnose pattern (qual drone diverge, com que frequencia).
