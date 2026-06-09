@@ -96,3 +96,32 @@ Describe "Bidirectional: conviction e robustez" {
         $r.signals_short | Should Be 0
     }
 }
+
+Describe "Bidirectional: Resolve-MentorDirection (precedencia p/ Mentor)" {
+
+    It "Direction explicito tem prioridade maxima" {
+        $r = Resolve-MentorDirection -ExplicitDirection "SHORT" -MesaSignal "LONG" -TriagemDirection "LONG"
+        $r | Should Be "SHORT"
+    }
+    It "Mesa vence Triagem quando Mesa tem consenso LONG/SHORT" {
+        $r = Resolve-MentorDirection -ExplicitDirection "" -MesaSignal "SHORT" -TriagemDirection "LONG"
+        $r | Should Be "SHORT"
+    }
+    It "Triagem usada como fallback quando Mesa NEUTRO" {
+        $r = Resolve-MentorDirection -ExplicitDirection "" -MesaSignal "NEUTRO" -TriagemDirection "SHORT"
+        $r | Should Be "SHORT"
+    }
+    It "Triagem usada quando Mesa CAOS" {
+        $r = Resolve-MentorDirection -ExplicitDirection "" -MesaSignal "CAOS" -TriagemDirection "SHORT"
+        $r | Should Be "SHORT"
+    }
+    It "LONG default SO quando tudo ausente (nao mais cego em bear)" {
+        $r = Resolve-MentorDirection -ExplicitDirection "" -MesaSignal "NEUTRO" -TriagemDirection ""
+        $r | Should Be "LONG"
+    }
+    It "bear trap: Triagem manda LONG mesmo sem Mesa -> Mentor avalia LONG" {
+        # Cenario real: triagem detectou bear_trap_reversal -> LONG; Mesa neutra
+        $r = Resolve-MentorDirection -ExplicitDirection "" -MesaSignal "NEUTRO" -TriagemDirection "LONG"
+        $r | Should Be "LONG"
+    }
+}

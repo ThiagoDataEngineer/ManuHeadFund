@@ -97,3 +97,21 @@ function Resolve-TradeDirection {
         reason        = $reason
     }
 }
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Resolve-MentorDirection (PURA) -- precedencia da direcao que chega ao Mentor.
+# Ordem: explicito > Mesa(consenso tecnico) > Triagem(bidirecional c/ trap) > LONG.
+# Fecha o gap do "LONG default cego": quando Mesa nao tem consenso, usa a direcao
+# bidirecional da Triagem (que ja considera bear/bull traps) em vez de LONG fixo.
+# ─────────────────────────────────────────────────────────────────────────────
+function Resolve-MentorDirection {
+    param(
+        [string]$ExplicitDirection = "",
+        [string]$MesaSignal        = "",
+        [string]$TriagemDirection  = ""
+    )
+    if ($ExplicitDirection -in @("LONG","SHORT")) { return $ExplicitDirection }
+    if ($MesaSignal       -in @("LONG","SHORT")) { return $MesaSignal }
+    if ($TriagemDirection -in @("LONG","SHORT")) { return $TriagemDirection }
+    return "LONG"
+}

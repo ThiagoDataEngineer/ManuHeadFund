@@ -684,10 +684,23 @@ function Invoke-MentorDebate {
         # Backward compat: vazio/null = LONG default (atual comportamento)
         [ValidateSet("LONG","SHORT","")] [string] $Direction = ""
     )
-    # Resolve direction: explicit param > Mesa sinal_consenso > LONG default
-    $effectiveDirection = if ($Direction) { $Direction }
-                          elseif ($MesaResult -and $MesaResult.sinal_consenso -in @("LONG","SHORT")) { $MesaResult.sinal_consenso }
-                          else { "LONG" }
+    # Resolve direction: explicit > Mesa(consenso) > Triagem(bidirecional) > LONG.
+    # 2026-06-08: usa lib central + fallback Triagem (fecha "LONG default cego" em bear).
+    if (-not (Get-Command Resolve-MentorDirection -ErrorAction SilentlyContinue)) {
+        $__bidirLib = Join-Path $PSScriptRoot "lib_bidirectional_direction.ps1"
+        if (Test-Path $__bidirLib) { . $__bidirLib }
+    }
+    $mesaSig = if ($MesaResult -and $MesaResult.sinal_consenso) { [string]$MesaResult.sinal_consenso } else { "" }
+    $triagemDir = if ($TriagemResult -and $TriagemResult.direction) { [string]$TriagemResult.direction } else { "" }
+    if (Get-Command Resolve-MentorDirection -ErrorAction SilentlyContinue) {
+        $effectiveDirection = Resolve-MentorDirection -ExplicitDirection ([string]$Direction) -MesaSignal $mesaSig -TriagemDirection $triagemDir
+    } else {
+        # Fallback legado (lib indisponivel)
+        $effectiveDirection = if ($Direction) { $Direction }
+                              elseif ($mesaSig -in @("LONG","SHORT")) { $mesaSig }
+                              elseif ($triagemDir -in @("LONG","SHORT")) { $triagemDir }
+                              else { "LONG" }
+    }
 
     # RAG opcional -- so executa se Get-RelevantKnowledge (Parte A) estiver disponivel
     if (-not $KnowledgeContext -and (Get-Command Get-RelevantKnowledge -ErrorAction SilentlyContinue)) {
