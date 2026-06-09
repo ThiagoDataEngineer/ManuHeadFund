@@ -90,6 +90,7 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 . (Join-Path $agentsDir "lib_universe_sweep.ps1")
 . (Join-Path $agentsDir "lib_hit_rate.ps1")
 . (Join-Path $agentsDir "lib_observation_logger.ps1")
+. (Join-Path $agentsDir "lib_self_recovery.ps1")  # 2026-06-08: auto-healing (diagnostica log + auto-corrige)
 . (Join-Path $agentsDir "lib_mentor_invariants.ps1")  # B4 prevention
 . (Join-Path $agentsDir "lib_gem_safety.ps1")
 . (Join-Path $agentsDir "lib_gem_auto_approve.ps1")
@@ -1423,6 +1424,18 @@ do {
     $iteration++
     $seasonal = Get-SeasonalityContext
     $global:MASTER_LAST_SEASONAL = $seasonal
+
+    # 2026-06-08: SELF-RECOVERY -- analisa log do ciclo anterior e auto-corrige
+    # falhas de infra ANTES de re-tentar. Fail-safe: nunca afrouxa gates de trade.
+    if ($iteration -gt 1 -and (Get-Command Invoke-AutoRecover -ErrorAction SilentlyContinue)) {
+        try {
+            $masterLog = Join-Path $logDir "master_$(Get-Date -Format 'yyyyMMdd').log"
+            $rec = Invoke-AutoRecover -LogPath $masterLog
+            if ($rec.decision.action -ne "none") {
+                Write-MasterLog "SELF-RECOVERY: $($rec.health.dominant_issue) (streak=$($rec.streak)) -> $($rec.decision.action) [$($rec.applied)]" "WARN"
+            }
+        } catch { Write-MasterLog "SELF-RECOVERY erro: $_" "WARN" }
+    }
 
     if (-not $global:MASTER_PAUSED) {
         try {
