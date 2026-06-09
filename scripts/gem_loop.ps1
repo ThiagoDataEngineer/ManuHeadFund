@@ -92,6 +92,21 @@ try {
     Write-GemLog "WARN" "Falha ao carregar guards: $($_.Exception.Message)"
 }
 
+# Market movers (universo dinamico 2026-06-09)
+try {
+    . (Join-Path $agentsDir "lib_market_movers.ps1") -ErrorAction SilentlyContinue
+    if (Get-Command Get-PrioritizedMarkets -ErrorAction SilentlyContinue) {
+        Write-GemLog "DEBUG" "Market movers lib carregado (universo dinamico ativo)"
+    }
+} catch { }
+
+# Trailing stop (deixa ganho rodar 2026-06-09)
+try {
+    . (Join-Path $agentsDir "lib_trailing.ps1") -ErrorAction SilentlyContinue
+    . (Join-Path $agentsDir "trailing_stop_manager.ps1") -ErrorAction SilentlyContinue
+    Write-GemLog "DEBUG" "Trailing stop ativado"
+} catch { }
+
 # Tech agent (precisa estar disponivel para gem_executor)
 # Carrega com erro visivel (Stop) — catch loga + continua (fallback no gem_executor)
 try {

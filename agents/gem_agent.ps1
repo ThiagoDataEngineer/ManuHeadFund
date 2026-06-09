@@ -790,6 +790,13 @@ function Invoke-GemScan {
     $tickers = Get-GemSpotTickers -MinVol $MinVol24h -MaxVol $MaxVol24h
     Write-Host "        $($tickers.Count) pares no universo micro-cap" -ForegroundColor Gray
 
+    # 2026-06-09: UNIVERSO DINAMICO -- prioriza movers (gainers/losers) sobre quiet.
+    # Mover primeiro = maior chance de hit em vol spike real.
+    if (Get-Command Get-PrioritizedMarkets -ErrorAction SilentlyContinue) {
+        $tickers = Get-PrioritizedMarkets -AllMarkets $tickers -GainerThreshold 10 -LoserThreshold -10
+        Write-Host "        (reordenado: movers primeiro p/ vol spike real)" -ForegroundColor Cyan
+    }
+
     # ── Fase 2: Filtro rapido G1+G2 via range do ticker (sem klines extras) ───
     Write-Host "  [2/5] Pre-filtro: range > $($global:GEM_RANGE_MIN_PCT * 100)%..." -ForegroundColor Gray
     $pre_filtered = $tickers | Where-Object {
