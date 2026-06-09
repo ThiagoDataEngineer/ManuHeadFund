@@ -931,6 +931,42 @@ jobs:
           }
 
   # ============================================================================
+  # JOB 5: LEARNING CYCLE (Counterfactual — a cada 30min)
+  # 2026-06-09: Computa stats dos snapshots+outcomes+skips periodicamente
+  # ============================================================================
+  learning-cycle:
+    name: Learning Cycle (Retroalimentacao)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+
+      - name: Run Learning Cycle (a cada 30min)
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $minute = (Get-Date).Minute
+          # Roda a cada 30min (0, 30)
+          if ($minute -in @(0, 30)) {
+            Write-Host "=== LEARNING CYCLE ===" -ForegroundColor Cyan
+            try {
+              . agents/lib_learning_scheduler.ps1
+              Invoke-LearningCycle -JournalDir "journal"
+              Write-Host "✓ Learning cycle complete" -ForegroundColor Green
+            } catch {
+              Write-Host "WARN: Learning cycle failed: $_" -ForegroundColor Yellow
+            }
+          } else {
+            Write-Host "Skipped (runs every 30min)" -ForegroundColor DarkGray
+          }
+
+  # ============================================================================
   # JOB 6: HEALTH CHECK
   # ============================================================================
   health-check:
