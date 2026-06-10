@@ -6,7 +6,7 @@
 . (Join-Path $PSScriptRoot "lib_telegram.ps1")
 
 # Promove para global (lido de config.ps1 se disponivel, senao fallback hardcoded)
-$global:GEM_VOL_SPIKE_MIN    = if ($GEM_VOL_SPIKE_MIN)    { $GEM_VOL_SPIKE_MIN    } else { 2.0 }
+$global:GEM_VOL_SPIKE_MIN    = if ($GEM_VOL_SPIKE_MIN)    { $GEM_VOL_SPIKE_MIN    } else { 1.5 }  # 2026-06-10: reduced 2.0→1.5 for +3x candidates
 $global:GEM_MCAP_DISCOVERY   = if ($GEM_MCAP_DISCOVERY)   { $GEM_MCAP_DISCOVERY   } else { 2000000.0 }
 $global:GEM_MCAP_MOMENTUM    = if ($GEM_MCAP_MOMENTUM)    { $GEM_MCAP_MOMENTUM    } else { 20000000.0 }
 $global:GEM_LISTING_DAYS_MAX = if ($GEM_LISTING_DAYS_MAX) { $GEM_LISTING_DAYS_MAX } else { 10 }
@@ -818,13 +818,28 @@ function Invoke-GemScan {
                 [PSCustomObject]@{ open=[double]$_.open; high=[double]$_.high; low=[double]$_.low; close=[double]$_.close; volume=[double]$_.volume; ts=$_.created_at }
             }
             $vol_data = Get-CoinExVolSpike -Market $t.market -DailyCandles $daily
-            if (-not $vol_data.passed) { continue }
+            # 2026-06-10: Vol Climax alternative gate — pass even if spike < 1.5x if vol_climax confluent
+            $vol_climax_pass = $false
+            if (Get-Command Get-VolClimaxBoost -ErrorAction SilentlyContinue) {
+                $volumes = @($daily | ForEach-Object { [double]$_.volume })
+                if ($volumes.Count -ge 3) {
+                    $closes = @($daily | ForEach-Object { [double]$_.close })
+                    $highs  = @($daily | ForEach-Object { [double]$_.high })
+                    $lows   = @($daily | ForEach-Object { [double]$_.low })
+                    $vc_boost = Get-VolClimaxBoost -Volumes $volumes -Closes $closes -Highs $highs -Lows $lows
+                    $vol_climax_pass = $vc_boost -gt 15  # strong vol_climax signal
+                }
+            }
+
+            if (-not $vol_data.passed -and -not $vol_climax_pass) { continue }
+
             $pct_range = if ($daily[-1].open -gt 0) { ([double]$daily[-1].high - [double]$daily[-1].low) / [double]$daily[-1].open } else { 0 }
             $spike_candidates += [PSCustomObject]@{
                 ticker    = $t
                 vol_data  = $vol_data
                 daily     = $daily
                 pct_range = $pct_range
+                vol_climax_flag = $vol_climax_pass
             }
         } catch { }
     }
