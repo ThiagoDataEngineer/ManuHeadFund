@@ -158,8 +158,5 @@ function Get-VolClimaxBoost {
     return 0
 }
 
-# Exports
-Export-ModuleMember -Function @(
-    'Test-VolClimaxSignal',
-    'Get-VolClimaxBoost'
-)
+# Note: Export-ModuleMember not needed for dot-sourcing in PowerShell scripts
+# Functions are automatically available after . .\lib_vol_climax_integration.ps1
