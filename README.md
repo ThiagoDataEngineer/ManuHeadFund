@@ -1,7 +1,23 @@
 # 🚀 ManuHeadFund - CoinEx AI Trading System
 
 Sistema automatizado de trading com IA (Mentor Agent) + Auto-Trade Engine para CoinEx SPOT + FUTURES (HYBRID 50/50).  
-**Status**: ✅ **READY FOR LIVE SPOT $2.70** (FASE 1) | **Last Updated**: 2026-06-08
+**Status**: ✅ **READY FOR LIVE SPOT $2.70** (FASE 1) | **Last Updated**: 2026-06-09
+
+---
+
+## 🎯 VALIDACAO BRUTAL — vol_climax Signal (2026-06-09) ⭐
+
+**TDD Phase 1 COMPLETE**: Backtest 7.4 anos validou 3 sinais.
+
+| Signal | Sharpe | Trades | Win% | Status |
+|--------|--------|--------|------|--------|
+| **vol_climax** | **8.81** | 65 | 55.4% | ✅ **ELITE — ACTIVATE NOW** |
+| tori | 6.34 | 1,236 | 50.4% | ✅ Complementary |
+| faro_v3 | 4.49 | 6 | 50% | ⚠️ Paused (small sample) |
+
+**Action**: Phase 2 (wire in gem_agent) happening NOW.
+**Target**: 5-10 vol_climax trades in 24h with 45%+ win rate.
+**Docs**: Read [VALIDACAO_BRUTAL_INDEX](./journal/VALIDACAO_BRUTAL_INDEX_2026_06_09.md) then [ACAO_IMEDIATA](./journal/ACAO_IMEDIATA_2026_06_09.md)
 
 ---
 
