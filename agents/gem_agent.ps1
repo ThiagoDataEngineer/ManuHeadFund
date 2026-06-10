@@ -881,8 +881,8 @@ function Invoke-GemScan {
     foreach ($c in $narrative_candidates) {
         $mkt = $c.ticker.market
         try {
-            # 1H para estrutura (G5)
-            $kr1h = Invoke-RestMethod -Uri "$global:COINEX_BASE_URL/v2/spot/kline?market=$mkt&period=1hour&limit=24" -Method GET
+            # 1H para estrutura (G5) — ADD TIMEOUT (2026-06-09: fix GemScan hang)
+            $kr1h = Invoke-RestMethod -Uri "$global:COINEX_BASE_URL/v2/spot/kline?market=$mkt&period=1hour&limit=24" -Method GET -TimeoutSec 10
             $c1h = @()
             if ($kr1h.code -eq 0) {
                 $c1h = $kr1h.data | ForEach-Object {
@@ -891,8 +891,8 @@ function Invoke-GemScan {
             }
             $structure = Get-GemStructureScore -Candles1H $c1h
 
-            # 5min para deteccao organica (G6)
-            $kr5 = Invoke-RestMethod -Uri "$global:COINEX_BASE_URL/v2/spot/kline?market=$mkt&period=5min&limit=60" -Method GET
+            # 5min para deteccao organica (G6) — ADD TIMEOUT
+            $kr5 = Invoke-RestMethod -Uri "$global:COINEX_BASE_URL/v2/spot/kline?market=$mkt&period=5min&limit=60" -Method GET -TimeoutSec 10
             $c5 = @()
             if ($kr5.code -eq 0) {
                 $c5 = $kr5.data | ForEach-Object {
@@ -900,10 +900,10 @@ function Invoke-GemScan {
                 }
             }
 
-            # 1min para fingerprint (G7)
-            $kr1 = Invoke-RestMethod -Uri "$global:COINEX_BASE_URL/v2/spot/kline?market=$mkt&period=1min&limit=60" -Method GET
+            # 1min para fingerprint (G7) — ADD TIMEOUT
+            $kr1 = Invoke-RestMethod -Uri "$global:COINEX_BASE_URL/v2/spot/kline?market=$mkt&period=1min&limit=60" -Method GET -TimeoutSec 10
             $c1 = @()
-            if ($kr1.code -eq 0) {
+            if ($null -ne $kr1 -and $kr1.code -eq 0) {
                 $c1 = $kr1.data | ForEach-Object {
                     [PSCustomObject]@{ open=[double]$_.open; high=[double]$_.high; low=[double]$_.low; close=[double]$_.close; volume=[double]$_.volume }
                 }
