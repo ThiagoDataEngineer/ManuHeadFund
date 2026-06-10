@@ -183,8 +183,8 @@ function Invoke-GemCycle-Once {
             try {
                 $trailingFile = Join-Path $global:JOURNAL_DIR "trailing_positions.json"
                 if (Test-Path $trailingFile) {
-                    # Get current MONUSDT price via Invoke-RestMethod (como gem_executor faz)
-                    $ticker = Invoke-RestMethod -Uri "$global:COINEX_BASE_URL/v2/futures/ticker?market=MONUSDT" -Method GET -ErrorAction SilentlyContinue
+                    # Get current MONUSDT price via Invoke-RestMethod (como gem_executor faz) — ADD TIMEOUT
+                    $ticker = Invoke-RestMethod -Uri "$global:COINEX_BASE_URL/v2/futures/ticker?market=MONUSDT" -Method GET -TimeoutSec 5 -ErrorAction SilentlyContinue
                     if ($ticker -and $ticker.code -eq 0 -and $ticker.data) {
                         $currentPrice = [double]$ticker.data[0].last
                         $trailingResult = Update-TrailingPeakLive -Market "MONUSDT" -CurrentPrice $currentPrice -TrailingFile $trailingFile
@@ -208,8 +208,8 @@ function Invoke-GemCycle-Once {
                 $today = (Get-Date).Date
 
                 if ($lastBuyDate.Date -lt $today) {
-                    # Get BTC price via Invoke-RestMethod
-                    $btcTicker = Invoke-RestMethod -Uri "$global:COINEX_BASE_URL/v2/futures/ticker?market=BTCUSDT" -Method GET -ErrorAction SilentlyContinue
+                    # Get BTC price via Invoke-RestMethod — ADD TIMEOUT
+                    $btcTicker = Invoke-RestMethod -Uri "$global:COINEX_BASE_URL/v2/futures/ticker?market=BTCUSDT" -Method GET -TimeoutSec 5 -ErrorAction SilentlyContinue
                     if ($btcTicker -and $btcTicker.code -eq 0 -and $btcTicker.data) {
                         $btcPrice = [double]$btcTicker.data[0].last
                         $shouldBuy = Test-DcaShouldBuy -BtcPrice $btcPrice
