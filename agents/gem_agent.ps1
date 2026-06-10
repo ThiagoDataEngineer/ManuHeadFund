@@ -925,6 +925,26 @@ function Invoke-GemScan {
                 -LogoUrl     $c.logo_url `
                 -BtcDominance $null
 
+            # 2026-06-09 TDD Phase 2: Add vol_climax boost to score
+            if (Get-Command Get-VolClimaxBoost -ErrorAction SilentlyContinue) {
+                try {
+                    if ($c1h -and $c1h.Count -ge 3) {
+                        $volumes = @($c1h.volume)
+                        $closes  = @($c1h.close)
+                        $highs   = @($c1h.high)
+                        $lows    = @($c1h.low)
+                        $volClimaxBoost = Get-VolClimaxBoost -Volumes $volumes -Closes $closes -Highs $highs -Lows $lows
+                        if ($volClimaxBoost -gt 0 -and $gem) {
+                            $oldScore = $gem.score
+                            $gem.score = [math]::Min(100, $gem.score + $volClimaxBoost)
+                            Write-Host "      [VC] $mkt boost +$volClimaxBoost ($oldScore→$($gem.score))" -ForegroundColor Cyan
+                        }
+                    }
+                } catch {
+                    # Non-critical; continue with base score
+                }
+            }
+
             $gem | Add-Member -NotePropertyName vol_data  -NotePropertyValue $c.vol_data  -Force
             $gem | Add-Member -NotePropertyName mcap_usd  -NotePropertyValue $c.mcap      -Force
             if ($gem.score -gt 0) {
