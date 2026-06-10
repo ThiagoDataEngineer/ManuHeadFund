@@ -132,6 +132,16 @@ try {
     Write-GemLog "WARN" "Macro libs carregamento falhou (non-critical): $($_.Exception.Message)"
 }
 
+# Vol Climax integration (2026-06-09 — TDD phase 1)
+try {
+    . (Join-Path $agentsDir "lib_vol_climax_integration.ps1") -ErrorAction SilentlyContinue
+    if (Get-Command Test-VolClimaxSignal -ErrorAction SilentlyContinue) {
+        Write-GemLog "DEBUG" "Vol Climax integration loaded (TDD phase 1)"
+    }
+} catch {
+    Write-GemLog "WARN" "Vol Climax integration load failed (non-critical): $($_.Exception.Message)"
+}
+
 # Tech agent (precisa estar disponivel para gem_executor)
 # Carrega com erro visivel (Stop) — catch loga + continua (fallback no gem_executor)
 try {
