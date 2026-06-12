@@ -78,6 +78,7 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 . (Join-Path $agentsDir "lib_tori_proximity.ps1")  # 2026-05-21 PM7: snapshot reader consumido por Mentor FullContext
 . (Join-Path $agentsDir "lib_trailing.ps1")
 . (Join-Path $agentsDir "lib_trailing_adaptive.ps1")  # Layer 1 TDD: Adaptive buffers + regime-aware stops
+. (Join-Path $agentsDir "lib_position_risk_audit.ps1")  # 2026-06-11: liq proxima / SL inutil / lucro destravado (12 TDD)
 . (Join-Path $agentsDir "lib_mentor_reflection.ps1")  # Layer 2 TDD: 6h checkpoint reviews + early warnings
 . (Join-Path $agentsDir "lib_layer4_tori_timestop.ps1")  # Layer 4 TDD: Tori proximity + time-based stops
 . (Join-Path $agentsDir "lib_moon_bag.ps1")  # Layer 5 TDD: Moon Bag (50/50 harvest + upside)
@@ -607,6 +608,11 @@ function Invoke-MasterCycle {
         
         try { Update-TrailingStopsAdaptive } catch { Write-MasterLog "Trailing adaptativo erro: $_" "WARN" }
         Show-TrailingStatus
+
+        # 2026-06-11: auditoria de risco por ciclo — liq proxima, SL alem da liq,
+        # lucro destravado sem protecao. Auto-protecao (mover SL) opt-in via
+        # journal/RISK_AUTO_PROTECT.flag; sem flag = so alerta TG (dedup diario).
+        try { Invoke-PositionRiskAudit } catch { Write-MasterLog "Risk audit erro: $_" "WARN" }
         
         # ── Layer 2: Mentor Reflection (6h checkpoint reviews) ──────────────────
         try { Update-MentorReview } catch { Write-MasterLog "Mentor review erro: $_" "WARN" }
