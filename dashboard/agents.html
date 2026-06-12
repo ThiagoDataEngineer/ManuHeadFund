@@ -6,6 +6,8 @@
 <meta http-equiv="refresh" content="300">
 <title>ManuHeadFund — Agents Mission Control</title>
 <script src="manu_data.js"></script>
+<script src="manu_data.enc.js"></script>
+<script src="unlock.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #0a0e14; color: #e6edf3; font-family: 'Cascadia Code', 'Consolas', monospace; font-size: 13px; }
@@ -135,8 +137,8 @@ function render() {
 
   document.getElementById('last-update').textContent = 'atualizado: ' + (d.timestamp ?? '—');
 }
-render();
-setInterval(render, 60000);
+window.onDataReady = render;
+setInterval(() => { if (typeof MANU_DATA !== 'undefined' || window.MANU_DATA) render(); }, 60000);
 </script>
 </body>
 </html>

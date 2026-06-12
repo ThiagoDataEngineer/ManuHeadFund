@@ -6,6 +6,8 @@
 <meta http-equiv="refresh" content="300">
 <title>ManuHeadFund — Dashboard</title>
 <script src="manu_data.js"></script>
+<script src="manu_data.enc.js"></script>
+<script src="unlock.js"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: #0d1117; color: #e6edf3; font-family: 'Segoe UI', monospace; font-size: 13px; }
@@ -491,9 +493,9 @@ async function loadAll() {
   document.getElementById('last-update').textContent = 'Atualizado: ' + ts;
 }
 
-// Auto-refresh a cada 60s
-loadAll();
-setInterval(loadAll, 60000);
+// Bootstrap via unlock.js (local: direto; online: apos senha). Refresh 60s.
+window.onDataReady = loadAll;
+setInterval(() => { if (typeof MANU_DATA !== 'undefined' || window.MANU_DATA) loadAll(); }, 60000);
 </script>
 </body>
 </html>
