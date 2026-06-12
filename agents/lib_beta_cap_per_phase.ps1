@@ -1,4 +1,4 @@
-# lib_beta_cap_per_phase.ps1 -- Dynamic beta cap per market phase.
+﻿# lib_beta_cap_per_phase.ps1 -- Dynamic beta cap per market phase.
 #
 # Tier 1 T-Beta (2026-05-23): Phase 2 A/B revelou bands beta>1.2 com EV positivo.
 # Per-phase analise mostrou:

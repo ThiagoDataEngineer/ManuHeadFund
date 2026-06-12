@@ -1,4 +1,4 @@
-# PHASE 3 EVOLVED BACKTEST — Multi-signal realistic validation
+﻿# PHASE 3 EVOLVED BACKTEST — Multi-signal realistic validation
 # Baseado em sinais REAIS já avaliados no projeto
 # Objetivo: Determinar se FASE 3 (leverage 5x, $135) é viável com confiança
 

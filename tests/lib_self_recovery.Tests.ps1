@@ -1,4 +1,4 @@
-# lib_self_recovery.Tests.ps1 -- TDD Self-Recovery Engine
+﻿# lib_self_recovery.Tests.ps1 -- TDD Self-Recovery Engine
 # 2026-06-08: Cobre funcoes puras (sem mock) + I/O wrappers (tmp files).
 
 $agentsDir = Join-Path (Split-Path -Parent $PSScriptRoot) "agents"

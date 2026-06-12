@@ -1,4 +1,4 @@
-# scripts\trailing_stop_monitor.ps1
+﻿# scripts\trailing_stop_monitor.ps1
 # Monitor de Trailing Stop - CROSS-PLATFORM (Windows/Linux)
 # Funciona tanto localmente quanto no GitHub Actions
 # 2026-05-24

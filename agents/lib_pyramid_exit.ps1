@@ -1,4 +1,4 @@
-# lib_pyramid_exit.ps1 — Venda piramidal em topos cíclicos halving
+﻿# lib_pyramid_exit.ps1 — Venda piramidal em topos cíclicos halving
 # Vende 20% a cada novo ATH, prende ganho em stablecoin
 # PS 5.1. UTF-8 BOM.
 

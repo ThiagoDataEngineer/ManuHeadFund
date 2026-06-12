@@ -1,4 +1,4 @@
-# lib_faro_sentiment.ps1 — Trending + Social sentiment
+﻿# lib_faro_sentiment.ps1 — Trending + Social sentiment
 function Get-SentimentScore {
     param([string] $Market, [int] $TrendingRank, [decimal] $MentionsChange, [int] $TelegramMembers = 0, [int] $TelegramVelocity = 0)
     if (-not $TrendingRank -or -not $MentionsChange -or $TrendingRank -lt 1 -or $TrendingRank -gt 1000) { return 0 }

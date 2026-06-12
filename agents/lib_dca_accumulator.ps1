@@ -1,4 +1,4 @@
-# lib_dca_accumulator.ps1 — DCA acumulação automática em fundo halving
+﻿# lib_dca_accumulator.ps1 — DCA acumulação automática em fundo halving
 # Compra BTC+ETH dia a dia quando BTC está em downtrend ou fundo histórico
 # PS 5.1. UTF-8 BOM.
 

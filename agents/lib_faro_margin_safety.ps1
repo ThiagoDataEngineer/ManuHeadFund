@@ -1,4 +1,4 @@
-# lib_faro_margin_safety.ps1 — Intelligent 2x margin with auto-liquidation safety
+﻿# lib_faro_margin_safety.ps1 — Intelligent 2x margin with auto-liquidation safety
 
 function Calculate-MarginPosition {
     param(

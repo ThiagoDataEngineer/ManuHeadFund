@@ -1,4 +1,4 @@
-# lib_gem_executor_multitf.Tests.ps1 — Phase 2 Integration Tests
+﻿# lib_gem_executor_multitf.Tests.ps1 — Phase 2 Integration Tests
 # 2026-06-08: Validate Multi-TF gate integration in gem_executor.ps1
 
 $agentsDir = Join-Path (Split-Path -Parent $PSScriptRoot) "agents"

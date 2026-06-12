@@ -1,4 +1,4 @@
-# trailing_smart_atr.Tests.ps1
+﻿# trailing_smart_atr.Tests.ps1
 # TDD para Camada 2: ATR Adaptativo no trailing
 # RED phase: testes definem comportamento esperado
 

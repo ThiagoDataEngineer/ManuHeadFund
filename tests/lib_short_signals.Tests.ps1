@@ -1,4 +1,4 @@
-$here = Split-Path -Parent $MyInvocation.MyCommand.Path
+﻿$here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $root = Split-Path -Parent $here
 . (Join-Path $root "agents\lib_short_signals.ps1")
 

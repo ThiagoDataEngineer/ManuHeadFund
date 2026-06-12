@@ -1,4 +1,4 @@
-# mentor_alpha_history.Tests.ps1 -- B.4
+﻿# mentor_alpha_history.Tests.ps1 -- B.4
 # Get-MarketAlphaSummary le decision_reflections.jsonl, retorna stats alpha
 # historico pro market. Mentor usa pra: "alt has -3pp avg alpha N=15 -> VETAR".
 

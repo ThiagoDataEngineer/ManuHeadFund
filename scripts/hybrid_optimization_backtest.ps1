@@ -1,4 +1,4 @@
-# HYBRID OPTIMIZATION — Teste múltiplos splits SPOT/FUTURES
+﻿# HYBRID OPTIMIZATION — Teste múltiplos splits SPOT/FUTURES
 # Objetivo: Encontrar ratio ótimo que mantenha WR ≥60% + capital allocation eficiente
 
 param(

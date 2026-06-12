@@ -1,4 +1,4 @@
-# lib_cluster_filter.ps1 -- Cluster filter pra signal alerts (risk control).
+﻿# lib_cluster_filter.ps1 -- Cluster filter pra signal alerts (risk control).
 #
 # Filosofia: vol_climax_refined dispara em K markets simultaneos em capitulacoes
 # correlacionadas (ex: Jan 31 2026 = 7 markets mesmo dia). Sem filter, ativar

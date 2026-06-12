@@ -1,4 +1,4 @@
-# Layer 4 REAL SCENARIO Tests - validates against actual trade data
+﻿# Layer 4 REAL SCENARIO Tests - validates against actual trade data
 # Uses UNI (stagnant) and BNB (peak retraced) from 2026-05-25
 
 $ErrorActionPreference = "Stop"

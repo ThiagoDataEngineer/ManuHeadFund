@@ -1,4 +1,4 @@
-# lib_kelly_wire.ps1 -- Integra Kelly adaptive + feedback loop pra sizing real.
+﻿# lib_kelly_wire.ps1 -- Integra Kelly adaptive + feedback loop pra sizing real.
 #
 # Resolve-AdaptiveSizing(Market, Mode, Capital):
 #   1. Le trade_outcomes.jsonl filtrado por market

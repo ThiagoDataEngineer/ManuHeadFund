@@ -1,4 +1,4 @@
-# promotion_sizing.Tests.ps1 -- TDD Resolve-PromotionSizing integration
+﻿# promotion_sizing.Tests.ps1 -- TDD Resolve-PromotionSizing integration
 # Pester 3.x. UTF-8 BOM.
 
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"

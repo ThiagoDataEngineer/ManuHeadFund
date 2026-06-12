@@ -1,4 +1,4 @@
-# Layer 5 wire: Register-PositionTrailing wrapper TDD
+﻿# Layer 5 wire: Register-PositionTrailing wrapper TDD
 #
 # Objetivo: garantir que o wrapper escolhe corretamente entre
 #   Add-TrailingPosition (legacy) e Add-MoonBagPair (nova) baseado em flag opt-in.

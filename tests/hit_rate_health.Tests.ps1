@@ -1,4 +1,4 @@
-# hit_rate_health.Tests.ps1 — TDD strict: saude do hit rate (GREEN/YELLOW/RED)
+﻿# hit_rate_health.Tests.ps1 — TDD strict: saude do hit rate (GREEN/YELLOW/RED)
 # 11+ tests: validar status, logs, consecutivos, truncamento
 # UTF-8 BOM, Pester 3.x
 

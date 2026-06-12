@@ -1,4 +1,4 @@
-# lib_auto_market_analysis.ps1
+﻿# lib_auto_market_analysis.ps1
 # "AI Analysis" AUTOMATICA propria (sem depender de endpoint externo).
 # Reusa o que ja existe no projeto:
 #   - candles: CoinEx-GetFuturesCandles (multi-timeframe 1h/4h/1d)

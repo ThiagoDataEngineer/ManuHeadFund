@@ -1,4 +1,4 @@
-# lib_llm_quota_optimizer.ps1 — LLM Quota Optimization & Rate Limiting
+﻿# lib_llm_quota_optimizer.ps1 — LLM Quota Optimization & Rate Limiting
 # Context: Groq free tier = 14.4K reqs/dia. Mesa 3 drones × 6-12s latencia cada = burst heavy.
 # Solution: (1) Skip Mesa trivial signals, (2) Rate limit inter-drone, (3) Cache LLM responses
 # Impact: 6x reduction (5min → 30min interval) + aggressive filtering = ~2.4K reqs/dia (5.8 days runway on 14.4K)

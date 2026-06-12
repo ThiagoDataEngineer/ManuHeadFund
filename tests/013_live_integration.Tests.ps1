@@ -1,4 +1,4 @@
-# TDD: Semana 5 — Live Integration (gates → PlaceOrder)
+﻿# TDD: Semana 5 — Live Integration (gates → PlaceOrder)
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 

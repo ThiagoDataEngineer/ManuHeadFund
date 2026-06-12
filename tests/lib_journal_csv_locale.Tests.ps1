@@ -1,4 +1,4 @@
-# lib_journal_csv_locale.Tests.ps1 - Pester 3.x
+﻿# lib_journal_csv_locale.Tests.ps1 - Pester 3.x
 # RED-GREEN-REFACTOR: bug de serializacao CSV em locale PT-BR (decimais com virgula)
 # Rodar: Invoke-Pester .\tests\lib_journal_csv_locale.Tests.ps1 -Verbose
 

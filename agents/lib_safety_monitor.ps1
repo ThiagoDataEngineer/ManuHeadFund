@@ -1,4 +1,4 @@
-# lib_safety_monitor.ps1 — Automatic safety checks every cycle
+﻿# lib_safety_monitor.ps1 — Automatic safety checks every cycle
 # Auto-switches PAPER mode if any red flag detected
 # 2026-06-08
 

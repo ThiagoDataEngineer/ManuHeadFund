@@ -1,4 +1,4 @@
-# lib_telegram_commands.ps1 — Telegram bot commands handler
+﻿# lib_telegram_commands.ps1 — Telegram bot commands handler
 # /status /halt /resume /close /scan /summary
 
 # ════════════════════════════════════════════════════════════

@@ -1,4 +1,4 @@
-# lib_daemon_singleton.Tests.ps1 -- Guard de instancia unica (anti-duplicata).
+﻿# lib_daemon_singleton.Tests.ps1 -- Guard de instancia unica (anti-duplicata).
 # Pester 3.x. PS 5.1. Minimo mock: usa processos REAIS (child sleep) pra simular
 # "outra instancia viva", refletindo exatamente o que o daemon executa em producao.
 

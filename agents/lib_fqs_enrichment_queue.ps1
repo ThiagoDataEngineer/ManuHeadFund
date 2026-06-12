@@ -1,4 +1,4 @@
-# lib_fqs_enrichment_queue.ps1 -- Helper idempotente p/ enqueue FQS enrichment.
+﻿# lib_fqs_enrichment_queue.ps1 -- Helper idempotente p/ enqueue FQS enrichment.
 #
 # Background:
 #   Antes (PM6): apenas Build-MentorFullContext (mentor_agent.ps1) enfileirava

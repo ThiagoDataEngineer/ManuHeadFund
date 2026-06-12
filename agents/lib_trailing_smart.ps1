@@ -1,4 +1,4 @@
-# lib_trailing_smart.ps1
+﻿# lib_trailing_smart.ps1
 # Trailing Stop Inteligente - Camadas 2-5 (volatilidade adaptativa, exhaustion, micro, macro)
 # 2026-05-25 - Implementacao TDD
 #

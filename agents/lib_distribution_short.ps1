@@ -1,4 +1,4 @@
-# lib_distribution_short.ps1 — DISTRIBUTION_SHORT Pattern Detection
+﻿# lib_distribution_short.ps1 — DISTRIBUTION_SHORT Pattern Detection
 # Detecta distribuição → reversão → dump setup (SHORT)
 # TDD: 10 funções, cada uma testada
 # 2026-06-08

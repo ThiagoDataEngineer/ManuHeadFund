@@ -1,4 +1,4 @@
-# triagem_regime_hybrid.Tests.ps1 -- HYBRID fix 2026-05-21.
+﻿# triagem_regime_hybrid.Tests.ps1 -- HYBRID fix 2026-05-21.
 # Pester 3.x.
 #
 # Bug: triagem usa change_24h + macro fallback, mas backtest STRUCTURAL_BREAK

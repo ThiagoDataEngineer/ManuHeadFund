@@ -1,4 +1,4 @@
-# migrate_json_to_supabase.ps1 -- Migrate JSON data to Supabase
+﻿# migrate_json_to_supabase.ps1 -- Migrate JSON data to Supabase
 # Reads local JSON files and populates Supabase tables
 
 param(

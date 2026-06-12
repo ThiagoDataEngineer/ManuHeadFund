@@ -1,4 +1,4 @@
-# wave3_cross_platform.Tests.ps1
+﻿# wave3_cross_platform.Tests.ps1
 # TDD para Onda 3: scripts com dependencias LLM
 
 $ErrorActionPreference = "Stop"

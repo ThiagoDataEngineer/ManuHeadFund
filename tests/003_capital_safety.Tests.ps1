@@ -1,4 +1,4 @@
-# TDD: A4 — Capital Safety enforcement
+﻿# TDD: A4 — Capital Safety enforcement
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 

@@ -1,4 +1,4 @@
-# lib_capital_safety_enforcer.ps1 -- Capital Safety gates (fail-closed)
+﻿# lib_capital_safety_enforcer.ps1 -- Capital Safety gates (fail-closed)
 # Objetivo: Nenhuma trade pode bypassar limites de capital
 #   - Max 1% account por trade
 #   - R:R mínimo 1:5

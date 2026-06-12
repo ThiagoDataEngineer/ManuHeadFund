@@ -1,4 +1,4 @@
-# tests\test_telegram_dedup_persist.ps1
+﻿# tests\test_telegram_dedup_persist.ps1
 # TDD: deduplicacao PERSISTENTE em JSON (sobrevive a restart do daemon).
 #   - Import-TgDedupStore / Export-TgDedupStore (round-trip)
 #   - Send-TelegramAlert -DedupStorePath usa o arquivo entre processos

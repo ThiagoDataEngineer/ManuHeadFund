@@ -1,4 +1,4 @@
-# lib_fqs_enrichment_queue.Tests.ps1 -- TDD-first auto-enqueue idempotent FQS.
+﻿# lib_fqs_enrichment_queue.Tests.ps1 -- TDD-first auto-enqueue idempotent FQS.
 # Pester 3.x. Lockdown anti-regression do gap 2026-05-21 morning:
 #   6 markets scanned hoje sem registry entry; queue mecanismo previo so cobria
 #   path Mentor (GEM track + Tier D escapavam). Esses testes garantem que:

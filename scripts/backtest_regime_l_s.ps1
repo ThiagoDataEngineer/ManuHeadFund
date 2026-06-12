@@ -1,4 +1,4 @@
-# backtest_regime_l_s.ps1 — Regime-Specific LONG vs SHORT Backtest
+﻿# backtest_regime_l_s.ps1 — Regime-Specific LONG vs SHORT Backtest
 # 2026-06-08: Validates L+S edge per regime (BULL_STRONG/WEAK, BEAR_WEAK/STRONG)
 
 param(

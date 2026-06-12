@@ -1,4 +1,4 @@
-# VERSÃO SIMPLIFICADA — backtest real com cálculo manual dos sinais
+﻿# VERSÃO SIMPLIFICADA — backtest real com cálculo manual dos sinais
 # Sem dependência das libs de scoring completas
 
 param([int] $MinScore = 30, [int] $MinSignalCount = 2, [int] $SampleSize = 146)

@@ -1,4 +1,4 @@
-# lib_exit_logic.ps1 — Exit management (TP, SL, Trailing, Time-based)
+﻿# lib_exit_logic.ps1 — Exit management (TP, SL, Trailing, Time-based)
 # Position monitoring + auto-close logic
 
 # ════════════════════════════════════════════════════════════

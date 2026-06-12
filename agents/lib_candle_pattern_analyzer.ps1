@@ -1,4 +1,4 @@
-# lib_candle_pattern_analyzer.ps1
+﻿# lib_candle_pattern_analyzer.ps1
 # Sistema de análise de padrões em candlesticks
 # Aprende com movimentos históricos e ajusta trailing dinâmico
 # 2026-06-06

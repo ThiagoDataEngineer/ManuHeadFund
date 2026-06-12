@@ -1,4 +1,4 @@
-# faro_v3_entry_scalp.ps1 — Scalp mode auto-entry
+﻿# faro_v3_entry_scalp.ps1 — Scalp mode auto-entry
 # Quick entries on 5+ signals, smaller position size, micro-caps only
 # Runs every 15 minutes (or immediately after engine scan)
 

@@ -1,4 +1,4 @@
-# triagem_regime_per_pair.Tests.ps1
+﻿# triagem_regime_per_pair.Tests.ps1
 # TDD: regime classifier per-pair (pair change_24h), nao macro-only.
 # UTF-8 BOM. Pester 3.x.
 

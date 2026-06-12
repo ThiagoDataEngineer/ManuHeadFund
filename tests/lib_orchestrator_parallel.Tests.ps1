@@ -1,4 +1,4 @@
-# lib_orchestrator_parallel.Tests.ps1 -- Pester 3.x
+﻿# lib_orchestrator_parallel.Tests.ps1 -- Pester 3.x
 # Smoke test usando AgentsDir fake com mock Invoke-OrchestratorV6 minimo.
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path

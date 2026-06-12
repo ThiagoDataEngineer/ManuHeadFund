@@ -1,4 +1,4 @@
-# B28 fix 2026-05-21 PM6+1050min: Mesa cascade burst mitigation.
+﻿# B28 fix 2026-05-21 PM6+1050min: Mesa cascade burst mitigation.
 #
 # Pós B25/B26/B27 a telemetria revelou: 5/6 drones com job_state_Running_likely_timeout
 # Causa raiz: scan paralelo de N markets dispara N*3 drones LLM simultaneamente,

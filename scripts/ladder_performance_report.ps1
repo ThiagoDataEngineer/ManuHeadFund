@@ -1,4 +1,4 @@
-# ladder_performance_report.ps1 -- Agrega performance ladder por template x regime
+﻿# ladder_performance_report.ps1 -- Agrega performance ladder por template x regime
 # PS 5.1. UTF-8 BOM.
 param(
     [string]   $JournalDir = (Join-Path (Split-Path $MyInvocation.MyCommand.Path -Parent) "..\journal"),

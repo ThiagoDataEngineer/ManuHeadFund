@@ -1,4 +1,4 @@
-# lib_seasonality.Tests.ps1 -- Pester 3.x -- Get-SeasonalityContext
+﻿# lib_seasonality.Tests.ps1 -- Pester 3.x -- Get-SeasonalityContext
 # Cobre calibracao empirica DoW (14 anos BTC, 2026-05-13)
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path

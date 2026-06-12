@@ -1,4 +1,4 @@
-# TDD: Audit Trail Validation — Cross-check 10 trades vs JSONL
+﻿# TDD: Audit Trail Validation — Cross-check 10 trades vs JSONL
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 

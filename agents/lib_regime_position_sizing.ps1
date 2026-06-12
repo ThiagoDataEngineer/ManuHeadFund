@@ -1,4 +1,4 @@
-# Regime Position Sizing Library
+﻿# Regime Position Sizing Library
 # Adjust position sizes based on market regime for optimal risk management
 # BULL_STRONG/BULL_WEAK/BEAR_WEAK: 1.0x
 # BEAR_STRONG: 0.5x (risk reduction in capitulation)

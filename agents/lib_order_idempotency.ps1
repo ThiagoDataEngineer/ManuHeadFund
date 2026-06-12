@@ -1,4 +1,4 @@
-# lib_order_idempotency.ps1 -- B19b fix 2026-05-20 PM6+450min.
+﻿# lib_order_idempotency.ps1 -- B19b fix 2026-05-20 PM6+450min.
 #
 # Fecha gap deferred do B19: PlaceOrder com client_id idempotency key.
 # CoinEx v2 futures/order aceita campo client_id (ate ~32 chars). Mesmo client_id

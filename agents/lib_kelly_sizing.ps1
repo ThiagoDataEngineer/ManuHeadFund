@@ -1,4 +1,4 @@
-# lib_kelly_sizing.ps1 -- Kelly fracionario com cap pra position sizing dinamico.
+﻿# lib_kelly_sizing.ps1 -- Kelly fracionario com cap pra position sizing dinamico.
 #
 # Filosofia (Simons/Berlekamp 1989):
 #   - Flat 1% sizing ignora variacao de edge entre trades.

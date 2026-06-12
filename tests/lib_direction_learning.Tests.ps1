@@ -1,4 +1,4 @@
-# lib_direction_learning.Tests.ps1 -- TDD motor de aprendizado bidirecional
+﻿# lib_direction_learning.Tests.ps1 -- TDD motor de aprendizado bidirecional
 # 2026-06-08: aprende win_rate/PnL por (source,direction,regime) com guardrail estatistico.
 # Fecha o loop sinais->outcome. "Se nao e compra, pode ser venda" = Get-BiasRecommendation.
 

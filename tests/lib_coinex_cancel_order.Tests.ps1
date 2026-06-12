@@ -1,4 +1,4 @@
-# lib_coinex_cancel_order.Tests.ps1 - TDD para CoinEx-CancelOrder
+﻿# lib_coinex_cancel_order.Tests.ps1 - TDD para CoinEx-CancelOrder
 # Rodar: Invoke-Pester .\tests\lib_coinex_cancel_order.Tests.ps1 -Verbose
 #
 # FASE RED: Testes escritos ANTES da implementacao

@@ -1,4 +1,4 @@
-# lib_self_learning.ps1 — Self-Learning Loop Autônomo
+﻿# lib_self_learning.ps1 — Self-Learning Loop Autônomo
 
 if (-not $global:JOURNAL_DIR) {
     $global:JOURNAL_DIR = Join-Path (Split-Path $PSScriptRoot -Parent) "journal"

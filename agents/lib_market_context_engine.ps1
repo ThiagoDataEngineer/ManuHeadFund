@@ -1,4 +1,4 @@
-# lib_market_context_engine.ps1 -- Market Context Engine (MCE)
+﻿# lib_market_context_engine.ps1 -- Market Context Engine (MCE)
 #
 # Modula decisoes TA via 6 fatores contextuais:
 #   dow_factor      x season_factor x halving_factor x session_factor

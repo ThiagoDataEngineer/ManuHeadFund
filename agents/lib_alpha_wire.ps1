@@ -1,4 +1,4 @@
-# lib_alpha_wire.ps1 -- Wire alpha_vs_btc no trades.csv (E4 close-trade migration).
+﻿# lib_alpha_wire.ps1 -- Wire alpha_vs_btc no trades.csv (E4 close-trade migration).
 #
 # Funcoes:
 #   - Test-AlphaColumnExists: check se header tem alpha_vs_btc

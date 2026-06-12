@@ -1,4 +1,4 @@
-# lib_trailing_peak_update.ps1 — Atualiza peak em tempo real
+﻿# lib_trailing_peak_update.ps1 — Atualiza peak em tempo real
 # Se price > peak, move stop pra breakeven liberando ganho
 # PS 5.1. UTF-8 BOM.
 

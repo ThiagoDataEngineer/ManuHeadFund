@@ -1,4 +1,4 @@
-# B4 mode-conflict prevention: invariante pre-mentor.
+﻿# B4 mode-conflict prevention: invariante pre-mentor.
 # Defesa em profundidade — mesmo apos 4-mode mapping fix, payload corrompido
 # (tier=A + mode=TIER_B_PAPER) deve falhar fast SEM custar 1 LLM call.
 

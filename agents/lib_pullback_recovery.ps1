@@ -1,4 +1,4 @@
-# lib_pullback_recovery.ps1 — PULL_BACK_RECOVERY Pattern Detection
+﻿# lib_pullback_recovery.ps1 — PULL_BACK_RECOVERY Pattern Detection
 # Detecta pump falso → pullback → recovery setup (LONG)
 # TDD: 10 funções, cada uma testada
 # 2026-06-08

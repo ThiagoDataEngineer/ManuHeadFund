@@ -1,4 +1,4 @@
-# gem_loop.ps1 -- Loop dedicado GemAgent (paralelo ao scan_master daily).
+﻿# gem_loop.ps1 -- Loop dedicado GemAgent (paralelo ao scan_master daily).
 #
 # Por que existe (2026-05-18):
 # - scan_master roda DAILY (1x/dia) -- ideal para orchestrator V6 + trailing

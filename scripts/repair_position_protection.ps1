@@ -1,4 +1,4 @@
-# scripts\repair_position_protection.ps1
+﻿# scripts\repair_position_protection.ps1
 # REPARO IMEDIATO: garante TP/SL real na corretora para posicoes abertas sem protecao.
 # Causa raiz: SL/TP embutido em ordem MARKET nao aplica confiavel na CoinEx V2.
 # Uso:

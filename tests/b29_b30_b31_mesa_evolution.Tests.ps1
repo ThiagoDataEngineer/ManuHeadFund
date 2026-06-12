@@ -1,4 +1,4 @@
-# b29_b30_b31_mesa_evolution.Tests.ps1 -- Pester 3.x -- TDD
+﻿# b29_b30_b31_mesa_evolution.Tests.ps1 -- Pester 3.x -- TDD
 #
 # B29: Regime salvo corretamente no JSONL (campo regime sempre preenchido)
 # B30: Rerun de drones degraded (1 falhou -> rerun sequencial; 2+ -> rerun paralelo)

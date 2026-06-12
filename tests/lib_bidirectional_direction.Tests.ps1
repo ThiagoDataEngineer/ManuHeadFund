@@ -1,4 +1,4 @@
-# lib_bidirectional_direction.Tests.ps1 -- TDD direcao bidirecional (Triagem/Mesa/Mentor)
+﻿# lib_bidirectional_direction.Tests.ps1 -- TDD direcao bidirecional (Triagem/Mesa/Mentor)
 # 2026-06-08: Resolve-TradeDirection avalia LONG e SHORT; detecta bear/bull traps por confluencia.
 
 $agentsDir = Join-Path (Split-Path -Parent $PSScriptRoot) "agents"

@@ -1,4 +1,4 @@
-# Layer 4 Advisory Mode Tests
+﻿# Layer 4 Advisory Mode Tests
 # Validates that Layer 4 in ADVISORY mode does NOT close positions automatically
 
 $ErrorActionPreference = "Stop"

@@ -1,4 +1,4 @@
-# lib_position_price.ps1 -- Resolucao de preco de posicao.
+﻿# lib_position_price.ps1 -- Resolucao de preco de posicao.
 # Problema: CoinEx retorna mark_price=0 pra muitos micro-caps (MON/BABY/ENA...).
 # O watcher pulava a gestao (continue) -> posicao SEM stop/trailing = capital cego.
 # Aqui: fallback determinístico pro ticker 'last' + pnl price-based. PS 5.1. UTF-8 BOM.

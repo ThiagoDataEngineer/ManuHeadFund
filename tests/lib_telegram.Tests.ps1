@@ -1,4 +1,4 @@
-# lib_telegram.Tests.ps1 -- TDD para alertas Telegram
+﻿# lib_telegram.Tests.ps1 -- TDD para alertas Telegram
 # Pester 3.x compatible -- sem acentos
 
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"

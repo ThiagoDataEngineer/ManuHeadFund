@@ -1,4 +1,4 @@
-# lib_universe_sweep.ps1 -- Universe snapshot and gate quality analysis
+﻿# lib_universe_sweep.ps1 -- Universe snapshot and gate quality analysis
 #
 # Contrato:
 #   Get-UniverseSnapshot -Pairs -TopN

@@ -1,4 +1,4 @@
-# lib_decision_reflection.ps1 -- Pending->Resolved reflection loop (Tauric-inspired).
+﻿# lib_decision_reflection.ps1 -- Pending->Resolved reflection loop (Tauric-inspired).
 #
 # E3 (2026-05-22): cycle fechado. Decisao -> trade outcome -> reflection LLM-distilled.
 # Proxima decisao mesmo market injeta 5 reflections no prompt.

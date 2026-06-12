@@ -1,4 +1,4 @@
-# lib_coinex_retry.ps1
+﻿# lib_coinex_retry.ps1
 # Retry com Backoff Exponencial para CoinEx API
 # Implementado com TDD: tests\lib_coinex_retry.Tests.ps1
 # 2026-05-23

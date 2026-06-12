@@ -1,4 +1,4 @@
-# lib_stress_test_dd.ps1
+﻿# lib_stress_test_dd.ps1
 
 if (-not $global:JOURNAL_DIR) {
     $global:JOURNAL_DIR = Join-Path (Split-Path $PSScriptRoot -Parent) "journal"

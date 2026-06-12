@@ -1,4 +1,4 @@
-# Pre-Integration Backtest Bundle
+﻿# Pre-Integration Backtest Bundle
 # 4 advanced scenarios before going LIVE
 # Validat combo + regime sizing under stress
 

@@ -1,4 +1,4 @@
-# cleanup_exec.ps1 - Executa limpeza de carteira
+﻿# cleanup_exec.ps1 - Executa limpeza de carteira
 $ErrorActionPreference = "Continue"
 
 cd (Split-Path $MyInvocation.MyCommand.Path -Parent)

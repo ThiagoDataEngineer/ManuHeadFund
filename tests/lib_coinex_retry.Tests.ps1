@@ -1,4 +1,4 @@
-# tests/lib_coinex_retry.Tests.ps1
+﻿# tests/lib_coinex_retry.Tests.ps1
 # TDD para Retry com Backoff Exponencial (erro 4213 e transientes)
 # 2026-05-23
 

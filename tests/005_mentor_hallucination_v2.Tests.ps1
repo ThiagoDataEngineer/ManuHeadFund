@@ -1,4 +1,4 @@
-# TDD: A3 — Mentor hallucination detector v2
+﻿# TDD: A3 — Mentor hallucination detector v2
 # Tests for lib_mentor_hallucination_detector.ps1
 
 $projectRoot = Split-Path -Parent $PSScriptRoot

@@ -1,4 +1,4 @@
-# lib_trailing_microstructure.ps1
+﻿# lib_trailing_microstructure.ps1
 # Camada 4: Microstructure Detection (Open Interest, Funding Rate)
 # 
 # Detecta sinais do mercado de derivativos que indicam movimento iminente.

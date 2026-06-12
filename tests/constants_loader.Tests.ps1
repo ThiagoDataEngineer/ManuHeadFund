@@ -1,4 +1,4 @@
-# constants_loader.Tests.ps1
+﻿# constants_loader.Tests.ps1
 # TDD strict para constants_loader.ps1 e parity com backtest/constants.py
 # UTF-8 BOM. Pester 3.x.
 

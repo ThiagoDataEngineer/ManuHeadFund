@@ -1,4 +1,4 @@
-# watchdog_paper.Tests.ps1
+﻿# watchdog_paper.Tests.ps1
 # TDD strict: watchdog que detecta paper trade morto e respawn.
 # UTF-8 BOM. Pester 3.x.
 

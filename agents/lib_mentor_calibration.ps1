@@ -1,4 +1,4 @@
-# lib_mentor_calibration.ps1 -- C.5 wire 2026-05-26
+﻿# lib_mentor_calibration.ps1 -- C.5 wire 2026-05-26
 # Calibration dashboard: agrega reflections + decisions pra medir Mentor accuracy
 # por (veredicto_5tier, provider, regime). Detecta overconfidence drift sem fe.
 #

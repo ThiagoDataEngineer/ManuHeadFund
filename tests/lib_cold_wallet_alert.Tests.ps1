@@ -1,4 +1,4 @@
-# lib_cold_wallet_alert.Tests.ps1 -- TDD pra hot-wallet ratio alert.
+﻿# lib_cold_wallet_alert.Tests.ps1 -- TDD pra hot-wallet ratio alert.
 # Pester 3.x.
 #
 # Pattern: cron diario checa saldo CoinEx ("hot"). Se exceder threshold

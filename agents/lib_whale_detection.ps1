@@ -1,4 +1,4 @@
-# lib_whale_detection.ps1 - Whale Detection para ChainAgent
+﻿# lib_whale_detection.ps1 - Whale Detection para ChainAgent
 # TDD: Implementação para passar em whale_detection.Tests.ps1
 # Refs: MANIPULATION.md, ONCHAIN_ANALYSIS.md
 

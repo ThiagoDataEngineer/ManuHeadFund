@@ -1,4 +1,4 @@
-# lib_decision_logger.Tests.ps1 -- Pester 3.x
+﻿# lib_decision_logger.Tests.ps1 -- Pester 3.x
 # Add-Decision: loga TODA chamada orchestrator_v6 (independente de paperOnly).
 # Resolve o bug observations.csv vazia (so logava paperOnly).
 

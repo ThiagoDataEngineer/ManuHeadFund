@@ -1,4 +1,4 @@
-# lib_tg_approval_handler.Tests.ps1 — 12 TDD
+﻿# lib_tg_approval_handler.Tests.ps1 — 12 TDD
 
 $agentsDir = Join-Path (Split-Path -Parent $PSScriptRoot) "agents"
 . (Join-Path $agentsDir "lib_tg_approval_handler.ps1")

@@ -1,4 +1,4 @@
-# agents/lib_enhanced_short_entry.ps1
+﻿# agents/lib_enhanced_short_entry.ps1
 # TDD-driven: Enhanced SHORT entry filter + regime-aware trailing
 # Objetivo: Win rate 65% → 72%+ sem redução de volume
 # Implementação: Fase 1 + Trailing adaptativo em um arquivo

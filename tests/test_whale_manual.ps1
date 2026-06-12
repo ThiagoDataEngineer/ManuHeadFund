@@ -1,4 +1,4 @@
-# test_whale_manual.ps1 - Teste manual TDD para whale detection
+﻿# test_whale_manual.ps1 - Teste manual TDD para whale detection
 $ErrorActionPreference = "Stop"
 
 . "$PSScriptRoot\..\agents\lib_whale_detection.ps1"

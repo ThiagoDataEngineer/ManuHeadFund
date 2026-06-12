@@ -1,4 +1,4 @@
-# tests\lib_order_validation.Tests.ps1
+﻿# tests\lib_order_validation.Tests.ps1
 # TDD Tests para lib_order_validation.ps1
 # 2026-05-24
 # Compatible with Pester 3.x

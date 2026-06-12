@@ -1,4 +1,4 @@
-# Test script para telegram listener — apenas getUpdates
+﻿# Test script para telegram listener — apenas getUpdates
 # Sem lógica de commands, apenas testa se consegue receber updates
 
 $env:TELEGRAM_BOT_TOKEN = "8763265579:AAFPaVZjeS_rQSzs4xpzb9stMG5veP_Qo54"

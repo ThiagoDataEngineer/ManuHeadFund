@@ -1,4 +1,4 @@
-# faro_v3_entry.ps1 — Auto-entry on ENTRA/URGENTE signals
+﻿# faro_v3_entry.ps1 — Auto-entry on ENTRA/URGENTE signals
 # Runs after faro_v3_engine to place orders on confirmed candidates
 
 param([bool] $DryRun = $false, [double] $CapitalPercent = 0.01, [int] $MaxPositions = 5)

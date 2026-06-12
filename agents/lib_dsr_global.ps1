@@ -1,4 +1,4 @@
-# lib_dsr_global.ps1 -- DSR global cumulative trials registry
+﻿# lib_dsr_global.ps1 -- DSR global cumulative trials registry
 #
 # Bailey-LdP multi-testing penalty: cada gate eval = +1 trial.
 # Conforme N cresce, gate threshold sobe (mais rigor para passar).

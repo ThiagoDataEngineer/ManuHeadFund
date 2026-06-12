@@ -1,4 +1,4 @@
-# trailing_exhaustion.Tests.ps1
+﻿# trailing_exhaustion.Tests.ps1
 # TDD para Camada 3: Detectores de exhaustion (proativo)
 
 $ErrorActionPreference = "Stop"

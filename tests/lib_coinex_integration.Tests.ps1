@@ -1,4 +1,4 @@
-# tests/lib_coinex_integration.Tests.ps1
+﻿# tests/lib_coinex_integration.Tests.ps1
 # TDD para Integração de Rate Limiter + Retry em lib_coinex.ps1
 # 2026-05-23
 

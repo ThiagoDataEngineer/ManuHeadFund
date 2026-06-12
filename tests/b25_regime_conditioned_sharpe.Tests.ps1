@@ -1,4 +1,4 @@
-# b25_regime_conditioned_sharpe.Tests.ps1 -- B25 (2026-05-21 sessao extra).
+﻿# b25_regime_conditioned_sharpe.Tests.ps1 -- B25 (2026-05-21 sessao extra).
 # Pester 3.x. Anti-regression de B23 (default thresholds) + lockdown B25 (Phase-aware).
 
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"

@@ -1,4 +1,4 @@
-# trailing_stop_manager.Tests.ps1 -- TDD para Get-TrailingStopState (3 fases + moon bag)
+﻿# trailing_stop_manager.Tests.ps1 -- TDD para Get-TrailingStopState (3 fases + moon bag)
 
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"
 . (Join-Path $agentsDir "trailing_stop_manager.ps1")

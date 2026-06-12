@@ -1,4 +1,4 @@
-# gemini_provider_state.Tests.ps1 -- TDD 2026-05-28
+﻿# gemini_provider_state.Tests.ps1 -- TDD 2026-05-28
 #
 # Problema: Gemini em 429 persistente (8/9 warmups falharam hoje).
 # O cascade tentava Gemini mesmo sabendo que estava em rate limit,

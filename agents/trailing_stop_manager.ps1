@@ -1,4 +1,4 @@
-# trailing_stop_manager.ps1 -- Maquina de estados de trailing stop (3 fases + moon bag)
+﻿# trailing_stop_manager.ps1 -- Maquina de estados de trailing stop (3 fases + moon bag)
 # Funcao pura Get-TrailingStopState: dado entry/stop/price/peak/target, retorna fase + acao + stop.
 # PS 5.1. UTF-8 BOM.
 #

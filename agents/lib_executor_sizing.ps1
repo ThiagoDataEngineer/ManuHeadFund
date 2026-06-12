@@ -1,4 +1,4 @@
-# lib_executor_sizing.ps1 -- Helper unified pra sizing executor (gem + orchestrator).
+﻿# lib_executor_sizing.ps1 -- Helper unified pra sizing executor (gem + orchestrator).
 #
 # Substitui o pattern direto:
 #   $usd_size = $capital * $sz.sizing_pct

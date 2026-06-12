@@ -1,4 +1,4 @@
-# ladder_ab_report.Tests.ps1 — TDD strict: A/B testing automatizado para ladders
+﻿# ladder_ab_report.Tests.ps1 — TDD strict: A/B testing automatizado para ladders
 # 5 tests RED: validar que agregacao A/B funciona
 # UTF-8 BOM, Pester 3.x
 

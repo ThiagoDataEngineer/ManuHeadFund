@@ -1,4 +1,4 @@
-# lib_state_store.ps1 contract TDD
+﻿# lib_state_store.ps1 contract TDD
 #
 # Objetivo: estabelecer interface CRUD generica pra estado persistente
 # com 2 backends:

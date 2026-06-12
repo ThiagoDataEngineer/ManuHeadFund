@@ -1,4 +1,4 @@
-# lib_volatility_filter.ps1 — Volatilidade: bloqueia entrada barulhenta ou reduz size
+﻿# lib_volatility_filter.ps1 — Volatilidade: bloqueia entrada barulhenta ou reduz size
 
 if (-not $global:JOURNAL_DIR) {
     $global:JOURNAL_DIR = Join-Path (Split-Path $PSScriptRoot -Parent) "journal"

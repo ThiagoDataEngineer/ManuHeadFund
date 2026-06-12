@@ -1,4 +1,4 @@
-# trailing_stop_manager.ps1 — Gerencia trailing stop AUTOMÁTICO para posições abertas
+﻿# trailing_stop_manager.ps1 — Gerencia trailing stop AUTOMÁTICO para posições abertas
 # Atualiza SL quando preço sobe, garante lock-in de lucro
 
 param(

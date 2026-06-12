@@ -1,4 +1,4 @@
-# lib_short_execution.ps1 -- SHORT Block 2: wiring scanner -> orchestrator
+﻿# lib_short_execution.ps1 -- SHORT Block 2: wiring scanner -> orchestrator
 # 2026-05-28: Implementa pipeline de execucao SHORT.
 #
 # Funcoes:

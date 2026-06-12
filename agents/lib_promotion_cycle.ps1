@@ -1,4 +1,4 @@
-# lib_promotion_cycle.ps1 -- Cron logic pura (sem Telegram I/O)
+﻿# lib_promotion_cycle.ps1 -- Cron logic pura (sem Telegram I/O)
 #
 # Invoke-PromotionCycle:
 #   1. Le pipeline jsonl

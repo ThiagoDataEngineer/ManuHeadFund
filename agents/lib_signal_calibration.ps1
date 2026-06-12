@@ -1,4 +1,4 @@
-# lib_signal_calibration.ps1 — Calibra sinais (FARO, Tori, DSR) com histórico real
+﻿# lib_signal_calibration.ps1 — Calibra sinais (FARO, Tori, DSR) com histórico real
 # OBJETIVO: Refinar thresholds baseado em PERFORMANCE real, não em teste
 # MÉTODO: Análise win_rate por signal_score + ajustamento dinâmico
 

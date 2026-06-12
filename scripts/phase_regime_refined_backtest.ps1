@@ -1,4 +1,4 @@
-# REGIME REFINED BACKTEST — Vol_Climax + Engulfing Combo Across Regimes
+﻿# REGIME REFINED BACKTEST — Vol_Climax + Engulfing Combo Across Regimes
 # Objetivo: Validar que COMBINAR sinais resolve problema de cross-regime robustez
 # Testa 3 estratégias: Vol_Climax solo, Engulfing solo, Combo (Vol_Climax + Engulfing)
 

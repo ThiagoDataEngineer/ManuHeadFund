@@ -1,4 +1,4 @@
-# lib_mentor_audit_simple.Tests.ps1 — 11 TDD
+﻿# lib_mentor_audit_simple.Tests.ps1 — 11 TDD
 
 $agentsDir = Join-Path (Split-Path -Parent $PSScriptRoot) "agents"
 . (Join-Path $agentsDir "lib_mentor_audit_simple.ps1")

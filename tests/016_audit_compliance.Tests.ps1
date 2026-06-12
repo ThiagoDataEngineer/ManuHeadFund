@@ -1,4 +1,4 @@
-# TDD: Audit Compliance — validação, logs estruturados, paper vs live
+﻿# TDD: Audit Compliance — validação, logs estruturados, paper vs live
 # OBJETIVO: auditoria reguladora 100% documentada
 
 $projectRoot = Split-Path -Parent $PSScriptRoot

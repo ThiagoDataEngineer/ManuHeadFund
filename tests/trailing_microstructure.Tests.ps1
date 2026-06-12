@@ -1,4 +1,4 @@
-# trailing_microstructure.Tests.ps1
+﻿# trailing_microstructure.Tests.ps1
 # TDD para Camada 4: Microstructure (OI, funding, whales)
 
 $ErrorActionPreference = "Stop"

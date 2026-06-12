@@ -1,4 +1,4 @@
-# Layer 5 TDD: Moon Bag (50/50 Harvest + Upside)
+﻿# Layer 5 TDD: Moon Bag (50/50 Harvest + Upside)
 #
 # Strategy: ao entrar numa posição, divide em duas pernas:
 #   - Harvest (50% size): target +5%, stop -2% — captura ganho de certeza

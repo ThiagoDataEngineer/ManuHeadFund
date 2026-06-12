@@ -1,4 +1,4 @@
-# mentor_self_consistency.Tests.ps1 -- C.8
+﻿# mentor_self_consistency.Tests.ps1 -- C.8
 # Test-SelfConsistency: compara 2 respostas Mentor. Critical tiers (STRONG/HARD)
 # precisam acordo; divergir -> downgrade EXECUTAR/ABORTAR.
 

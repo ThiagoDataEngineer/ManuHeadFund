@@ -1,4 +1,4 @@
-# Clean restart do telegram_listener
+﻿# Clean restart do telegram_listener
 # Mata todos os processos anteriores e inicia uma nova instância limpa
 
 param([switch]$NoStart)

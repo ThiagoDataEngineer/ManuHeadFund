@@ -1,4 +1,4 @@
-<#
+﻿<#
 VOL_CLIMAX INTEGRATION LAYER
 Adapta Detect-VolumeClimax (backtest) pra workflow de trading live.
 Wire em gem_agent para boost score quando vol climax detectado.

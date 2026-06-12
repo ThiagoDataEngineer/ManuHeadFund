@@ -1,4 +1,4 @@
-# C6 round-trip TDD generalizado 2026-05-20 PM6+680min.
+﻿# C6 round-trip TDD generalizado 2026-05-20 PM6+680min.
 # Para cada writer JSON conhecido: escrever 1-elemento + ler + assert array preservado.
 # Anti-regression structural — pega novos bugs antes de chegar em prod.
 

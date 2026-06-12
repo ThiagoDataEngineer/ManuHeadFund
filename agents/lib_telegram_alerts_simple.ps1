@@ -1,4 +1,4 @@
-# lib_telegram_alerts_simple.ps1 — Simple Telegram Alerting
+﻿# lib_telegram_alerts_simple.ps1 — Simple Telegram Alerting
 # Send alerts via Telegram Bot API
 # 2026-06-09
 

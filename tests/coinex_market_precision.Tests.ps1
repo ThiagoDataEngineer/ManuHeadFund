@@ -1,4 +1,4 @@
-# coinex_market_precision.Tests.ps1 -- TDD para Get-MarketPrecision (cache + sub-dollar)
+﻿# coinex_market_precision.Tests.ps1 -- TDD para Get-MarketPrecision (cache + sub-dollar)
 # Pester 3.x compatible -- sem acentos
 #
 # Cobre root cause bug AIUSDT (2026-05-14):

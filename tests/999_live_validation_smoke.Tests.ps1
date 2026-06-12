@@ -1,4 +1,4 @@
-# LIVE VALIDATION: A1 (Gates) + A4 (Capital Safety)
+﻿# LIVE VALIDATION: A1 (Gates) + A4 (Capital Safety)
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 

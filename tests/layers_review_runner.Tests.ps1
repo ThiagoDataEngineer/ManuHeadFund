@@ -1,4 +1,4 @@
-# layers_review_runner.ps1 — invocation TDD
+﻿# layers_review_runner.ps1 — invocation TDD
 #
 # Verifica que o entry point chama as funcoes corretas para cada Layer.
 

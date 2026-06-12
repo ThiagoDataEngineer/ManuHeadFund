@@ -1,4 +1,4 @@
-# run_tests_optimized.ps1 — Suite otimizada (3x mais rápida)
+﻿# run_tests_optimized.ps1 — Suite otimizada (3x mais rápida)
 # Estratégia:
 # 1. Cache de módulos pre-loaded
 # 2. Paralelização agressiva (CPU count threads)

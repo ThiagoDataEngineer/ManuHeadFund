@@ -1,4 +1,4 @@
-# run_tests_parallel.ps1 -- Executa a suite Pester em PROCESSOS ISOLADOS paralelos.
+﻿# run_tests_parallel.ps1 -- Executa a suite Pester em PROCESSOS ISOLADOS paralelos.
 # Cada arquivo de teste roda em seu proprio processo powershell.exe (isolamento TOTAL:
 # zero poluicao de escopo inter-arquivo, que e o problema do Pester 3.x rodando tudo
 # no mesmo processo). Resultados agregados via NUnit XML.

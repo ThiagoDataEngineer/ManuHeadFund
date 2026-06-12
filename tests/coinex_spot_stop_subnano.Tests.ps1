@@ -1,4 +1,4 @@
-# coinex_spot_stop_subnano.Tests.ps1 -- TDD precisao sub-nano em stop spot (2026-06-05)
+﻿# coinex_spot_stop_subnano.Tests.ps1 -- TDD precisao sub-nano em stop spot (2026-06-05)
 #
 # Incidente: PEPE2USDT (preco ~2e-9) entrou e o stop FALHOU as 2 vezes -> long NU.
 # Causa: CoinEx-PlaceSpotStopOrder fazia Round(trigger,8) -> 1.006e-9 virava "0"

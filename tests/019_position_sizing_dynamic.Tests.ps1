@@ -1,4 +1,4 @@
-# TDD: Dynamic Position Sizing — Beta * Confluence dinâmico (CORE)
+﻿# TDD: Dynamic Position Sizing — Beta * Confluence dinâmico (CORE)
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 

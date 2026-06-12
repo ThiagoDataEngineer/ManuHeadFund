@@ -1,4 +1,4 @@
-$script:fase4Here = Split-Path -Parent $MyInvocation.MyCommand.Path
+﻿$script:fase4Here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $script:fase4Root = Split-Path -Parent $fase4Here
 . (Join-Path $fase4Root "agents\lib_quant_whitelist.ps1")
 

@@ -1,4 +1,4 @@
-# lib_promotion_telegram.ps1 -- Telegram formatting para promotion ladder
+﻿# lib_promotion_telegram.ps1 -- Telegram formatting para promotion ladder
 #
 # Alerts:
 #   - propose_promote: gate passou, sugere user aprovar transition +1 tier

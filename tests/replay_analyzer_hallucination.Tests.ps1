@@ -1,4 +1,4 @@
-# replay_analyzer_hallucination.Tests.ps1 -- Lockdown 2026-05-21 sessao manha.
+﻿# replay_analyzer_hallucination.Tests.ps1 -- Lockdown 2026-05-21 sessao manha.
 # Pester 3.x.
 #
 # Garante que replay_decisions_analyzer carrega mentor_hallucinations.jsonl,

@@ -1,4 +1,4 @@
-# C4 fix 2026-05-21 PM6+780min: min_n_entries gate (anti-overfitting empirico).
+﻿# C4 fix 2026-05-21 PM6+780min: min_n_entries gate (anti-overfitting empirico).
 # Justificativa: HYPE com N=34 entries gerou Sharpe 12.23 (insanity statistical).
 # Threshold default 50 (rule of thumb: <30 = teste de hipotese rejeitado por sample).
 

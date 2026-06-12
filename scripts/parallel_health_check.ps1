@@ -1,4 +1,4 @@
-# parallel_health_check.ps1 -- Audita 7d de paper trade pra decidir se -Parallel
+﻿# parallel_health_check.ps1 -- Audita 7d de paper trade pra decidir se -Parallel
 # pode virar default. Le decisions.csv + master_*.log.
 #
 # Criterios pra "estavel" (todos precisam passar):

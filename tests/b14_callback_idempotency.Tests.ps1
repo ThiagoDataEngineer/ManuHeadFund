@@ -1,4 +1,4 @@
-# B14 callback idempotency 2026-05-20 PM6+320min.
+﻿# B14 callback idempotency 2026-05-20 PM6+320min.
 # Sistema LIVE Mode 2 desde 18/05 com $2762.93 capital exposto.
 # Worst case duplicado: 2x sizing 1% = 2x $27.60 = $55 exposicao inesperada.
 # Daily_loss CB calcula com 1 trade mas se executar 2 -> threshold violado silenciosamente.

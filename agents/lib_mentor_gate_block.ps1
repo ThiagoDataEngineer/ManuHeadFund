@@ -1,4 +1,4 @@
-# lib_mentor_gate_block.ps1 -- Grounded GATE STATUS block para prompt Mentor.
+﻿# lib_mentor_gate_block.ps1 -- Grounded GATE STATUS block para prompt Mentor.
 #
 # E2 Grounded v2 (Tauric-inspired): substitui CONTEXTO free-form por bloco estruturado
 # com [TAG] explicit. Cada gate ausente vira "[TAG] ABSENT (reason)" — nunca silent.

@@ -1,4 +1,4 @@
-# lib_faro_ml_confidence.ps1 — ML-based prediction confidence scoring
+﻿# lib_faro_ml_confidence.ps1 — ML-based prediction confidence scoring
 # Combines 7-signal output to estimate probability of successful trade
 
 function Calculate-MLConfidence {

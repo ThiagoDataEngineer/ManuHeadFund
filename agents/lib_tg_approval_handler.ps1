@@ -1,4 +1,4 @@
-# lib_tg_approval_handler.ps1 — Handle /approve /reject /resume from Telegram
+﻿# lib_tg_approval_handler.ps1 — Handle /approve /reject /resume from Telegram
 
 function Process-ApprovalCommand {
     param(

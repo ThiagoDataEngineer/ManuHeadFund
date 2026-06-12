@@ -1,4 +1,4 @@
-# tests\test_telegram_quality.ps1
+﻿# tests\test_telegram_quality.ps1
 # TDD: qualidade das mensagens Telegram
 #   1. parse_mode HTML + escape correto (sem tags cruas / caracteres quebrados)
 #   2. deduplicacao de mensagens repetidas (TTL)

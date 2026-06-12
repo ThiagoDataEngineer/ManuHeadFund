@@ -1,4 +1,4 @@
-Describe "MinMax Detector RÁPIDO" {
+﻿Describe "MinMax Detector RÁPIDO" {
     It "Detecta min 24h" { 0.01400 | Should Be 0.01400 }
     It "Detecta max 24h" { 0.02755 | Should Be 0.02755 }
     It "% ganho" { 97 | Should BeGreaterThan 95 }

@@ -1,4 +1,4 @@
-# test_tori_optimized_integration.ps1 -- Teste de integração Tori Optimized
+﻿# test_tori_optimized_integration.ps1 -- Teste de integração Tori Optimized
 #
 # OBJETIVO: Validar integração completa do Tori otimizado
 #

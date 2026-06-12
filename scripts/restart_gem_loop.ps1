@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 # Quick restart script for gem_loop
 
 Write-Host "Killing gem_loop processes..." -ForegroundColor Yellow

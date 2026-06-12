@@ -1,4 +1,4 @@
-# EVOLVED BACKTEST V2 — Realistic Slippage + Fees + Distribution
+﻿# EVOLVED BACKTEST V2 — Realistic Slippage + Fees + Distribution
 # Melhorias sobre phase_regime_refined:
 # 1. Slippage realista (0.05% médio)
 # 2. Fees (0.2% entrada + 0.2% saída)

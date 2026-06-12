@@ -1,4 +1,4 @@
-# refresh_regime_state.Tests.ps1 -- Pester 3.x -- TDD
+﻿# refresh_regime_state.Tests.ps1 -- Pester 3.x -- TDD
 #
 # Testa scripts/refresh_regime_state.ps1
 # Responsabilidade: ler regime_state.json (Python output) e normalizar para

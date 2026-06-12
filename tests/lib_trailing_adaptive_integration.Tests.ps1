@@ -1,4 +1,4 @@
-# tests/lib_trailing_adaptive_integration.Tests.ps1
+﻿# tests/lib_trailing_adaptive_integration.Tests.ps1
 # TDD: Testes de integração Adaptive Trailing com scan_master
 # Valida: substituição clean de Update-TrailingStops, persistência, alertas
 # Sintaxe: Pester 3.4 compatível (piping com Should)

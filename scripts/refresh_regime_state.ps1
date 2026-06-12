@@ -1,4 +1,4 @@
-# refresh_regime_state.ps1 -- Normaliza regime_state.json (Python output) para schema PS.
+﻿# refresh_regime_state.ps1 -- Normaliza regime_state.json (Python output) para schema PS.
 #
 # PROBLEMA RESOLVIDO (B29 fix 2026-05-28):
 #   Python (regime_change_monitor.py) escreve:

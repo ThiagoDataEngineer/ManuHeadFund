@@ -1,4 +1,4 @@
-# PHASE 0 BACKTEST COMPLETO — Vol_Climax Historical Validation
+﻿# PHASE 0 BACKTEST COMPLETO — Vol_Climax Historical Validation
 # Analisa dados passados + simula aprendizado + calibra threshold
 
 param(

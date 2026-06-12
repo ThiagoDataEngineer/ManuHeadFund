@@ -1,4 +1,4 @@
-# trailing_stop_intelligent_full.Tests.ps1
+﻿# trailing_stop_intelligent_full.Tests.ps1
 # Cobertura COMPLETA de lib_trailing_stop_intelligent.ps1 (Pester 3.4 compativel).
 # Mede via: Invoke-Pester -CodeCoverage agents\lib_trailing_stop_intelligent.ps1
 # 2026-05-29

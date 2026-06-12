@@ -1,4 +1,4 @@
-# lib_asymmetric_demote.Tests.ps1 -- TDD pra fast demote vs slow promote.
+﻿# lib_asymmetric_demote.Tests.ps1 -- TDD pra fast demote vs slow promote.
 # Pester 3.x.
 #
 # Pattern: demote rapido (3 dias FLAG = auto), promote lento (Bailey-LdP).

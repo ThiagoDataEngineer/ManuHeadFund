@@ -1,4 +1,4 @@
-# lib_moon_bag.ps1 — state_store integration TDD
+﻿# lib_moon_bag.ps1 — state_store integration TDD
 #
 # Etapa 2.3 — Refactor para Add-MoonBagPair, Get-MoonBagPositions e Update-MoonBagReview
 # usarem state_store (via lib_trailing wrapper Save-TrailingPositions / Get-TrailingPositions)

@@ -1,4 +1,4 @@
-# lib_override_expiry.ps1 — Expiry triggers para OVERRIDEs
+﻿# lib_override_expiry.ps1 — Expiry triggers para OVERRIDEs
 # Previne que overrides temporarios virem defaults acidentais.
 # UTF-8 BOM, pure functions.
 

@@ -1,4 +1,4 @@
-# lib_gem_router.ps1 — GEM ROUTER & EXECUTOR
+﻿# lib_gem_router.ps1 — GEM ROUTER & EXECUTOR
 # Rota sinais de PULL_BACK / DISTRIBUTION para LIVE execution
 # 2026-06-09
 

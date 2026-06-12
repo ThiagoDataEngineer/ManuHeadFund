@@ -1,4 +1,4 @@
-# test_whale_staging.ps1 - Teste de staging com dados reais
+﻿# test_whale_staging.ps1 - Teste de staging com dados reais
 # Valida que ChainAgent funciona end-to-end com whale detection
 $ErrorActionPreference = "Stop"
 

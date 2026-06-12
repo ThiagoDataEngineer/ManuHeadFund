@@ -1,4 +1,4 @@
-# test_whale_integration.ps1 - Teste de integracao ChainAgent + Whale Detection
+﻿# test_whale_integration.ps1 - Teste de integracao ChainAgent + Whale Detection
 # TDD: Validar que whale detection foi integrado corretamente
 $ErrorActionPreference = "Stop"
 

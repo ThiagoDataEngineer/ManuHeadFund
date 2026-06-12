@@ -1,4 +1,4 @@
-# telegram_gem_dedup_crossproc.Tests.ps1 -- TDD dedup cross-processo de alerta gem
+﻿# telegram_gem_dedup_crossproc.Tests.ps1 -- TDD dedup cross-processo de alerta gem
 #
 # Incidente 2026-06-05: gem_loop E scan_master rodam Invoke-GemScan; ambos chamam
 # Send-GemAlert -> mesmo gem alertado 2x no Telegram (Size:$0, so notificacao).

@@ -1,4 +1,4 @@
-# lib_fqs_drain.ps1 -- Drena fila FQS inline antes do orchestrator V6.
+﻿# lib_fqs_drain.ps1 -- Drena fila FQS inline antes do orchestrator V6.
 #
 # CONTEXTO 2026-05-29 (Item 2):
 #   Pre-fix: scan_master enfileirava markets novos via Add-FqsEnrichmentRequest,

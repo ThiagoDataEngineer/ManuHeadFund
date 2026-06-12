@@ -1,4 +1,4 @@
-# lib_faro_entry_timing.ps1 — Golden hour + 1min rejection
+﻿# lib_faro_entry_timing.ps1 — Golden hour + 1min rejection
 function Get-EntryTiming {
     param([array] $Candles1min, [decimal] $MA5, [decimal] $CurrentHourUTC)
     $score = 0

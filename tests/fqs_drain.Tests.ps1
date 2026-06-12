@@ -1,4 +1,4 @@
-# fqs_drain.Tests.ps1 -- TDD Invoke-FqsEnrichmentDrain
+﻿# fqs_drain.Tests.ps1 -- TDD Invoke-FqsEnrichmentDrain
 #
 # Item 2 (2026-05-29): drena fila FQS inline ANTES do orchestrator V6 receber
 # os candidatos. Antes: scanner enfileirava markets novos, mas a fila so era

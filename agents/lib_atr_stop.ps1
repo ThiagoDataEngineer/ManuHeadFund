@@ -1,4 +1,4 @@
-# lib_atr_stop.ps1 -- ATR stop obrigatorio (Soros guardrail).
+﻿# lib_atr_stop.ps1 -- ATR stop obrigatorio (Soros guardrail).
 #
 # Filosofia: stop calculado ANTES da emocao.
 #   "Nao me incomoda estar errado, me incomoda ficar errado." -- Soros

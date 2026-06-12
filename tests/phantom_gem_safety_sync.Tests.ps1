@@ -1,4 +1,4 @@
-# phantom_gem_safety_sync.Tests.ps1
+﻿# phantom_gem_safety_sync.Tests.ps1
 # TDD - Causa raiz: Reconcile-PhantomPositions NAO remove posicao do gem_safety_state
 # Resultado: gem_loop recompra o mesmo ativo em loop apos phantom_reconciliation
 #

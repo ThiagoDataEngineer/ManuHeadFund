@@ -1,4 +1,4 @@
-# test_llm_cascade.ps1 - Teste do Cascade de LLMs
+﻿# test_llm_cascade.ps1 - Teste do Cascade de LLMs
 $ErrorActionPreference = "Stop"
 
 Write-Host "`n=== TESTE LLM CASCADE ===" -ForegroundColor Cyan

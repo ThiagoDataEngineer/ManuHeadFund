@@ -1,4 +1,4 @@
-# watchdog_paper.ps1 — Monitora scan_master + gem_loop e respawn se morrer
+﻿# watchdog_paper.ps1 — Monitora scan_master + gem_loop e respawn se morrer
 #
 # Detecta:
 #   1. Processo scan_master morto (não aparece em Get-Process)

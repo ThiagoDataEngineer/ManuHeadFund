@@ -1,4 +1,4 @@
-# lib_kelly_sizing.Tests.ps1 -- Pester 3.x
+﻿# lib_kelly_sizing.Tests.ps1 -- Pester 3.x
 # Kelly fracionario com cap pra position sizing dinamico.
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path

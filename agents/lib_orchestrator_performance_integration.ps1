@@ -1,4 +1,4 @@
-# lib_orchestrator_performance_integration.ps1 — Injeta Performance Refiner no Orchestrator
+﻿# lib_orchestrator_performance_integration.ps1 — Injeta Performance Refiner no Orchestrator
 # POSIÇÃO: Após Mentor APROVAR, antes de telegram fire
 # IMPACTO: Bloqueia entradas fracas mesmo com Mentor OK
 

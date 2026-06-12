@@ -1,4 +1,4 @@
-# lib_idea_triggers.ps1 -- Sistema de price triggers (ideas) via Telegram.
+﻿# lib_idea_triggers.ps1 -- Sistema de price triggers (ideas) via Telegram.
 #
 # User envia /idea MARKET PRICE [long|short] [above|below] — sistema monitora
 # preco, alerta quando bate. Lifecycle:

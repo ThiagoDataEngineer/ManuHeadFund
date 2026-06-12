@@ -1,4 +1,4 @@
-# lib_coinex_position_management.Tests.ps1 - TDD para Position Management
+﻿# lib_coinex_position_management.Tests.ps1 - TDD para Position Management
 # Rodar: Invoke-Pester .\tests\lib_coinex_position_management.Tests.ps1 -Verbose
 #
 # FASE RED: Testes escritos ANTES da implementacao

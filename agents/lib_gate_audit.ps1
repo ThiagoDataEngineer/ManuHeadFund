@@ -1,4 +1,4 @@
-# lib_gate_audit.ps1 -- Gate chain orchestrator + audit trail
+﻿# lib_gate_audit.ps1 -- Gate chain orchestrator + audit trail
 # Objetivo: Centralizar TODA decisao de gate (pre-trade) e registrar em journal/gate_audit_trail.jsonl
 # Cada gate result == auditavel, fail-closed
 

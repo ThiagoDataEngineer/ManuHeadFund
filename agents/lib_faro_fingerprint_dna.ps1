@@ -1,4 +1,4 @@
-# lib_faro_fingerprint_dna.ps1 — Historical pattern matching
+﻿# lib_faro_fingerprint_dna.ps1 — Historical pattern matching
 function Get-FingerprintMatch {
     param([string] $Market, [decimal] $CurrentVol, [decimal] $Avg3dVol, [decimal] $HighWick, [decimal] $RSI, [int] $DaysConsolidation)
     $score = 0

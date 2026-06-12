@@ -1,4 +1,4 @@
-# heartbeat.Tests.ps1 -- TDD heartbeat opt-in para Telegram silencioso
+﻿# heartbeat.Tests.ps1 -- TDD heartbeat opt-in para Telegram silencioso
 # Pester 3.x, sem acentos.
 
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"

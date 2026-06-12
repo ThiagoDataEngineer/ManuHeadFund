@@ -1,4 +1,4 @@
-# B19b fix 2026-05-20 PM6+450min.
+﻿# B19b fix 2026-05-20 PM6+450min.
 # PlaceOrder client_id idempotency: fecha gap deferred do B19.
 # CoinEx v2 futures/order aceita campo client_id -> retry safe (exchange dedup).
 

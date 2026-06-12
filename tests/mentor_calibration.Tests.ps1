@@ -1,4 +1,4 @@
-# mentor_calibration.Tests.ps1 -- C.5
+﻿# mentor_calibration.Tests.ps1 -- C.5
 # Get-MentorCalibration agrega reflections + decisions.csv -> win_rate por
 # (veredicto_5tier, provider). Detecta overconfidence drift.
 

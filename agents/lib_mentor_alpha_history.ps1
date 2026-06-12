@@ -1,4 +1,4 @@
-# lib_mentor_alpha_history.ps1 -- B.4 wire 2026-05-26
+﻿# lib_mentor_alpha_history.ps1 -- B.4 wire 2026-05-26
 # Le decision_reflections.jsonl + agrega alpha_vs_btc historico por market.
 # Mentor usa pra honrar BTC-core philosophy: "alt loses to BTC consistently? VETAR".
 

@@ -1,4 +1,4 @@
-# lib_direction_learning.ps1 -- Motor de aprendizado bidirecional (sinais -> outcome)
+﻿# lib_direction_learning.ps1 -- Motor de aprendizado bidirecional (sinais -> outcome)
 # 2026-06-08: aprende com o historico REAL quais vies (LONG/SHORT) e source (regime/
 # bear_trap/bull_trap) funcionam em cada regime. Fecha o loop decisao->outcome.
 #

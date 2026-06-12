@@ -1,4 +1,4 @@
-# lib_place_order.ps1 — SPOT + FUTURES trade execution
+﻿# lib_place_order.ps1 — SPOT + FUTURES trade execution
 # Idempotent, retry-safe, fill-validated
 
 # ════════════════════════════════════════════════════════════

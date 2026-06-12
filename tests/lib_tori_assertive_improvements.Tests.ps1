@@ -1,4 +1,4 @@
-# lib_tori_assertive_improvements.Tests.ps1 -- TDD para 3 melhorias Tori (2026-06-05)
+﻿# lib_tori_assertive_improvements.Tests.ps1 -- TDD para 3 melhorias Tori (2026-06-05)
 # #3 Expand SHORT proximity range (-10% min em vez de -5%)
 # #2 Add conviction dinâmica (ripening/staging/wait)
 # #1 Remove regime_filter para LONG (deixa BEAR/BULL passar)

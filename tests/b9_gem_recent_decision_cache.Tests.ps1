@@ -1,4 +1,4 @@
-# B9 fix 2026-05-20 PM6+: TTL cache pra GEM decisions recentes.
+﻿# B9 fix 2026-05-20 PM6+: TTL cache pra GEM decisions recentes.
 # Mesma combo (market + abort_reason) dentro de TTL = skip silencioso (sem custo LLM).
 
 $projectRoot = Split-Path -Parent $PSScriptRoot

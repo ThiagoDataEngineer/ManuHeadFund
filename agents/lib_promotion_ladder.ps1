@@ -1,4 +1,4 @@
-# lib_promotion_ladder.ps1 -- State machine pra promotion ladder
+﻿# lib_promotion_ladder.ps1 -- State machine pra promotion ladder
 #
 # Append-only event log em journal/promotion_pipeline.jsonl
 # Estados: 0=DESCOBERTA, 1=OBSERVATION, 2=PAPER_C, 3=PAPER_B, 4=TIER_A_LIVE

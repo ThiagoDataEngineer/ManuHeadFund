@@ -1,4 +1,4 @@
-# lib_position_sizing_dynamic.ps1 — Position Sizing: Beta * Confluence dinâmico
+﻿# lib_position_sizing_dynamic.ps1 — Position Sizing: Beta * Confluence dinâmico
 # PROBLEMA: hoje 1% fixo = não protege em HIGH volatilidade + não aproveita confluência FORTE
 # SOLUÇÃO: ajusta size por (beta_pct * confluence_score * regime_multiplier)
 

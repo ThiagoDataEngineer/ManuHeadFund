@@ -1,4 +1,4 @@
-param([string] $ModulePath = "$PSScriptRoot\..\agents")
+﻿param([string] $ModulePath = "$PSScriptRoot\..\agents")
 
 Describe "SHORT vol_climax collector (RSI 80+, vol 2.5x, ADX >60)" {
 

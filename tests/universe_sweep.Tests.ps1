@@ -1,4 +1,4 @@
-# universe_sweep.Tests.ps1 — Pester 3.x tests para lib_universe_sweep.ps1
+﻿# universe_sweep.Tests.ps1 — Pester 3.x tests para lib_universe_sweep.ps1
 # Cobre: Get-UniverseSnapshot, Get-TopMoversLong, Get-TopMoversShort, Get-UniverseGateStats
 # Rodar: Invoke-Pester .\tests\universe_sweep.Tests.ps1 -Verbose
 

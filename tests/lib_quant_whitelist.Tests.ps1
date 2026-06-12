@@ -1,4 +1,4 @@
-# lib_quant_whitelist.Tests.ps1 - TDD para integracao quant whitelist
+﻿# lib_quant_whitelist.Tests.ps1 - TDD para integracao quant whitelist
 # Pester 3.x, sem acentos.
 
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"

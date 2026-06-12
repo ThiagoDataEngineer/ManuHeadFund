@@ -1,4 +1,4 @@
-# lib_human_approval_simple.ps1 — Human approval >$100 (SIMPLIFICADO)
+﻿# lib_human_approval_simple.ps1 — Human approval >$100 (SIMPLIFICADO)
 
 function Request-HumanApproval {
     param(

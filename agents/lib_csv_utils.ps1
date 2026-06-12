@@ -1,4 +1,4 @@
-# lib_csv_utils.ps1 -- B11 fix 2026-05-20 PM6+: DRY single source pra CSV/RFC4180 helpers.
+﻿# lib_csv_utils.ps1 -- B11 fix 2026-05-20 PM6+: DRY single source pra CSV/RFC4180 helpers.
 # Antes: 3 copias do mesmo escape em lib_observation_logger / lib_ladder_tracker / lib_journal.
 # Agora: helper unico aqui, callers dot-source e usam ConvertTo-CsvField.
 #

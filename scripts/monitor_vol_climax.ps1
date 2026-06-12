@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 <#
 MONITOR VOL_CLIMAX LIVE
 Real-time tracking of vol_climax signals, trades, win rate

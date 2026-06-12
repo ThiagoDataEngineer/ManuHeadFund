@@ -1,4 +1,4 @@
-# tests/lib_coinex_deep_evaluation.Tests.ps1
+﻿# tests/lib_coinex_deep_evaluation.Tests.ps1
 # Avaliacao Profunda de TODAS as funcoes CoinEx com TDD
 
 $ErrorActionPreference = "Stop"

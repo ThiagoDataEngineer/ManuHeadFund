@@ -1,4 +1,4 @@
-# B15 fix 2026-05-20 PM6+380min.
+﻿# B15 fix 2026-05-20 PM6+380min.
 # Migracao dsr_global pra append-only JSONL pra eliminar race condition.
 # Add-DsrTrial agora pode ser chamado por 9+ gates concurrentes sem clobber.
 

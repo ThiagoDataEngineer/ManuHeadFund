@@ -1,4 +1,4 @@
-# gem_executor_csv_fix.Tests.ps1
+﻿# gem_executor_csv_fix.Tests.ps1
 # TDD: Testes para corrigir bug de CSV em Write-GemTradeJournal
 # 2026-05-29
 

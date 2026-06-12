@@ -1,4 +1,4 @@
-# wave1_cross_platform.Tests.ps1
+﻿# wave1_cross_platform.Tests.ps1
 # TDD para Onda 1 de migração: scripts standalone simples
 # Critérios: cada script deve carregar sem erro em PS 5.1 e ser cross-platform
 

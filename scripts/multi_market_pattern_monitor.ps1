@@ -1,4 +1,4 @@
-# multi_market_pattern_monitor.ps1
+﻿# multi_market_pattern_monitor.ps1
 # Monitor de padrões para TODOS os mercados (SPOT + FUTURES)
 # Sistema de aprendizado multi-ativo
 # 2026-06-06

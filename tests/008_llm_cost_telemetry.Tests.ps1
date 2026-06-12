@@ -1,4 +1,4 @@
-# TDD: C1 — LLM cost telemetry
+﻿# TDD: C1 — LLM cost telemetry
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 

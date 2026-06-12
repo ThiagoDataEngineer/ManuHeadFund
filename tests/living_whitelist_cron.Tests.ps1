@@ -1,4 +1,4 @@
-# living_whitelist_cron.Tests.ps1 -- TDD Item 2: Get-LivingWhitelistMetrics + cron integration
+﻿# living_whitelist_cron.Tests.ps1 -- TDD Item 2: Get-LivingWhitelistMetrics + cron integration
 # Pester 3.x. UTF-8 BOM.
 
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"

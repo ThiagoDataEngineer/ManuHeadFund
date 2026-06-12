@@ -1,4 +1,4 @@
-# scan_master_topn_override.Tests.ps1 -- Pester 3.x
+﻿# scan_master_topn_override.Tests.ps1 -- Pester 3.x
 # Calibracao TopN cascade V6 (2026-05-15)
 #
 # Contexto: 30+ trades observados em 100% Tier D (cascade morre no DRONE BATEDOR).

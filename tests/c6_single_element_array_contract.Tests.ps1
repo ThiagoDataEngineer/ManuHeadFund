@@ -1,4 +1,4 @@
-# C6 fix 2026-05-20 PM6+580min — contract: array fields ALWAYS array in JSON.
+﻿# C6 fix 2026-05-20 PM6+580min — contract: array fields ALWAYS array in JSON.
 # Bug: PowerShell 5.1 unwrap single-element arrays implicitamente em property assignment
 # E ConvertTo-Json -Compress serializa single-element como scalar.
 # HYPE evidence: 'failures' field viu serializacao char-by-char quando array tinha 1 entry.

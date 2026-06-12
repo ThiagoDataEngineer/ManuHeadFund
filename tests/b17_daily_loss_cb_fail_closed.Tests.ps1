@@ -1,4 +1,4 @@
-# B17 fix 2026-05-20 PM6+400min.
+﻿# B17 fix 2026-05-20 PM6+400min.
 # Daily Loss CB fail-closed: corruption -> BLOCK ao inves de fail-open silent.
 
 $projectRoot = Split-Path -Parent $PSScriptRoot

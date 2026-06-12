@@ -1,4 +1,4 @@
-# lib_pyramid_exit.Tests.ps1 — 10 TDD
+﻿# lib_pyramid_exit.Tests.ps1 — 10 TDD
 
 $agentsDir = Join-Path (Split-Path -Parent $PSScriptRoot) "agents"
 . (Join-Path $agentsDir "lib_pyramid_exit.ps1")

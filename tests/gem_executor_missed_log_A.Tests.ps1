@@ -1,4 +1,4 @@
-# gem_executor_missed_log_A.Tests.ps1 -- 2026-05-22 ATIVACAO A.
+﻿# gem_executor_missed_log_A.Tests.ps1 -- 2026-05-22 ATIVACAO A.
 # Pester 3.x. Testa logica isolada do MISSED log enriquecido.
 #
 # Garantias:

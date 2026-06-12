@@ -1,4 +1,4 @@
-# lib_order_validation.ps1
+﻿# lib_order_validation.ps1
 # Validação pós-execução de ordens com retry e fallback
 # Implementado com TDD: tests\lib_order_validation.Tests.ps1
 # 2026-05-24

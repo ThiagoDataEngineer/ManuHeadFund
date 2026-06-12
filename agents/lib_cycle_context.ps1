@@ -1,4 +1,4 @@
-# lib_cycle_context.ps1 -- V6.5 Parte C: composicao Pi/200WMA/ATH-DD/NUPL
+﻿# lib_cycle_context.ps1 -- V6.5 Parte C: composicao Pi/200WMA/ATH-DD/NUPL
 # Compoe as 4 funcoes de A+B em objeto unico consumido pelo ChainAgent.
 #
 # Contrato Get-CycleContext:

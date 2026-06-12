@@ -1,4 +1,4 @@
-# watch_status.ps1 -- Snapshot KPIs do sistema (sem efeito colateral)
+﻿# watch_status.ps1 -- Snapshot KPIs do sistema (sem efeito colateral)
 #
 # Uso:
 #   pwsh -File scripts\watch_status.ps1

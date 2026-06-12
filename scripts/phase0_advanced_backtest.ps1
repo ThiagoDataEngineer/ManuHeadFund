@@ -1,4 +1,4 @@
-# PHASE 0 ADVANCED BACKTEST — Validação de escalação (100 → 200 → 500 trades)
+﻿# PHASE 0 ADVANCED BACKTEST — Validação de escalação (100 → 200 → 500 trades)
 # Objetivo: Determinar quando escalar de $2.70 → $27 → $135 com confiança
 
 param(

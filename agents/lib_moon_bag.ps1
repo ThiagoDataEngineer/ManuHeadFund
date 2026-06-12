@@ -1,4 +1,4 @@
-# agents/lib_moon_bag.ps1
+﻿# agents/lib_moon_bag.ps1
 # Layer 5: Moon Bag (50/50 Harvest + Upside)
 #
 # Filosofia: ao entrar numa posição, divide em duas pernas:

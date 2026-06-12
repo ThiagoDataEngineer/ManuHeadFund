@@ -1,4 +1,4 @@
-# exit_ladder.Tests.ps1 -- TDD para multi-TP/SL exit ladder templates
+﻿# exit_ladder.Tests.ps1 -- TDD para multi-TP/SL exit ladder templates
 # Pester 3.x compatible
 
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"

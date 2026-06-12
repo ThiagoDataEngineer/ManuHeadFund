@@ -1,4 +1,4 @@
-# TDD: A1 — Gate audit trail + pre-trade gate chain
+﻿# TDD: A1 — Gate audit trail + pre-trade gate chain
 # Tests for lib_gate_audit.ps1
 
 $projectRoot = Split-Path -Parent $PSScriptRoot

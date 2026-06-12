@@ -1,4 +1,4 @@
-# lib_circuit_breaker_simple.ps1 — Circuit breaker -2% daily (SIMPLIFICADO)
+﻿# lib_circuit_breaker_simple.ps1 — Circuit breaker -2% daily (SIMPLIFICADO)
 
 function Get-DailyPnL {
     param([string]$JournalDir = $global:JOURNAL_DIR)

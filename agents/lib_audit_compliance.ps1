@@ -1,4 +1,4 @@
-# lib_audit_compliance.ps1 — Auditoria completa para reguladores
+﻿# lib_audit_compliance.ps1 — Auditoria completa para reguladores
 # ✅ Validação de dados (normalidade)
 # ✅ Logs estruturados (Timestamp | Ativo | Decisão | Confiança | Preço)
 # ✅ Simulação vs Real (flag clara)

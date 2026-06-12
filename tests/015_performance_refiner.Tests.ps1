@@ -1,4 +1,4 @@
-# TDD: Performance Refiner — confluência multi-sinal + refinamento SL/TP
+﻿# TDD: Performance Refiner — confluência multi-sinal + refinamento SL/TP
 # OBJETIVO: elevar win rate de 33% para 60%+ via consenso robusto
 
 $projectRoot = Split-Path -Parent $PSScriptRoot

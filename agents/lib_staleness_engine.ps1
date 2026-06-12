@@ -1,4 +1,4 @@
-# lib_staleness_engine.ps1 -- Multi-trigger detector + priority scoring + rerun cmd.
+﻿# lib_staleness_engine.ps1 -- Multi-trigger detector + priority scoring + rerun cmd.
 #
 # Phase 0b (2026-05-23): identifica automaticamente o que precisa rodar novamente
 # baseado em 5 triggers: capital drift, time-age, source-data mtime, lib version, config change.

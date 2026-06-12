@@ -1,4 +1,4 @@
-# faro_v3_entry_aggressive.ps1 — Ultra-aggressive micro-scalp
+﻿# faro_v3_entry_aggressive.ps1 — Ultra-aggressive micro-scalp
 # 6/7 signals ONLY + 1.5x margin on high-confidence + 0.5% capital per position
 # Target: $300/day on $5k capital = 6% daily ROI
 

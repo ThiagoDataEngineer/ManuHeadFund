@@ -1,4 +1,4 @@
-# scripts/capital_snapshot_runner.ps1
+﻿# scripts/capital_snapshot_runner.ps1
 # Entry point para GitHub Actions atualizar capital_context a cada 15min.
 # Chama Get-CapitalContext -Force que faz fetch ao vivo de CoinEx (spot+futures)
 # e persiste em manuheadfund.capital_context no Supabase.

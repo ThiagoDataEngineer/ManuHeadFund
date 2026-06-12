@@ -1,4 +1,4 @@
-# test_fixes_simple.ps1 - Teste simples dos 3 fixes
+﻿# test_fixes_simple.ps1 - Teste simples dos 3 fixes
 $ErrorActionPreference = "Stop"
 
 Write-Host "`n=== TESTE DOS 3 FIXES CRITICOS ===" -ForegroundColor Cyan

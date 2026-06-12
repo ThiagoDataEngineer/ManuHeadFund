@@ -1,4 +1,4 @@
-# lib_trendline_filter.Tests.ps1 -- Pester 3.x
+﻿# lib_trendline_filter.Tests.ps1 -- Pester 3.x
 # Trendline filter pra validar BULL_WEAK structural (Tori A+ rigor)
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path

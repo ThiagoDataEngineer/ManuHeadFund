@@ -1,4 +1,4 @@
-# TDD: Semana 4 — Forward Validation (walk-forward + OOS testing)
+﻿# TDD: Semana 4 — Forward Validation (walk-forward + OOS testing)
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 

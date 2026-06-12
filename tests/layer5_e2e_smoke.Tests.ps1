@@ -1,4 +1,4 @@
-# Smoke test E2E: Register-PositionTrailing decide caminho correto
+﻿# Smoke test E2E: Register-PositionTrailing decide caminho correto
 # em condicoes que simulam o fluxo real do scan_master.
 
 $ErrorActionPreference = "Stop"

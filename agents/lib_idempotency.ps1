@@ -1,4 +1,4 @@
-# lib_idempotency.ps1 -- B14 fix 2026-05-20 PM6+320min.
+﻿# lib_idempotency.ps1 -- B14 fix 2026-05-20 PM6+320min.
 #
 # Idempotency key pra callback handlers do Telegram. Sistema LIVE Mode 2 desde 18/05
 # com $2762.93 capital exposto -- worst case duplicate callback = 2x sizing 1% = 2x $27.60

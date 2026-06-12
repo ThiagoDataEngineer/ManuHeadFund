@@ -1,4 +1,4 @@
-# operational_whitelist.Tests.ps1 -- Pester 3.x -- Test-RegimeDirectionAllowed
+﻿# operational_whitelist.Tests.ps1 -- Pester 3.x -- Test-RegimeDirectionAllowed
 # Convencoes: ($x) | Should Be $y | sem BeforeAll | sem em-dash | sem &&
 # DoW: 0=Sunday, 1=Monday, ..., 6=Saturday
 

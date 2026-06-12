@@ -1,4 +1,4 @@
-# lib_mentor_self_consistency.ps1 -- C.8 wire 2026-05-26
+﻿# lib_mentor_self_consistency.ps1 -- C.8 wire 2026-05-26
 # Critical decisions (STRONG_EXECUTAR amplifier 1.5x sizing / HARD_VETO blacklist 24h)
 # devem ter 2 LLM calls concordando. Divergencia = downgrade pra REVISAR (paper-only).
 # Anti-overconfidence: forca consenso onde stakes maiores.

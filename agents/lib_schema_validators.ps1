@@ -1,4 +1,4 @@
-# lib_schema_validators.ps1 -- C6 fix 2026-05-20 PM6+650min.
+﻿# lib_schema_validators.ps1 -- C6 fix 2026-05-20 PM6+650min.
 #
 # Validators read-back pra detectar JSON corrupto (HYPE-style schema violation).
 # Camada complementar do lib_json_contract (write-side).

@@ -1,4 +1,4 @@
-# faro_v3_manager_scalp.ps1 — Scalp mode position manager
+﻿# faro_v3_manager_scalp.ps1 — Scalp mode position manager
 # Quick entries/exits (4h timeout, 5/15/50% targets, -3% stops)
 # Runs every 5 minutes
 

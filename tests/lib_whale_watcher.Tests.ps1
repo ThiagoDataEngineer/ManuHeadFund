@@ -1,4 +1,4 @@
-# lib_whale_watcher.Tests.ps1 -- Whale watcher MVP TDD (2026-05-21 sessao extra).
+﻿# lib_whale_watcher.Tests.ps1 -- Whale watcher MVP TDD (2026-05-21 sessao extra).
 # Pester 3.x. Validates:
 #   - Test-WhaleTxSeen idempotent dedup
 #   - Add-WhaleTxSeen append-only persistence

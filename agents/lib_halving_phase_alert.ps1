@@ -1,4 +1,4 @@
-# lib_halving_phase_alert.ps1 -- Detecta mudanca de halving_phase + alerta Telegram.
+﻿# lib_halving_phase_alert.ps1 -- Detecta mudanca de halving_phase + alerta Telegram.
 #
 # Validacao 14y BTC (2026-05-19):
 #   phase_1_bull (0-12m)   : BULL_WEAK LONG ALLOWED (+1.72R Sharpe 11.4)

@@ -1,4 +1,4 @@
-# validate_injusdt_trailing_stop.ps1
+﻿# validate_injusdt_trailing_stop.ps1
 # Validar implementação de trailing stop automático para INJUSDT
 # 2026-05-29
 

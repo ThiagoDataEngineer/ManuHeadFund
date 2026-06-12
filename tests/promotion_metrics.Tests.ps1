@@ -1,4 +1,4 @@
-# promotion_metrics.Tests.ps1 -- TDD Get-PromotionMetrics
+﻿# promotion_metrics.Tests.ps1 -- TDD Get-PromotionMetrics
 # Pester 3.x. PS 5.1. UTF-8 BOM.
 
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"

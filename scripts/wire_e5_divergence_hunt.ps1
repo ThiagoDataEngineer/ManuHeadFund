@@ -1,4 +1,4 @@
-# wire_e5_divergence_hunt.ps1
+﻿# wire_e5_divergence_hunt.ps1
 # E5 refinement: Wire funding exhaustion divergence hunt into scan loop
 # Call this from scan_master.ps1 after processing each market
 

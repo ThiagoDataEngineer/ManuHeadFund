@@ -1,4 +1,4 @@
-# tests/test_rsi_manual.ps1
+﻿# tests/test_rsi_manual.ps1
 # Test RSI calculation manually (sem Pester)
 # Criado: 2026-05-23
 

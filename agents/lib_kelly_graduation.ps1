@@ -1,4 +1,4 @@
-# lib_kelly_graduation.ps1 -- Auto-activator pra $global:USE_KELLY_SIZING.
+﻿# lib_kelly_graduation.ps1 -- Auto-activator pra $global:USE_KELLY_SIZING.
 #
 # Criterios pra graduate Kelly:
 #   - >= MinTrades (default 10) outcomes acumulados

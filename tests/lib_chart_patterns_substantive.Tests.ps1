@@ -1,4 +1,4 @@
-# lib_chart_patterns_substantive.Tests.ps1 -- TESTES SUBSTANTIVOS (nao so math).
+﻿# lib_chart_patterns_substantive.Tests.ps1 -- TESTES SUBSTANTIVOS (nao so math).
 # Pester 3.x. ASCII puro (PS5.1 quirk com box-drawing chars).
 #
 # Filosofia: testes anteriores validavam que codigo FAZ o que pedi (math correta).

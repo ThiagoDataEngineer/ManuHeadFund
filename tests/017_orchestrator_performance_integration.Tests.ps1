@@ -1,4 +1,4 @@
-# TDD: Orchestrator Performance Integration
+﻿# TDD: Orchestrator Performance Integration
 # POSIÇÃO: Após Mentor APROVAR, antes telegram fire
 # IMPACTO: Bloqueia entradas fracas mesmo com Mentor OK
 

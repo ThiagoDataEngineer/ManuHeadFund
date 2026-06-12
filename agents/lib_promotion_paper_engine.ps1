@@ -1,4 +1,4 @@
-# lib_promotion_paper_engine.ps1 -- Simula paper trades pra preencher metricas
+﻿# lib_promotion_paper_engine.ps1 -- Simula paper trades pra preencher metricas
 # de OBSERVATION-tier candidates.
 #
 # Por que existe: ladder gate OBSERVATION->PAPER_C exige sharpe_30d/n_trades/max_dd

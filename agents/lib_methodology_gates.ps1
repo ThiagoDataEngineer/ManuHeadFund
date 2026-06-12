@@ -1,4 +1,4 @@
-# lib_methodology_gates.ps1 -- B23/B24 fix 2026-05-20 PM6+520min.
+﻿# lib_methodology_gates.ps1 -- B23/B24 fix 2026-05-20 PM6+520min.
 #
 # Anti-overfitting gates baseados em evidencia empirica do proprio pipeline:
 #

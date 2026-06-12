@@ -1,4 +1,4 @@
-# register_manual_trade.ps1 -- Registra trade fechado manualmente no trade_outcomes.jsonl
+﻿# register_manual_trade.ps1 -- Registra trade fechado manualmente no trade_outcomes.jsonl
 # Isso alimenta o DSR, Kelly graduation e alpha_vs_btc
 #
 # Uso:

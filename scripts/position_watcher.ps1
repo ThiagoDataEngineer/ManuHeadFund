@@ -1,4 +1,4 @@
-# position_watcher.ps1 — Monitora posições COM DADOS REAIS (não API bugada)
+﻿# position_watcher.ps1 — Monitora posições COM DADOS REAIS (não API bugada)
 # Usa CoinEx websocket ou polling com fallback local
 
 param(

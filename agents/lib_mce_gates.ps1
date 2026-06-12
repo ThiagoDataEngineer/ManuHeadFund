@@ -1,4 +1,4 @@
-# lib_mce_gates.ps1 — MCE Gates: Market Context Engine (timing BRT + Fear&Greed)
+﻿# lib_mce_gates.ps1 — MCE Gates: Market Context Engine (timing BRT + Fear&Greed)
 
 if (-not $global:JOURNAL_DIR) {
     $global:JOURNAL_DIR = Join-Path (Split-Path $PSScriptRoot -Parent) "journal"

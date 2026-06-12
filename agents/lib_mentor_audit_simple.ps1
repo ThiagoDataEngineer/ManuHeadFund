@@ -1,4 +1,4 @@
-# lib_mentor_audit_simple.ps1 — Mentor decision audit (SIMPLIFICADO)
+﻿# lib_mentor_audit_simple.ps1 — Mentor decision audit (SIMPLIFICADO)
 
 function Get-MentorDecisionsRecent {
     param([int]$Limit = 100, [string]$JournalDir = $global:JOURNAL_DIR)

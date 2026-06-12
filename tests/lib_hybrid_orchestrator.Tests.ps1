@@ -1,4 +1,4 @@
-# Tests for lib_hybrid_orchestrator.ps1
+﻿# Tests for lib_hybrid_orchestrator.ps1
 # Pester 3.4 compatible
 
 Describe "Hybrid Orchestrator" {

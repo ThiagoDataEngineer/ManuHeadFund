@@ -1,4 +1,4 @@
-# TDD: A2 — Trade journal schema extension
+﻿# TDD: A2 — Trade journal schema extension
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 

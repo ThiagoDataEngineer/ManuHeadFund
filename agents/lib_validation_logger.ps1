@@ -1,4 +1,4 @@
-# lib_validation_logger.ps1 - Validacao Layer 1+2+4 (Opcao 2)
+﻿# lib_validation_logger.ps1 - Validacao Layer 1+2+4 (Opcao 2)
 # 2026-05-25: Snapshot logger leve para validar interacoes entre layers
 # em modo ADVISORY puro, ate a primeira posicao fechar.
 #

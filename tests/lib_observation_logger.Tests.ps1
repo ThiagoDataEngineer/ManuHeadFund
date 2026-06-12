@@ -1,4 +1,4 @@
-# lib_observation_logger.Tests.ps1
+﻿# lib_observation_logger.Tests.ps1
 # TDD strict: Add-Observation persiste cascade output em CSV para audit pos-14d.
 #
 # Schema (journal/short_promotion_criteria_2026_05_15.md): 17 campos.

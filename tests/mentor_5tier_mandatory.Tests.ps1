@@ -1,4 +1,4 @@
-# mentor_5tier_mandatory.Tests.ps1 -- B.2
+﻿# mentor_5tier_mandatory.Tests.ps1 -- B.2
 # Test-MentorOutputV2 (extended) requer veredicto_5tier alem dos campos legacy.
 
 $ErrorActionPreference = "Stop"

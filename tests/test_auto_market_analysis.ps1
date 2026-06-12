@@ -1,4 +1,4 @@
-# tests\test_auto_market_analysis.ps1
+﻿# tests\test_auto_market_analysis.ps1
 # TDD: analise de mercado automatica (nossa "AI Analysis" interna).
 #   - Get-BollingerBands / Get-MacdValue (helpers puros)
 #   - Get-AutoTimeframeAnalysis (1 timeframe a partir de candles)

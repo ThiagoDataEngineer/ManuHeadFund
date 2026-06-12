@@ -1,4 +1,4 @@
-# lib_runspace_warnings.ps1 -- runtime detection de funcoes faltantes em runspace
+﻿# lib_runspace_warnings.ps1 -- runtime detection de funcoes faltantes em runspace
 #
 # Background: `Get-Command X -ErrorAction SilentlyContinue` retorna null sem erro
 # quando X nao existe -- bug invisivel. Esta lib emite WARNING + log estruturado

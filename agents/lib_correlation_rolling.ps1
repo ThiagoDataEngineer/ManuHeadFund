@@ -1,4 +1,4 @@
-# lib_correlation_rolling.ps1
+﻿# lib_correlation_rolling.ps1
 # Beta rolling correlation detector for Alpha vs BTC
 # Detects when TIER_A assets are losing independence (>0.75 corr with BTC in BEAR_WEAK)
 

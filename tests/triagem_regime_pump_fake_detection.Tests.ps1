@@ -1,4 +1,4 @@
-# triagem_regime_pump_fake_detection.Tests.ps1
+﻿# triagem_regime_pump_fake_detection.Tests.ps1
 # TDD: Opção 1 — Detectar pump fake: BULL_STRONG só com confirmação técnica
 # UTF-8 BOM. Pester 3.x.
 

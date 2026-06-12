@@ -1,4 +1,4 @@
-# scan_master_universe_integration.Tests.ps1 -- Pester 3.x
+﻿# scan_master_universe_integration.Tests.ps1 -- Pester 3.x
 #
 # Integracao Universe Sweep + Hit-Rate no fluxo do scan_master.
 # Garantia: APOS Get-ScannerCandidates retornar top-N, o ciclo:

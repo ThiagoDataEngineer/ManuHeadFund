@@ -1,4 +1,4 @@
-# B19 fix 2026-05-20 PM6+420min.
+﻿# B19 fix 2026-05-20 PM6+420min.
 # Retry transient errors (429/503/timeout) com backoff. Hashtable shared pra contador
 # (Pester scope isolation).
 

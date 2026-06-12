@@ -1,4 +1,4 @@
-# lib_mentor_time_context.ps1 -- A.6 wire 2026-05-26
+﻿# lib_mentor_time_context.ps1 -- A.6 wire 2026-05-26
 # Fornece UTC hour, weekday, trading session, weekend flag pro prompt Mentor.
 # Trader real considera contexto temporal -- weekend low liquidity, US session
 # = volatility, ASIA session = quiet drift. Mentor passa a saber tambem.

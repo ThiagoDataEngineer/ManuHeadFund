@@ -1,4 +1,4 @@
-# mistral_cascade.Tests.ps1 -- TDD 2026-05-29
+﻿# mistral_cascade.Tests.ps1 -- TDD 2026-05-29
 #
 # Problema: Gemini 2.5 Flash free tier tem apenas 250 RPD (requests/dia).
 # Com ciclos a cada 30min e 10 candidatos x 3 drones Mesa = ~30 calls/ciclo,

@@ -1,4 +1,4 @@
-# beta_hallucination_fix.Tests.ps1 -- TDD 2026-05-28
+﻿# beta_hallucination_fix.Tests.ps1 -- TDD 2026-05-28
 #
 # Fix 1: LLM nao pode escrever "viola BLOCK" quando beta < cap_block (erro matematico).
 #   Regra adicionada em lib_mentor_rules.Get-MentorAntiHallucinationRules (regra 6)

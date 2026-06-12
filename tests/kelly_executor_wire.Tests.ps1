@@ -1,4 +1,4 @@
-# kelly_executor_wire.Tests.ps1 -- TDD pra wire de Kelly em gem_executor + orchestrator_v6.
+﻿# kelly_executor_wire.Tests.ps1 -- TDD pra wire de Kelly em gem_executor + orchestrator_v6.
 # Pester 3.x.
 #
 # Pattern: helper Get-ExecutorSize(Market, Mode, Capital, BasePct) que:

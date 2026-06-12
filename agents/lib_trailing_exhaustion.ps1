@@ -1,4 +1,4 @@
-# lib_trailing_exhaustion.ps1
+﻿# lib_trailing_exhaustion.ps1
 # Camada 3: Detectores de Exhaustion (proativo)
 # 
 # Detecta sinais de fraqueza ANTES da reversao.

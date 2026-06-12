@@ -1,4 +1,4 @@
-# lib_mentor_schema.ps1 -- Schema-first Mentor output + 5-tier veredicto + sizing tilt cap.
+﻿# lib_mentor_schema.ps1 -- Schema-first Mentor output + 5-tier veredicto + sizing tilt cap.
 #
 # E1 (2026-05-22, Tauric-inspired):
 #   1. Expande veredicto 3-tier -> 5-tier:

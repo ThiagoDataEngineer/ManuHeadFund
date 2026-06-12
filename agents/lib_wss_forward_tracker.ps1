@@ -1,4 +1,4 @@
-# lib_wss_forward_tracker.ps1 -- Forward validation: track WSS signals + realized outcomes.
+﻿# lib_wss_forward_tracker.ps1 -- Forward validation: track WSS signals + realized outcomes.
 #
 # Caminho 2 (2026-05-23): Branch A v2 mostrou CI ainda inclui zero. Unico jeito de
 # rejeitar/confirmar thesis eh OUTCOMES REAIS forward. Esta lib captura:

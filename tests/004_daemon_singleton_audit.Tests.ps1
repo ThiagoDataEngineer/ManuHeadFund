@@ -1,4 +1,4 @@
-# TDD: A5 — Daemon singleton audit
+﻿# TDD: A5 — Daemon singleton audit
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $scriptsDir = Join-Path $projectRoot "scripts"

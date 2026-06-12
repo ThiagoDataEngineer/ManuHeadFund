@@ -1,4 +1,4 @@
-# lib_gem_decision_cache.ps1 -- B9 fix 2026-05-20 PM6+.
+﻿# lib_gem_decision_cache.ps1 -- B9 fix 2026-05-20 PM6+.
 # TTL cache pra GEM decisions recentes: mesma (market,reason) dentro de N min = skip.
 # Resolve loop de re-veto (DASH rejeitado 5x hoje com mesmo MCE_BLOCK 0.1823 -> ~$0.03 desperdicio).
 #

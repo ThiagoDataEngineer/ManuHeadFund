@@ -1,4 +1,4 @@
-# moon_pattern_monitor.ps1
+﻿# moon_pattern_monitor.ps1
 # Monitor MON em tempo real com análise de padrões + trailing dinâmico
 # Sistema que aprende e se ajusta com base em candlesticks
 # 2026-06-06

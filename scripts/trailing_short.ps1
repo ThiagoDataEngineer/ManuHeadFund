@@ -1,4 +1,4 @@
-
+﻿
 # trailing_short.ps1 — SHORT TONUSDT com TechAgent integrado
 # Stop trail: 3% acima do minimo | Fibonacci como alvos | ATR como referencia de stop
 

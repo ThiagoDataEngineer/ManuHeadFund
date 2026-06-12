@@ -1,4 +1,4 @@
-# lib_faro_pattern_pro.ps1 — Multi-timeframe pattern detection
+﻿# lib_faro_pattern_pro.ps1 — Multi-timeframe pattern detection
 function Get-PatternPro {
     param([string] $PatternType, [decimal] $Strength, [array] $Candles1min, [array] $Candles5min, [array] $Candles1d)
     if (-not $PatternType -or -not $Strength -or $Strength -lt 0 -or $Strength -gt 1) { return 0 }

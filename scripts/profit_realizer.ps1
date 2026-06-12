@@ -1,4 +1,4 @@
-# profit_realizer.ps1 — Realiza lucro automaticamente quando atinge meta
+﻿# profit_realizer.ps1 — Realiza lucro automaticamente quando atinge meta
 # Garante que posições FECHAM com ganho, não fica "vendo correr"
 
 param(

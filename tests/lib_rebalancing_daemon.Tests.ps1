@@ -1,4 +1,4 @@
-# Tests for lib_rebalancing_daemon.ps1
+﻿# Tests for lib_rebalancing_daemon.ps1
 
 Describe "Rebalancing Daemon" {
     BeforeAll {

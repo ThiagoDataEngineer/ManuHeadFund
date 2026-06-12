@@ -1,4 +1,4 @@
-# lib_trailing_stop_intelligent.ps1
+﻿# lib_trailing_stop_intelligent.ps1
 # Trailing Stop Inteligente + TP/SL Automatico + Saidas Parciais
 # 2026-05-29 (recriado apos truncamento acidental)
 

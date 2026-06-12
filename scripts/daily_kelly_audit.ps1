@@ -1,4 +1,4 @@
-# daily_kelly_audit.ps1 -- Auto-activator pra Kelly sizing.
+﻿# daily_kelly_audit.ps1 -- Auto-activator pra Kelly sizing.
 # Roda 02:35 BRT (5 min depois do parallel audit), checa trade_outcomes,
 # se passa criterios cria journal/USE_KELLY_SIZING.flag.
 

@@ -1,4 +1,4 @@
-# agents/lib_position_register.ps1
+﻿# agents/lib_position_register.ps1
 # Wrapper que escolhe entre trailing classico (Add-TrailingPosition) e
 # Moon Bag split (Add-MoonBagPair) baseado em flag opt-in.
 #

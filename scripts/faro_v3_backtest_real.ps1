@@ -1,4 +1,4 @@
-# faro_v3_backtest_real.ps1 — Backtest FARO V3 contra 146 mercados CoinEx reais (dados daily)
+﻿# faro_v3_backtest_real.ps1 — Backtest FARO V3 contra 146 mercados CoinEx reais (dados daily)
 # Input: journal/candles_coinex/{MARKET}_1day.json
 # Output: journal/faro_v3_backtest_real_YYYYMMDD_HHmmss.csv
 # Objetivo: encontrar quais coins TERIAM gerado sinais no histórico

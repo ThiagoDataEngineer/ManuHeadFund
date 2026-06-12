@@ -1,4 +1,4 @@
-# lib_auto_trade_engine.ps1
+﻿# lib_auto_trade_engine.ps1
 # Sistema de auto-trade com feedback loop
 # Aprende qual padrão gera ganho + retroalimentação contínua
 # 2026-06-06

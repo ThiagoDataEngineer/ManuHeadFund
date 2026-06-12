@@ -1,4 +1,4 @@
-# lib_kelly_adaptive.ps1 -- Kelly-fractional adaptive sizing.
+﻿# lib_kelly_adaptive.ps1 -- Kelly-fractional adaptive sizing.
 #
 # Substitui sizing fixo 1% por f* = (p*W - q*L) / (W*L) ajustado por
 # fractional Kelly (default quarter = 0.25, conservative crypto).

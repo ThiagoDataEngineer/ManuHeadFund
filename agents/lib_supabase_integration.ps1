@@ -1,4 +1,4 @@
-# lib_supabase_integration.ps1 -- Supabase Integration for Data Sync
+﻿# lib_supabase_integration.ps1 -- Supabase Integration for Data Sync
 # Provides functions to read/write data from Supabase tables
 
 function Get-SupabaseConnection {

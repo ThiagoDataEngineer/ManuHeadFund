@@ -1,4 +1,4 @@
-# lib_trailing_peak_update.Tests.ps1 — 3 TDD happy path
+﻿# lib_trailing_peak_update.Tests.ps1 — 3 TDD happy path
 
 $agentsDir = Join-Path (Split-Path -Parent $PSScriptRoot) "agents"
 . (Join-Path $agentsDir "lib_trailing_peak_update.ps1")

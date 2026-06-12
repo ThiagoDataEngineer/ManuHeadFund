@@ -1,4 +1,4 @@
-# mentor_reflection_wire.Tests.ps1
+﻿# mentor_reflection_wire.Tests.ps1
 # TDD: wire entre lifecycle de trade (Add/Close-TrailingPosition) e ledger E3
 # de reflections (decision_reflections.jsonl).
 #

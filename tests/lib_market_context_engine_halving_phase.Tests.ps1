@@ -1,4 +1,4 @@
-# lib_market_context_engine_halving_phase.Tests.ps1 -- Pester 3.x
+﻿# lib_market_context_engine_halving_phase.Tests.ps1 -- Pester 3.x
 # Get-HalvingPhase: retorna categoria do ciclo halving (vs Get-HalvingFactor numerico)
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path

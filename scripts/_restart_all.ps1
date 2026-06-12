@@ -1,4 +1,4 @@
-# _restart_all.ps1 -- Restart completo de todos os daemons com novo codigo
+﻿# _restart_all.ps1 -- Restart completo de todos os daemons com novo codigo
 # 2026-05-28: inclui mudancas Living Whitelist + Regime-Aware Candidates
 # PS 5.1. UTF-8 BOM. Sem acentos.
 

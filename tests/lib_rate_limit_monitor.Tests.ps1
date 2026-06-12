@@ -1,4 +1,4 @@
-# tests/lib_rate_limit_monitor.Tests.ps1
+﻿# tests/lib_rate_limit_monitor.Tests.ps1
 # TDD para Monitoramento de Rate Limit Events
 # 2026-05-23
 

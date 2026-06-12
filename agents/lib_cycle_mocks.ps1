@@ -1,4 +1,4 @@
-# lib_cycle_mocks.ps1 -- Mocks idempotentes das 4 funcoes de A+B
+﻿# lib_cycle_mocks.ps1 -- Mocks idempotentes das 4 funcoes de A+B
 # So define se a funcao real ainda nao foi dot-sourced (lib_cycle_indicators*.ps1).
 #
 # Ordem de uso correta em scan_master:

@@ -1,4 +1,4 @@
-# B4 prevention 2026-05-20 PM6+: Test-DaemonDrift unit test.
+﻿# B4 prevention 2026-05-20 PM6+: Test-DaemonDrift unit test.
 # Drift = qualquer .ps1 em AgentsDir com LastWriteTime > processo.StartTime + ThresholdHours.
 
 Describe "B4 Test-DaemonDrift" {

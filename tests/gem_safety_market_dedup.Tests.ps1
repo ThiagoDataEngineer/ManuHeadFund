@@ -1,4 +1,4 @@
-# gem_safety_market_dedup.Tests.ps1 -- TDD dedup per-market (2026-06-05)
+﻿# gem_safety_market_dedup.Tests.ps1 -- TDD dedup per-market (2026-06-05)
 #
 # Incidente 2026-06-05: gem_loop re-entrou FIRO 4x / PEPE2 2x / BABY 4x porque
 # Test-GemSafetyGuards NUNCA checava se o mercado especifico ja estava em

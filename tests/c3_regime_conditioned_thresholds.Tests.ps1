@@ -1,4 +1,4 @@
-# C3 fix 2026-05-21 PM6+810min — regime-conditioned thresholds.
+﻿# C3 fix 2026-05-21 PM6+810min — regime-conditioned thresholds.
 # Justificativa empirica:
 #   Pipeline em phase_3_bear: TODOS markets falham sharpe_30d > 1.0
 #   (CFG/HYPE/INJ/PENDLE/RENDER/TON/ZEC = 4-4 evals todas FAIL)

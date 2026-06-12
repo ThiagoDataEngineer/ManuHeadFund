@@ -1,4 +1,4 @@
-# lib_wyckoff_spring_score.ps1 -- WSS composite scoring (0-100) + tier S/A/B.
+﻿# lib_wyckoff_spring_score.ps1 -- WSS composite scoring (0-100) + tier S/A/B.
 #
 # Filosofia: vol_climax+RSI<30 predicate eh detector de Wyckoff Spring phase.
 # Edge eh CONCENTRADO em regime especifico (12-26 meses post-halving + vol elevada

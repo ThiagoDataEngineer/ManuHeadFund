@@ -1,4 +1,4 @@
-# hit_rate.Tests.ps1 — Pester 3.x tests para lib_hit_rate.ps1
+﻿# hit_rate.Tests.ps1 — Pester 3.x tests para lib_hit_rate.ps1
 # Cobre: Compare-ScannerVsUniverse, Get-HitRateMetrics
 # Rodar: Invoke-Pester .\tests\hit_rate.Tests.ps1 -Verbose
 

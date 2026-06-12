@@ -1,4 +1,4 @@
-# orchestrator_v6.ps1 -- Esquadrao V6: Triagem (Parte A) -> Mesa (Parte B) -> Mentor Debate
+﻿# orchestrator_v6.ps1 -- Esquadrao V6: Triagem (Parte A) -> Mesa (Parte B) -> Mentor Debate
 # Cascade pura (Invoke-V6Cascade) + wrapper IO (Invoke-OrchestratorV6).
 #
 # Cascata:

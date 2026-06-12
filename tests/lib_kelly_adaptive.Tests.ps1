@@ -1,4 +1,4 @@
-# lib_kelly_adaptive.Tests.ps1 -- TDD Kelly-fractional adaptive sizing.
+﻿# lib_kelly_adaptive.Tests.ps1 -- TDD Kelly-fractional adaptive sizing.
 # Pester 3.x.
 #
 # Formula Kelly classico: f* = (p*W - q*L) / (W*L)

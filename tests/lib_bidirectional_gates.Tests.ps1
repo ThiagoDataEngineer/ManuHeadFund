@@ -1,4 +1,4 @@
-# lib_bidirectional_gates.Tests.ps1
+﻿# lib_bidirectional_gates.Tests.ps1
 # TDD: Gates para LONG e SHORT simultâneos
 
 Describe "Bidirectional Gates" {

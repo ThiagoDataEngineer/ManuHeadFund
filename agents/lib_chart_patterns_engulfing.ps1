@@ -1,4 +1,4 @@
-# Engulfing Pattern - Simplified
+﻿# Engulfing Pattern - Simplified
 # Returns engulfing signal if: current body > previous body AND color reversal
 
 function Detect-EngulfingPattern {

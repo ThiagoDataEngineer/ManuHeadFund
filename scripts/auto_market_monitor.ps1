@@ -1,4 +1,4 @@
-# auto_market_monitor.ps1
+﻿# auto_market_monitor.ps1
 # Inicia monitor multi-mercado em loop infinito
 # Gera alertas e reports automáticos
 

@@ -1,4 +1,4 @@
-# validate_fqs_registry.ps1
+﻿# validate_fqs_registry.ps1
 # Valida e reporta gaps no FQS Registry
 # Uso: .\validate_fqs_registry.ps1
 

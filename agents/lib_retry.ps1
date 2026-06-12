@@ -1,4 +1,4 @@
-# lib_retry.ps1 -- B19 fix 2026-05-20 PM6+420min.
+﻿# lib_retry.ps1 -- B19 fix 2026-05-20 PM6+420min.
 #
 # Retry helper generico pra erros transient (429/503/502/504/timeout/connection).
 # Necessario porque CoinEx-PlaceOrder atualmente: Invoke-RestMethod -ErrorAction Stop

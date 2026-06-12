@@ -1,4 +1,4 @@
-# halving_phase_integration.Tests.ps1 -- Testa carregamento na ordem de scan_master.ps1
+﻿# halving_phase_integration.Tests.ps1 -- Testa carregamento na ordem de scan_master.ps1
 
 Describe "Halving Phase Integration Order" {
     BeforeAll {

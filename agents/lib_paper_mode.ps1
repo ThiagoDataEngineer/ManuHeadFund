@@ -1,4 +1,4 @@
-# lib_paper_mode.ps1 — Paper trading (simulation without real execution)
+﻿# lib_paper_mode.ps1 — Paper trading (simulation without real execution)
 # Simulates trades before deploying to LIVE
 # 2026-06-08
 

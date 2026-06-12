@@ -1,4 +1,4 @@
-# scripts/collect_paper_metrics.ps1
+﻿# scripts/collect_paper_metrics.ps1
 # Coleta de métricas dos 48h de paper trades com Trailing Adaptativo (Layer 1)
 # Uso: .\scripts\collect_paper_metrics.ps1 -StartTime "2026-05-25 14:00" -EndTime "2026-05-27 14:00"
 

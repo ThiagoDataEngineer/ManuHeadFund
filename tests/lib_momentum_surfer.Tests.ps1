@@ -1,4 +1,4 @@
-# lib_momentum_surfer.Tests.ps1
+﻿# lib_momentum_surfer.Tests.ps1
 # TDD: Surfa movimentos em andamento (entra no meio de trends)
 
 Describe "Momentum Surfer" {

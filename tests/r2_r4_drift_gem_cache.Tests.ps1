@@ -1,4 +1,4 @@
-# r2_r4_drift_gem_cache.Tests.ps1 -- 2026-05-21 R2+R4 lockdown.
+﻿# r2_r4_drift_gem_cache.Tests.ps1 -- 2026-05-21 R2+R4 lockdown.
 # Pester 3.x.
 #
 # R2: DriftThresholdHours bumped 1h -> 6h (default). Override via env WATCHDOG_DRIFT_THRESHOLD_H.

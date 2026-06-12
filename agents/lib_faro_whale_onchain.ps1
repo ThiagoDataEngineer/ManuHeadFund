@@ -1,4 +1,4 @@
-# lib_faro_whale_onchain.ps1 — Exchange flows + large holders
+﻿# lib_faro_whale_onchain.ps1 — Exchange flows + large holders
 function Get-WhaleOnChain {
     param([string] $Market, [decimal] $TopHoldersSupplyPct = 0, [decimal] $ExchangeOutflow = 0, [decimal] $ExchangeInflow = 0, [int] $CommunitySize = 0)
     $score = 0

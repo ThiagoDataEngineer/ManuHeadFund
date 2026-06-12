@@ -1,4 +1,4 @@
-# Layer 4 AUTO_EXECUTE mode TDD
+﻿# Layer 4 AUTO_EXECUTE mode TDD
 #
 # Valida que quando LAYER4_AUTO_EXECUTE = $true:
 #   - CLOSE_TIME_STOP fecha posicao na exchange

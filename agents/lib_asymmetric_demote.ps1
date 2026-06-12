@@ -1,4 +1,4 @@
-# lib_asymmetric_demote.ps1 -- Demote rapido (3 dias FLAG = auto-fired).
+﻿# lib_asymmetric_demote.ps1 -- Demote rapido (3 dias FLAG = auto-fired).
 #
 # Filosofia assimetrica:
 #   - PROMOTE eh lento: Sharpe60 1.5+, DSR 0.6+, PSR 0.9+, multiple validations

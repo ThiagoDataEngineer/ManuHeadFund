@@ -1,4 +1,4 @@
-# TDD: B3 — Auto-demote cron (3-day FLAG = demote Tier A→B)
+﻿# TDD: B3 — Auto-demote cron (3-day FLAG = demote Tier A→B)
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 

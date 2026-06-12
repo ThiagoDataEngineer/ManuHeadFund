@@ -1,4 +1,4 @@
-# validate_injusdt_fix.ps1 - Validar que INJUSDT inflado foi corrigido
+﻿# validate_injusdt_fix.ps1 - Validar que INJUSDT inflado foi corrigido
 # Testes simples sem Pester para validar as 3 correções
 
 $agentsDir = Join-Path (Split-Path -Parent $PSScriptRoot) "agents"

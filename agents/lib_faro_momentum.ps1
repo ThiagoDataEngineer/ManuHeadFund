@@ -1,4 +1,4 @@
-# lib_faro_momentum.ps1 — RSI + MACD
+﻿# lib_faro_momentum.ps1 — RSI + MACD
 function Calculate-RSI {
     param([array] $Closes, [int] $Period = 14)
     if ($Closes.Count -lt $Period + 1) { return 50 }

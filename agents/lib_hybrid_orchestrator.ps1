@@ -1,4 +1,4 @@
-# lib_hybrid_orchestrator.ps1 — Dynamic SPOT/FUTURES trading (no 50/50 hardcoded)
+﻿# lib_hybrid_orchestrator.ps1 — Dynamic SPOT/FUTURES trading (no 50/50 hardcoded)
 # Capital allocated dynamically based on onchain balances
 # 2026-06-08
 

@@ -1,4 +1,4 @@
-# living_whitelist_autoadd.Tests.ps1 -- TDD auto-add BULL_STRONG mode
+﻿# living_whitelist_autoadd.Tests.ps1 -- TDD auto-add BULL_STRONG mode
 # Pester 3.x. UTF-8 BOM.
 
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"

@@ -1,4 +1,4 @@
-# TDD: Signal Calibration — refina thresholds com histórico real
+﻿# TDD: Signal Calibration — refina thresholds com histórico real
 # CORE: Descobre qual score_threshold maximize win_rate
 
 $projectRoot = Split-Path -Parent $PSScriptRoot

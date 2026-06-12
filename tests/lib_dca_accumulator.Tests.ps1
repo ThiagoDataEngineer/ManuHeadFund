@@ -1,4 +1,4 @@
-# lib_dca_accumulator.Tests.ps1 — 12 TDD
+﻿# lib_dca_accumulator.Tests.ps1 — 12 TDD
 
 $agentsDir = Join-Path (Split-Path -Parent $PSScriptRoot) "agents"
 . (Join-Path $agentsDir "lib_dca_accumulator.ps1")

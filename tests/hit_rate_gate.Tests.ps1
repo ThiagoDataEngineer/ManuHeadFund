@@ -1,4 +1,4 @@
-# hit_rate_gate.Tests.ps1 — TDD strict: scanner health gate via hit rate
+﻿# hit_rate_gate.Tests.ps1 — TDD strict: scanner health gate via hit rate
 # 5 tests RED: validar que hit rate como gate de saude funciona
 # UTF-8 BOM, Pester 3.x
 

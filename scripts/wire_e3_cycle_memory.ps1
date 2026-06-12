@@ -1,4 +1,4 @@
-# wire_e3_cycle_memory.ps1
+﻿# wire_e3_cycle_memory.ps1
 # E3 refinement: Cycle memory cache to skip expensive LLM reflection calls
 # Call this from lib_mentor_reflection.ps1 BEFORE LLM invocation
 

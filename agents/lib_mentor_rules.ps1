@@ -1,4 +1,4 @@
-# lib_mentor_rules.ps1 -- C.3 wire 2026-05-26
+﻿# lib_mentor_rules.ps1 -- C.3 wire 2026-05-26
 # Single source of truth para regras compartilhadas entre MENTOR_SYSTEM_PROMPT
 # (legado, debate full) e MENTOR_DEBATE_SYSTEM (V6 compact). Antes divergiam:
 # legacy diz R:R 1:3, novo diz 1:5; legacy sem anti-hallucination rules.

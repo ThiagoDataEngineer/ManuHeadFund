@@ -1,4 +1,4 @@
-# Anti-regression suite — lockdown dos fixes round 1+2+3 (2026-05-20 PM6+).
+﻿# Anti-regression suite — lockdown dos fixes round 1+2+3 (2026-05-20 PM6+).
 # Cada teste cobre um bug que poderia ressurgir sem essa rede.
 #
 # B4  — pre-mentor invariant (tier=A + mode=TIER_B_PAPER -> reject sem custar LLM call)

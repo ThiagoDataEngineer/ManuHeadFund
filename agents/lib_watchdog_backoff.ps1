@@ -1,4 +1,4 @@
-# lib_watchdog_backoff.ps1 -- B16 fix 2026-05-20 PM6+390min.
+﻿# lib_watchdog_backoff.ps1 -- B16 fix 2026-05-20 PM6+390min.
 #
 # Backoff exponencial + kill switch pra evitar respawn-loop infinito.
 # Antes: watchdog respawnaria 1000x/hora se processo morresse imediatamente apos start

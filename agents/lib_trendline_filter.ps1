@@ -1,4 +1,4 @@
-# lib_trendline_filter.ps1 -- Tori A+ trendline filter pra validar BULL_WEAK estrutural.
+﻿# lib_trendline_filter.ps1 -- Tori A+ trendline filter pra validar BULL_WEAK estrutural.
 #
 # Filosofia: BULL_WEAK plain = ruido (-0.37R 2025 holdout).
 #            BULL_WEAK + trendline A+ = edge estrutural (Tori).

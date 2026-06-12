@@ -1,4 +1,4 @@
-# lib_market_movers.Tests.ps1 -- TDD universo dinamico top movers
+﻿# lib_market_movers.Tests.ps1 -- TDD universo dinamico top movers
 # 2026-06-09: prioriza gainers/losers (vol spike real) sobre quiet tickers
 
 $agentsDir = Join-Path (Split-Path -Parent $PSScriptRoot) "agents"

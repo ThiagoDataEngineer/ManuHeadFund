@@ -1,4 +1,4 @@
-# lib_json_contract.ps1 -- C6 fix 2026-05-20 PM6+620min.
+﻿# lib_json_contract.ps1 -- C6 fix 2026-05-20 PM6+620min.
 #
 # Contrato de normalizacao JSON pra PowerShell 5.1.
 #

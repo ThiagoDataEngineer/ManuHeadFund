@@ -1,4 +1,4 @@
-# lib_position_price.Tests.ps1 -- Resolucao de preco quando mark_price=0 (API bug
+﻿# lib_position_price.Tests.ps1 -- Resolucao de preco quando mark_price=0 (API bug
 # comum em micro-caps CoinEx). Antes o watcher pulava a gestao (posicao sem stop).
 # Pester 3.x. PS 5.1. Funcoes puras, deterministicas.
 

@@ -1,4 +1,4 @@
-# dashboard_professional.Tests.ps1 - TDD para dashboard profissional
+﻿# dashboard_professional.Tests.ps1 - TDD para dashboard profissional
 # RED → GREEN → REFACTOR
 
 $ErrorActionPreference = "Stop"

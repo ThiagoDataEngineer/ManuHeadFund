@@ -1,4 +1,4 @@
-# lib_trade_logger.ps1 -- Structured TRADE log entries for orchestrator V6.
+﻿# lib_trade_logger.ps1 -- Structured TRADE log entries for orchestrator V6.
 #
 # Contrato:
 #   Format-TradeLogEntry -Timestamp -Market -Decision -Regime -Direction

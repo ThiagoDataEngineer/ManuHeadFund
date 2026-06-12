@@ -1,4 +1,4 @@
-# faro_v3_backtest_runner.ps1 — Run backtest on historical CoinEx data
+﻿# faro_v3_backtest_runner.ps1 — Run backtest on historical CoinEx data
 # Tests aggressive scalp strategy: 6/7 signals, -2% stops, +3/8/20% targets
 
 param(

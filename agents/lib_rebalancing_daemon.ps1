@@ -1,4 +1,4 @@
-# lib_rebalancing_daemon.ps1 — Daily capital rebalancing (SPOT/FUTURES 50/50)
+﻿# lib_rebalancing_daemon.ps1 — Daily capital rebalancing (SPOT/FUTURES 50/50)
 # Runs daily 17:00 BRT, maintains allocation
 
 # ════════════════════════════════════════════════════════════

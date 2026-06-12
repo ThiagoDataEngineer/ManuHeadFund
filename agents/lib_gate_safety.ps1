@@ -1,4 +1,4 @@
-# lib_gate_safety.ps1 -- Fail-closed gate helper + audit utility.
+﻿# lib_gate_safety.ps1 -- Fail-closed gate helper + audit utility.
 #
 # Vulnerability #4 mitigation: catch silent em gates pode resultar em "trade
 # liberado por erro" (fail-open). Esta lib provides:

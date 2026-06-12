@@ -1,4 +1,4 @@
-# kelly_graduation_check.Tests.ps1 -- TDD pra audit que auto-ativa Kelly quando criterios passam.
+﻿# kelly_graduation_check.Tests.ps1 -- TDD pra audit que auto-ativa Kelly quando criterios passam.
 # Pester 3.x.
 #
 # Test-KellyGraduationCriteria(OutcomePath, MinTrades, MinWinRate):

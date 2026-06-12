@@ -1,4 +1,4 @@
-# lib_candle_fetcher.ps1 — Fetch OHLCV candles from CoinEx
+﻿# lib_candle_fetcher.ps1 — Fetch OHLCV candles from CoinEx
 # 2026-06-08: Multi-timeframe candle retrieval for HTF confirmation
 
 # ─────────────────────────────────────────────────────────────────────────────

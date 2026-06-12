@@ -1,4 +1,4 @@
-# lib_claude_cascade.Tests.ps1
+﻿# lib_claude_cascade.Tests.ps1
 # TDD strict para Invoke-MesaDroneCascade / Invoke-MentorCascade / Invoke-TriagemCascade.
 # Atualizado 2026-06-04: Gemini substituido por Mistral como fallback 2 (2026-05-29).
 # UTF-8 BOM. Pester 3.x. PS 5.1.

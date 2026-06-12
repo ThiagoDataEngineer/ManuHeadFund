@@ -1,4 +1,4 @@
-# lib_market_router.ps1 -- Decide spot vs futures routing pra trade execution.
+﻿# lib_market_router.ps1 -- Decide spot vs futures routing pra trade execution.
 #
 # Hoje:
 #   - orchestrator_v6 SO opera futures

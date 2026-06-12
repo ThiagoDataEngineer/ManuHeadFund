@@ -1,4 +1,4 @@
-# lib_entry_score_boost.Tests.ps1 -- TDD pra entry score boost via trend_persistence cache.
+﻿# lib_entry_score_boost.Tests.ps1 -- TDD pra entry score boost via trend_persistence cache.
 # Pester 3.x.
 #
 # Get-EntryScoreBoost(Market, BaseScore): retorna BaseScore + boost (0-15 pts)

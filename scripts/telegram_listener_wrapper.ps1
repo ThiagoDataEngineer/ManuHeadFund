@@ -1,4 +1,4 @@
-# Wrapper para telegram_listener que seta env vars antes
+﻿# Wrapper para telegram_listener que seta env vars antes
 param([switch]$Force, [switch]$Once)
 
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path

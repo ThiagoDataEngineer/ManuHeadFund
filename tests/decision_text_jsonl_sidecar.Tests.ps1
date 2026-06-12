@@ -1,4 +1,4 @@
-# JSONL sidecar para texto livre (D3 2026-05-20 PM6+).
+﻿# JSONL sidecar para texto livre (D3 2026-05-20 PM6+).
 # CSV continua sendo SSoT pra tabular; JSONL sidecar guarda texto livre (reason/alerta/notes)
 # linkado por (ts, market). Mentor pode escrever , " \n sem corromper nada.
 

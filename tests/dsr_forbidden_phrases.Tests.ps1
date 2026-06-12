@@ -1,4 +1,4 @@
-# dsr_forbidden_phrases.Tests.ps1 -- 4b TDD 2026-05-28
+﻿# dsr_forbidden_phrases.Tests.ps1 -- 4b TDD 2026-05-28
 #
 # Problema: LLM do Mentor usava "DSR n_trades=0 e track record inexistente"
 # como razao de ABORTAR mesmo com [DSR_HISTORY] INFO-ONLY no gate block e

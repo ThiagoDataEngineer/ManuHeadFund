@@ -1,4 +1,4 @@
-# paper_calibration_report.ps1 — Relatório de progresso da calibração de paper trade
+﻿# paper_calibration_report.ps1 — Relatório de progresso da calibração de paper trade
 # Uso: .\scripts\paper_calibration_report.ps1
 # Output: (1) console summary, (2) Telegram alert, (3) CSV detalhado
 

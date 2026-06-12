@@ -1,4 +1,4 @@
-# lib_learning_scheduler.ps1 -- Retroalimentacao periodica (counterfactual learning)
+﻿# lib_learning_scheduler.ps1 -- Retroalimentacao periodica (counterfactual learning)
 # 2026-06-09: Computa stats dos snapshots+outcomes+skips a cada 6 ciclos (~180min)
 
 # Load libs se nao carregados

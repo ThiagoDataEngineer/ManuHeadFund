@@ -1,4 +1,4 @@
-# lib_minmax_detector.Tests.ps1
+﻿# lib_minmax_detector.Tests.ps1
 # TDD: Detecta mínimas/máximas 24h/7d e oportunidades de entrada
 # Autoria: ManuHeadFund 2026-06-08
 

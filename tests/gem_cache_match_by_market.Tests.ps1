@@ -1,4 +1,4 @@
-$script:gemtest_here = Split-Path -Parent $MyInvocation.MyCommand.Path
+﻿$script:gemtest_here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $script:gemtest_root = Split-Path -Parent $gemtest_here
 
 # gem_cache_match_by_market.Tests.ps1 -- Lockdown 2026-05-21 sessao TG audit.

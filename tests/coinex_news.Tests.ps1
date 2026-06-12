@@ -1,4 +1,4 @@
-# coinex_news.Tests.ps1 -- TDD lib_coinex_news
+﻿# coinex_news.Tests.ps1 -- TDD lib_coinex_news
 # Pester 3.x. UTF-8 BOM.
 
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"

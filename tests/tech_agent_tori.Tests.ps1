@@ -1,4 +1,4 @@
-# tech_agent_tori.Tests.ps1 -- Pester 3.x -- Invoke-ToriPostProcess
+﻿# tech_agent_tori.Tests.ps1 -- Pester 3.x -- Invoke-ToriPostProcess
 # Testa a camada Tori isoladamente (funcao pura, sem Claude, sem CoinEx)
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path

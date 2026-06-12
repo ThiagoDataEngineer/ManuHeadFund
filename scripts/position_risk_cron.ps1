@@ -1,4 +1,4 @@
-# scripts\position_risk_cron.ps1
+﻿# scripts\position_risk_cron.ps1
 # Position Risk Manager - CROSS-PLATFORM (Windows/Linux)
 # Gestão automática de risco
 # 2026-05-24

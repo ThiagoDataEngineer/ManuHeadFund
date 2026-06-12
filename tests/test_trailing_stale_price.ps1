@@ -1,4 +1,4 @@
-# tests\test_trailing_stale_price.ps1
+﻿# tests\test_trailing_stale_price.ps1
 # TDD: guarda de preco defasado (stale price) no trailing stop.
 # Runner PowerShell puro (PASS/FAIL) - nao depende de Pester.
 # 2026-05-29

@@ -1,4 +1,4 @@
-# wave2_cross_platform.Tests.ps1
+﻿# wave2_cross_platform.Tests.ps1
 # TDD para Onda 2 de migração: scripts médios (com scanner)
 
 $ErrorActionPreference = "Stop"

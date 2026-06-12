@@ -1,4 +1,4 @@
-# scripts/layers_review_runner.ps1
+﻿# scripts/layers_review_runner.ps1
 # Entry point unificado para GitHub Actions rodar Layers 1, 2, 4, 5 em modo cloud.
 #
 # Uso:

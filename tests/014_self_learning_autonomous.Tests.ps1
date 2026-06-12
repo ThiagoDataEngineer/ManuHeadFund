@@ -1,4 +1,4 @@
-# TDD: Semana 6 — Self-Learning Loop Autônomo (aprende do próprio histórico)
+﻿# TDD: Semana 6 — Self-Learning Loop Autônomo (aprende do próprio histórico)
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 

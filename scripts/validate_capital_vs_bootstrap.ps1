@@ -1,4 +1,4 @@
-# validate_capital_vs_bootstrap.ps1
+﻿# validate_capital_vs_bootstrap.ps1
 # Compare real CoinEx balances vs bootstrap fallback values
 
 Write-Host "`n📊 CAPITAL VALIDATION: Real vs Bootstrap" -ForegroundColor Cyan

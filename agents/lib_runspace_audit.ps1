@@ -1,4 +1,4 @@
-# lib_runspace_audit.ps1 -- preventivo contra bug "lib orfa em runspace child"
+﻿# lib_runspace_audit.ps1 -- preventivo contra bug "lib orfa em runspace child"
 #
 # Background (2026-05-20 PM3):
 #   `lib_orchestrator_parallel.ps1` cria RunspacePool [InitialSessionState::CreateDefault()] -

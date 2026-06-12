@@ -1,4 +1,4 @@
-# whitelist_v3_short_live.Tests.ps1
+﻿# whitelist_v3_short_live.Tests.ps1
 # TDD strict: SHORT em BEAR_STRONG/BEAR_WEAK/CAPITULATION/TRANSITION_DOWN aprovado LIVE.
 # Intent estratégico do usuário: LONG + SHORT bidirecional desde o início.
 # Whitelist v2 strict_v2 limitou SHORT->observe (backtest 14y conservador).

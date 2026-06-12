@@ -1,4 +1,4 @@
-# lib_router_spot_futures.ps1 — Route SPOT vs FUTURES (OPERACIONAL)
+﻿# lib_router_spot_futures.ps1 — Route SPOT vs FUTURES (OPERACIONAL)
 
 function Get-Route {
     param(

@@ -1,4 +1,4 @@
-# fix_stale_logs.ps1 — Diagnosticar e resolver logs desatualizados
+﻿# fix_stale_logs.ps1 — Diagnosticar e resolver logs desatualizados
 # 2026-05-29: Resolver problemas de position_risk.log, system.log e dashboard.log
 
 param(

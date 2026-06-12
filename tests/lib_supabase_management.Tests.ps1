@@ -1,4 +1,4 @@
-# lib_supabase_management.ps1 TDD
+﻿# lib_supabase_management.ps1 TDD
 #
 # Encapsula chamadas a Supabase Management API (api.supabase.com).
 # Diferente do PostgREST (lib_state_store.ps1) - aqui rodamos DDL/SQL arbitrario.

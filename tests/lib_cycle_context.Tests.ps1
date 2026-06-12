@@ -1,4 +1,4 @@
-# lib_cycle_context.Tests.ps1 -- Pester 3.x
+﻿# lib_cycle_context.Tests.ps1 -- Pester 3.x
 # Contrato: Get-CycleContext compoe Pi/200WMA/ATH-DD/NUPL (Partes A+B)
 #   -> cycle_phase, risk_score 0-100, recommendation, summary_line
 # Stubs: redefine as 4 funcoes de A+B apos dot-source para isolar logica composta.

@@ -1,4 +1,4 @@
-# lib_halving_phase_alert.Tests.ps1 -- Pester 3.x
+﻿# lib_halving_phase_alert.Tests.ps1 -- Pester 3.x
 # Alert de mudanca de halving_phase: detecta transition + formata mensagem Telegram.
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path

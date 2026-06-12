@@ -1,4 +1,4 @@
-# tests/supabase_data_migration.Tests.ps1
+﻿# tests/supabase_data_migration.Tests.ps1
 # TDD: Test data migration from JSON to Supabase
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path

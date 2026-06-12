@@ -1,4 +1,4 @@
-# lib_market_movers.ps1 -- Universo dinamico: top gainers/losers (vol spike real)
+﻿# lib_market_movers.ps1 -- Universo dinamico: top gainers/losers (vol spike real)
 # 2026-06-09: prioriza moedas que estao se MOVENDO agora, nao lentas micro-caps.
 
 # Get-PrioritizedMarkets (simples): movers (gainers+losers) primeiro, quiet depois

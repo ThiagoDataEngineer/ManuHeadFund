@@ -1,4 +1,4 @@
-# lib_orchestrator_parallel.ps1 -- RunspacePool wrapper para Invoke-OrchestratorV6.
+﻿# lib_orchestrator_parallel.ps1 -- RunspacePool wrapper para Invoke-OrchestratorV6.
 #
 # Cada candidato roda em runspace dedicado dentro de pool (default 3 concurrent).
 # Speedup esperado: 7 candidatos x ~30s seq (~200s) -> 3 paralelo (~80s) ~2.5x.

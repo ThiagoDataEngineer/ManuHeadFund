@@ -1,4 +1,4 @@
-# audit_coinex_state.ps1 — Audit histórico real de trades + balance + posições abertas
+﻿# audit_coinex_state.ps1 — Audit histórico real de trades + balance + posições abertas
 # Uso: .\scripts\audit_coinex_state.ps1
 
 param(

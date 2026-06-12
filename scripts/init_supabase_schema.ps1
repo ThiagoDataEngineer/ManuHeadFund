@@ -1,4 +1,4 @@
-# init_supabase_schema.ps1 -- Initialize Supabase Schema for ManuHeadFund
+﻿# init_supabase_schema.ps1 -- Initialize Supabase Schema for ManuHeadFund
 # Creates all required tables and indexes
 
 param(

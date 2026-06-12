@@ -1,4 +1,4 @@
-# lib_short_pipeline_advanced.ps1 — SHORT Pipeline: Fase-based ramp-up
+﻿# lib_short_pipeline_advanced.ps1 — SHORT Pipeline: Fase-based ramp-up
 # PROBLEMA: Hoje 0/4 pass em BEAR_STRONG — SHORT muito arriscado sem validação
 # SOLUÇÃO: 4 fases com requerimentos cada vez mais rígidos
 

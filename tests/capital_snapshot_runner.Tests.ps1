@@ -1,4 +1,4 @@
-# capital_snapshot_runner.ps1 — TDD entry point
+﻿# capital_snapshot_runner.ps1 — TDD entry point
 # Verifica que o runner que vai pro GitHub Actions:
 #   - Forca Supabase backend + manuheadfund schema
 #   - Chama Get-CapitalContext -Force

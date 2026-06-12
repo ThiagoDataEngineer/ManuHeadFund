@@ -1,4 +1,4 @@
-# warmup_llm_endpoints.ps1 -- Pre-aquece os 3 endpoints LLM do cascade
+﻿# warmup_llm_endpoints.ps1 -- Pre-aquece os 3 endpoints LLM do cascade
 # Chamado pelo daily_daemon_restart.ps1 antes de respawnar os daemons.
 # Objetivo: evitar cold-start no primeiro ciclo da manha (LIDAR null, Mentor null).
 # Fire-forget: falhas sao logadas mas nao bloqueiam o restart.

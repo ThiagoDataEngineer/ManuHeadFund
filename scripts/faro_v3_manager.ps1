@@ -1,4 +1,4 @@
-param([bool] $DryRun = $false)
+﻿param([bool] $DryRun = $false)
 
 $projectRoot = Split-Path $PSScriptRoot -Parent
 $agentsDir = Join-Path $projectRoot "agents"

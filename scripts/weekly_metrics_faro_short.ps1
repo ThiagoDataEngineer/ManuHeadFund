@@ -1,4 +1,4 @@
-# weekly_metrics_faro_short.ps1
+﻿# weekly_metrics_faro_short.ps1
 # Weekly monitoring dashboard for FARO aggressive + SHORT vol_climax
 # Run: pwsh .\scripts\weekly_metrics_faro_short.ps1
 

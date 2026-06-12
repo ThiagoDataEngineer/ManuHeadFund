@@ -1,4 +1,4 @@
-# lib_rate_limit_monitor.ps1 -- Monitoramento de rate-limit events (4213/429)
+﻿# lib_rate_limit_monitor.ps1 -- Monitoramento de rate-limit events (4213/429)
 # Observabilidade: loga eventos em JSONL, contadores, queries, health-check, report.
 # PS 5.1. UTF-8 BOM.
 

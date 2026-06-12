@@ -1,4 +1,4 @@
-# sub_dollar_precision.Tests.ps1 -- TDD para bug AIUSDT precision em pares sub-dollar
+﻿# sub_dollar_precision.Tests.ps1 -- TDD para bug AIUSDT precision em pares sub-dollar
 # Pester 3.x compatible -- sem acentos
 #
 # Bug observado 2026-05-14 (paper trade real):

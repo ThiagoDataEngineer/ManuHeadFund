@@ -1,4 +1,4 @@
-# lib_momentum_surfer.ps1 — Surfa movimentos (OPERACIONAL)
+﻿# lib_momentum_surfer.ps1 — Surfa movimentos (OPERACIONAL)
 # Entra no MEIO de trends já em andamento
 
 function Get-MomentumScore {

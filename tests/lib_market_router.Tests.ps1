@@ -1,4 +1,4 @@
-# lib_market_router.Tests.ps1 -- TDD market routing decision (spot vs futures).
+﻿# lib_market_router.Tests.ps1 -- TDD market routing decision (spot vs futures).
 # Pester 3.x.
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path

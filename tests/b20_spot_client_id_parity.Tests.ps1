@@ -1,4 +1,4 @@
-# B20 anti-regression 2026-05-20 PM6+490min.
+﻿# B20 anti-regression 2026-05-20 PM6+490min.
 # Garante paridade spot com futures B19b — todas funções PlaceOrder
 # geram client_id, persistem em order_client_ids.jsonl e atualizam status.
 

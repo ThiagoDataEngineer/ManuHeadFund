@@ -1,4 +1,4 @@
-# lib_cold_wallet_alert.ps1 -- Hot wallet ratio alert (vulnerability #6 single-venue).
+﻿# lib_cold_wallet_alert.ps1 -- Hot wallet ratio alert (vulnerability #6 single-venue).
 #
 # Premissa: CoinEx eh hot wallet. Total declarado (incluindo cold) deveria ser
 # > capital exposto. Cron diario checa ratio e alerta se hot/total > threshold.

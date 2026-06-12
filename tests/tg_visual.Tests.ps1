@@ -1,4 +1,4 @@
-# tg_visual.Tests.ps1 -- TDD para refatoracao visual Telegram (2026-05-17)
+﻿# tg_visual.Tests.ps1 -- TDD para refatoracao visual Telegram (2026-05-17)
 # Pester 3.x, sem acentos.
 
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"

@@ -1,4 +1,4 @@
-# lib_trailing_macro.ps1
+﻿# lib_trailing_macro.ps1
 # Camada 5: Macro Pressure (BTC correlation, eventos macro)
 # 
 # Detecta pressao macro que afeta TODAS as posicoes (ex: BTC dump, FOMC).

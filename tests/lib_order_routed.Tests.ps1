@@ -1,4 +1,4 @@
-# lib_order_routed.Tests.ps1 -- TDD pra Invoke-OrderRouted (spot vs futures unified).
+﻿# lib_order_routed.Tests.ps1 -- TDD pra Invoke-OrderRouted (spot vs futures unified).
 # Pester 3.x.
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path

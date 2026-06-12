@@ -1,4 +1,4 @@
-# lib_fundamental_quality.Tests.ps1 -- TDD-first Fundamental Quality Score.
+﻿# lib_fundamental_quality.Tests.ps1 -- TDD-first Fundamental Quality Score.
 # Pester 3.x.
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path

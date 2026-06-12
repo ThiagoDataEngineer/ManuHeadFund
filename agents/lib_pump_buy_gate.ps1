@@ -1,4 +1,4 @@
-# lib_pump_buy_gate.ps1 -- Anti-pump-buy gate pre-promotion Tier A.
+﻿# lib_pump_buy_gate.ps1 -- Anti-pump-buy gate pre-promotion Tier A.
 #
 # Filosofia: NUNCA promover Tier A em topo local. Resolve padrao PENDLE/INJ
 #            drawdown -17/-19% no primeiro dia LIVE (promocao em pump).

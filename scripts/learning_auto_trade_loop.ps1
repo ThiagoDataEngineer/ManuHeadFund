@@ -1,4 +1,4 @@
-# learning_auto_trade_loop.ps1
+﻿# learning_auto_trade_loop.ps1
 # Sistema completo: Aprende + Abre trades + Feedback loop
 # 2026-06-06
 

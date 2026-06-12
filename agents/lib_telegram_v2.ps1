@@ -1,4 +1,4 @@
-# lib_telegram_v2.ps1 - Telegram Bot Integration v2
+﻿# lib_telegram_v2.ps1 - Telegram Bot Integration v2
 # ✨ Mensagens LIMPAS, CONCISAS e HIERÁRQUICAS
 # Implementado: 2026-05-26
 # Objetivo: Substituir verbosidade por clareza

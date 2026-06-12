@@ -1,4 +1,4 @@
-# telegram_listener_demote_keep.Tests.ps1 -- Pester 3.x
+﻿# telegram_listener_demote_keep.Tests.ps1 -- Pester 3.x
 # Smoke tests para Cmd-Demote / Cmd-Keep (handler isolado, sem getUpdates loop).
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path

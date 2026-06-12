@@ -1,4 +1,4 @@
-# TDD: Stress Test — DD 15%+ Behavior
+﻿# TDD: Stress Test — DD 15%+ Behavior
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 

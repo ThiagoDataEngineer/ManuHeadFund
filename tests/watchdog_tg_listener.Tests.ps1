@@ -1,4 +1,4 @@
-# watchdog_tg_listener.Tests.ps1 -- Pester 3.x
+﻿# watchdog_tg_listener.Tests.ps1 -- Pester 3.x
 # Test que funcoes Get-TgListenerProcess / Test-TgListenerAlive / Start-TgListener
 # existem no watchdog_paper.ps1 (smoke; testes funcionais reais usariam mock CIM).
 

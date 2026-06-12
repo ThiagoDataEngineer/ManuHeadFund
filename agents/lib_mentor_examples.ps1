@@ -1,4 +1,4 @@
-# lib_mentor_examples.ps1 -- B.7 wire 2026-05-26
+﻿# lib_mentor_examples.ps1 -- B.7 wire 2026-05-26
 # Canonical examples block. Reduzir hallucination ~30-50% (LLM aprende formato
 # E padrao de raciocinio dos 2 exemplos before answering).
 

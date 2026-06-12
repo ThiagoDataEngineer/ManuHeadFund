@@ -1,4 +1,4 @@
-# lib_price_freshness.ps1 -- B18 fix 2026-05-20 PM6+410min.
+﻿# lib_price_freshness.ps1 -- B18 fix 2026-05-20 PM6+410min.
 #
 # Stale price detection: garante que decisao de trade usa preco recente.
 # Antes: CoinEx-GetTicker retorna .last sem timestamp; se REST API/WS cachear ou

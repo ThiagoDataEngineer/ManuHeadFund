@@ -1,4 +1,4 @@
-# register_wss_forward_resolve.ps1 -- Registra cron task CoinExWssForwardResolve
+﻿# register_wss_forward_resolve.ps1 -- Registra cron task CoinExWssForwardResolve
 # Agenda cron_wss_forward_resolve.ps1 para rodar semanalmente (sabado 23h).
 # Idempotente: re-registrar atualiza a task existente.
 #

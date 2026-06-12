@@ -1,4 +1,4 @@
-# lib_chart_patterns.Tests.ps1 -- TDD-first.
+﻿# lib_chart_patterns.Tests.ps1 -- TDD-first.
 # Pester 3.x.
 #
 # Patterns cobertos (pure-math, zero LLM):

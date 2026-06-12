@@ -1,4 +1,4 @@
-# Test Runner for Signal Combo + Regime Position Sizing
+﻿# Test Runner for Signal Combo + Regime Position Sizing
 # Full validation of cross-regime robustness implementation
 
 param(

@@ -1,4 +1,4 @@
-# B16 fix 2026-05-20 PM6+390min.
+﻿# B16 fix 2026-05-20 PM6+390min.
 # Watchdog backoff exponencial + kill switch.
 # Antes: processo morrendo logo apos start = respawn-loop infinito (potencial 1000x/h).
 # Agora: backoff exponencial (2^n segundos) + kill switch apos N falhas consecutivas.

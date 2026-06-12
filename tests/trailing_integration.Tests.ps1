@@ -1,4 +1,4 @@
-# trailing_integration.Tests.ps1
+﻿# trailing_integration.Tests.ps1
 # Testes de integracao: Camadas 1+2+3 trabalhando juntas
 
 $ErrorActionPreference = "Stop"

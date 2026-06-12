@@ -1,4 +1,4 @@
-# lib_operational_whitelist.ps1 -- Whitelist operacional regime+direcao+DoW+mode
+﻿# lib_operational_whitelist.ps1 -- Whitelist operacional regime+direcao+DoW+mode
 # Pester 3.x compativel. PS 5.1. UTF-8 BOM.
 #
 # Regras (ref: memory/project_operational_whitelist_v2.md):

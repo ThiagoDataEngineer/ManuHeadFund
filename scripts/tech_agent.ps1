@@ -1,4 +1,4 @@
-
+﻿
 # TechAgent v3.0
 # Referencias: Murphy, Bulkowski, Nison, Connors, Elder (Triple Screen), Carter, Crabel, Aronson
 # v3.0 add: Stochastic(Lane), OBV(Granville), Ichimoku(Hosoda), SuperTrend, Keltner+BollingerSqueeze(Carter),

@@ -1,4 +1,4 @@
-# lib_exit_ladder.ps1 -- Multi TP/SL knowledge-driven templates
+﻿# lib_exit_ladder.ps1 -- Multi TP/SL knowledge-driven templates
 # Pester 3.x compatible
 #
 # Contrato:

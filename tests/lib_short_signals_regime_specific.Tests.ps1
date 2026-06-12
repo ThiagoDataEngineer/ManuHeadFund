@@ -1,4 +1,4 @@
-# lib_short_signals_regime_specific.Tests.ps1 -- TDD Sprint 1
+﻿# lib_short_signals_regime_specific.Tests.ps1 -- TDD Sprint 1
 # Objetivo: Otimizar SHORT patterns por regime (BEAR focus)
 # Hipótese: Edge +2.85pp → +5-8pp em BEAR regimes
 #

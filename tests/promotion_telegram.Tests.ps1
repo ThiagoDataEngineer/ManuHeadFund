@@ -1,4 +1,4 @@
-# promotion_telegram.Tests.ps1 -- TDD Format-TgPromotion*
+﻿# promotion_telegram.Tests.ps1 -- TDD Format-TgPromotion*
 # Pester 3.x. UTF-8 BOM.
 
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"

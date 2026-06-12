@@ -1,4 +1,4 @@
-# lib_promotion_gates.Tests.ps1 -- Pester 3.x
+﻿# lib_promotion_gates.Tests.ps1 -- Pester 3.x
 # Suite de gates pre-promotion + pre-trade:
 #   - Test-ConcentrationLimit  (max N Tier A LIVE)
 #   - Test-DailyLossCircuit    (equity -X% dia)

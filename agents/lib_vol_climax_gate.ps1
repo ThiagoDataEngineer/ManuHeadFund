@@ -1,4 +1,4 @@
-# lib_vol_climax_gate.ps1 — Volatility climax SHORT detection gate
+﻿# lib_vol_climax_gate.ps1 — Volatility climax SHORT detection gate
 # Passive collector: logs potential SHORT vol_climax signals to observations.csv
 # Gate criteria: RSI ≥80 + vol ≥2.5x + ADX >60 (all 3 must pass)
 # Purpose: collect real-world data during BEAR_WEAK for validation in BEAR_STRONG

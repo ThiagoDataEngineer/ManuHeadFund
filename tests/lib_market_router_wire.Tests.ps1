@@ -1,4 +1,4 @@
-# lib_market_router_wire.Tests.ps1 -- TDD pra integracao market_router + CoinEx availability.
+﻿# lib_market_router_wire.Tests.ps1 -- TDD pra integracao market_router + CoinEx availability.
 # Pester 3.x.
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path

@@ -1,4 +1,4 @@
-# generate_position_dashboard.ps1 -- Gera dashboard de posicoes com metricas
+﻿# generate_position_dashboard.ps1 -- Gera dashboard de posicoes com metricas
 # PS 5.1. UTF-8 BOM.
 $scriptDir  = Split-Path $MyInvocation.MyCommand.Path -Parent
 $projectDir = Split-Path $scriptDir -Parent

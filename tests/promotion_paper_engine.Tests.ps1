@@ -1,4 +1,4 @@
-# promotion_paper_engine.Tests.ps1 -- TDD Compute-PaperBacktest
+﻿# promotion_paper_engine.Tests.ps1 -- TDD Compute-PaperBacktest
 # Pester 3.x. UTF-8 BOM.
 
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"

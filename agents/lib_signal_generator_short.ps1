@@ -1,4 +1,4 @@
-# lib_signal_generator_short.ps1 -- SHORT signal_generator (multi-indicator scoring)
+﻿# lib_signal_generator_short.ps1 -- SHORT signal_generator (multi-indicator scoring)
 # 
 # VALIDATED: 2026-05-23 TDD
 # - Edge: +1.53% (h20) em bear markets (2018, 2022)

@@ -1,4 +1,4 @@
-# Signal Combo Library
+﻿# Signal Combo Library
 # Combine Vol_Climax + Engulfing for robust cross-regime trading
 # Tested: 60%+ win rate in BULL_STRONG, BULL_WEAK, BEAR_WEAK, BEAR_STRONG
 

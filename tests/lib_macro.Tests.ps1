@@ -1,4 +1,4 @@
-# lib_macro.Tests.ps1 -- Pester 3.x -- Get-MacroContext
+﻿# lib_macro.Tests.ps1 -- Pester 3.x -- Get-MacroContext
 # Convencoes: ($x) | Should Be $y | sem BeforeAll | sem em-dash | sem &&
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path

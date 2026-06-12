@@ -1,4 +1,4 @@
-# lib_vol_climax_optimized.ps1 -- Vol climax OPTIMIZED (rejection=0.5)
+﻿# lib_vol_climax_optimized.ps1 -- Vol climax OPTIMIZED (rejection=0.5)
 #
 # VALIDATED: 2026-05-23 TDD
 # - Edge: +3.63% (h20) com rejection=0.5

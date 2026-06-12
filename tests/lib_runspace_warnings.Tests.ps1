@@ -1,4 +1,4 @@
-# lib_runspace_warnings.Tests.ps1 -- Pester 3.x
+﻿# lib_runspace_warnings.Tests.ps1 -- Pester 3.x
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 . "$here\..\agents\lib_runspace_warnings.ps1"

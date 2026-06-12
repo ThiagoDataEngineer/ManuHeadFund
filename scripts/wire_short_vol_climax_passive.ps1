@@ -1,4 +1,4 @@
-# wire_short_vol_climax_passive.ps1
+﻿# wire_short_vol_climax_passive.ps1
 # Wire SHORT vol_climax gate into passive observation collection
 # Runs in BEAR_WEAK regime (no executions, log only)
 # Timeline: passive collection 3-4 weeks → validation → deploy in BEAR_STRONG

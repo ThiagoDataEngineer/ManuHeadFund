@@ -1,4 +1,4 @@
-# scanner.Tests.ps1 -- Pester 3.x
+﻿# scanner.Tests.ps1 -- Pester 3.x
 # Universe Sweep cache: Get-ScannerCandidates popula $global:LAST_UNIVERSE_SNAPSHOT
 # antes de filtrar pelo top-N. ZERO chamada CoinEx extra -- reusa o fetch existente.
 #

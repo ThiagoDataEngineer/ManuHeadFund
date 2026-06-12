@@ -1,4 +1,4 @@
-# gem_safety.Tests.ps1 -- TDD para GEM Safety Guards (Pester 3.x)
+﻿# gem_safety.Tests.ps1 -- TDD para GEM Safety Guards (Pester 3.x)
 # Defaults loose (learning phase): exposure 15%, daily 10, weekly 40, breaker 5, double-confirm 10%
 
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"

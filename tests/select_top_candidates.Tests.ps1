@@ -1,4 +1,4 @@
-# select_top_candidates.Tests.ps1 -- TDD Select-TopCandidates
+﻿# select_top_candidates.Tests.ps1 -- TDD Select-TopCandidates
 #
 # Funcao pura para selecionar candidatos do orchestrator V6.
 #

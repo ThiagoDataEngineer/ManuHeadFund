@@ -1,4 +1,4 @@
-# lib_self_recovery.ps1 -- Self-Recovery Engine (auto-healing)
+﻿# lib_self_recovery.ps1 -- Self-Recovery Engine (auto-healing)
 # 2026-06-08: Detecta falhas em runtime, auto-corrige conhecidas, escala desconhecidas.
 # Design: core de REGRAS PURAS (testavel sem I/O) + wrappers I/O finos.
 # Custo: ZERO LLM (tudo deterministico). Fail-safe: nunca forca trade, so destrava infra.

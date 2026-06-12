@@ -1,4 +1,4 @@
-# lib_tori_proximity.Tests.ps1 -- Pester 3.x
+﻿# lib_tori_proximity.Tests.ps1 -- Pester 3.x
 # Cobertura: Get-ToriProximityFromArrays (funcao pura, testavel sem API)
 #            Test-ProximityAlertRecent + Add-ProximityAlert (dedup)
 #

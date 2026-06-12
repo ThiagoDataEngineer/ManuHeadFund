@@ -1,4 +1,4 @@
-# lib_capital_audit.ps1 — Audit capital consistency
+﻿# lib_capital_audit.ps1 — Audit capital consistency
 # Validates: onchain vs journal vs executed trades
 # Detects manual trades on CoinEx and reconciles
 # 2026-06-08

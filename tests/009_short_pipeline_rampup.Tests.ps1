@@ -1,4 +1,4 @@
-# TDD: B2 — SHORT pipeline ramp-up strategy
+﻿# TDD: B2 — SHORT pipeline ramp-up strategy
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 

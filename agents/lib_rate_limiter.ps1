@@ -1,4 +1,4 @@
-# lib_rate_limiter.ps1
+﻿# lib_rate_limiter.ps1
 # Rate Limiter com Token Bucket Algorithm
 # Implementado com TDD: tests\lib_rate_limiter.Tests.ps1
 # 2026-05-23

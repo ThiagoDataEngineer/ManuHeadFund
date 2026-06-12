@@ -1,4 +1,4 @@
-# V3 — Sinais realistas para dados DAILY (não synthetic)
+﻿# V3 — Sinais realistas para dados DAILY (não synthetic)
 # Threshold reduzido, critérios ajustados
 
 param([int] $MinScore = 40, [int] $MinSignalCount = 3)

@@ -1,4 +1,4 @@
-# B25/B26/B27 fix 2026-05-21: Mesa CAOS degraded diagnostics.
+﻿# B25/B26/B27 fix 2026-05-21: Mesa CAOS degraded diagnostics.
 # Antes: 50% dos CAOS recentes = all-3 drones null mascarados como "Mesa dividida" no log master.
 # Agora:
 #  B25: motivo distingue MESA_DEGRADED vs CAOS genuino na string de abort

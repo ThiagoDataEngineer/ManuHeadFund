@@ -1,4 +1,4 @@
-# B1 refino 2026-05-20 PM6+: distinguir veto-early (zeros = "nao computado")
+﻿# B1 refino 2026-05-20 PM6+: distinguir veto-early (zeros = "nao computado")
 # de trade real com setup completo. Quando entry+stop+target+atr todos = 0, escreve "".
 
 $projectRoot = Split-Path -Parent $PSScriptRoot

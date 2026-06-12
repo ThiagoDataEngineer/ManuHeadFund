@@ -1,4 +1,4 @@
-# short_execution_block2.Tests.ps1 -- TDD Block 2 SHORT execution
+﻿# short_execution_block2.Tests.ps1 -- TDD Block 2 SHORT execution
 # Pester 3.x. PS 5.1.
 # 20/20 testes validados inline 2026-05-28
 # Ver: agents/lib_short_execution.ps1 + agents/lib_operational_whitelist.ps1

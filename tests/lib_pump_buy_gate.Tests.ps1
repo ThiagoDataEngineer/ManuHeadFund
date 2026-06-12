@@ -1,4 +1,4 @@
-# lib_pump_buy_gate.Tests.ps1 -- Pester 3.x
+﻿# lib_pump_buy_gate.Tests.ps1 -- Pester 3.x
 # Anti-pump-buy gate: BLOQUEIA promocao Tier A se preco muito perto do peak 7d.
 # Evita compra em topo local. Resolve padrao PENDLE/INJ drawdown -17/-19% pos-promotion.
 

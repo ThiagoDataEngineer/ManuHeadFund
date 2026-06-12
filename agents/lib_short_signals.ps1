@@ -1,4 +1,4 @@
-# lib_short_signals.ps1 -- SHORT predicate detector (Wyckoff Buying Climax).
+﻿# lib_short_signals.ps1 -- SHORT predicate detector (Wyckoff Buying Climax).
 #
 # Tier 2 Block 1 C.1 (2026-05-23): Phase 2 T6 backtest validou EV +2.85pp em 505 signals
 # usando inverse predicate (vol_climax + new HIGH + close BELOW + RSI > 70).

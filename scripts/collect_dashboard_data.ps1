@@ -1,4 +1,4 @@
-# collect_dashboard_data.ps1 — Gerar dados do dashboard
+﻿# collect_dashboard_data.ps1 — Gerar dados do dashboard
 # Executar a cada 5-10 minutos via Task Scheduler
 
 $scriptDir = Split-Path $MyInvocation.MyCommand.Path -Parent

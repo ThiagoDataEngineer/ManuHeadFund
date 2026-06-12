@@ -1,4 +1,4 @@
-# lib_gem_auto_approve.ps1 -- Auto-approve GEMs strict (2026-05-20 PM4)
+﻿# lib_gem_auto_approve.ps1 -- Auto-approve GEMs strict (2026-05-20 PM4)
 #
 # Background:
 #   GEM detection envia TG com botao manual approve (Wait-TgCallbackApproval 5min).

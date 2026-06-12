@@ -1,4 +1,4 @@
-# lib_performance_refiner.ps1 — Sintetiza TODOS sinais + confluência + validação entrada
+﻿# lib_performance_refiner.ps1 — Sintetiza TODOS sinais + confluência + validação entrada
 # PROBLEMA: 6 trades, 33% win rate, -$26 PnL. SOLUÇÃO: consenso multi-sinal + timing real
 #
 # Estratégia:

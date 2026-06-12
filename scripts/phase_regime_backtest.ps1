@@ -1,4 +1,4 @@
-# REGIME BACKTEST — Vol_Climax Performance Across Market Conditions
+﻿# REGIME BACKTEST — Vol_Climax Performance Across Market Conditions
 # Testa vol_climax em 4 regimes diferentes: BULL_WEAK, BULL_STRONG, BEAR_WEAK, BEAR_STRONG
 # Objetivo: Validar robustez antes de LIVE em diferentes condições de mercado
 

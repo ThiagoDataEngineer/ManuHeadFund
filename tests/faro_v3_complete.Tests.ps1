@@ -1,4 +1,4 @@
-$projectRoot = Split-Path $PSScriptRoot -Parent
+﻿$projectRoot = Split-Path $PSScriptRoot -Parent
 $agentsDir = Join-Path $projectRoot "agents"
 $libs = @("lib_faro_volume_plus.ps1","lib_faro_pattern_pro.ps1","lib_faro_sentiment.ps1","lib_faro_whale_onchain.ps1","lib_faro_momentum.ps1","lib_faro_fingerprint_dna.ps1","lib_faro_entry_timing.ps1","lib_faro_v3_scoring.ps1")
 foreach ($l in $libs) {

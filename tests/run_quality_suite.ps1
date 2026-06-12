@@ -1,4 +1,4 @@
-# tests\run_quality_suite.ps1
+﻿# tests\run_quality_suite.ps1
 # Runner agregador dos testes de qualidade (trailing stale price + telegram).
 # 2026-05-29
 

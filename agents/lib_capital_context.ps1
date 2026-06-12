@@ -1,4 +1,4 @@
-# lib_capital_context.ps1 -- Snapshot atual de capital + drift detection vs baseline.
+﻿# lib_capital_context.ps1 -- Snapshot atual de capital + drift detection vs baseline.
 #
 # Phase 0a (2026-05-23): foundation pra eliminar bias por capital antigo em todos
 # backtests/calibrations downstream. Lib + cache JSON + drift detection.

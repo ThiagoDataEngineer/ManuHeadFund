@@ -1,4 +1,4 @@
-# override_expiry.Tests.ps1 — TDD strict: expiry triggers para OVERRIDEs
+﻿# override_expiry.Tests.ps1 — TDD strict: expiry triggers para OVERRIDEs
 # 12 tests: validar comportamento de expiração, warn, keep/disable actions
 # UTF-8 BOM, Pester 3.x, PS 5.1 compatible
 

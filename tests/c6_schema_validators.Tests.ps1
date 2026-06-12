@@ -1,4 +1,4 @@
-# C6 read-side schema validators TDD 2026-05-20 PM6+650min.
+﻿# C6 read-side schema validators TDD 2026-05-20 PM6+650min.
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 . (Join-Path $projectRoot "agents\lib_json_contract.ps1")

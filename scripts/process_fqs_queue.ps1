@@ -1,4 +1,4 @@
-# process_fqs_queue.ps1 -- Auto-enrich markets sem entry no coin_registry.json
+﻿# process_fqs_queue.ps1 -- Auto-enrich markets sem entry no coin_registry.json
 #
 # Background:
 #   Build-MentorFullContext (mentor_agent.ps1) detecta markets faltantes e

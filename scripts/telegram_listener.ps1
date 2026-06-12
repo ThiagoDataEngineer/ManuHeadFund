@@ -1,4 +1,4 @@
-# telegram_listener.ps1 -- Bot Telegram com /ask + comandos
+﻿# telegram_listener.ps1 -- Bot Telegram com /ask + comandos
 # PS 5.1. UTF-8 BOM. Sem emojis inline (encoding issue PS5.1).
 
 param([switch]$Force, [switch]$Once)

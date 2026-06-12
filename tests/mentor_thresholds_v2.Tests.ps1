@@ -1,4 +1,4 @@
-# mentor_thresholds_v2.Tests.ps1 -- TDD para Mudanças 1 e 2
+﻿# mentor_thresholds_v2.Tests.ps1 -- TDD para Mudanças 1 e 2
 # Mudança 1: Aceitar MEDIO_2 com score >= 65 em Tier B+
 # Mudança 2: ALPHA_HIST ABSENT aceito em Tier B se score >= 75 + FORTE_3
 # Data: 29/05/2026

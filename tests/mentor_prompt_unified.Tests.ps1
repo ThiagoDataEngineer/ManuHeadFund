@@ -1,4 +1,4 @@
-# mentor_prompt_unified.Tests.ps1 -- C.3
+﻿# mentor_prompt_unified.Tests.ps1 -- C.3
 # Garante MENTOR_SYSTEM_PROMPT (legado) tem mesmas regras anti-hallucination
 # do MENTOR_DEBATE_SYSTEM (atualizado). Single source of truth pra constantes
 # em lib_mentor_rules.ps1.

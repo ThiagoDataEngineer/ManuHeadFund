@@ -1,4 +1,4 @@
-# lib_feedback_loop.ps1 -- Post-trade feedback loop (skeleton).
+﻿# lib_feedback_loop.ps1 -- Post-trade feedback loop (skeleton).
 #
 # Lifecycle:
 #   1. Trade fecha (stop/target/max_days) -> Add-TradeOutcome

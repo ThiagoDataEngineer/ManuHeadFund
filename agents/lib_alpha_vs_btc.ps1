@@ -1,4 +1,4 @@
-# lib_alpha_vs_btc.ps1 -- Compute alpha (excess return vs BTC) for closed trades.
+﻿# lib_alpha_vs_btc.ps1 -- Compute alpha (excess return vs BTC) for closed trades.
 #
 # E4 (2026-05-22): valida a regra-ouro #13 do CLAUDE.md "altcoin precisa BATER BTC".
 # Sem alpha_vs_btc calc, regra eh invisivel. Sistema poderia rodar trades alts

@@ -1,4 +1,4 @@
-# validation_loop.ps1 - Loop leve para validacao Opcao 2
+﻿# validation_loop.ps1 - Loop leve para validacao Opcao 2
 # Roda apenas: Update-TrailingStopsAdaptive + Update-MentorReview + Update-Layer4Review + Write-ValidationSnapshot
 # Sem orchestrator, sem gem scan, sem trade abertura. Apenas observa e loga.
 #

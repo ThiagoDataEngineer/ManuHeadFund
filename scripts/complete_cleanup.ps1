@@ -1,4 +1,4 @@
-# Complete cleanup - auditoria + vendas + stops + commit
+﻿# Complete cleanup - auditoria + vendas + stops + commit
 
 $ErrorActionPreference = "Continue"
 

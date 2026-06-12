@@ -1,4 +1,4 @@
-# lib_bidirectional_direction.ps1 -- Resolucao de direcao BIDIRECIONAL
+﻿# lib_bidirectional_direction.ps1 -- Resolucao de direcao BIDIRECIONAL
 # 2026-06-08: fonte unica de verdade p/ Triagem -> Mesa -> Mentor avaliarem LONG e SHORT.
 #
 # Problema que resolve: direcao era PURAMENTE regime-driven (BEAR->SHORT, BULL->LONG),

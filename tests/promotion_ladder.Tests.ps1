@@ -1,4 +1,4 @@
-# promotion_ladder.Tests.ps1 -- TDD lib_promotion_ladder.ps1
+﻿# promotion_ladder.Tests.ps1 -- TDD lib_promotion_ladder.ps1
 # Pester 3.x, sem acentos. PS 5.1.
 
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"

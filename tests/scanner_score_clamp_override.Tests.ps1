@@ -1,4 +1,4 @@
-# scanner_score_clamp_override.Tests.ps1 -- Pester 3.x
+﻿# scanner_score_clamp_override.Tests.ps1 -- Pester 3.x
 # EUREKA B (2026-05-15): Get-QuickTechScore clamp em 65 torna Tier A
 # matematicamente impossivel (precisa >=75). Override OPT-IN segue padrao TopN.
 #

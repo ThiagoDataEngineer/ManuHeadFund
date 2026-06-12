@@ -1,4 +1,4 @@
-# lib_journal.ps1 — Journal de sinais do GemAgent
+﻿# lib_journal.ps1 — Journal de sinais do GemAgent
 # Registra cada sinal gerado (passou ou não os gates) para backtesting e calibração.
 # Arquivo: journal/gem_signals.csv
 

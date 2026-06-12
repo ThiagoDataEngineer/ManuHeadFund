@@ -1,4 +1,4 @@
-# PHASE 0 VOL_CLIMAX BACKTEST — Validar threshold 0.30 antes de LIVE
+﻿# PHASE 0 VOL_CLIMAX BACKTEST — Validar threshold 0.30 antes de LIVE
 # Baseado no runner existente, otimizado para vol_climax
 
 param(

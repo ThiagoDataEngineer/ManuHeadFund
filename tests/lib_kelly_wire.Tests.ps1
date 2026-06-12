@@ -1,4 +1,4 @@
-# lib_kelly_wire.Tests.ps1 -- TDD pra wire de Kelly em gem_executor + orchestrator.
+﻿# lib_kelly_wire.Tests.ps1 -- TDD pra wire de Kelly em gem_executor + orchestrator.
 # Testa funcao integradora Resolve-AdaptiveSizing que combina:
 #   1. Le trade_outcomes.jsonl (historico do market)
 #   2. Filtra por mode

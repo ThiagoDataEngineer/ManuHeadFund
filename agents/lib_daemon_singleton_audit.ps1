@@ -1,4 +1,4 @@
-# lib_daemon_singleton_audit.ps1 -- Validacao de singleton locks para todos os daemons
+﻿# lib_daemon_singleton_audit.ps1 -- Validacao de singleton locks para todos os daemons
 
 if (-not $global:JOURNAL_DIR) {
     $global:JOURNAL_DIR = Join-Path (Split-Path $PSScriptRoot -Parent) "journal"

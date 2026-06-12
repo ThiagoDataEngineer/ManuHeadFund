@@ -1,4 +1,4 @@
-# ladder_tracker.Tests.ps1 -- Pester 3.x para lib_ladder_tracker.ps1
+﻿# ladder_tracker.Tests.ps1 -- Pester 3.x para lib_ladder_tracker.ps1
 # Sem acentos. CSV InvariantCulture.
 
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"

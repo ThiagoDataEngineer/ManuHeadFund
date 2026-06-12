@@ -1,4 +1,4 @@
-# lib_feedback_loop.Tests.ps1 -- TDD post-trade feedback loop.
+﻿# lib_feedback_loop.Tests.ps1 -- TDD post-trade feedback loop.
 # Pester 3.x.
 #
 # Conceito: trade fecha (stop hit, target, max_days) -> registra outcome em

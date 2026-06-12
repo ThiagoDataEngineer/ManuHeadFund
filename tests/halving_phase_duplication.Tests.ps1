@@ -1,4 +1,4 @@
-# halving_phase_duplication.Tests.ps1 -- Valida remocao segura de Get-HalvingPhase duplicado
+﻿# halving_phase_duplication.Tests.ps1 -- Valida remocao segura de Get-HalvingPhase duplicado
 # Pester 3.x / PS 5.1 compatible: sem BeforeAll + sem Join-Path 3-args
 
 $script:projectRoot = Split-Path $PSScriptRoot -Parent

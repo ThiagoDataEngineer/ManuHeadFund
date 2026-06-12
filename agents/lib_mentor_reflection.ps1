@@ -1,4 +1,4 @@
-# agents/lib_mentor_reflection.ps1
+﻿# agents/lib_mentor_reflection.ps1
 # Layer 2: Mentor Reflection (6h checkpoint reviews)
 # Implementação GREEN phase — passa em 24 testes TDD
 #

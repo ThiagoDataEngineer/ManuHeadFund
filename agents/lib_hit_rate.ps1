@@ -1,4 +1,4 @@
-# lib_hit_rate.ps1 -- Hit rate analysis: scanner vs universe movers
+﻿# lib_hit_rate.ps1 -- Hit rate analysis: scanner vs universe movers
 #
 # Contrato:
 #   Compare-ScannerVsUniverse -ScannerTopN -UniverseMovers -Direction

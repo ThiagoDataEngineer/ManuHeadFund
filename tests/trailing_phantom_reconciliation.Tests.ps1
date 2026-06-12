@@ -1,4 +1,4 @@
-# trailing_phantom_reconciliation.Tests.ps1
+﻿# trailing_phantom_reconciliation.Tests.ps1
 # TDD para detecção de "phantom positions": registradas localmente como active=true
 # mas NÃO existem na exchange (fechadas via TP/SL/manual sem o sistema saber).
 #

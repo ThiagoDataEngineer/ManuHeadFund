@@ -1,4 +1,4 @@
-# lib_human_approval_simple.Tests.ps1 — 14 TDD
+﻿# lib_human_approval_simple.Tests.ps1 — 14 TDD
 
 $agentsDir = Join-Path (Split-Path -Parent $PSScriptRoot) "agents"
 . (Join-Path $agentsDir "lib_human_approval_simple.ps1")

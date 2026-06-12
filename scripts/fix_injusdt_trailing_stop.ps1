@@ -1,4 +1,4 @@
-# fix_injusdt_trailing_stop.ps1
+﻿# fix_injusdt_trailing_stop.ps1
 # Complete fix for INJUSDT: Enable trailing stop + partial exits + monitoring
 # 2026-05-29
 

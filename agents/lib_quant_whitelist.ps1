@@ -1,4 +1,4 @@
-# lib_quant_whitelist.ps1 - Le per_asset_whitelist JSON e expoe Tier A/B/C ao
+﻿# lib_quant_whitelist.ps1 - Le per_asset_whitelist JSON e expoe Tier A/B/C ao
 # scan_master/orchestrator. Substituicao quant-priorizada do scanner heuristico.
 #
 # Output JSON gerado por backtest/build_per_asset_whitelist.py em

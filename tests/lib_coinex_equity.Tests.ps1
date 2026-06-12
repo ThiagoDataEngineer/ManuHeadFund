@@ -1,4 +1,4 @@
-# lib_coinex.ps1 — Etapa 6: equity total inclui margem alocada + PnL nao realizado
+﻿# lib_coinex.ps1 — Etapa 6: equity total inclui margem alocada + PnL nao realizado
 #
 # Antes: CoinEx-GetFuturesCapitalUSDT retornava apenas $available (margem livre).
 # Depois: retorna available + margin + unrealized_pnl (= equity total da conta)

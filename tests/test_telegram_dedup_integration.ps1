@@ -1,4 +1,4 @@
-# tests\test_telegram_dedup_integration.ps1
+﻿# tests\test_telegram_dedup_integration.ps1
 # TDD: Send-TelegramAlert deve suprimir reenvios identicos dentro de -DedupSeconds.
 # Mocka Telegram-SendMessage para contar chamadas reais (sem rede).
 # 2026-05-29

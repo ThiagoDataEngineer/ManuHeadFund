@@ -1,4 +1,4 @@
-# lib_multiframe_analysis.Tests.ps1 — TDD for Multi-TF Analysis
+﻿# lib_multiframe_analysis.Tests.ps1 — TDD for Multi-TF Analysis
 # 2026-06-08: 20 test cases for trend detection and alignment
 
 $agentsDir = Join-Path (Split-Path -Parent $PSScriptRoot) "agents"

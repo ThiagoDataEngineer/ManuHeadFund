@@ -1,4 +1,4 @@
-# test_fixes_2026_05_23.ps1 - Testes dos 3 fixes críticos implementados
+﻿# test_fixes_2026_05_23.ps1 - Testes dos 3 fixes críticos implementados
 # Uso: .\tests\test_fixes_2026_05_23.ps1
 
 $ErrorActionPreference = "Stop"

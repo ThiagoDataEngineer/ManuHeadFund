@@ -1,4 +1,4 @@
-# lib_gate_safety.Tests.ps1 -- TDD pra fail-closed gate helper.
+﻿# lib_gate_safety.Tests.ps1 -- TDD pra fail-closed gate helper.
 # Pester 3.x.
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path

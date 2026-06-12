@@ -1,4 +1,4 @@
-# cleanup_wallet.ps1 - Limpeza automática da carteira
+﻿# cleanup_wallet.ps1 - Limpeza automática da carteira
 # VENDE: CRO, OPN, XRP, FIRO
 # MANTÉM: BTC, PAXG
 # APLICA: Stop loss no resto

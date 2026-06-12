@@ -1,4 +1,4 @@
-# TDD: Volatility Filter + MCE Gates (CORE)
+﻿# TDD: Volatility Filter + MCE Gates (CORE)
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 

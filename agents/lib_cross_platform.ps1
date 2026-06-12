@@ -1,4 +1,4 @@
-# lib_cross_platform.ps1
+﻿# lib_cross_platform.ps1
 # Helpers para compatibilidade Windows/Linux
 # Garante que scripts funcionem tanto localmente quanto no GitHub Actions
 

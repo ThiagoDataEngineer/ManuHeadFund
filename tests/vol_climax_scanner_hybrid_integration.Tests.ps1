@@ -1,4 +1,4 @@
-# Integration test: vol_climax_scanner with lib_hybrid_orchestrator
+﻿# Integration test: vol_climax_scanner with lib_hybrid_orchestrator
 
 Describe "Vol Climax Scanner Hybrid Integration" {
     BeforeAll {

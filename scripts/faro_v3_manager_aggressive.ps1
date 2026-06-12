@@ -1,4 +1,4 @@
-# faro_v3_manager_aggressive.ps1 — Aggressive micro-scalp manager
+﻿# faro_v3_manager_aggressive.ps1 — Aggressive micro-scalp manager
 # Monitors with tight stops (-2%), fast exits (+3/8/20%), 3h timeout
 
 param([bool] $DryRun = $false)

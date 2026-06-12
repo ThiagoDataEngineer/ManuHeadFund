@@ -1,4 +1,4 @@
-# B3 upstream fix 2026-05-20 PM6+: garante que campos texto (Notes, alerta, reason)
+﻿# B3 upstream fix 2026-05-20 PM6+: garante que campos texto (Notes, alerta, reason)
 # preservam virgulas via RFC4180 quoting ao inves do hack ,->; antigo.
 
 $projectRoot = Split-Path -Parent $PSScriptRoot

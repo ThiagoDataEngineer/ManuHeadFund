@@ -1,4 +1,4 @@
-# tests/mentor_review.Tests.ps1
+﻿# tests/mentor_review.Tests.ps1
 # TDD: Mentor Reflection Layer 2 - RED phase tests
 # 25 teste specifications para validar design antes de implementar
 

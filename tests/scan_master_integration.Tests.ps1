@@ -1,4 +1,4 @@
-# scan_master_integration.Tests.ps1 -- Pester 3.x
+﻿# scan_master_integration.Tests.ps1 -- Pester 3.x
 # Wave 2.5: garante que scan_master.ps1 passa -ScannerInfo e -Mode quando
 # chama Invoke-OrchestratorV6 (Risco 2 da Wave 2).
 #

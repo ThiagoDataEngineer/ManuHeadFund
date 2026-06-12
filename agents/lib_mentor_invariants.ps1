@@ -1,4 +1,4 @@
-# lib_mentor_invariants.ps1 -- B4 prevention pre-LLM 2026-05-20 PM6+260min.
+﻿# lib_mentor_invariants.ps1 -- B4 prevention pre-LLM 2026-05-20 PM6+260min.
 #
 # Defense in depth: mesmo apos PM6 fix de 4 modes ortogonais, payload corrompido
 # (ex: vindo de replay, recovery, ou bug futuro no mapper) deve falhar fast SEM

@@ -1,4 +1,4 @@
-# lib_minmax_detector.ps1 — Fast minmax detection (OPERACIONAL)
+﻿# lib_minmax_detector.ps1 — Fast minmax detection (OPERACIONAL)
 # Detecta mínimas/máximas 24h/7d em qualquer par
 
 function Get-Min24h {

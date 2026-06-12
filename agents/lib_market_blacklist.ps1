@@ -1,4 +1,4 @@
-# lib_market_blacklist.ps1 -- TTL-based market blacklist (E1 HARD_VETO mechanism).
+﻿# lib_market_blacklist.ps1 -- TTL-based market blacklist (E1 HARD_VETO mechanism).
 #
 # Mentor HARD_VETO veredict triggers blacklist:
 #   Add-MarketBlacklist -Market X -TtlHours 24 -Reason "regime extremo"

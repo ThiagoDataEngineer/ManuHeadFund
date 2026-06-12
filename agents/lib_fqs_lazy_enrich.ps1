@@ -1,4 +1,4 @@
-# lib_fqs_lazy_enrich.ps1 -- P3 (2026-05-23): synchronous on-demand FQS enrichment.
+﻿# lib_fqs_lazy_enrich.ps1 -- P3 (2026-05-23): synchronous on-demand FQS enrichment.
 #
 # Trigger: GEM detected, market NAO esta em coin_registry.json (FQS missing).
 # Action: chamar coingecko_enrichment.py --markets X SINCRONO (1-3s latency).

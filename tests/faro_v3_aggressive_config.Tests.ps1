@@ -1,4 +1,4 @@
-param([string] $ModulePath = "$PSScriptRoot\..\agents")
+﻿param([string] $ModulePath = "$PSScriptRoot\..\agents")
 
 Describe "FARO V3 Aggressive Config (score 30→28)" {
     . "$ModulePath\lib_faro_v3_scoring.ps1"

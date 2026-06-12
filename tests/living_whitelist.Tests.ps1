@@ -1,4 +1,4 @@
-# living_whitelist.Tests.ps1 -- TDD lib_living_whitelist
+﻿# living_whitelist.Tests.ps1 -- TDD lib_living_whitelist
 # Pester 3.x. UTF-8 BOM.
 
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"

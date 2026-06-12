@@ -1,4 +1,4 @@
-# restart_all_daemons.ps1 — Restart completo com regime-specific allocation
+﻿# restart_all_daemons.ps1 — Restart completo com regime-specific allocation
 # 2026-06-08: Ativar SHORT 80% / LONG 20% (BEAR_WEAK regime)
 
 param([switch]$DryRun)

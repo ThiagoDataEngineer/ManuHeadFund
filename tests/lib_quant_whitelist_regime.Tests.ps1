@@ -1,4 +1,4 @@
-# lib_quant_whitelist_regime.Tests.ps1 -- TDD regime-aware tier_level
+﻿# lib_quant_whitelist_regime.Tests.ps1 -- TDD regime-aware tier_level
 # Item 1: Merge-QuantWhitelistIntoCandidates com -RegimeProvider
 #         Get-MarketRegimeFromCache
 # Pester 3.x. UTF-8 BOM.

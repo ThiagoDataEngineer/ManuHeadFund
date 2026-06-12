@@ -1,4 +1,4 @@
-# lib_market_router_wire.ps1 -- Integra Resolve-MarketRoute com CoinEx availability live.
+﻿# lib_market_router_wire.ps1 -- Integra Resolve-MarketRoute com CoinEx availability live.
 #
 # Usage:
 #   $r = Resolve-MarketRouteLive -Market "INJUSDT" -Mode "TIER_A"

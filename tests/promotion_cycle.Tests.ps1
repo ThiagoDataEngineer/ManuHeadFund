@@ -1,4 +1,4 @@
-# promotion_cycle.Tests.ps1 -- TDD Invoke-PromotionCycle (cron logic)
+﻿# promotion_cycle.Tests.ps1 -- TDD Invoke-PromotionCycle (cron logic)
 # Pester 3.x. UTF-8 BOM.
 
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"

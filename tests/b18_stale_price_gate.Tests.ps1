@@ -1,4 +1,4 @@
-# B18 fix 2026-05-20 PM6+410min.
+﻿# B18 fix 2026-05-20 PM6+410min.
 # Stale price detection: ticker fetched_at validado contra threshold antes de uso.
 
 $projectRoot = Split-Path -Parent $PSScriptRoot

@@ -1,4 +1,4 @@
-# lib_living_whitelist.ps1 -- Item 11: discovery semanal universo CoinEx
+﻿# lib_living_whitelist.ps1 -- Item 11: discovery semanal universo CoinEx
 #
 # Domingo 03:00 (mesmo cron que promotion):
 #   1. Fetch CoinEx all tickers

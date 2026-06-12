@@ -1,4 +1,4 @@
-# lib_cycle_memory_decision.ps1
+﻿# lib_cycle_memory_decision.ps1
 # Cycle memory cache: skip expensive LLM reflection calls when context unchanged
 # If prior veto was "MACRO_UNFAVORABLE" and regime hasn't changed, veto again without LLM
 

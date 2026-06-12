@@ -1,4 +1,4 @@
-# SPOT vs FUTURES Comparison for LIVE
+﻿# SPOT vs FUTURES Comparison for LIVE
 # Avalia qual modo é melhor para FASE 1
 # SPOT 1x | FUTURES 1x | SPOT+FUTURES combinado
 

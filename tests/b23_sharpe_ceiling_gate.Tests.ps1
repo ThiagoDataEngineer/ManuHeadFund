@@ -1,4 +1,4 @@
-# B23 fix 2026-05-20 PM6+520min: Sharpe ceiling + pump-after-discovery gates.
+﻿# B23 fix 2026-05-20 PM6+520min: Sharpe ceiling + pump-after-discovery gates.
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 . (Join-Path $projectRoot "agents\lib_methodology_gates.ps1")

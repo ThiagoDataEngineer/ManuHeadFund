@@ -1,4 +1,4 @@
-# lib_entry_score_boost.ps1 -- Entry score boost direto baseado em trend_persistence cache.
+﻿# lib_entry_score_boost.ps1 -- Entry score boost direto baseado em trend_persistence cache.
 #
 # Diferente de lib_news_entry_boost (composite multi-source):
 # Aqui foco em trend_persistence_cache.json APENAS, retornando score ajustado.

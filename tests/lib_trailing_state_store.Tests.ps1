@@ -1,4 +1,4 @@
-# lib_trailing.ps1 — state_store integration TDD
+﻿# lib_trailing.ps1 — state_store integration TDD
 #
 # Etapa 2.2 — Refactor Get-TrailingPositions / Save-TrailingPositions para
 # usar state_store quando $global:TRAILING_USE_STATE_STORE = $true.

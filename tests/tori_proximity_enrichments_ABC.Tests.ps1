@@ -1,4 +1,4 @@
-# tori_proximity_enrichments_ABC.Tests.ps1 -- 2026-05-22 enriquecimentos opt-in.
+﻿# tori_proximity_enrichments_ABC.Tests.ps1 -- 2026-05-22 enriquecimentos opt-in.
 # Pester 3.x. Anti-regression de:
 #   A. Tori MISSED log enriquecido (gem_executor)
 #   B. scan_master priority boost (compScore += 1000 quando ripening)

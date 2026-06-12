@@ -1,4 +1,4 @@
-# lib_trade_reason_archive.ps1 — Arquivo de razoes completas de trades
+﻿# lib_trade_reason_archive.ps1 — Arquivo de razoes completas de trades
 # 2026-05-29: Armazenar razoes completas em JSONL para auditoria
 # Razoes sao truncadas no log master para evitar inflacao de contexto
 

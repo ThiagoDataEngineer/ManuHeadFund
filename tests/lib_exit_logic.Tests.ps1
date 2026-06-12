@@ -1,4 +1,4 @@
-# Tests for lib_exit_logic.ps1
+﻿# Tests for lib_exit_logic.ps1
 
 Describe "Exit Logic Library" {
     BeforeAll {

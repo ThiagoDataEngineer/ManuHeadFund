@@ -1,4 +1,4 @@
-# lib_fundamental_quality.ps1 -- Fundamental Quality Score (FQS) gate.
+﻿# lib_fundamental_quality.ps1 -- Fundamental Quality Score (FQS) gate.
 #
 # 7 dimensoes binarias/scored (0 ou 1 cada) que somam FQS 0-7:
 #   1. age_years         >= 3        (sobreviveu 1+ bear)

@@ -1,4 +1,4 @@
-# scan_direction_bias.Tests.ps1
+﻿# scan_direction_bias.Tests.ps1
 # TDD strict: Get-DirectionBias detecta LONG/SHORT/NEUTRAL no pre-screen.
 #
 # Bug raiz (journal/cascade_diagnose_2026_05_15.md + log 2026-05-15):

@@ -1,4 +1,4 @@
-# lib_observation_logger.ps1 — Persist whitelist 'observe' cycles para audit pos-14d.
+﻿# lib_observation_logger.ps1 — Persist whitelist 'observe' cycles para audit pos-14d.
 # Schema definido em journal/short_promotion_criteria_2026_05_15.md (17 campos).
 # Driver: orchestrator_v6.ps1 chama Add-Observation quando whitelist retorna tier='observe'.
 # UTF-8 BOM, PS 5.1, pure functions (zero dependencia externa alem do disco).

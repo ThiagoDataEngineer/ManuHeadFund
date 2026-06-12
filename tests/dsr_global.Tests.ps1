@@ -1,4 +1,4 @@
-# dsr_global.Tests.ps1 -- TDD lib_dsr_global.ps1
+﻿# dsr_global.Tests.ps1 -- TDD lib_dsr_global.ps1
 # Pester 3.x. Multi-testing penalty Bailey-LdP.
 
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"

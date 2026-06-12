@@ -1,4 +1,4 @@
-# tests/supabase_schema_init.Tests.ps1
+﻿# tests/supabase_schema_init.Tests.ps1
 # TDD: Test schema initialization before implementation
 # Tests for scripts/init_supabase_schema.ps1
 

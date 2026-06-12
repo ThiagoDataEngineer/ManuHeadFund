@@ -1,4 +1,4 @@
-# lib_news_entry_boost.ps1 -- Calcula boost de score baseado em sinais externos.
+﻿# lib_news_entry_boost.ps1 -- Calcula boost de score baseado em sinais externos.
 #
 # Fontes:
 #   1. journal/idea_triggers.jsonl -- user-priced ideas que ja triggered (fired)

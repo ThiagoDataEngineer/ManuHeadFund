@@ -1,4 +1,4 @@
-# mesa_lidar_direction_fix.Tests.ps1 -- TDD 2026-05-28
+﻿# mesa_lidar_direction_fix.Tests.ps1 -- TDD 2026-05-28
 #
 # Problema: LIDAR votava em direcao oposta ao direction_proxy do setup.
 # Ex: direction_proxy=SHORT, RR=5, vol_ratio=1.2 -> LIDAR votava LONG.

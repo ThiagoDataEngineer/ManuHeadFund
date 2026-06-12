@@ -1,4 +1,4 @@
-# weekly_data_refresh.ps1 -- Cron semanal: funding history + correlation matrix.
+﻿# weekly_data_refresh.ps1 -- Cron semanal: funding history + correlation matrix.
 #
 # Roda 1x/semana (Domingo 02:00 BRT, antes do promotion_weekly_cron).
 # Refresh incremental dos coletores que alimentam Test-FundingRateGate e Test-CrossAssetCorrelation.

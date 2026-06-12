@@ -1,4 +1,4 @@
-# lib_capital_context.ps1 — Supabase backend integration TDD
+﻿# lib_capital_context.ps1 — Supabase backend integration TDD
 #
 # Etapa 2.1 — Refactor para usar state_store quando STATE_STORE_BACKEND=supabase.
 # Back-compat: STATE_STORE_BACKEND=local (default) usa journal/capital_context.json.

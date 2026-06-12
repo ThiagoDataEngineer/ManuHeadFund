@@ -1,4 +1,4 @@
-# rotate_logs.ps1 -- B5 fix 2026-05-20 PM6 (log rotation).
+﻿# rotate_logs.ps1 -- B5 fix 2026-05-20 PM6 (log rotation).
 #
 # Rotaciona qualquer journal/*.log >MaxBytes para journal/archive/<name>.YYYY-MM-DD.log
 # e trunca o arquivo original. Sem dependencia (sem gzip pra ficar PS 5.1 puro).

@@ -1,4 +1,4 @@
-# agents/lib_supabase_management.ps1
+﻿# agents/lib_supabase_management.ps1
 # Encapsula chamadas a Supabase Management API (api.supabase.com).
 #
 # Diferente de lib_state_store.ps1 (PostgREST = DML em data) — aqui rodamos

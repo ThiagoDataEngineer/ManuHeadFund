@@ -1,4 +1,4 @@
-# lib_daemon_singleton.ps1 -- Guard de instancia unica para daemons.
+﻿# lib_daemon_singleton.ps1 -- Guard de instancia unica para daemons.
 # Problema: watchdog/restart matam por pattern de CommandLine; processos elevados
 # expoem CommandLine=NULL pra shell normal -> kill falha -> DUPLICATAS.
 # Solucao: cada daemon adquire um lock (PID + start-time) no startup via

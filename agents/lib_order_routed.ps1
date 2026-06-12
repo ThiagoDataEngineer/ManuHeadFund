@@ -1,4 +1,4 @@
-# lib_order_routed.ps1 -- Wrapper unified de order placement (spot vs futures).
+﻿# lib_order_routed.ps1 -- Wrapper unified de order placement (spot vs futures).
 #
 # Apos lib_market_router decidir Route, callers chamam Invoke-OrderRouted
 # em vez de CoinEx-PlaceOrder/CoinEx-PlaceSpotOrder direto.

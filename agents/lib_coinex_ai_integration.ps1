@@ -1,4 +1,4 @@
-# lib_coinex_ai_integration.ps1
+﻿# lib_coinex_ai_integration.ps1
 # Integração com análise IA da CoinEx
 # Consumir dados IA e validar alinhamento com nossa análise
 # 2026-05-29

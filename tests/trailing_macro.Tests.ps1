@@ -1,4 +1,4 @@
-# trailing_macro.Tests.ps1
+﻿# trailing_macro.Tests.ps1
 # TDD para Camada 5: Macro pressure (BTC correlation, DXY, eventos)
 
 $ErrorActionPreference = "Stop"

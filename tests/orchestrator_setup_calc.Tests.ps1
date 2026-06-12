@@ -1,4 +1,4 @@
-# orchestrator_setup_calc.Tests.ps1
+﻿# orchestrator_setup_calc.Tests.ps1
 # TDD strict: Get-SetupForCascade calcula entry/stop/target ANTES da cascade.
 # Bug residual (2026-05-16 02:40): Mentor vetava 100% porque recebia zeros.
 # Fix: orchestrator preenche setup real via current price + ATR-proxy.

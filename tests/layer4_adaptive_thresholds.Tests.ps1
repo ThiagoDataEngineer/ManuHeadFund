@@ -1,4 +1,4 @@
-# Layer 4 Adaptive Thresholds Tests (RED phase)
+﻿# Layer 4 Adaptive Thresholds Tests (RED phase)
 # Tests for multi-tier (SOFT/MEDIUM/HARD) + regime-aware time stops
 
 $ErrorActionPreference = "Stop"

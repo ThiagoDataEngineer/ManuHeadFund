@@ -1,4 +1,4 @@
-# mentor_time_context.Tests.ps1
+﻿# mentor_time_context.Tests.ps1
 # TDD: Get-TimeContext produz info pro Mentor sobre dia/hora/session.
 
 $ErrorActionPreference = "Stop"

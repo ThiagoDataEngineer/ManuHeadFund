@@ -1,4 +1,4 @@
-# lib_atr_stop.Tests.ps1 -- Pester 3.x
+﻿# lib_atr_stop.Tests.ps1 -- Pester 3.x
 # ATR stop obrigatorio (Soros guardrail).
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path

@@ -1,4 +1,4 @@
-# lib_layer4_tori_timestop.ps1 -- Layer 4: stagnation time-stop + adaptive thresholds
+﻿# lib_layer4_tori_timestop.ps1 -- Layer 4: stagnation time-stop + adaptive thresholds
 # PS 5.1. UTF-8 BOM.
 # Flag LAYER4_AUTO_EXECUTE: quando $true, Update-Layer4Review executa fechamento real na exchange.
 # Default: $false (advisory only — envia alerta mas nao fecha).

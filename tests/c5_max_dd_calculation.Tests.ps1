@@ -1,4 +1,4 @@
-# C5 fix 2026-05-21 — max_dd calculation bug.
+﻿# C5 fix 2026-05-21 — max_dd calculation bug.
 # RENDER mostrou max_dd=2.22 (222%) impossivel sem leverage.
 # Root cause: Compute-PaperBacktest computa drawdown em R-units mas threshold compara
 # como fraction (0.15 = 15%). Tambem divide por max(1,peak) gerando raw R units.

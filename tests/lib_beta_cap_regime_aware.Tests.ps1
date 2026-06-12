@@ -1,4 +1,4 @@
-# lib_beta_cap_regime_aware.Tests.ps1
+﻿# lib_beta_cap_regime_aware.Tests.ps1
 # TDD: Opção 2 — Beta cap respeita regime per-pair (não ignora)
 # UTF-8 BOM. Pester 3.x.
 

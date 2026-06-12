@@ -1,4 +1,4 @@
-# lib_circuit_breaker_simple.Tests.ps1 — 15 TDD
+﻿# lib_circuit_breaker_simple.Tests.ps1 — 15 TDD
 
 $agentsDir = Join-Path (Split-Path -Parent $PSScriptRoot) "agents"
 . (Join-Path $agentsDir "lib_circuit_breaker_simple.ps1")

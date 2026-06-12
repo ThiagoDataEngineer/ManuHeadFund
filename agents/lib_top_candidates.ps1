@@ -1,4 +1,4 @@
-# lib_top_candidates.ps1 -- Selecao de candidatos para o orchestrator V6.
+﻿# lib_top_candidates.ps1 -- Selecao de candidatos para o orchestrator V6.
 #
 # DESIGN 2026-05-29 (Item 1: top organico real):
 #   Pre-fix: scan_master fazia Sort-Object | Select -First N puro. Quando a

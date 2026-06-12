@@ -1,4 +1,4 @@
-# lib_router_spot_futures.Tests.ps1
+﻿# lib_router_spot_futures.Tests.ps1
 # TDD: Router inteligente SPOT vs FUTURES
 
 Describe "Router SPOT vs FUTURES" {

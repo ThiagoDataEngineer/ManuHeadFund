@@ -1,4 +1,4 @@
-# market_context_engine.Tests.ps1 -- TDD MCE
+﻿# market_context_engine.Tests.ps1 -- TDD MCE
 # Pester 3.x. UTF-8 BOM.
 
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"

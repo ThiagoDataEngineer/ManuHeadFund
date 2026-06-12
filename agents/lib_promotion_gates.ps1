@@ -1,4 +1,4 @@
-# lib_promotion_gates.ps1 -- Suite de gates pre-promotion + pre-trade.
+﻿# lib_promotion_gates.ps1 -- Suite de gates pre-promotion + pre-trade.
 #
 # Cada funcao retorna PSCustomObject @{ passes; reason; details }.
 # Filosofia: composability — pode aplicar todos em sequencia, blocking == false.

@@ -1,4 +1,4 @@
-# test_tori_validation.ps1 -- Validar Tori Proximity (TDD)
+﻿# test_tori_validation.ps1 -- Validar Tori Proximity (TDD)
 #
 # OBJETIVO: Comparar implementação PowerShell vs Python
 # 

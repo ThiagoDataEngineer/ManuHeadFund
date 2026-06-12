@@ -1,4 +1,4 @@
-# mentor_multi_shot.Tests.ps1 -- B.7
+﻿# mentor_multi_shot.Tests.ps1 -- B.7
 # Get-MentorExamplesBlock retorna 1 APROVAR + 1 VETAR canonicos no formato JSON.
 
 $ErrorActionPreference = "Stop"

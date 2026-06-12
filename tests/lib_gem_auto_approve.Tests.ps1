@@ -1,4 +1,4 @@
-# lib_gem_auto_approve.Tests.ps1 -- Pester 3.x
+﻿# lib_gem_auto_approve.Tests.ps1 -- Pester 3.x
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 . "$here\..\agents\lib_gem_auto_approve.ps1"

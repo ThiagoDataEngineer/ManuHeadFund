@@ -1,4 +1,4 @@
-# lib_news_entry_boost.Tests.ps1 -- TDD pra Get-NewsEntryBoost.
+﻿# lib_news_entry_boost.Tests.ps1 -- TDD pra Get-NewsEntryBoost.
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 $agentsDir = Join-Path (Split-Path $here -Parent) "agents"

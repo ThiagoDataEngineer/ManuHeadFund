@@ -1,4 +1,4 @@
-# lib_multiframe_analysis.ps1 — Multi-Timeframe Trend Analysis + Alignment Gate
+﻿# lib_multiframe_analysis.ps1 — Multi-Timeframe Trend Analysis + Alignment Gate
 # 2026-06-08: Automated HTF confirmation before trade execution
 # Purpose: Analyze trend direction across 1D/4H/1H and enforce alignment rules
 

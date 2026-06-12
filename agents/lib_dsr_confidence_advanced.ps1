@@ -1,4 +1,4 @@
-# lib_dsr_confidence_advanced.ps1 — DSR Confidence: Walk-forward validation
+﻿# lib_dsr_confidence_advanced.ps1 — DSR Confidence: Walk-forward validation
 # PROBLEMA: Hoje apenas detecta 30+ trades = MEDIUM; sem validação forward
 # SOLUÇÃO: 3 niveis (LOW/MEDIUM/HIGH) + walk-forward vs backtest
 

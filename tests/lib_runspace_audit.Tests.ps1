@@ -1,4 +1,4 @@
-# lib_runspace_audit.Tests.ps1 -- Pester 3.x
+﻿# lib_runspace_audit.Tests.ps1 -- Pester 3.x
 #
 # Test-RunspaceLibsComplete: preventivo contra bug "lib orfa em runspace".
 # Cruza Get-Command refs no orchestrator vs lista hardcoded de libs no parallel.

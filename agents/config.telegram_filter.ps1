@@ -1,4 +1,4 @@
-# ============================================================================
+﻿# ============================================================================
 # config.telegram_filter.ps1 - Telegram Message Filtering Configuration
 # ============================================================================
 # Objetivo: Reduzir ruído no Telegram filtrando mensagens por tier de importância

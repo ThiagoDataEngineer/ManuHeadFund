@@ -1,4 +1,4 @@
-# TDD: SHORT Pipeline + DSR Confidence (ADVANCED)
+﻿# TDD: SHORT Pipeline + DSR Confidence (ADVANCED)
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 

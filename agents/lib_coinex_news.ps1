@@ -1,4 +1,4 @@
-# lib_coinex_news.ps1 -- Item 12: tracker noticias CoinEx pra alimentar ladder
+﻿# lib_coinex_news.ps1 -- Item 12: tracker noticias CoinEx pra alimentar ladder
 #
 # Filtra brutal:
 #   - listing  -> auto-cria DESCOBERTA no promotion_pipeline

@@ -1,4 +1,4 @@
-# lib_state_store.ps1 — schema-aware backend tests
+﻿# lib_state_store.ps1 — schema-aware backend tests
 #
 # Quando STATE_STORE_SCHEMA esta setado, o backend supabase deve enviar
 # Accept-Profile (GET/DELETE) e Content-Profile (POST) headers HTTP.

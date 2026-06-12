@@ -1,4 +1,4 @@
-# lib_position_protection.ps1
+﻿# lib_position_protection.ps1
 # Garante que TODA posicao FUTURES tenha TP/SL REAIS na corretora (nao embutidos na ordem).
 # Causa raiz corrigida (2026-05-29): CoinEx V2 nao aplica stop_loss/take_profit embutidos
 # em ordem MARKET de forma confiavel (posicao ainda nao existe no submit). A solucao e

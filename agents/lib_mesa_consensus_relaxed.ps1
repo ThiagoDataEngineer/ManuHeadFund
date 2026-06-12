@@ -1,4 +1,4 @@
-# agents/lib_mesa_consensus_relaxed.ps1
+﻿# agents/lib_mesa_consensus_relaxed.ps1
 # TDD: Relaxar Mesa Consensus + Permitir Tier C com FORTE_3
 # Data: 2026-06-01
 # Objetivo: Aumentar trades de 5% para 15-20%

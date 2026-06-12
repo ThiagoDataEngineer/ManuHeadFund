@@ -1,4 +1,4 @@
-# triagem_thresholds_override.Tests.ps1
+﻿# triagem_thresholds_override.Tests.ps1
 # TDD strict para Get-TriagemThresholds + _Compute-Tier recalibrado.
 #
 # Bug raiz (journal/cascade_diagnose_2026_05_15.md):

@@ -1,4 +1,4 @@
-# lib_bidirectional_gates.ps1 — LONG/SHORT simultâneos (OPERACIONAL)
+﻿# lib_bidirectional_gates.ps1 — LONG/SHORT simultâneos (OPERACIONAL)
 
 function Test-LongGate {
     param([double]$score, [double]$pctAboveMin)

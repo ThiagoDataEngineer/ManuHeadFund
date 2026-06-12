@@ -1,4 +1,4 @@
-# tests/lib_trailing_adaptive.Tests.ps1
+﻿# tests/lib_trailing_adaptive.Tests.ps1
 # TDD: Tests para trailing stops adaptativos (ATR-dinâmico + regime-aware)
 # Pester 3.4 compatible (avoid -BeGreaterThan, use | Should Be / | Should Match)
 # Executar: Invoke-Pester ./tests/lib_trailing_adaptive.Tests.ps1 -Verbose
