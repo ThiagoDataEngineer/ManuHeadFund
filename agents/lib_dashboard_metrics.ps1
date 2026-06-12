@@ -126,3 +126,97 @@ function Get-WhaleActivitySummary {
         signal        = $signal
     }
 }
+
+# ── 4. Agent Flow (mission control: cada agente da jornada) ─────────────────
+# 2026-06-12: monta eventos por agente a partir das fontes que ja existem.
+# PURA: recebe dados pre-parseados, devolve { events, stats }.
+#   $DecisionRows: linhas do decisions.csv via Import-Csv
+#     (timestamp, market, decision, reason, abort_stage, regime, direction,
+#      scanner_score, mesa_consensus, mentor_decision, provider_used)
+#   $GemLogLines: linhas cruas do gem_loop.log (tail)
+#   $TrailingPositions: posicoes do trailing (ativas)
+# Agentes: SCANNER, MESA, MCE, MENTOR, TORI, EXECUTOR, GUARD, TRAILING
+function Get-AgentFlowEvents {
+    param(
+        [object[]] $DecisionRows = @(),
+        [string[]] $GemLogLines = @(),
+        [object[]] $TrailingPositions = @(),
+        [int] $MaxEvents = 60
+    )
+
+    $events = New-Object System.Collections.Generic.List[object]
+    $stats = @{ analisados = 0; mesa_veto = 0; mce_block = 0; mentor_veto = 0; executados = 0; tori_block = 0; guard_block = 0; protegidos = 0 }
+
+    foreach ($d in $DecisionRows) {
+        if (-not $d -or -not $d.market) { continue }
+        $ts = "$($d.timestamp)"
+        $stats.analisados++
+
+        # Mesa: consenso registrado
+        if ($d.mesa_consensus) {
+            $events.Add([PSCustomObject]@{ ts = $ts; agent = "MESA"; market = "$($d.market)"; action = "$($d.mesa_consensus)"
+                detail = "consenso $($d.mesa_consensus) ($($d.direction) score $($d.scanner_score))" })
+        }
+        if ("$($d.decision)" -eq "EXECUTAR") {
+            $stats.executados++
+            $events.Add([PSCustomObject]@{ ts = $ts; agent = "EXECUTOR"; market = "$($d.market)"; action = "EXECUTAR"
+                detail = "$($d.direction) aprovado fim-a-fim (regime $($d.regime))" })
+        } else {
+            $stage = "$($d.abort_stage)".ToLower()
+            switch ($stage) {
+                "mce" {
+                    $stats.mce_block++
+                    $events.Add([PSCustomObject]@{ ts = $ts; agent = "MCE"; market = "$($d.market)"; action = "BLOCK"
+                        detail = ("$($d.reason)" -split "`n")[0].Substring(0, [math]::Min(90, "$($d.reason)".Length)) })
+                }
+                default {
+                    $stats.mentor_veto++
+                    $events.Add([PSCustomObject]@{ ts = $ts; agent = "MENTOR"; market = "$($d.market)"; action = "$(if ($d.mentor_decision) { $d.mentor_decision } else { 'VETAR' })"
+                        detail = ("$($d.reason)" -split "`n")[0].Substring(0, [math]::Min(90, "$($d.reason)".Length)) })
+                }
+            }
+        }
+    }
+
+    # gem_loop: Tori blocks, guards, execucoes, scores
+    foreach ($line in $GemLogLines) {
+        if ($line -match "^\[(?<ts>[\d\- :]+)\]\s+\[(?<tag>\w+)\]\s+(?<rest>.+)$") {
+            $ts = $Matches.ts; $tag = $Matches.tag; $rest = $Matches.rest
+            if ($tag -eq "BLOCKED" -and $rest -match "^(?<mkt>\S+)\s+--\s+(?<why>.+)$") {
+                $mkt = $Matches.mkt; $why = $Matches.why
+                if ($why -match "tori") {
+                    $stats.tori_block++
+                    $events.Add([PSCustomObject]@{ ts = $ts; agent = "TORI"; market = $mkt; action = "SKIP"
+                        detail = $why.Substring(0, [math]::Min(90, $why.Length)) })
+                } else {
+                    $stats.guard_block++
+                    $events.Add([PSCustomObject]@{ ts = $ts; agent = "GUARD"; market = $mkt; action = "BLOCK"
+                        detail = $why.Substring(0, [math]::Min(90, $why.Length)) })
+                }
+            }
+            elseif ($tag -eq "EXEC" -and $rest -match "^(?<mkt>\S+)\s+(?<info>.+)$") {
+                $stats.executados++
+                $events.Add([PSCustomObject]@{ ts = $ts; agent = "EXECUTOR"; market = $Matches.mkt; action = "ORDER"
+                    detail = $Matches.info })
+            }
+            elseif ($tag -eq "GEM" -and $rest -match "^(?<mkt>\S+)\s+score=(?<sc>\d+)") {
+                $events.Add([PSCustomObject]@{ ts = $ts; agent = "SCANNER"; market = $Matches.mkt; action = "GEM"
+                    detail = "score=$($Matches.sc) candidato descoberto" })
+            }
+        }
+    }
+
+    # Trailing: posicoes com lucro travado (stop >= entry)
+    foreach ($p in $TrailingPositions) {
+        if (-not $p -or -not $p.active) { continue }
+        $entry = [double]$p.entry; $stopC = [double]$p.stopCurrent
+        $locked = $entry -gt 0 -and $stopC -ge $entry
+        if ($locked) { $stats.protegidos++ }
+        $events.Add([PSCustomObject]@{ ts = "$($p.updatedAt)"; agent = "TRAILING"; market = "$($p.market)"
+            action = $(if ($locked) { "LOCKED" } else { "WATCH" })
+            detail = $(if ($locked) { ("lucro travado: stop {0} >= entry {1}" -f $stopC, $entry) } else { ("stop {0} | peak {1}" -f $stopC, $p.peak) }) })
+    }
+
+    $sorted = @($events | Sort-Object { "$($_.ts)" } -Descending | Select-Object -First $MaxEvents)
+    return [PSCustomObject]@{ events = $sorted; stats = [PSCustomObject]$stats }
+}

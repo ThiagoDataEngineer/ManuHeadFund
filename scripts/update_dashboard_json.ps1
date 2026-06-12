@@ -231,6 +231,26 @@ try {
     }
 } catch { Write-Warning "whale signals: $_" }
 
+# ── Agent Flow (mission control agents.html) ────────────────────────────────
+# 2026-06-12: jornada dos agentes por evento (decisions + gem_loop + trailing)
+try {
+    $decRows = @()
+    $decFile2 = Join-Path $journalDir "decisions.csv"
+    if (Test-Path $decFile2) {
+        # so hoje + ontem (feed recente); Import-Csv no arquivo inteiro e barato (<5k linhas)
+        $cut = (Get-Date).AddDays(-2).ToString("yyyy-MM-dd")
+        $decRows = @(Import-Csv $decFile2 | Where-Object { "$($_.timestamp)" -ge $cut })
+    }
+    $gemLines = @()
+    $gemLog = Join-Path $journalDir "gem_loop.log"
+    if (Test-Path $gemLog) { $gemLines = @(Get-Content $gemLog -Tail 400) }
+    $trailAct = @()
+    try { $trailAct = @((Get-Content (Join-Path $journalDir "trailing_positions.json") -Raw | ConvertFrom-Json) | Where-Object { $_.active }) } catch {}
+
+    $flow = Get-AgentFlowEvents -DecisionRows $decRows -GemLogLines $gemLines -TrailingPositions $trailAct -MaxEvents 60
+    $data.agent_flow = @{ events = @($flow.events); stats = $flow.stats }
+} catch { Write-Warning "agent_flow: $_" }
+
 # ── Whitelist Tier A/B ────────────────────────────────────────────────────────
 try {
     $wlFile = Get-ChildItem $journalDir -Filter "per_asset_whitelist_*.json" | Sort-Object LastWriteTime -Descending | Select-Object -First 1
@@ -280,3 +300,8 @@ $dataJs | Out-File (Join-Path $dashDir "manu_data.js") -Encoding UTF8 -Force
 
 Write-Host "Dashboard data atualizado: $outFile"
 Write-Host "Capital: `$$($data.capital.total) | Posicoes: $($data.positions.Count) | Trades 24h: $($data.trading_metrics.trades_24h)"
+
+# ── Publica online (gh-pages) — opt-in via flag ──────────────────────────────
+if (Test-Path (Join-Path $journalDir "DASHBOARD_PUBLISH.flag")) {
+    try { & (Join-Path $PSScriptRoot "publish_dashboard_pages.ps1") } catch { Write-Warning "publish gh-pages: $_" }
+}

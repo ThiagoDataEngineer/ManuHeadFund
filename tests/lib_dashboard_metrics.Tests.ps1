@@ -169,3 +169,86 @@ Describe "Get-WhaleActivitySummary" {
         $w2.whale_buys | Should Be 0
     }
 }
+
+Describe "Get-AgentFlowEvents" {
+
+    It "decisao ABORTAR stage=mesa vira evento MENTOR veto + MESA consenso" {
+        $rows = @([PSCustomObject]@{
+            timestamp = "2026-06-12T17:54:21Z"; market = "MYXUSDT"; decision = "ABORTAR"
+            reason = "TIER_B_PAPER exige Mesa consensus FORTE"; abort_stage = "mesa"
+            regime = "BEAR_STRONG"; direction = "SHORT"; scanner_score = "30.00"
+            mesa_consensus = "MEDIO_2"; mentor_decision = "VETAR"
+        })
+        $r = Get-AgentFlowEvents -DecisionRows $rows
+        $agents = @($r.events | ForEach-Object { $_.agent })
+        ($agents -contains "MENTOR") | Should Be $true
+        ($agents -contains "MESA") | Should Be $true
+        $r.stats.mentor_veto | Should Be 1
+        $r.stats.analisados | Should Be 1
+    }
+
+    It "decisao EXECUTAR vira evento EXECUTOR e conta executados" {
+        $rows = @([PSCustomObject]@{
+            timestamp = "2026-06-12T10:30:00Z"; market = "AINUSDT"; decision = "EXECUTAR"
+            reason = ""; abort_stage = ""; regime = "BEAR_WEAK"; direction = "LONG"
+            scanner_score = "80"; mesa_consensus = "FORTE_3"; mentor_decision = "EXECUTAR"
+        })
+        $r = Get-AgentFlowEvents -DecisionRows $rows
+        @($r.events | Where-Object { $_.agent -eq "EXECUTOR" }).Count | Should Be 1
+        $r.stats.executados | Should Be 1
+        $r.stats.mentor_veto | Should Be 0
+    }
+
+    It "abort_stage=mce vira evento MCE (nao MENTOR)" {
+        $rows = @([PSCustomObject]@{
+            timestamp = "2026-06-12T17:54:32Z"; market = "HYPEUSDT"; decision = "ABORTAR"
+            reason = "MCE_BLOCK score=0.127"; abort_stage = "mce"; regime = "BULL_WEAK"
+            direction = "LONG"; scanner_score = "27"; mesa_consensus = "FORTE_3"; mentor_decision = "VETAR_MCE"
+        })
+        $r = Get-AgentFlowEvents -DecisionRows $rows
+        @($r.events | Where-Object { $_.agent -eq "MCE" }).Count | Should Be 1
+        $r.stats.mce_block | Should Be 1
+    }
+
+    It "gem_loop: BLOCKED tori_skip vira TORI; market_already_open vira GUARD; EXEC vira EXECUTOR" {
+        $lines = @(
+            "[2026-06-12 14:03:29] [BLOCKED] TRUMPUSDT -- tori_skip_Sem trendline valida",
+            "[2026-06-12 14:03:15] [BLOCKED] AINUSDT -- gem_safety:market_already_open",
+            "[2026-06-12 10:30:10] [EXEC] TRUMPUSDT order=209936434309 qty=8.76",
+            "[2026-06-12 14:03:12] [GEM] AINUSDT score=80 mode=DISCOVERY"
+        )
+        $r = Get-AgentFlowEvents -GemLogLines $lines
+        $r.stats.tori_block | Should Be 1
+        $r.stats.guard_block | Should Be 1
+        $r.stats.executados | Should Be 1
+        @($r.events | Where-Object { $_.agent -eq "SCANNER" }).Count | Should Be 1
+    }
+
+    It "trailing com stop >= entry vira LOCKED e conta protegidos" {
+        $pos = @(
+            [PSCustomObject]@{ market = "AINUSDT"; active = $true; entry = 0.090932; stopCurrent = 0.1022; peak = 0.115; updatedAt = "2026-06-12 13:48:00" }
+            [PSCustomObject]@{ market = "BASEDUSDT"; active = $true; entry = 0.073285; stopCurrent = 0.036619; peak = 0.075; updatedAt = "2026-06-12 13:48:00" }
+        )
+        $r = Get-AgentFlowEvents -TrailingPositions $pos
+        $r.stats.protegidos | Should Be 1
+        @($r.events | Where-Object { $_.action -eq "LOCKED" }).Count | Should Be 1
+        @($r.events | Where-Object { $_.action -eq "WATCH" }).Count | Should Be 1
+    }
+
+    It "eventos ordenados desc por ts e limitados por MaxEvents" {
+        $rows = @(
+            [PSCustomObject]@{ timestamp = "2026-06-12T10:00:00Z"; market = "A"; decision = "ABORTAR"; reason = "x"; abort_stage = "mesa"; mesa_consensus = "M"; mentor_decision = "VETAR"; direction = "LONG"; scanner_score = "1"; regime = "R" }
+            [PSCustomObject]@{ timestamp = "2026-06-12T12:00:00Z"; market = "B"; decision = "ABORTAR"; reason = "y"; abort_stage = "mesa"; mesa_consensus = "M"; mentor_decision = "VETAR"; direction = "LONG"; scanner_score = "1"; regime = "R" }
+        )
+        $r = Get-AgentFlowEvents -DecisionRows $rows -MaxEvents 2
+        @($r.events).Count | Should Be 2
+        # top do feed = ts mais recente (linha das 12:00; MESA+MENTOR compartilham ts)
+        ($r.events[0].ts -like "*12:00:00*") | Should Be $true
+    }
+
+    It "entradas vazias: zero eventos, stats zerados, sem explodir" {
+        $r = Get-AgentFlowEvents
+        @($r.events).Count | Should Be 0
+        $r.stats.analisados | Should Be 0
+    }
+}
