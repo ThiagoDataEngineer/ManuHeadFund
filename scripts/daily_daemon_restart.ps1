@@ -1,4 +1,4 @@
-# daily_daemon_restart.ps1 -- Restart rolling de daemons 03:00 BRT
+﻿# daily_daemon_restart.ps1 -- Restart rolling de daemons 03:00 BRT
 #
 # Resolve drift: daemons que rodam 24h+ nao recarregam config.ps1/libs alteradas.
 # Audit 2026-05-20: gem_loop PID 5400 rodou 46h sem restart, perdeu config update
@@ -72,9 +72,16 @@ if (Test-Path $singletonLib) {
     }
 }
 
+# 2026-06-12 fix: daemons DEVEM rodar pwsh 7 — codebase usa ?? e UTF-8; sob 5.1
+# o scan_master da madrugada quebrou state_store/risk_audit (parse ANSI sem BOM).
+# Fallback 5.1 so se pwsh ausente.
+$engineExe = if (Get-Command pwsh.exe -ErrorAction SilentlyContinue) { "pwsh.exe" } else { "powershell.exe" }
+Log "Engine de respawn: $engineExe"
+
 foreach ($d in $daemons) {
     Log "[$($d.name)] checking..."
-    $procs = @(Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" -ErrorAction SilentlyContinue |
+    # 2026-06-12 fix: matar AMBOS engines (so powershell.exe deixava pwsh duplicado)
+    $procs = @(Get-CimInstance Win32_Process -Filter "Name='powershell.exe' OR Name='pwsh.exe'" -ErrorAction SilentlyContinue |
                 Where-Object { $_.CommandLine -like $d.pattern -and $_.CommandLine -notlike "*Get-CimInstance*" })
     foreach ($p in $procs) {
         try {
@@ -96,7 +103,7 @@ foreach ($d in $daemons) {
     # gem_loop + watchdog aceitam -Force (idempotent bypass). tg_listener + scan_master nao.
     if ($d.name -eq "gem_loop" -or $d.name -eq "watchdog_paper") { $psArgs += "-Force" }
     try {
-        $new = Start-Process powershell.exe -ArgumentList $psArgs -WorkingDirectory $projectRoot -WindowStyle Hidden -PassThru
+        $new = Start-Process $engineExe -ArgumentList $psArgs -WorkingDirectory $projectRoot -WindowStyle Hidden -PassThru
         Start-Sleep -Seconds 5
         $alive = Get-Process -Id $new.Id -ErrorAction SilentlyContinue
         if ($alive) {

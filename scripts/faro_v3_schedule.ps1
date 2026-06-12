@@ -4,7 +4,10 @@
 param([string] $Action = "install", [string] $ProjectRoot)
 
 if (-not $ProjectRoot) {
-    $ProjectRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+    # 2026-06-12 fix: havia um Split-Path a MAIS (subia ate C:\Users\thiag),
+    # gerando tasks apontando pra C:\Users\thiag\scripts (inexistente) — as 3
+    # crons FARO nasceram mortas. scripts\ -> repo root e um nivel so.
+    $ProjectRoot = Split-Path $PSScriptRoot -Parent
 }
 $scriptsDir = Join-Path $ProjectRoot "scripts"
 
