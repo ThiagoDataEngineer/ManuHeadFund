@@ -115,6 +115,18 @@
     <div id="trailing-content"><div class="no-data">Carregando...</div></div>
   </div>
 
+  <!-- PNL CURVE -->
+  <div class="card">
+    <h2>📉 Curva PnL (realizado)</h2>
+    <div id="pnl-curve-content"><div class="no-data">Carregando...</div></div>
+  </div>
+
+  <!-- WHALE SIGNALS -->
+  <div class="card">
+    <h2>🐋 Whale Activity (tape)</h2>
+    <div id="whale-content"><div class="no-data">Carregando...</div></div>
+  </div>
+
   <!-- CUSTOS LLM -->
   <div class="card">
     <h2>💸 Custos LLM</h2>
@@ -167,20 +179,18 @@ async function loadDashboardData() {
 }
 
 // ─── Capital ─────────────────────────────────────────────────────────────────
+// 2026-06-12 fix: lia portfolio_metrics que nunca existiu no JSON — usa capital.*
 function renderCapital(data) {
   const el = document.getElementById('capital-content');
-  const pm = data?.portfolio_metrics;
-  if (!pm) { el.innerHTML = '<div class="no-data">Sem dados de capital</div>'; return; }
-  
-  const total = pm.exposure_total || 0;
-  const beta = pm.beta || 0;
-  const betaColor = beta > 1.4 ? 'red' : beta > 1.1 ? 'yellow' : 'green';
-  
+  const c = data?.capital;
+  if (!c) { el.innerHTML = '<div class="no-data">Sem dados de capital</div>'; return; }
+
+  const pnl = data?.trading_metrics?.total_pnl_usd;
   el.innerHTML = `
-    ${metric('Capital Total', fmtUSD(total))}
-    ${metric('Exposição', fmtUSD(total))}
-    ${metric('Beta Portfolio', fmt(beta, 3), betaColor)}
-    ${metric('Diversificação', pm.diversification || '—')}
+    ${metric('Capital Total', fmtUSD(c.total), 'blue')}
+    ${metric('Futures', fmtUSD(c.futures))}
+    ${metric('Spot', fmtUSD(c.spot))}
+    ${metric('PnL Realizado', fmtUSD(pnl), colorPnl(pnl))}
   `;
 }
 
@@ -194,19 +204,81 @@ function renderPositions(data) {
     return;
   }
   
+  // 2026-06-12 fix: usa campos reais (entry/peak/stop_current) em vez de
+  // distance_pct/volatility_class que o gerador nunca produziu
   let html = '';
   for (const pos of trailing) {
-    const pnlColor = colorPnl(pos.distance_pct);
+    const entry = parseFloat(pos.entry), peak = parseFloat(pos.peak), stop = parseFloat(pos.stop_current);
+    const peakPct = entry > 0 ? ((peak - entry) / entry * 100) : 0;
+    const stopPct = entry > 0 ? ((stop - entry) / entry * 100) : 0;
+    const protectedBE = stop >= entry;
     html += `
       <div class="position-row">
         <div class="pos-header">
-          <span class="pos-market">${pos.market}</span>
-          <span class="${pnlColor}">${fmtPct(pos.distance_pct)}</span>
+          <span class="pos-market">${pos.market} ${badge(pos.side || 'LONG', pos.side === 'SHORT' ? 'red' : 'green')}</span>
+          <span class="${colorPnl(peakPct)}">peak ${fmtPct(peakPct)}</span>
         </div>
         <div class="pos-details">
-          <span>Vol: ${pos.volatility_class || '—'}</span>
-          <span>Momentum: ${pos.momentum || '—'} (${fmt(pos.momentum_score,0)})</span>
-          <span>Stop: ${fmtPct(pos.threshold_pct)}</span>
+          <span>Entry: ${entry}</span>
+          <span>SL: ${stop} (${fmt(stopPct,1)}%)</span>
+          <span>${protectedBE ? '🔒 risk-free' : 'Fase ' + (pos.phase ?? 0)}</span>
+        </div>
+      </div>`;
+  }
+  el.innerHTML = html;
+}
+
+// ─── PnL Curve (SVG inline, sem libs externas) ───────────────────────────────
+function renderPnlCurve(data) {
+  const el = document.getElementById('pnl-curve-content');
+  const pts = data?.pnl_curve;
+  if (!pts || pts.length === 0) { el.innerHTML = '<div class="no-data">Sem trades fechados</div>'; return; }
+
+  const W = 260, H = 90, PAD = 6;
+  const vals = pts.map(p => p.cum_pnl);
+  const min = Math.min(0, ...vals), max = Math.max(0, ...vals);
+  const range = (max - min) || 1;
+  const x = i => pts.length > 1 ? PAD + i * (W - 2*PAD) / (pts.length - 1) : W / 2;
+  const y = v => PAD + (max - v) * (H - 2*PAD) / range;
+
+  const line = pts.map((p, i) => `${x(i).toFixed(1)},${y(p.cum_pnl).toFixed(1)}`).join(' ');
+  const zeroY = y(0).toFixed(1);
+  const last = pts[pts.length - 1];
+  const lineColor = last.cum_pnl >= 0 ? '#3fb950' : '#f85149';
+
+  el.innerHTML = `
+    <svg viewBox="0 0 ${W} ${H}" style="width:100%;height:${H}px">
+      <line x1="${PAD}" y1="${zeroY}" x2="${W-PAD}" y2="${zeroY}" stroke="#30363d" stroke-dasharray="3,3"/>
+      <polyline points="${line}" fill="none" stroke="${lineColor}" stroke-width="2"/>
+      ${pts.map((p, i) => `<circle cx="${x(i).toFixed(1)}" cy="${y(p.cum_pnl).toFixed(1)}" r="2.5" fill="${p.daily_pnl >= 0 ? '#3fb950' : '#f85149'}"><title>${p.date}: dia ${fmtUSD(p.daily_pnl)} | acum ${fmtUSD(p.cum_pnl)} (${p.trades} trades)</title></circle>`).join('')}
+    </svg>
+    ${metric('PnL Acumulado', fmtUSD(last.cum_pnl), colorPnl(last.cum_pnl))}
+    ${metric('Último dia (' + last.date.substring(5) + ')', fmtUSD(last.daily_pnl), colorPnl(last.daily_pnl))}
+    ${metric('Trades fechados', data?.trading_metrics?.closed_trades ?? pts.reduce((a,p) => a + p.trades, 0))}
+  `;
+}
+
+// ─── Whale Activity ──────────────────────────────────────────────────────────
+function renderWhales(data) {
+  const el = document.getElementById('whale-content');
+  const ws = data?.whale_signals;
+  if (!ws || ws.length === 0) { el.innerHTML = '<div class="no-data">Sem whale prints nas posições abertas</div>'; return; }
+
+  const sigBadge = s => s === 'ACCUMULATION' ? badge('🟢 ACUMULAÇÃO', 'green')
+                      : s === 'DISTRIBUTION' ? badge('🔴 DISTRIBUIÇÃO', 'red')
+                      : badge('NEUTRO', 'gray');
+  let html = '';
+  for (const w of ws) {
+    html += `
+      <div class="position-row">
+        <div class="pos-header">
+          <span class="pos-market">${w.market}</span>
+          ${sigBadge(w.signal)}
+        </div>
+        <div class="pos-details">
+          <span class="green">▲ ${w.whale_buys} ($${(w.buy_usd ?? 0).toLocaleString()})</span>
+          <span class="red">▼ ${w.whale_sells} ($${(w.sell_usd ?? 0).toLocaleString()})</span>
+          <span class="${colorPnl(w.net_usd)}">net $${(w.net_usd ?? 0).toLocaleString()}</span>
         </div>
       </div>`;
   }
@@ -219,14 +291,14 @@ function renderRegime(data) {
   const r = data?.market_regime;
   if (!r) { el.innerHTML = '<div class="no-data">Sem dados de regime</div>'; return; }
   
+  // 2026-06-12 fix: mce_score/tori_proximity nunca existiram no JSON — usa campos reais
   const regimeColor = r.regime?.includes('BULL') ? 'green' : r.regime?.includes('BEAR') ? 'red' : 'yellow';
-  const mceColor = r.mce_score > 0.7 ? 'green' : r.mce_score > 0.4 ? 'yellow' : 'red';
-  
+
   el.innerHTML = `
     ${metric('Regime', badge(r.regime || '—', regimeColor))}
-    ${metric('MCE Score', fmt(r.mce_score, 4), mceColor)}
-    ${metric('TORI Proximity', fmtPct(r.tori_proximity))}
-    ${metric('Ciclo', r.cycle || '—')}
+    ${metric('Bias', r.bias || '—')}
+    ${metric('Fase Halving', r.phase || '—')}
+    ${metric('Atualizado', (r.updated_at || '—').replace('T', ' ').substring(0, 16))}
   `;
 }
 
@@ -236,16 +308,18 @@ function renderTrading(data) {
   const t = data?.trading_metrics;
   if (!t) { el.innerHTML = '<div class="no-data">Sem dados de performance</div>'; return; }
   
+  // 2026-06-12: metricas REAIS do trade_outcomes.jsonl (antes hardcoded 0)
   const wrColor = t.win_rate > 50 ? 'green' : t.win_rate > 30 ? 'yellow' : 'red';
-  
+  const pfColor = t.profit_factor >= 1.5 ? 'green' : t.profit_factor >= 1 ? 'yellow' : 'red';
+
   el.innerHTML = `
-    ${metric('Trades 24h', t.trades_24h || 0)}
-    ${metric('Trades 7d', t.trades_7d || 0)}
-    ${metric('Trades 30d', t.trades_30d || 0)}
+    ${metric('Trades fechados', t.closed_trades ?? 0)}
     ${metric('Win Rate', fmtPct(t.win_rate), wrColor)}
-    ${metric('Sharpe', fmt(t.sharpe_ratio, 2))}
-    ${metric('Max Drawdown', fmtPct(t.max_drawdown), 'red')}
-    ${metric('Profit Factor', fmt(t.profit_factor, 2))}
+    ${metric('Profit Factor', fmt(t.profit_factor, 2), pfColor)}
+    ${metric('PnL Total', fmtUSD(t.total_pnl_usd), colorPnl(t.total_pnl_usd))}
+    ${metric('Avg Win / Loss', `<span class="green">${fmtUSD(t.avg_win_usd)}</span> / <span class="red">${fmtUSD(t.avg_loss_usd)}</span>`)}
+    ${metric('Best / Worst', `<span class="green">${fmtUSD(t.best_usd)}</span> / <span class="red">${fmtUSD(t.worst_usd)}</span>`)}
+    ${metric('Sinais 7d / 30d', (t.trades_7d || 0) + ' / ' + (t.trades_30d || 0))}
   `;
 }
 
@@ -289,13 +363,16 @@ function renderTrailing(data) {
     return;
   }
   
+  // 2026-06-12 fix: mostra progressao real do stop (entry → SL atual)
   let html = '';
   for (const t of trailing) {
+    const entry = parseFloat(t.entry), stop = parseFloat(t.stop_current);
+    const locked = stop >= entry;
     html += `
       <div class="tier-row">
         <span class="tier-market">${t.market}</span>
-        <span class="tier-info">${t.volatility_class}</span>
-        <span class="badge badge-${t.momentum === 'STRONG' ? 'green' : 'yellow'}">${t.momentum}</span>
+        <span class="tier-info">SL ${t.stop_current}</span>
+        ${badge(locked ? '🔒 breakeven+' : 'fase ' + (t.phase ?? 0), locked ? 'green' : 'yellow')}
       </div>`;
   }
   el.innerHTML = html;
@@ -403,6 +480,8 @@ async function loadAll() {
   renderTrading(data);
   renderTier(data);
   renderTrailing(data);
+  renderPnlCurve(data);
+  renderWhales(data);
   renderCosts(data);
   renderPipeline(data);
   await renderLog();

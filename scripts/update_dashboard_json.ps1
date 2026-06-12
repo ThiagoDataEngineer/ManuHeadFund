@@ -1,4 +1,4 @@
-# update_dashboard_json.ps1
+﻿# update_dashboard_json.ps1
 # Atualiza dashboard/dashboard_data.json com dados reais do sistema
 # Chamado pelo GitHub Actions e pela task local
 
@@ -13,6 +13,7 @@ $dashDir     = Join-Path $projectRoot "dashboard"
 $configLocal = Join-Path $agentsDir "config.local.ps1"
 if (Test-Path $configLocal) { . $configLocal }
 . (Join-Path $agentsDir "lib_coinex.ps1")
+. (Join-Path $agentsDir "lib_dashboard_metrics.ps1")  # 2026-06-12: metricas reais (16 TDD)
 
 $data = [ordered]@{
     timestamp         = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
@@ -20,6 +21,8 @@ $data = [ordered]@{
     positions         = @()
     trading_metrics   = @{}
     trailing_stop     = @()
+    pnl_curve         = @()
+    whale_signals     = @()
     market_regime     = @{}
     promotion_pipeline = @{}
     fqs_distribution  = @{}
@@ -155,10 +158,6 @@ try {
             trades_24h   = $t24h
             trades_7d    = $t7d
             trades_30d   = $t30d
-            win_rate     = 0
-            sharpe_ratio = 0
-            max_drawdown = 0
-            profit_factor = 0
         }
         # Mentor decisions
         $vetoes = @($allLines | Where-Object { $_ -match $today -and $_ -match "ABORTAR" }).Count
@@ -171,6 +170,66 @@ try {
         }
     }
 } catch {}
+
+# ── Performance REAL + curva PnL (trade_outcomes.jsonl) ─────────────────────
+# 2026-06-12: antes win_rate/profit_factor eram hardcoded 0. Agora lê o journal
+# de outcomes (mesma fonte do learning engine / Kelly).
+try {
+    $outFile2 = Join-Path $journalDir "trade_outcomes.jsonl"
+    if (Test-Path $outFile2) {
+        $outcomes = @(Get-Content $outFile2 | Where-Object { $_.Trim() } | ForEach-Object {
+            try { $_ | ConvertFrom-Json } catch { $null }
+        } | Where-Object { $_ })
+
+        $perf = Get-TradePerformanceMetrics -Outcomes $outcomes
+        $data.trading_metrics.win_rate      = $perf.win_rate
+        $data.trading_metrics.profit_factor = $perf.profit_factor
+        $data.trading_metrics.total_pnl_usd = $perf.total_pnl_usd
+        $data.trading_metrics.closed_trades = $perf.trades
+        $data.trading_metrics.avg_win_usd   = $perf.avg_win_usd
+        $data.trading_metrics.avg_loss_usd  = $perf.avg_loss_usd
+        $data.trading_metrics.best_usd      = $perf.best_usd
+        $data.trading_metrics.worst_usd     = $perf.worst_usd
+
+        $data.pnl_curve = @(Get-PnlCurvePoints -Outcomes $outcomes)
+    }
+} catch { Write-Warning "trade_outcomes metrics: $_" }
+
+# ── Whale signals (tape reading via deals, free) ─────────────────────────────
+# Para cada mercado com posição trailing ativa: últimos 100 deals, trades >= $500
+# em micro-caps = whale print. Spot primeiro, fallback futures.
+try {
+    $whaleMarkets = @($data.trailing_stop | ForEach-Object { "$($_.market)" } | Select-Object -Unique)
+    foreach ($mkt in $whaleMarkets) {
+        $deals = $null
+        try {
+            $r = CoinEx-Get "/v2/spot/deals?market=$mkt&limit=100"
+            if ($r.code -eq 0 -and @($r.data).Count -gt 0) { $deals = @($r.data) }
+        } catch {}
+        if (-not $deals) {
+            try {
+                $r = CoinEx-Get "/v2/futures/deals?market=$mkt&limit=100"
+                if ($r.code -eq 0) { $deals = @($r.data) }
+            } catch {}
+        }
+        if (-not $deals) { continue }
+
+        # threshold adaptativo (8x mediana do tape) — escala de BTC a micro-cap
+        $w = Get-WhaleActivitySummary -Deals $deals
+        $data.whale_signals += @{
+            market        = $mkt
+            signal        = $w.signal
+            whale_buys    = $w.whale_buys
+            whale_sells   = $w.whale_sells
+            buy_usd       = $w.buy_usd
+            sell_usd      = $w.sell_usd
+            net_usd       = $w.net_usd
+            largest_usd   = $w.largest_usd
+            largest_side  = $w.largest_side
+            threshold_usd = $w.threshold_usd
+        }
+    }
+} catch { Write-Warning "whale signals: $_" }
 
 # ── Whitelist Tier A/B ────────────────────────────────────────────────────────
 try {
