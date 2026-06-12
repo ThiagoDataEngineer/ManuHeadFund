@@ -63,7 +63,12 @@ function Get-TrailingPositions {
                     $result += $item
                 }
             }
-            return $result
+            # 2026-06-11 fix: _Supabase-Get engole erros e retorna @() sem throw
+            # (ex.: tabela ausente PGRST205). Resultado vazio NAO pode mascarar o
+            # arquivo local — posicoes ativas ficavam invisiveis pro trailing
+            # updater (scan_master mostrava "Nenhuma posicao ativa" com posicoes
+            # reais no arquivo). Vazio => fall through pro arquivo.
+            if (@($result).Count -gt 0) { return $result }
         } catch {
             Write-Warning "[trailing] state_store read failed, falling back to file: $_"
             # fall through to legacy

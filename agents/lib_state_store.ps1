@@ -1,4 +1,4 @@
-# agents/lib_state_store.ps1
+﻿# agents/lib_state_store.ps1
 # Generic state store abstraction with 2 backends: local JSON files OR Supabase REST.
 #
 # Why: GitHub Actions runs em Linux nao tem acesso a journal/ local. Para Layers 1-5
@@ -263,8 +263,27 @@ function _Local-Remove {
 # Supabase backend (REST PostgREST + schema-aware via Accept/Content-Profile)
 # ─────────────────────────────────────────────────────────────────────
 
+# 2026-06-11: circuit breaker por tabela. Tabela ausente (PGRST205) eh erro
+# permanente na sessao — repetir a chamada so gera spam de warning (10+/ciclo)
+# e latencia. Marca a tabela como missing, avisa 1x, e os callers caem no
+# fallback local imediatamente. Cura: criar a tabela + restart (ou nova sessao).
+if (-not $script:_SupabaseMissingTables) { $script:_SupabaseMissingTables = @{} }
+
+function _Test-SupabaseTableMissing {
+    param([string]$Table, [object]$CaughtError)
+    if ("$CaughtError" -match "PGRST205") {
+        if (-not $script:_SupabaseMissingTables[$Table]) {
+            $script:_SupabaseMissingTables[$Table] = $true
+            Write-Warning "[state_store] tabela '${Table}' ausente no Supabase (PGRST205) — usando fallback local nesta sessao. Fix: docs/SETUP_SUPABASE_*.sql no SQL Editor."
+        }
+        return $true
+    }
+    return $false
+}
+
 function _Supabase-Get {
     param([string]$Table, [hashtable]$Filter)
+    if ($script:_SupabaseMissingTables[$Table]) { return @() }
     $cfg = Get-SupabaseRequestHeaders -Method "GET"
     $params = "select=*"
     if ($Filter -and $Filter.Count -gt 0) {
@@ -278,7 +297,9 @@ function _Supabase-Get {
         $r = Invoke-RestMethod -Uri $uri -Method GET -Headers $cfg.headers -TimeoutSec 30
         return @($r)
     } catch {
-        Write-Warning "[state_store] Supabase GET ${Table} failed: $_"
+        if (-not (_Test-SupabaseTableMissing -Table $Table -CaughtError $_)) {
+            Write-Warning "[state_store] Supabase GET ${Table} failed: $_"
+        }
         return @()
     }
 }
@@ -286,6 +307,9 @@ function _Supabase-Get {
 function _Supabase-Save {
     param([string]$Table, [object[]]$Records, [string]$PrimaryKey)
     if ($null -eq $Records -or @($Records).Count -eq 0) { return }
+    # Tabela ja marcada missing nesta sessao: throw direto (sem HTTP) pro caller
+    # cair no fallback local sem latencia nem spam.
+    if ($script:_SupabaseMissingTables[$Table]) { throw "table '$Table' missing (PGRST205, cached)" }
     $cfg = Get-SupabaseRequestHeaders -Method "POST"
     $headers = @{} + $cfg.headers
     $headers["Prefer"] = "return=representation,resolution=merge-duplicates"
@@ -330,7 +354,11 @@ function _Supabase-Save {
     try {
         Invoke-RestMethod -Uri $url -Method POST -Headers $headers -Body $body -TimeoutSec 30 | Out-Null
     } catch {
-        Write-Warning "[state_store] Supabase POST ${Table} failed: $_"
+        # Circuit breaker: tabela ausente avisa 1x; throw preservado para o
+        # caller cair no fallback local (Save-TrailingPositions etc).
+        if (-not (_Test-SupabaseTableMissing -Table $Table -CaughtError $_)) {
+            Write-Warning "[state_store] Supabase POST ${Table} failed: $_"
+        }
         throw
     }
 }

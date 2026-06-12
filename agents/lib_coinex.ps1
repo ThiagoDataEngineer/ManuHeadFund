@@ -147,10 +147,14 @@ function CoinEx-GetTicker($market) {
     # B18-wire 2026-05-20 PM6+460min: stale price detection.
     # Retorna raw ticker (back-compat). Callers que precisam validar freshness devem
     # usar CoinEx-GetTickerFresh -> retorna wrapper { ticker, fetched_at, is_fresh }.
-    $type = "futures"
-    $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/$type/ticker?market=$market" -Method GET -ErrorAction Stop
-    if ($r.code -ne 0) { throw "Ticker error: $($r.message)" }
-    return $r.data[0]
+    # 2026-06-11: fallback SPOT quando o market nao existe em futures. Micro-caps
+    # GEM (BASED, AIN, COAI...) so existem em spot — trailing/phantom quebravam
+    # com "market not found" e as posicoes spot ficavam sem update de preco.
+    $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/futures/ticker?market=$market" -Method GET -ErrorAction Stop
+    if ($r.code -eq 0) { return $r.data[0] }
+    $rs = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/spot/ticker?market=$market" -Method GET -ErrorAction Stop
+    if ($rs.code -eq 0) { return $rs.data[0] }
+    throw "Ticker error: $($r.message)"
 }
 
 function CoinEx-GetTickerFresh($market) {
@@ -472,6 +476,137 @@ function CoinEx-GetPendingPositions {
         return ,@($r.data)
     }
     return ,@()
+}
+
+# Posicoes abertas consolidadas (SPOT holdings + FUTURES positions).
+# 2026-06-11: implementa o contrato esperado por Sync-TrailingPositionsWithExchange
+# (lib_trailing_adaptive.ps1:414) — a funcao nao existia e o sync era skipped em
+# todo ciclo do scan_master, deixando trailing_positions.json divergente da exchange.
+#
+# SPOT: holding = balance nao-stablecoin com valor >= MinValueUSD em par USDT.
+#   - entry: ultima ordem BUY concluida (filled_value/filled_amount); fallback last price
+#   - stop_price/take_profit_price: stop orders SELL pendentes reais — trigger abaixo
+#     do preco atual = SL (pega o mais proximo), acima = TP (idem)
+# FUTURES: pending-position, campos lidos defensivamente (schema nao documentado completo).
+function CoinEx-GetOpenOrders {
+    param([double]$MinValueUSD = 3.0)
+
+    $out = @()
+
+    # ── SPOT holdings ─────────────────────────────────────────────────────────
+    $balances = @()
+    try {
+        $r = CoinEx-Get "/v2/assets/spot/balance"
+        if ($r.code -eq 0) { $balances = @($r.data) }
+    } catch {
+        Write-Warning "CoinEx-GetOpenOrders: spot balance falhou: $_"
+    }
+
+    foreach ($bal in $balances) {
+        $ccy = "$($bal.ccy)".ToUpper()
+        if ($ccy -in @("USDT", "USDC", "USD")) { continue }
+        $amount = 0.0
+        try {
+            $avail  = if ($null -ne $bal.available) { [double]$bal.available } else { 0.0 }
+            $frozen = if ($null -ne $bal.frozen) { [double]$bal.frozen } else { 0.0 }
+            $amount = $avail + $frozen
+        } catch { continue }
+        if ($amount -le 0) { continue }
+
+        $market = "${ccy}USDT"
+        # ticker SPOT direto: CoinEx-GetTicker eh hardcoded futures e micro-caps
+        # spot (AIN, BASED, COAI...) nao tem mercado futures
+        $last = 0.0
+        try {
+            $t = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/spot/ticker?market=$market" -Method GET -TimeoutSec 10 -ErrorAction Stop
+            if ($t.code -eq 0 -and $t.data) { $last = [double]$t.data[0].last }
+        } catch {}
+        if ($last -le 0) { continue }                          # sem par USDT — ignora
+        if (($amount * $last) -lt $MinValueUSD) { continue }   # poeira
+
+        # Entry real: ultima ordem BUY concluida
+        $entry = $last; $orderId = ""
+        try {
+            $fo = CoinEx-Get "/v2/spot/finished-order?market=$market&market_type=SPOT&side=buy&page=1&limit=5"
+            if ($fo.code -eq 0) {
+                $buy = @($fo.data) | Where-Object { $_.filled_amount -and [double]$_.filled_amount -gt 0 } | Select-Object -First 1
+                if ($buy) {
+                    $fa = [double]$buy.filled_amount
+                    $fv = if ($null -ne $buy.filled_value) { [double]$buy.filled_value } else { 0.0 }
+                    if ($fa -gt 0 -and $fv -gt 0) { $entry = $fv / $fa }
+                    $orderId = "$($buy.order_id)"
+                }
+            }
+        } catch {}
+
+        # SL/TP reais: stop orders SELL pendentes na corretora
+        $stopPrice = $null; $tpPrice = $null
+        try {
+            $so = CoinEx-Get "/v2/spot/pending-stop-order?market=$market&market_type=SPOT&page=1&limit=10"
+            if ($so.code -eq 0) {
+                foreach ($s in @($so.data)) {
+                    if ("$($s.side)" -ne "sell") { continue }
+                    $trig = if ($null -ne $s.trigger_price) { [double]$s.trigger_price } else { 0.0 }
+                    if ($trig -le 0) { continue }
+                    if ($trig -lt $last) {
+                        if ($null -eq $stopPrice -or $trig -gt $stopPrice) { $stopPrice = $trig }
+                    } else {
+                        if ($null -eq $tpPrice -or $trig -lt $tpPrice) { $tpPrice = $trig }
+                    }
+                }
+            }
+        } catch {}
+
+        $out += [PSCustomObject]@{
+            market            = $market
+            position_type     = "SPOT"
+            order_id          = $orderId
+            side              = "buy"
+            amount            = $amount
+            price             = [math]::Round($entry, 10)
+            last_price        = $last
+            value_usd         = [math]::Round($amount * $last, 2)
+            stop_price        = $stopPrice
+            take_profit_price = $tpPrice
+        }
+    }
+
+    # ── FUTURES positions ─────────────────────────────────────────────────────
+    try {
+        # pipe ForEach-Object achata o array aninhado de CoinEx-GetPendingPositions (return ,$data)
+        foreach ($pos in @(CoinEx-GetPendingPositions | ForEach-Object { $_ })) {
+            if (-not $pos -or -not $pos.PSObject.Properties['market'] -or -not $pos.market) { continue }
+            $entry = 0.0
+            foreach ($f in @('avg_entry_price', 'open_avg_price', 'entry_price')) {
+                if ($pos.PSObject.Properties[$f] -and $pos.$f) { $entry = [double]$pos.$f; break }
+            }
+            $sl = $null
+            if ($pos.PSObject.Properties['stop_loss_price'] -and $pos.stop_loss_price) { $sl = [double]$pos.stop_loss_price }
+            $tp = $null
+            if ($pos.PSObject.Properties['take_profit_price'] -and $pos.take_profit_price) { $tp = [double]$pos.take_profit_price }
+            $out += [PSCustomObject]@{
+                market            = "$($pos.market)"
+                position_type     = "FUTURES"
+                order_id          = if ($pos.PSObject.Properties['position_id']) { "$($pos.position_id)" } else { "" }
+                side              = if ("$($pos.side)" -eq "long") { "buy" } else { "sell" }
+                amount            = if ($pos.PSObject.Properties['open_interest'] -and $pos.open_interest) { [double]$pos.open_interest } else { 0.0 }
+                price             = $entry
+                last_price        = $null
+                value_usd         = if ($pos.PSObject.Properties['settle_value'] -and $pos.settle_value) { [math]::Round([double]$pos.settle_value, 2) } else { $null }
+                stop_price        = $sl
+                take_profit_price = $tp
+                leverage          = if ($pos.PSObject.Properties['leverage'] -and $pos.leverage) { [double]$pos.leverage } else { $null }
+                margin_mode       = if ($pos.PSObject.Properties['margin_mode']) { "$($pos.margin_mode)" } else { $null }
+                liq_price         = if ($pos.PSObject.Properties['liq_price'] -and $pos.liq_price) { [double]$pos.liq_price } else { $null }
+                unrealized_pnl    = if ($pos.PSObject.Properties['unrealized_pnl'] -and $pos.unrealized_pnl) { [double]$pos.unrealized_pnl } else { $null }
+            }
+        }
+    } catch {
+        Write-Warning "CoinEx-GetOpenOrders: futures positions falhou: $_"
+    }
+
+    # return simples: pipeline unrolls e @() no caller coleta corretamente (0, 1 ou N)
+    return $out
 }
 
 # Submete ordem em /v2/futures/order.

@@ -1,4 +1,4 @@
-# agents/lib_trailing_adaptive.ps1
+﻿# agents/lib_trailing_adaptive.ps1
 # TDD-driven: Adaptive trailing stops with ATR-dynamic buffer + regime-aware
 # Evolução do lib_trailing.ps1 original
 #
@@ -438,8 +438,12 @@ function Sync-TrailingPositionsWithExchange {
             $market = [string]$order.market
             $orderId = [string]$order.order_id
             
-            # Procura posição correspondente
-            $existing = $positions | Where-Object { $_.market -eq $market -and $_.orderId -eq $orderId }
+            # Procura posição correspondente. 2026-06-11: entradas órfãs
+            # (orphan_auto_register) têm orderId vazio — match por market só,
+            # senão o sync duplica a posição.
+            $existing = $positions | Where-Object {
+                $_.market -eq $market -and ($_.orderId -eq $orderId -or -not $_.orderId)
+            } | Select-Object -First 1
             
             if ($existing) {
                 # Atualiza com dados reais da exchange
@@ -464,14 +468,26 @@ function Sync-TrailingPositionsWithExchange {
                     }
                 }
             } else {
+                # 2026-06-11 guard: só auto-registra posição GERENCIADA (com SL ou TP
+                # real na corretora). Holdings passivos (PAXG, CET, BTC parking...)
+                # não têm stop orders — registrá-los no trailing poderia auto-vendê-los.
+                $isManaged = ($null -ne $order.stop_price) -or ($null -ne $order.take_profit_price)
+                if (-not $isManaged) {
+                    if ($Verbose) { Write-Host "  [Sync Trailing] $market sem SL/TP na exchange — holding passivo, skip" -ForegroundColor DarkGray }
+                    continue
+                }
+
                 # Posição nova na exchange - criar entrada
                 Write-Host "  [Sync Trailing] Nova posição detectada: $market" -ForegroundColor Yellow
+                # 2026-06-11 fix: `[double](if ...)` nao eh sintaxe valida — precisa
+                # subexpressao `$(if ...)`. Bug latente: nunca executou porque
+                # CoinEx-GetOpenOrders nao existia e a funcao sempre dava skip.
                 $newPos = [PSCustomObject]@{
                     market = $market
                     side = if ($order.side -eq "buy") { "LONG" } else { "SHORT" }
                     entry = [double]$order.price
-                    stop = [double](if ($order.stop_price) { $order.stop_price } else { $order.price * 0.95 })
-                    target = [double](if ($order.take_profit_price) { $order.take_profit_price } else { $order.price * 1.05 })
+                    stop = [double]$(if ($order.stop_price) { $order.stop_price } else { $order.price * 0.95 })
+                    target = [double]$(if ($order.take_profit_price) { $order.take_profit_price } else { $order.price * 1.05 })
                     orderId = $orderId
                     source = "exchange_sync"
                     mode = "STANDARD"
@@ -479,7 +495,7 @@ function Sync-TrailingPositionsWithExchange {
                     dd_threshold_pct = 30
                     phase = 0
                     peak = [double]$order.price
-                    stopCurrent = [double](if ($order.stop_price) { $order.stop_price } else { $order.price * 0.95 })
+                    stopCurrent = [double]$(if ($order.stop_price) { $order.stop_price } else { $order.price * 0.95 })
                     active = $true
                     openedAt = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
                     updatedAt = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")

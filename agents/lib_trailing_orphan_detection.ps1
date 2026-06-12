@@ -310,8 +310,27 @@ function Detect-PhantomPositions {
     [CmdletBinding()]
     param()
     try {
-        $exchangePositions = @(CoinEx-GetPendingPositions)
-        $exchangeMarkets = @($exchangePositions | ForEach-Object { $_.market })
+        # FUTURES: pending positions
+        $exchangePositions = @(CoinEx-GetPendingPositions | ForEach-Object { $_ })
+        $exchangeMarkets = @($exchangePositions | ForEach-Object { "$($_.market)" })
+
+        # 2026-06-11 fix: posicoes SPOT (GEMs BASED/AIN/FIRO/COAI) nunca aparecem
+        # em futures pending-position — eram marcadas phantom e fechadas em todo
+        # ciclo do gem_loop. Spot position existe se o saldo do asset base > 0.
+        try {
+            $sb = CoinEx-Get "/v2/assets/spot/balance"
+            if ($sb.code -eq 0) {
+                foreach ($bal in @($sb.data)) {
+                    $tot = [double]$bal.available + [double]$bal.frozen
+                    if ($tot -gt 0) { $exchangeMarkets += "$($bal.ccy)".ToUpper() + "USDT" }
+                }
+            }
+        } catch {
+            # Fail-closed REVERSO: se a leitura de saldos spot falhar, NAO da pra
+            # afirmar que a posicao sumiu — aborta deteccao em vez de fechar tudo.
+            Write-Warning "Detect-PhantomPositions: spot balance indisponivel, abortando deteccao: $_"
+            return @()
+        }
 
         $localActive = @(Get-TrailingPositions | Where-Object { $_.active })
 

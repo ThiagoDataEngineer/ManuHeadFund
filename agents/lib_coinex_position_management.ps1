@@ -1,4 +1,4 @@
-# lib_coinex_position_management.ps1 - Position Management API (TDD-driven)
+﻿# lib_coinex_position_management.ps1 - Position Management API (TDD-driven)
 # Implementado com TDD rigoroso: testes em tests\lib_coinex_position_management.Tests.ps1
 #
 # FUNCOES CRITICAS:
@@ -191,14 +191,19 @@ function CoinEx-ModifyPositionStopLoss {
     )
     
     try {
+        # 2026-06-11 fix: ToString() em locale PT-BR gera virgula ("0,0215") e a
+        # API rejeita com 3639 Invalid Parameter — usar InvariantCulture.
+        $inv = [System.Globalization.CultureInfo]::InvariantCulture
         $bodyObj = @{
             market          = $Market
             market_type     = "FUTURES"
-            stop_loss_price = $Price.ToString()
+            stop_loss_price = $Price.ToString($inv)
             stop_loss_type  = $TriggerType
         }
         
-        $response = CoinEx-Post -path "/v2/futures/modify-position-stop-loss" -bodyObj $bodyObj
+        # 2026-06-11 fix: endpoint correto eh set-position-stop-loss
+        # (knowledge/COINEX_REFERENCE.md:421) — modify-* nao existe, retornava 4004
+        $response = CoinEx-Post -path "/v2/futures/set-position-stop-loss" -bodyObj $bodyObj
         
         if ($response.code -eq 0) {
             return [PSCustomObject]@{

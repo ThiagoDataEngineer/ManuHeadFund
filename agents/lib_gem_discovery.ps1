@@ -1,4 +1,4 @@
-# lib_gem_discovery.ps1 — GEM DISCOVERY SCANNER
+﻿# lib_gem_discovery.ps1 — GEM DISCOVERY SCANNER
 # Escaneia 1800 pares CoinEx, detecta PULL_BACK + DISTRIBUTION patterns
 # Real-time, 5-minute cycles
 # 2026-06-09
@@ -162,7 +162,7 @@ function Format-DiscoveryAlert {
 
     $icon = if ($Discovery.action -eq "BUY_ON_BREAK") { "📈" } else { "📉" }
     $message = @"
-$icon $($Discovery.market) — $($Discovery.strategy)
+$icon $($Discovery.market) -> $($Discovery.strategy)
 
 Entry: $($Discovery.entry_price | Get-CurrencyFormat)
 Target: $($Discovery.target | Get-CurrencyFormat)
