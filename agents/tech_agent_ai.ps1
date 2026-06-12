@@ -167,18 +167,18 @@ function Get-ToriTrendlineSignal {
         } catch {}
     }
 
-    # Tori FORÇA ENTRY: deixa gem_executor mapear conviction→signal via gem_executor
-    # Mentor faz filtragem secundaria (gem_executor chama Mentor DEPOIS de Tori)
-    # Gems com score alto merecem chance mesmo sem trendline perfeita
+    # 2026-06-12: SKIP explicito do Tori VOLTA a bloquear. O bypass de 2026-06-11
+    # ("sempre ENTER, Mentor decide") deixou TRUMPUSDT LONG entrar as 10:30 com
+    # Tori dizendo SKIP (bias semanal downtrend) -> -4.4% cortado no mesmo dia.
+    # Balanco: SKIP explicito = veto tecnico real (bloqueia); sem verdict/dados
+    # ausentes = ENTER com conviction (nao congela o pipeline, Mentor filtra).
     if ($r.trendline -and $r.trendline.verdict) {
         $verdict = "$($r.trendline.verdict)".ToUpper()
-        # IGNORAR SKIP de Claude — vamos deixar Mentor decidir
-        # if ($verdict -eq "SKIP") {
-        #     return [PSCustomObject]@{ signal = "SKIP"; reason = "$($r.trendline.reason)" }
-        # }
+        if ($verdict -eq "SKIP") {
+            return [PSCustomObject]@{ signal = "SKIP"; conviction = $conviction; reason = "$($r.trendline.reason)" }
+        }
     }
-    # SEMPRE ENTER — deixa Mentor decidir tudo (Tori é só info)
-    $reasonTxt = if ($r.trendline -and $r.trendline.reason) { "$($r.trendline.reason)" } else { "tori_force_entry_mentor_decides" }
+    $reasonTxt = if ($r.trendline -and $r.trendline.reason) { "$($r.trendline.reason)" } else { "sem_verdict_mentor_decide" }
     return [PSCustomObject]@{ signal = "ENTER"; conviction = $conviction; reason = $reasonTxt }
 }
 

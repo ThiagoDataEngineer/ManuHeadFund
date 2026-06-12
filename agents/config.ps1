@@ -234,8 +234,8 @@ $GEM_MAX_DAYS_MOM     = 21
 $GEM_TRAILING_PCT     = 0.30   # trailing stop: 30% abaixo do pico
 
 # Score minimo para abertura de posicao
-$GEM_SCORE_MIN_DISC   = 55     # DISCOVERY: relaxado para capturar mais oportunidades (era 70)
-$GEM_SCORE_MIN_MOM    = 45     # MOMENTUM: relaxado para capturar SHORT (era 60)
+$GEM_SCORE_MIN_DISC   = 45     # DISCOVERY: 2026-06-11 relaxed 55→45 (allow AINUSDT score=50)
+$GEM_SCORE_MIN_MOM    = 40     # MOMENTUM: 2026-06-11 relaxed 45→40
 
 # Acumulacao organica — thresholds (Gate 6)
 $GEM_CV_ORGANIC_MIN   = 0.5    # coef. variacao de volume: heterogeneidade minima

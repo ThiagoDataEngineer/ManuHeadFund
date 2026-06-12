@@ -457,8 +457,9 @@ function Invoke-GemExecute {
     try {
         $tori = Get-ToriTrendlineSignal -Market $mkt
         $tori_conviction = if ($tori.PSObject.Properties['conviction']) { [int]$tori.conviction } else { 0 }
-        # Mapear conviction → signal: 0=SKIP, 1-40=WAIT, 41+=ENTER
-        $tori_signal = if ($tori_conviction -eq 0) { "SKIP" } elseif ($tori_conviction -le 40) { "WAIT" } else { "ENTER" }
+        # 2026-06-12: respeita o signal do Tori (SKIP explicito bloqueia de novo).
+        # Bypass "sempre ENTER" de 2026-06-11 custou TRUMPUSDT -4.4% (Tori dizia SKIP).
+        $tori_signal = if ($tori.PSObject.Properties['signal']) { "$($tori.signal)".ToUpper() } else { "ENTER" }
         $tori_reason = "$($tori.reason)"
     } catch {
         Write-Host "  [GEM TORI ERROR] ${mkt}: $_" -ForegroundColor Red
