@@ -39,7 +39,8 @@ try {
     # Dados cifrados
     $json = Get-Content (Join-Path $dashDir "dashboard_data.json") -Raw
     $envlp = Protect-DashboardData -Json $json -Password $env:DASHBOARD_PAGES_PASSWORD
-    $encJs = "const MANU_DATA_ENC = " + ($envlp | ConvertTo-Json -Compress) + ";"
+    # window.X = (nao const) -> vira propriedade de window, visivel pro unlock.js
+    $encJs = "window.MANU_DATA_ENC = " + ($envlp | ConvertTo-Json -Compress) + ";"
     Set-Content (Join-Path $tmp "manu_data.enc.js") $encJs -Encoding utf8
 
     Push-Location $tmp

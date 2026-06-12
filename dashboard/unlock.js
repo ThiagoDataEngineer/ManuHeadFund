@@ -8,8 +8,13 @@
 (function () {
   const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
 
+  // BUG FIX 2026-06-12: `const X = ...` em script NAO vira window.X — checar
+  // via typeof do identificador (safe mesmo se nao declarado)
+  function getEnc() { try { return (typeof MANU_DATA_ENC !== 'undefined') ? MANU_DATA_ENC : window.MANU_DATA_ENC; } catch (e) { return undefined; } }
+  function hasPlain() { try { return (typeof MANU_DATA !== 'undefined') || !!window.MANU_DATA; } catch (e) { return false; } }
+
   async function decryptData(pw) {
-    const e = window.MANU_DATA_ENC;
+    const e = getEnc();
     const km = await crypto.subtle.importKey('raw', new TextEncoder().encode(pw), 'PBKDF2', false, ['deriveKey']);
     const key = await crypto.subtle.deriveKey(
       { name: 'PBKDF2', salt: b64(e.s), iterations: 100000, hash: 'SHA-256' },
@@ -56,8 +61,8 @@
   }
 
   window.addEventListener('DOMContentLoaded', async () => {
-    if (typeof window.MANU_DATA !== 'undefined') { ready(); return; }      // local: dados em claro
-    if (typeof window.MANU_DATA_ENC === 'undefined') { ready(); return; }  // sem dados nenhuns
+    if (hasPlain()) { ready(); return; }                 // local: dados em claro
+    if (getEnc() === undefined) { ready(); return; }     // sem dados nenhuns
     const saved = sessionStorage.getItem('mhf_pw');
     if (saved) {
       try { window.MANU_DATA = await decryptData(saved); ready(); return; } catch (e) { sessionStorage.removeItem('mhf_pw'); }
