@@ -56,6 +56,10 @@ if (-not (Get-Command Get-ToriTrendlineSignal -ErrorAction SilentlyContinue)) {
 # entao o enqueue do Mentor nunca dispara. Cobrir aqui.
 $__fqsQueuePath = Join-Path $PSScriptRoot "lib_fqs_enrichment_queue.ps1"
 if (Test-Path $__fqsQueuePath) { . $__fqsQueuePath }
+# 2026-06-15: FQS lazy enrich SINCRONO (in-the-moment) — enqueue e async nao resolvem no ciclo.
+# Invoke-FqsLazyEnrich tenta CoinGecko agora (1-3s) para mercados sem registry.
+$__fqsLazyPath = Join-Path $PSScriptRoot "lib_fqs_lazy_enrich.ps1"
+if (Test-Path $__fqsLazyPath) { . $__fqsLazyPath }
 
 # 2026-05-23: Position Management - trailing stops automaticos + risk management
 $__posManagementPath = Join-Path $PSScriptRoot "lib_coinex_position_management.ps1"
@@ -268,6 +272,19 @@ function Invoke-GemExecute {
 
     Write-Host ""
     Write-Host "=== GEM EXECUTOR -- $mkt ===" -ForegroundColor Cyan
+
+    # 2026-06-15: FQS lazy enrich SINCRONO — tenta CoinGecko NOW (1-3s) pra mercados sem registry.
+    # Rate-limit aware (CoinGecko 10/min), fallback gracioso. Ciclo nao bloqueia.
+    if (Get-Command Invoke-FqsLazyEnrich -ErrorAction SilentlyContinue) {
+        try {
+            $fqsResult = Invoke-FqsLazyEnrich -Market $mkt -TimeoutSec 5
+            if ($fqsResult.success) {
+                Write-Host "  [FQS] LAZY ENRICH OK: $mkt → category=$($fqsResult.new_fqs_category)" -ForegroundColor Green
+            }
+        } catch {
+            # Fail-gracious: lazy enrich timeout ou erro nao bloqueia gem pipeline
+        }
+    }
 
     # 2026-05-21: auto-enqueue FQS antes de qualquer block. Garante que GEMs novos
     # (ARRR/PROVE patterns) eventualmente recebem entry no registry mesmo bloqueados.
