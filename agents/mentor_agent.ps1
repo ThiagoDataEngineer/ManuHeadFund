@@ -745,6 +745,16 @@ function Invoke-MentorDebate {
         "Mesa: NAO_APLICAVEL (Tier A pre-validado por 8+ gates upstream -- skip eh by design)"
     }
 
+    # 2026-06-15 FIX: Detecta e corrige target invertido para SHORT
+    # Bug: SHORT com target > entry (deveria ser target < entry).
+    # Deteccao: se direction=SHORT e target > entry, inverte target/stop.
+    if ($Setup -and $Direction -eq "SHORT" -and [double]$Setup.target -gt [double]$Setup.entry) {
+        $correctedTarget = $Setup.entry - ([double]$Setup.entry - [double]$Setup.stop) * $Setup.rr
+        $correctedStop = $Setup.stop  # stop nao muda, ja esta correto
+        Write-Host "  [MENTOR] SHORT target invertido detectado: $($Setup.target) > $($Setup.entry). Corrigindo para $([math]::Round($correctedTarget, 4))" -ForegroundColor DarkYellow
+        $Setup.target = $correctedTarget
+    }
+
     $setupLine = if ($Setup) {
         "Setup: entry=$($Setup.entry) stop=$($Setup.stop) target=$($Setup.target) rr=$($Setup.rr)"
     } else { "Setup: nao definido" }
