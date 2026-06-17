@@ -106,6 +106,38 @@ Describe "Telegram Noise Filter" {
         }
     }
 
+    Context "Bloqueios e Info logs (2026-06-17 v2 expansão)" {
+        It "silencia [BLOCKED] sizing_invalido" {
+            $msg = "[BLOCKED] ASTERUSDT -- sizing_invalido"
+            $result = Send-TelegramAlert -Message $msg -Enabled "true" -Token "fake" -ChatId "fake"
+            $result | Should Be $true
+        }
+
+        It "silencia [BLOCKED] trendline" {
+            $msg = "[BLOCKED] EPIC -- trendline_invalida"
+            $result = Send-TelegramAlert -Message $msg -Enabled "true" -Token "fake" -ChatId "fake"
+            $result | Should Be $true
+        }
+
+        It "silencia [BLOCKED] recent_decision" {
+            $msg = "[BLOCKED] XRP -- recent_decision_cache"
+            $result = Send-TelegramAlert -Message $msg -Enabled "true" -Token "fake" -ChatId "fake"
+            $result | Should Be $true
+        }
+
+        It "silencia [INFO] Dormindo" {
+            $msg = "[INFO] Dormindo 60min ate proximo cycle"
+            $result = Send-TelegramAlert -Message $msg -Enabled "true" -Token "fake" -ChatId "fake"
+            $result | Should Be $true
+        }
+
+        It "silencia cache cleared" {
+            $msg = "Cache cleared — reinicializou conexão"
+            $result = Send-TelegramAlert -Message $msg -Enabled "true" -Token "fake" -ChatId "fake"
+            $result | Should Be $true
+        }
+    }
+
     Context "Casos edge" {
         It "acionável sobrescreve ruído (prioriza acionável)" {
             $msg = "[SPOT] PnL=5% (10 USD) — ENTRADA executada!"

@@ -278,7 +278,17 @@ function Send-TelegramAlert {
         ($msg -match "auto-recover|self-recover|recovered|limpou cache|recarregou|reinicializou") -or
 
         # Updates de posição sem mudança significativa (<2% P&L, sem stop/TP)
-        ($msg -match "Position.*update|atualizado|posição.*ativa|trailing.*ajust" -and -not ($msg -match "STOP|TP|CIRCUIT|REGIME"))
+        ($msg -match "Position.*update|atualizado|posição.*ativa|trailing.*ajust" -and -not ($msg -match "STOP|TP|CIRCUIT|REGIME")) -or
+
+        # Bloqueios de gems (ruído operacional: sizing, trendline, recent_decision, etc)
+        ($msg -match "\[BLOCKED\].*sizing|trendline|recent_decision|spike_|scoring_|gate_") -or
+        ($msg -match "GEM.*bloqueado|BLOQUEADO") -or
+
+        # Info logs periódicos (dormindo, ciclo iniciado)
+        ($msg -match "\[INFO\].*Dormindo|Ciclo iniciado|ciclo.*finalizado") -or
+
+        # Logs técnicos sem ação (loading libs, cache, etc)
+        ($msg -match "carregando|loading|cache|cleared|flushed|initialized")
     )
 
     $isActionable = (
