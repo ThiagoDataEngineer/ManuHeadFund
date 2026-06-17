@@ -447,6 +447,16 @@ function Update-TrailingStops {
                 $pos.active     = $false
                 $pos | Add-Member -NotePropertyName "closedAt" -NotePropertyValue (Get-Date -Format "yyyy-MM-dd HH:mm:ss") -Force
                 $pos | Add-Member -NotePropertyName "closeReason" -NotePropertyValue "max_days_exceeded" -Force
+                # 2026-06-17 #2: auto-registra outcome p/ o motor de aprendizado (fail-safe)
+                if (Get-Command Add-LearningOutcome -ErrorAction SilentlyContinue) {
+                    try {
+                        $reg = if ($pos.PSObject.Properties['regime'] -and $pos.regime) { "$($pos.regime)" }
+                               elseif ($global:MARKET_REGIME) { "$($global:MARKET_REGIME)" } else { "UNKNOWN" }
+                        Add-LearningOutcome -Market $pos.market -Side $pos.side -EntryPrice ([double]$pos.entry) `
+                            -ExitPrice $price -OpenedAt "$($pos.openedAt)" -CloseReason "max_days_exceeded" `
+                            -OrderId "$($pos.orderId)" -Regime $reg | Out-Null
+                    } catch {}
+                }
                 $updated = $true
                 return $pos
             }
@@ -462,6 +472,16 @@ function Update-TrailingStops {
                 $pos.active     = $false
                 $pos | Add-Member -NotePropertyName "closedAt" -NotePropertyValue (Get-Date -Format "yyyy-MM-dd HH:mm:ss") -Force
                 $pos | Add-Member -NotePropertyName "closeReason" -NotePropertyValue "stop_atingido" -Force
+                # 2026-06-17 #2: auto-registra outcome p/ o motor de aprendizado (fail-safe)
+                if (Get-Command Add-LearningOutcome -ErrorAction SilentlyContinue) {
+                    try {
+                        $reg = if ($pos.PSObject.Properties['regime'] -and $pos.regime) { "$($pos.regime)" }
+                               elseif ($global:MARKET_REGIME) { "$($global:MARKET_REGIME)" } else { "UNKNOWN" }
+                        Add-LearningOutcome -Market $pos.market -Side $pos.side -EntryPrice ([double]$pos.entry) `
+                            -ExitPrice $price -OpenedAt "$($pos.openedAt)" -CloseReason "stop_atingido" `
+                            -OrderId "$($pos.orderId)" -Regime $reg | Out-Null
+                    } catch {}
+                }
                 $updated = $true
                 return $pos
             }

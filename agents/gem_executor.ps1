@@ -12,6 +12,8 @@
 . (Join-Path $PSScriptRoot "lib_candle_fetcher.ps1")
 # 2026-06-09: Direction learning (counterfactual: learn from rejections)
 . (Join-Path $PSScriptRoot "lib_direction_learning.ps1")
+# 2026-06-17: Triagem agent (aplica aprendizado a conviction scores)
+. (Join-Path $PSScriptRoot "triagem_agent.ps1")
 # 2026-05-21: B9 cache TTL (Add-GemRejection + Test-GemRecentlyRejected).
 # Bug encontrado: scan_master dot-sourced gem_executor mas NAO lib_gem_decision_cache,
 # entao Get-Command Test-GemRecentlyRejected returnava null silently -> cache check
@@ -876,10 +878,31 @@ function Invoke-GemExecute {
         }
     }
 
-    # ── 2026-05-23: TRAILING STOP AUTOMATICO (Position Management) ────────────
-    # Ativa trailing stop ATR-based automaticamente apos GEM executado com sucesso.
-    # Parametros: ATR 2x, ativa apos 2% lucro minimo (protege capital + deixa correr).
-    # Executa em background (nao bloqueia retorno) e loga resultado.
+    # ── 2026-06-17: REGISTRO OBRIGATORIO em trailing_positions.json ──────────────
+    # BUG-A: guard "$hasFutures -and" excluia SPOT (SPCXX, BASED nunca registrados).
+    # BUG-B: Add-TrailingPosition nunca era chamada — só Update-TrailingStop (ATR job),
+    #        que é diferente: um registra a posição, o outro ajusta o stop depois.
+    # Fix: registrar SEMPRE após EXEC, independente de SPOT vs FUTURES.
+    if (Get-Command Add-TrailingPosition -ErrorAction SilentlyContinue) {
+        try {
+            $__orderId = if ($order -and $order.order_id) { [string]$order.order_id } else { "" }
+            Add-TrailingPosition `
+                -Market  $mkt `
+                -Side    "LONG" `
+                -Entry   $avg_price `
+                -Stop    $stop_price `
+                -Target  $tgt_price `
+                -OrderId $__orderId `
+                -Source  "gem" `
+                -Mode    "GEM"
+            Write-Host "  [TRAILING] Registrado: $mkt entry=$avg_price stop=$stop_price target=$tgt_price" -ForegroundColor Green
+        } catch {
+            Write-Host "  [TRAILING WARN] Falha ao registrar trailing: $_" -ForegroundColor Yellow
+        }
+    }
+
+    # ── 2026-05-23: TRAILING STOP ATR (Position Management, FUTURES only) ────────
+    # Ajusta stop dinamicamente via ATR apos 2% de lucro. Complementar ao registro acima.
     if ($hasFutures -and (Get-Command Update-TrailingStop -ErrorAction SilentlyContinue)) {
         try {
             Write-Host "  [TRAILING STOP] Agendando ativacao automatica em 60s..." -ForegroundColor DarkCyan

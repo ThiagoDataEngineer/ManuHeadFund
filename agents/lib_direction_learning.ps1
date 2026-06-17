@@ -144,36 +144,116 @@ function _AggregatedMultiplier {
 # Match por trade_id (preferencial) ou market+entry_date (fallback).
 # So retorna trades JA fechados (com outcome). Alimenta Get-DirectionStats.
 # ─────────────────────────────────────────────────────────────────────────────
+# ─────────────────────────────────────────────────────────────────────────────
+# Get-SnapshotDate (PURA) -- extrai data yyyy-MM-dd de um snapshot/outcome.
+# Prefere entry_date; senao deriva do ts. Robusto a locale: ts pode vir ISO
+# ("2026-06-09T01:25:35Z") OU formato US ("06/15/2026 05:05:05") pois snapshots
+# antigos foram gravados com ToString() dependente de cultura. Usa REGEX (nao
+# [datetime]::Parse, que embaralha mes/dia conforme a cultura da maquina).
+# ─────────────────────────────────────────────────────────────────────────────
+function Get-SnapshotDate {
+    param([object]$Snapshot)
+    if (-not $Snapshot) { return "" }
+    # 1) entry_date explicito (ja yyyy-MM-dd)
+    if ($Snapshot.PSObject.Properties['entry_date'] -and $Snapshot.entry_date) {
+        $ed = "$($Snapshot.entry_date)".Trim()
+        if ($ed -match '^(\d{4})-(\d{2})-(\d{2})') { return "$($Matches[1])-$($Matches[2])-$($Matches[3])" }
+    }
+    # 2) deriva do ts
+    if ($Snapshot.PSObject.Properties['ts'] -and $Snapshot.ts) {
+        $ts = "$($Snapshot.ts)".Trim()
+        # ISO: 2026-06-09T...
+        if ($ts -match '^(\d{4})-(\d{2})-(\d{2})') { return "$($Matches[1])-$($Matches[2])-$($Matches[3])" }
+        # US locale: MM/dd/yyyy ...
+        if ($ts -match '^(\d{1,2})/(\d{1,2})/(\d{4})') {
+            $mo = "{0:00}" -f [int]$Matches[1]
+            $dy = "{0:00}" -f [int]$Matches[2]
+            return "$($Matches[3])-$mo-$dy"
+        }
+    }
+    return ""
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# _DateToInt (interno) -- yyyy-MM-dd -> dias absolutos p/ comparar tolerancia.
+# ─────────────────────────────────────────────────────────────────────────────
+function _DateToInt {
+    param([string]$YmdDate)
+    if ($YmdDate -match '^(\d{4})-(\d{2})-(\d{2})$') {
+        try {
+            $dt = [datetime]::new([int]$Matches[1], [int]$Matches[2], [int]$Matches[3])
+            return [int]$dt.ToOADate()
+        } catch { return $null }
+    }
+    return $null
+}
+
 function Join-SignalOutcomes {
     param(
         [object[]]$Snapshots,
-        [object[]]$Outcomes
+        [object[]]$Outcomes,
+        [int]$ToleranceDays = 1
     )
     if (-not $Snapshots -or -not $Outcomes) { return @() }
 
-    # Indexa outcomes por trade_id e por market|date
+    # Indexa outcomes por trade_id e por market -> lista de {date_int, outcome}
     $byId = @{}
-    $byMktDate = @{}
+    $byMkt = @{}
     foreach ($o in $Outcomes) {
         if (-not $o) { continue }
         if ($o.PSObject.Properties['trade_id'] -and $o.trade_id) { $byId["$($o.trade_id)"] = $o }
         $mkt = if ($o.PSObject.Properties['market']) { "$($o.market)" } else { "" }
-        $dt  = if ($o.PSObject.Properties['entry_date']) { "$($o.entry_date)" } else { "" }
-        if ($mkt -and $dt) { $byMktDate["$mkt|$dt"] = $o }
+        $dInt = _DateToInt (Get-SnapshotDate -Snapshot $o)
+        if ($mkt -and $null -ne $dInt) {
+            if (-not $byMkt.ContainsKey($mkt)) { $byMkt[$mkt] = @() }
+            $byMkt[$mkt] += [PSCustomObject]@{ date_int = $dInt; outcome = $o }
+        }
+    }
+
+    # DEDUP: cada outcome (trade real) contribui no MAXIMO 1x. N snapshots do mesmo
+    # trade (varios ciclos de scan antes da entrada) NAO podem inflar n. Isto e
+    # mandatorio: effective_n = trades distintos (Lopez de Prado / memoria do projeto).
+    $consumed = @{}
+    function _OutcomeKey($o) {
+        if ($o.PSObject.Properties['trade_id'] -and $o.trade_id) { return "id:$($o.trade_id)" }
+        $m = if ($o.PSObject.Properties['market']) { "$($o.market)" } else { "?" }
+        $d = Get-SnapshotDate -Snapshot $o
+        return "$m|$d"
     }
 
     $out = @()
     foreach ($s in $Snapshots) {
         if (-not $s) { continue }
+
+        # So ENTRADAS reais geram stats de entrada (VETAR/SKIP nunca viraram trade).
+        $decision = if ($s.PSObject.Properties['decision']) { "$($s.decision)".ToUpper() } else { "APROVAR" }
+        if ($decision -ne "APROVAR") { continue }
+
         $match = $null
+        # 1) match exato por trade_id
         if ($s.PSObject.Properties['trade_id'] -and $s.trade_id -and $byId.ContainsKey("$($s.trade_id)")) {
             $match = $byId["$($s.trade_id)"]
         } else {
+            # 2) match por market + data (tolerancia +-ToleranceDays)
             $mkt = if ($s.PSObject.Properties['market']) { "$($s.market)" } else { "" }
-            $dt  = if ($s.PSObject.Properties['entry_date']) { "$($s.entry_date)" } else { "" }
-            if ($mkt -and $dt -and $byMktDate.ContainsKey("$mkt|$dt")) { $match = $byMktDate["$mkt|$dt"] }
+            $sInt = _DateToInt (Get-SnapshotDate -Snapshot $s)
+            if ($mkt -and $null -ne $sInt -and $byMkt.ContainsKey($mkt)) {
+                $best = $null; $bestDiff = [int]::MaxValue
+                foreach ($cand in $byMkt[$mkt]) {
+                    $diff = [math]::Abs($cand.date_int - $sInt)
+                    if ($diff -le $ToleranceDays -and $diff -lt $bestDiff) {
+                        $best = $cand.outcome; $bestDiff = $diff
+                    }
+                }
+                $match = $best
+            }
         }
         if (-not $match) { continue }  # trade ainda aberto / sem outcome
+
+        # DEDUP: se este outcome ja foi contabilizado por outro snapshot, pula.
+        $okey = _OutcomeKey $match
+        if ($consumed.ContainsKey($okey)) { continue }
+        $consumed[$okey] = $true
 
         $out += [PSCustomObject]@{
             trade_id  = if ($s.PSObject.Properties['trade_id']) { $s.trade_id } else { $null }
@@ -295,8 +375,10 @@ function New-SignalSnapshot {
         [string]$Gate             = "",
         [string]$TradeId          = ""
     )
+    $nowUtc = (Get-Date).ToUniversalTime()
     return [ordered]@{
-        ts                 = (Get-Date).ToUniversalTime().ToString("o")
+        ts                 = $nowUtc.ToString("o")
+        entry_date         = $nowUtc.ToString("yyyy-MM-dd")
         trade_id           = $TradeId
         market             = $Market
         direction          = $Direction
@@ -391,6 +473,100 @@ function Write-SignalSkip {
 # ─────────────────────────────────────────────────────────────────────────────
 # Read-JsonLines (I/O) -- le JSONL tolerante (ignora linhas invalidas).
 # ─────────────────────────────────────────────────────────────────────────────
+# ═════════════════════════════════════════════════════════════════════════════
+# AUTO-REGISTRO DE OUTCOME -- fecha o gap "#2": ao FECHAR posicao, grava outcome
+# no MESMO schema que Join-SignalOutcomes le. Sem isto, volume nunca cresce e o
+# aprendizado fica eternamente "nao confiavel".
+# ═════════════════════════════════════════════════════════════════════════════
+
+# ─────────────────────────────────────────────────────────────────────────────
+# New-LearningOutcome (PURA) -- monta outcome join-compativel a partir de uma
+# posicao fechada. pnl_pct respeita o lado (LONG/SHORT). win = pnl_pct > 0.
+# ─────────────────────────────────────────────────────────────────────────────
+function New-LearningOutcome {
+    param(
+        [Parameter(Mandatory)] [string]$Market,
+        [Parameter(Mandatory)] [string]$Side,        # LONG | SHORT
+        [Parameter(Mandatory)] [double]$EntryPrice,
+        [Parameter(Mandatory)] [double]$ExitPrice,
+        [Parameter(Mandatory)] [string]$OpenedAt,    # "yyyy-MM-dd HH:mm:ss" ou ISO
+        [string]$CloseReason = "manual",
+        [string]$OrderId     = "",
+        [string]$Regime      = "UNKNOWN",
+        [string]$Source      = "regime"
+    )
+    $side = $Side.ToUpper()
+    $pnl = if ($EntryPrice -gt 0) {
+        if ($side -eq "SHORT") { ($EntryPrice - $ExitPrice) / $EntryPrice * 100 }
+        else                   { ($ExitPrice - $EntryPrice) / $EntryPrice * 100 }
+    } else { 0 }
+    $pnl = [math]::Round($pnl, 4)
+
+    # entry_date a partir de OpenedAt (reusa parser robusto via objeto temporario)
+    $entryDate = Get-SnapshotDate -Snapshot ([PSCustomObject]@{ ts = $OpenedAt })
+    $tid = if ($OrderId) { $OrderId } else { "$Market-$($entryDate -replace '-','')" }
+
+    return [ordered]@{
+        ts          = (Get-Date).ToUniversalTime().ToString("o")
+        trade_id    = $tid
+        market      = $Market
+        direction   = $side
+        entry_date  = $entryDate
+        entry_price = $EntryPrice
+        exit_price  = $ExitPrice
+        pnl_pct     = $pnl
+        win         = ($pnl -gt 0)
+        close_reason= $CloseReason
+        regime      = $Regime
+        source      = $Source
+    }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Add-LearningOutcome (I/O) -- append idempotente em trade_outcomes.jsonl.
+# Idempotencia por trade_id (nao grava o mesmo trade 2x). Fail-safe: nunca lanca.
+# ─────────────────────────────────────────────────────────────────────────────
+function Add-LearningOutcome {
+    param(
+        [string]$OutcomePath,
+        [Parameter(Mandatory)] [string]$Market,
+        [Parameter(Mandatory)] [string]$Side,
+        [Parameter(Mandatory)] [double]$EntryPrice,
+        [Parameter(Mandatory)] [double]$ExitPrice,
+        [Parameter(Mandatory)] [string]$OpenedAt,
+        [string]$CloseReason = "manual",
+        [string]$OrderId     = "",
+        [string]$Regime      = "UNKNOWN",
+        [string]$Source      = "regime"
+    )
+    try {
+        if (-not $OutcomePath) {
+            $base = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path $PSScriptRoot ".." "journal" }
+            $OutcomePath = Join-Path $base "trade_outcomes.jsonl"
+        }
+        $rec = New-LearningOutcome -Market $Market -Side $Side -EntryPrice $EntryPrice `
+            -ExitPrice $ExitPrice -OpenedAt $OpenedAt -CloseReason $CloseReason `
+            -OrderId $OrderId -Regime $Regime -Source $Source
+
+        # Idempotencia: pula se trade_id ja existe no arquivo
+        if (Test-Path $OutcomePath) {
+            $existing = Read-JsonLines -Path $OutcomePath
+            foreach ($e in $existing) {
+                if ($e -and $e.PSObject.Properties['trade_id'] -and "$($e.trade_id)" -eq "$($rec.trade_id)") {
+                    return $false
+                }
+            }
+        }
+        $dir = Split-Path -Parent $OutcomePath
+        if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+        Add-Content -Path $OutcomePath -Value ($rec | ConvertTo-Json -Compress -Depth 5) -Encoding UTF8
+        return $true
+    } catch {
+        Write-Host "  [LEARNING-OUTCOME] falha ao gravar: $_" -ForegroundColor Yellow
+        return $false
+    }
+}
+
 function Read-JsonLines {
     param([string]$Path)
     if (-not $Path -or -not (Test-Path $Path)) { return @() }

@@ -229,7 +229,43 @@ function Invoke-GemCycle-Once {
         }
 
         Write-GemLog "CYCLE" "Iniciando GemScan (mode=$(if ($DryRun) {'DRY'} else {'LIVE'}))"
-        $gems = @(Invoke-GemScan -TopN 5)
+
+        # 2026-06-15: Read signal_triggers from scan_master + append to gem_loop results
+        $triggerGems = @()
+        $triggerFile = Join-Path $global:JOURNAL_DIR "signal_triggers.jsonl"
+        if (Test-Path $triggerFile) {
+            try {
+                $now = Get-Date
+                $lines = @(Get-Content $triggerFile -ErrorAction SilentlyContinue)
+                foreach ($line in $lines) {
+                    if (-not $line) { continue }
+                    $sig = $line | ConvertFrom-Json -ErrorAction SilentlyContinue
+                    if (-not $sig) { continue }
+
+                    # Filtro: pending + nao expirado
+                    if ($sig.status -ne "pending") { continue }
+                    $expTime = if ($sig.expires_at) { [datetime]$sig.expires_at } else { $now }
+                    if ($now -gt $expTime) { continue }
+
+                    # Converter em gem compatível
+                    $gem = @{
+                        market = $sig.market
+                        score = [int]($sig.conviction ?? 50)
+                        mode = "TRIGGER"
+                        signal = $sig.signal
+                        direction = $sig.direction
+                    }
+                    $triggerGems += $gem
+                    Write-GemLog "TRIGGER" "$($sig.market) signal=$($sig.signal) conviction=$($sig.conviction)"
+                }
+            } catch {
+                Write-GemLog "WARN" "signal_triggers read failed (non-critical): $($_.Exception.Message)"
+            }
+        }
+
+        # Append Invoke-GemScan results
+        $gemsFromScan = @(Invoke-GemScan -TopN 5)
+        $gems = @($triggerGems) + @($gemsFromScan)
         # R4 fix 2026-05-21: cache check ANTES do log "encontrados" + Invoke-GemExecute.
         # Resolve PEAQ/PROVE re-detection spam.
         if (Get-Command Test-GemRecentlyRejected -ErrorAction SilentlyContinue -and $gems.Count -gt 0) {
@@ -258,8 +294,48 @@ function Invoke-GemCycle-Once {
                 $r = Invoke-GemExecute -Gem $g -DryRun:$DryRun
                 if ($r.blocked) {
                     Write-GemLog "BLOCKED" "$mkt -- $($r.blocked_by -join '; ')"
+                    # Mark trigger as skipped if from signal_triggers
+                    if ($g.mode -eq "TRIGGER") {
+                        try {
+                            $triggerFile = Join-Path $global:JOURNAL_DIR "signal_triggers.jsonl"
+                            if (Test-Path $triggerFile) {
+                                $lines = @(Get-Content $triggerFile -ErrorAction SilentlyContinue)
+                                $updated = @()
+                                foreach ($line in $lines) {
+                                    if (-not $line) { continue }
+                                    $sig = $line | ConvertFrom-Json -ErrorAction SilentlyContinue
+                                    if ($sig.market -eq $mkt) {
+                                        $sig.status = "skipped"
+                                        $sig.notes = "gem_safety_blocked"
+                                    }
+                                    $updated += ($sig | ConvertTo-Json -Compress)
+                                }
+                                $updated | Set-Content $triggerFile -Encoding UTF8 -ErrorAction SilentlyContinue
+                            }
+                        } catch { }
+                    }
                 } elseif ($r.order_id) {
                     Write-GemLog "EXEC" "$mkt order=$($r.order_id) qty=$($r.qty)"
+                    # Mark trigger as executed
+                    if ($g.mode -eq "TRIGGER") {
+                        try {
+                            $triggerFile = Join-Path $global:JOURNAL_DIR "signal_triggers.jsonl"
+                            if (Test-Path $triggerFile) {
+                                $lines = @(Get-Content $triggerFile -ErrorAction SilentlyContinue)
+                                $updated = @()
+                                foreach ($line in $lines) {
+                                    if (-not $line) { continue }
+                                    $sig = $line | ConvertFrom-Json -ErrorAction SilentlyContinue
+                                    if ($sig.market -eq $mkt) {
+                                        $sig.status = "processed"
+                                        $sig.notes = "gem_executor_executed"
+                                    }
+                                    $updated += ($sig | ConvertTo-Json -Compress)
+                                }
+                                $updated | Set-Content $triggerFile -Encoding UTF8 -ErrorAction SilentlyContinue
+                            }
+                        } catch { }
+                    }
                     # Pyramid exit mock: register intention if score >= 80 (high conviction)
                     if ($score -ge 80 -and (Get-Command Invoke-PyramidExit -ErrorAction SilentlyContinue)) {
                         try {
