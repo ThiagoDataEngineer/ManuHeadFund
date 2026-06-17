@@ -254,6 +254,7 @@ function Invoke-GemCycle-Once {
                         mode = "TRIGGER"
                         signal = $sig.signal
                         direction = $sig.direction
+                        sizing = @{sizing_pct = 0.02}  # 2% default para triggers
                     }
                     $triggerGems += $gem
                     Write-GemLog "TRIGGER" "$($sig.market) signal=$($sig.signal) conviction=$($sig.conviction)"
