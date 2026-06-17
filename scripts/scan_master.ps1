@@ -98,6 +98,10 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 . (Join-Path $agentsDir "lib_gem_safety.ps1")
 . (Join-Path $agentsDir "lib_gem_auto_approve.ps1")
 . (Join-Path $agentsDir "gem_agent.ps1")
+
+# 2026-06-17: Feedback loop calibration (auto-adjust thresholds based on outcomes)
+. (Join-Path $agentsDir "lib_feedback_calibrator.ps1")
+. (Join-Path $agentsDir "lib_sizing_dynamics.ps1")
 . (Join-Path $agentsDir "gem_executor.ps1")
 
 # V6.5 Cycle Indicators (Pi Cycle / 200WMA / ATH-DD / NUPL proxy)
@@ -1471,6 +1475,36 @@ do {
                 }
             }
         } catch { Write-MasterLog "LEARNING erro: $_" "WARN" }
+    }
+
+    # 2026-06-17: FEEDBACK CALIBRATION -- a cada 6 ciclos, calibra sizing + thresholds
+    if ($iteration % 6 -eq 1 -and (Get-Command Get-OutcomesStats -ErrorAction SilentlyContinue)) {
+        try {
+            $outPath = Join-Path $global:JOURNAL_DIR "trade_outcomes.jsonl"
+            $stats = Get-OutcomesStats -OutcomesFile $outPath -Days 7
+
+            if ($stats -and $stats.trades -ge 5) {
+                # Parametros atuais (salvos anteriormente ou defaults)
+                $currentParams = @{
+                    THRESHOLD_ENTRADA   = 70
+                    STOP_LOSS_PCT       = 2.0
+                    TARGET_PROFIT_PCT   = 10.0
+                    SHORT_RATIO         = 0.80
+                }
+
+                $calib = Get-CalibratedParams -Stats $stats -CurrentParams $currentParams
+
+                # Persiste parametros calibrados
+                $calibPath = Join-Path $global:JOURNAL_DIR "calibration_params_live.json"
+                $calib.calibrated | ConvertTo-Json | Set-Content $calibPath -Encoding UTF8 -Force
+
+                # Log das mudanças
+                if ($calib.changes.Count -gt 0) {
+                    $changeMsg = @($calib.changes | ForEach-Object { "$($_.param): $($_.old)→$($_.new)" }) -join " | "
+                    Write-MasterLog "CALIBRATION: $changeMsg" "GEM"
+                }
+            }
+        } catch { Write-MasterLog "CALIBRATION erro: $_" "WARN" }
     }
 
     if (-not $global:MASTER_PAUSED) {

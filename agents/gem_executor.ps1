@@ -69,6 +69,10 @@ if (Test-Path $__posManagementPath) { . $__posManagementPath }
 $__riskManagerPath = Join-Path $PSScriptRoot "lib_position_risk_manager.ps1"
 if (Test-Path $__riskManagerPath) { . $__riskManagerPath }
 
+# 2026-06-17: Dynamic sizing based on capital + regime (feedback loop)
+$__sizingDynamicsPath = Join-Path $PSScriptRoot "lib_sizing_dynamics.ps1"
+if (Test-Path $__sizingDynamicsPath) { . $__sizingDynamicsPath }
+
 # 2026-05-29: Order validation (retry+fallback SL/TP) + Position protection (garante TP/SL reais).
 # Causa raiz corrigida: SL/TP embutido em ordem MARKET nao aplica confiavel na CoinEx V2.
 # Solucao: aplicar SL/TP via set-position-* APOS fill + validar + retry.
@@ -394,16 +398,44 @@ function Invoke-GemExecute {
     $price = [double]$ticker.data[0].last
 
     # ── Sizing (calculo de usd_size, qty -- precede gates) ───────────────────
-    # 2026-05-19 PM: usa Get-ExecutorSize (Kelly-aware via $global:USE_KELLY_SIZING flag).
-    # Flag OFF (default) = legacy capital * sizing_pct. Flag ON = Kelly-fractional adaptive.
-    if (Get-Command Get-ExecutorSize -ErrorAction SilentlyContinue) {
-        $szResolved = Get-ExecutorSize -Market $mkt -Mode "GEM" -Capital $capital -BasePct $sz.sizing_pct
-        $usd_size = [double]$szResolved.size_usd
-        if ($szResolved.method -eq "kelly_adaptive") {
-            Write-Host "  [SIZING] Kelly adaptive: f_used=$($szResolved.f_used) win_prob=$($szResolved.win_prob) (n=$($szResolved.n_trades))" -ForegroundColor DarkCyan
+    # 2026-06-17: Dynamic sizing via feedback loop (regime-aware allocation + capital-based)
+    $usd_size = $null
+    $sizingMethod = "legacy"
+
+    try {
+        if (Get-Command Get-DynamicCapitalAllocation -ErrorAction SilentlyContinue) {
+            $regime = $global:MARKET_REGIME ?? "BEAR_WEAK"
+            $spotCap = CoinEx-GetSpotCapitalUSDT
+            $futuresCap = CoinEx-GetFuturesCapitalUSDT
+            $alloc = Get-DynamicCapitalAllocation -SpotUsdt $spotCap -FuturesUsdt $futuresCap -Regime $regime
+
+            if ($alloc) {
+                $allocForTrade = if ($hasFutures) { $alloc.short_alloc } else { $alloc.long_alloc }
+                $dynamicSize = Get-SizePerTrade -AllocatedCapital $allocForTrade -MaxConcurrentTrades 5 -StopLossPct 0.02
+
+                if ($dynamicSize -gt 0) {
+                    $usd_size = $dynamicSize
+                    $sizingMethod = "dynamic_feedback_$regime"
+                }
+            }
         }
-    } else {
-        $usd_size = [math]::Round($capital * $sz.sizing_pct, 2)
+    } catch {
+        Write-Host "  [SIZING] Dynamic falhou: $_ -- fallback" -ForegroundColor Yellow
+    }
+
+    # Fallback: Kelly ou legacy
+    if (-not $usd_size -or $usd_size -le 0) {
+        if (Get-Command Get-ExecutorSize -ErrorAction SilentlyContinue) {
+            $szResolved = Get-ExecutorSize -Market $mkt -Mode "GEM" -Capital $capital -BasePct $sz.sizing_pct
+            $usd_size = [double]$szResolved.size_usd
+            $sizingMethod = $szResolved.method ?? "kelly_adaptive"
+            if ($szResolved.method -eq "kelly_adaptive") {
+                Write-Host "  [SIZING] Kelly adaptive: f_used=$($szResolved.f_used) win_prob=$($szResolved.win_prob) (n=$($szResolved.n_trades))" -ForegroundColor DarkCyan
+            }
+        } else {
+            $usd_size = [math]::Round($capital * $sz.sizing_pct, 2)
+            $sizingMethod = "legacy_pct"
+        }
     }
     $qty         = [math]::Round($usd_size / $price, 6)
     $spike_pct   = $vd.pct_change_today

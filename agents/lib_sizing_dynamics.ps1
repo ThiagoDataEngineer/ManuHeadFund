@@ -69,8 +69,4 @@ function Test-SizingValidation {
     @{ valid = $true; size_pct = [math]::Round($singlePct, 2) }
 }
 
-Export-ModuleMember -Function @(
-    'Get-DynamicCapitalAllocation'
-    'Get-SizePerTrade'
-    'Test-SizingValidation'
-)
+# Export-ModuleMember nao necessario em dot-source; comentado para compatibilidade Pester

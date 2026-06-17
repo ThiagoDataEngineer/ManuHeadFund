@@ -129,8 +129,4 @@ function Write-CalibrationReport {
     $report | ConvertTo-Json | Add-Content $OutputFile
 }
 
-Export-ModuleMember -Function @(
-    'Get-OutcomesStats'
-    'Get-CalibratedParams'
-    'Write-CalibrationReport'
-)
+# Export-ModuleMember nao necessario em dot-source; comentado para compatibilidade Pester

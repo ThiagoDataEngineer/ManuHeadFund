@@ -104,8 +104,4 @@ function Get-TrailingStatus {
     } catch { @() }
 }
 
-Export-ModuleMember -Function @(
-    'Update-TrailingIfNeeded'
-    'Activate-AllOpenTrailing'
-    'Get-TrailingStatus'
-)
+# Export-ModuleMember nao necessario em dot-source; comentado para compatibilidade Pester
