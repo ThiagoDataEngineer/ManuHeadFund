@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ManuHeadFund — Trading Control</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+            background: #0f0f0f;
+            color: #fafafa;
+            line-height: 1.6;
+        }
+
+        header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            padding: 2rem 2rem;
+            border-bottom: 1px solid #333;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        h1 {
+            font-size: 1.5rem;
+            font-weight: 600;
+            letter-spacing: -0.5px;
+        }
+
+        .status-indicator {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            font-size: 0.9rem;
+        }
+
+        .dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .dot.online { background: #10b981; }
+        .dot.warning { background: #f59e0b; }
+        .dot.offline { background: #ef4444; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 2rem;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .card {
+            background: #1a1a1a;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: #444;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+
+        .card-title {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.75rem;
+        }
+
+        .card-value {
+            font-size: 2rem;
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+
+        .card-subtitle {
+            font-size: 0.875rem;
+            color: #666;
+        }
+
+        .metric-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0.5rem 0;
+        }
+
+        .label { color: #888; font-size: 0.875rem; }
+        .value { font-weight: 600; }
+
+        .green { color: #10b981; }
+        .red { color: #ef4444; }
+        .blue { color: #3b82f6; }
+        .yellow { color: #f59e0b; }
+
+        .btn {
+            padding: 0.75rem 1.25rem;
+            border: 1px solid #444;
+            border-radius: 6px;
+            background: #1a1a1a;
+            color: #fff;
+            cursor: pointer;
+            font-weight: 500;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+            margin-top: 1rem;
+        }
+
+        .btn:hover {
+            background: #333;
+            border-color: #555;
+        }
+
+        .btn-primary {
+            background: #3b82f6;
+            border-color: #3b82f6;
+        }
+
+        .btn-primary:hover {
+            background: #2563eb;
+            border-color: #2563eb;
+        }
+
+        .btn-danger {
+            background: #ef4444;
+            border-color: #ef4444;
+        }
+
+        .btn-danger:hover {
+            background: #dc2626;
+            border-color: #dc2626;
+        }
+
+        .list {
+            list-style: none;
+            margin-top: 1rem;
+        }
+
+        .list-item {
+            padding: 0.75rem 0;
+            border-bottom: 1px solid #2a2a2a;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.875rem;
+        }
+
+        .list-item:last-child {
+            border-bottom: none;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 0.25rem 0.5rem;
+            border-radius: 3px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+        }
+
+        .badge.success { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+        .badge.warning { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+        .badge.error { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+        .badge.info { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+
+        .chart-container {
+            margin-top: 1rem;
+            background: #0a0a0a;
+            border-radius: 6px;
+            padding: 1rem;
+            height: 200px;
+            display: flex;
+            align-items: flex-end;
+            gap: 0.5rem;
+        }
+
+        .bar {
+            flex: 1;
+            background: linear-gradient(180deg, #3b82f6 0%, #1e40af 100%);
+            border-radius: 2px;
+            opacity: 0.7;
+            min-height: 10%;
+        }
+
+        .bar.positive { background: linear-gradient(180deg, #10b981 0%, #047857 100%); }
+        .bar.negative { background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%); }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            color: #666;
+            font-size: 0.875rem;
+            border-top: 1px solid #333;
+        }
+
+        @media (max-width: 768px) {
+            .grid { grid-template-columns: 1fr; }
+            h1 { font-size: 1.25rem; }
+            .card-value { font-size: 1.5rem; }
+            header { flex-direction: column; gap: 1rem; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div>
+            <h1>🤖 ManuHeadFund</h1>
+            <p style="color: #999; font-size: 0.875rem; margin-top: 0.25rem;">Automated Trading Controller</p>
+        </div>
+        <div class="status-indicator">
+            <div class="dot online"></div>
+            <span id="status">ONLINE</span>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- KEY METRICS -->
+        <div class="grid">
+            <div class="card">
+                <div class="card-title">Portfolio Value</div>
+                <div class="card-value">$2,454.62</div>
+                <div class="card-subtitle">Capital atual em SPOT+FUTURES</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Win Rate</div>
+                <div class="card-value green">33%</div>
+                <div class="card-subtitle">4/12 trades com lucro</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Open Positions</div>
+                <div class="card-value blue">1</div>
+                <div class="card-subtitle">HYPEUSDT +0.84% | TP: +31.8%</div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">Learning Progress</div>
+                <div class="card-value">1,334</div>
+                <div class="card-subtitle">Sinais analisados | 12 outcomes</div>
+            </div>
+        </div>
+
+        <!-- ACTIVE TRADES TABLE -->
+        <div class="card">
+            <div class="card-title">Posições Abertas</div>
+            <table style="width: 100%; border-collapse: collapse;">
+                <tr style="border-bottom: 1px solid #333;">
+                    <th style="text-align: left; padding: 0.75rem; color: #999; font-weight: 600; font-size: 0.875rem;">Par</th>
+                    <th style="text-align: left; padding: 0.75rem; color: #999; font-weight: 600; font-size: 0.875rem;">Entrada</th>
+                    <th style="text-align: left; padding: 0.75rem; color: #999; font-weight: 600; font-size: 0.875rem;">Atual</th>
+                    <th style="text-align: left; padding: 0.75rem; color: #999; font-weight: 600; font-size: 0.875rem;">P&L</th>
+                    <th style="text-align: left; padding: 0.75rem; color: #999; font-weight: 600; font-size: 0.875rem;">TP / SL</th>
+                    <th style="text-align: center; padding: 0.75rem; color: #999; font-weight: 600; font-size: 0.875rem;">Ação</th>
+                </tr>
+                <tr style="border-bottom: 1px solid #2a2a2a;">
+                    <td style="padding: 0.75rem; font-weight: 600;">HYPEUSDT</td>
+                    <td style="padding: 0.75rem; color: #888;">$74.63</td>
+                    <td style="padding: 0.75rem; color: #888;">$75.28</td>
+                    <td style="padding: 0.75rem;"><span class="green">+0.84%</span></td>
+                    <td style="padding: 0.75rem; color: #666;">98.53 / 68.67</td>
+                    <td style="padding: 0.75rem; text-align: center;">
+                        <button class="btn" style="padding: 0.5rem 0.75rem; font-size: 0.8rem;">Fechar</button>
+                    </td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- STATS & ACTIONS -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-top: 1.5rem;">
+            <div class="card">
+                <div class="card-title">Sinais Hoje</div>
+                <ul class="list">
+                    <li class="list-item">
+                        <span>Detectados (GemScan)</span>
+                        <span class="badge info">22</span>
+                    </li>
+                    <li class="list-item">
+                        <span>Aprovados (Tori)</span>
+                        <span class="badge success">2</span>
+                    </li>
+                    <li class="list-item">
+                        <span>Bloqueados (gates)</span>
+                        <span class="badge warning">18</span>
+                    </li>
+                    <li class="list-item">
+                        <span>Executados</span>
+                        <span class="badge error">0</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="card">
+                <div class="card-title">System Health</div>
+                <ul class="list">
+                    <li class="list-item">
+                        <span>GemLoop</span>
+                        <span class="badge success">ONLINE</span>
+                    </li>
+                    <li class="list-item">
+                        <span>Telegram Filter</span>
+                        <span class="badge success">22/22 TDD</span>
+                    </li>
+                    <li class="list-item">
+                        <span>Learning Engine</span>
+                        <span class="badge success">ATIVO</span>
+                    </li>
+                    <li class="list-item">
+                        <span>SHORT Signals</span>
+                        <span class="badge success">ENABLED</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- QUICK ACTIONS -->
+        <div class="card" style="margin-top: 1.5rem;">
+            <div class="card-title">Controles Rápidos</div>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 1rem; margin-top: 1rem;">
+                <button class="btn btn-primary">▶️ Resume</button>
+                <button class="btn btn-danger">⏸️ Halt</button>
+                <button class="btn btn-primary">🔄 Restart Daemon</button>
+                <button class="btn btn-primary">📊 View Logs</button>
+                <button class="btn btn-primary">🎯 Force Rebalance</button>
+                <button class="btn btn-danger">🚨 Circuit Breaker</button>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        <p>Last update: <span id="timestamp">2026-06-17 14:15 BRT</span> | ManuHeadFund v6 — Alpha Trading</p>
+    </footer>
+
+    <script>
+        // Real-time status update (opcional — integrar com API futura)
+        setInterval(() => {
+            document.getElementById('timestamp').textContent =
+                new Date().toLocaleString('pt-BR', {
+                    timeZone: 'America/Sao_Paulo',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                }) + ' BRT';
+        }, 5000);
+
+        // Button handlers (placeholder)
+        document.querySelectorAll('.btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const action = e.target.textContent.trim();
+                console.log(`Ação: ${action}`);
+                // Integrar com API futura
+            });
+        });
+    </script>
+</body>
+</html>
