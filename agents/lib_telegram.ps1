@@ -253,64 +253,33 @@ function Send-TelegramAlert {
     if (-not $Token)          { return $false }
     if (-not $ChatId)         { return $false }
 
-    # ── 2026-06-17: FILTRO INTELIGENTE DE RUÍDO ────────────────────────────────
-    # Silencia updates recorrentes de P&L (gerados a cada ciclo pelo position_watcher
-    # e trailing). Deixa passar apenas eventos acionáveis. Log continua normalmente.
+    # ── 2026-06-17: FILTRO RADICAL — APENAS 6 MENSAGENS CRÍTICAS ─────────────────
+    # Usuário recebe APENAS:
+    # 1. ENTRADA (trade aberto)
+    # 2. FECHAMENTO (trade fechado)
+    # 3. STOP HIT (SL/TP ativado)
+    # 4. ERROR (falha crítica)
+    # 5. CIRCUIT BREAKER (limite de perda)
+    # 6. REGIME CHANGE (shift de mercado)
+    # Tudo mais = BLOQUEADO. Log continua.
+
     $msg = $Message
-    $isNoise = (
-        # Updates P&L de ciclo (position_watcher, trailing_adaptive emitem a cada 10-30s)
-        ($msg -match "PnL=[-\d\.]+%? \([\d\.]+ USD\)") -or
-        ($msg -match "\[SPOT\].*Price=.*PnL=") -or
-        ($msg -match "\[WATCH\].*Price=.*PnL=") -or
-        ($msg -match "FALLBACK.*mark=0.*pnl") -or
-        ($msg -match "trailing.*Price=.*PnL=") -or
 
-        # Heartbeats e status periódicos (scan_master, gem_loop, daemons)
-        ($msg -match "Heartbeat|heartbeat|🤖.*rodando|ciclos executados|daemon.*alive|ciclo.*completo") -or
-
-        # Updates de scan sem gems (0 gems encontrados)
-        ($msg -match "GemScan.*0 gem|0 gem.*encontrado") -or
-
-        # Updates de monitoramento passivo (não acionáveis)
-        ($msg -match "monitor|monitorando|observando|watch.*price|whale.*detectado|funding.*rate") -or
-
-        # Logs de recuperação de erro (auto-fix, nao requer acao manual)
-        ($msg -match "auto-recover|self-recover|recovered|limpou cache|recarregou|reinicializou") -or
-
-        # Updates de posição sem mudança significativa (<2% P&L, sem stop/TP)
-        ($msg -match "Position.*update|atualizado|posição.*ativa|trailing.*ajust" -and -not ($msg -match "STOP|TP|CIRCUIT|REGIME")) -or
-
-        # Bloqueios de gems (ruído operacional: sizing, trendline, recent_decision, etc)
-        ($msg -match "\[BLOCKED\].*sizing|trendline|recent_decision|spike_|scoring_|gate_") -or
-        ($msg -match "GEM.*bloqueado|BLOQUEADO") -or
-
-        # Info logs periódicos (dormindo, ciclo iniciado)
-        ($msg -match "\[INFO\].*Dormindo|Ciclo iniciado|ciclo.*finalizado") -or
-
-        # Logs técnicos sem ação (loading libs, cache, etc)
-        ($msg -match "carregando|loading|cache|cleared|flushed|initialized")
-    )
-
+    # WHITELIST RADICAL: SÓ DEIXA PASSAR CRÍTICOS
     $isActionable = (
-        # Trades abertos/fechados
-        ($msg -match "ENTRADA|EXEC|executad|ordem.*aberta|GEM.*aberta") -or
-        ($msg -match "FECHAD|stop.*ativado|SL ATIVADO|MAX_DAYS") -or
-        ($msg -match "STOP.*HIT|stop.*hit|SL.*hit") -or
-        # Alertas de risco próximos
-        ($msg -match "PROXIMO DO SL|PROXIMO DO TP|perto do TP|perto do SL") -or
-        ($msg -match "CIRCUIT|circuit.breaker|DAILY LOSS") -or
-        # Aprovação humana necessária
-        ($msg -match "APROVACAO|aprovacao|aprovação|approve|GEM AUTO-APPROVED|human.approval") -or
-        # Erros e auto-recovery
-        ($msg -match "ERRO|ERROR|falhou|BLOQUEADO|UNSAFE|AVISO.*manual|restart") -or
-        # Trail phase change (importante: mudou de fase = evento)
-        ($msg -match "fase.*->|phase.*->|\bBE\b.*lock|\block.*profit") -or
-        # Regime changes
-        ($msg -match "REGIME|regime.*mudou|BEAR.*STRONG|BULL.*STRONG")
+        ($msg -match "🎯.*ENTRADA|EXECUTAR.*trade|ordem.*aberta") -or
+        ($msg -match "❌.*FECHAD|TRADE.*FECHADO|posição.*fechada|STOP.*HIT|SL.*ativado|TP.*atingido") -or
+        ($msg -match "🛑.*CIRCUIT|CIRCUIT.*BREAKER|DAILY.*LOSS|perda.*limite") -or
+        ($msg -match "❌.*ERROR|erro.*crítico|FALHA.*crítica|ERRO.*sistema") -or
+        ($msg -match "📊.*REGIME|regime.*mudou|BULL.*BEAR|BEAR.*BULL") -or
+        ($msg -match "⚠️.*CRÍTICO|CRÍTICA.*ação")
     )
 
-    if ($isNoise -and -not $isActionable) {
-        return $true  # silencia mas indica "sucesso" para não alarmar o caller
+    # BLACKLIST RADICAL: TUDO MAIS É RUÍDO
+    $isNoise = (-not $isActionable)  # Se não é acionável, é ruído (BLOQUEADO)
+
+    if ($isNoise) {
+        return $true  # silencia mas retorna "sucesso" (não alarma caller)
     }
     # ──────────────────────────────────────────────────────────────────────────
 
