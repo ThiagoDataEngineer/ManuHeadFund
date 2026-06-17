@@ -88,6 +88,8 @@ try {
     . (Join-Path $agentsDir "lib_gem_safety.ps1") -ErrorAction SilentlyContinue
     # B9 fix: TTL cache pra GEM re-veto loop
     . (Join-Path $agentsDir "lib_gem_decision_cache.ps1") -ErrorAction SilentlyContinue
+    # 2026-06-17: SHORT gates (Resolve-BidirectionalDirection precisa delas)
+    . (Join-Path $agentsDir "lib_bidirectional_gates.ps1") -ErrorAction SilentlyContinue
 } catch {
     Write-GemLog "WARN" "Falha ao carregar guards: $($_.Exception.Message)"
 }
