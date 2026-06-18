@@ -59,6 +59,9 @@ try {
     . (Join-Path $agentsDir "lib_coinex_position_management.ps1")
     . (Join-Path $agentsDir "lib_order_validation.ps1")
     . (Join-Path $agentsDir "lib_position_protection.ps1")
+    # 2026-06-18 Fase 1 online: peak update fino (+2.5% breakeven) + executor de SL
+    . (Join-Path $agentsDir "lib_trailing_peak_update.ps1")
+    . (Join-Path $agentsDir "lib_trailing_sync.ps1")
     
     Write-CrossPlatformLog "Libraries loaded successfully" -LogFile "trailing_stop_monitor.log"
 } catch {
@@ -159,9 +162,35 @@ try {
         }
     }
     
+    # 2.5 PEAK UPDATE FINO + EXECUTOR DE SL (2026-06-18 Fase 1 online)
+    # Atualiza peak/phase com lock fino (+2.5% breakeven) e EMPURRA a SL pra corretora.
+    # Sync-TrailingToExchange tem trava propria: nunca empurra SL que ja dispararia.
+    # Aditivo e idempotente -- nao conflita com Update-AllTrailingStops acima.
+    Write-CrossPlatformLog "--- PEAK UPDATE + SL SYNC ---" -LogFile "trailing_stop_monitor.log"
+    if ((Get-Command Update-TrailingPeakLive -ErrorAction SilentlyContinue) -and (Get-Command CoinEx-GetPendingPositions -ErrorAction SilentlyContinue)) {
+        try {
+            foreach ($p in @(CoinEx-GetPendingPositions)) {
+                $mk = "$($p.market)"; $mark = [double]$p.mark_price
+                if ($mark -le 0) {
+                    try { $ft = Invoke-RestMethod "https://api.coinex.com/v2/futures/ticker?market=$mk" -TimeoutSec 8 -EA Stop; if ($ft.data) { $mark = [double]$ft.data[0].last } } catch {}
+                }
+                if ($mark -gt 0) { Update-TrailingPeakLive -Market $mk -CurrentPrice $mark | Out-Null }
+            }
+        } catch { Write-CrossPlatformLog "peak update: $_" -Level WARN -LogFile "trailing_stop_monitor.log" }
+    }
+    if (Get-Command Sync-TrailingToExchange -ErrorAction SilentlyContinue) {
+        try {
+            $sync = Sync-TrailingToExchange
+            foreach ($s in @($sync)) {
+                if ($s.pushed) { Write-CrossPlatformLog "  SL_PUSH $($s.market) [$($s.side)]: $($s.exch_sl) -> $($s.journal_sl)" -LogFile "trailing_stop_monitor.log" }
+                elseif ($s.should_push -and $s.error) { Write-CrossPlatformLog "  SL_PUSH FALHOU $($s.market): $($s.error)" -Level WARN -LogFile "trailing_stop_monitor.log" }
+            }
+        } catch { Write-CrossPlatformLog "sync SL: $_" -Level WARN -LogFile "trailing_stop_monitor.log" }
+    }
+
     # 3. VALIDATION
     Write-CrossPlatformLog "--- VALIDATION ---" -LogFile "trailing_stop_monitor.log"
-    
+
     $allPositions = @(CoinEx-GetPendingPositions)
     $positionsWithoutStop = @()
     $positionsWithoutTP = @()
