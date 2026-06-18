@@ -33,6 +33,13 @@ $gemLog       = Join-Path $journalDir "gem_loop.log"
 # Join-Path aninhado (cross-platform: backslash literal quebrava no ubuntu).
 if (Test-Path (Join-Path $journalDir "CLOUD_DRY_RUN.flag")) { $DryRun = $true }
 
+# 2026-06-18 CUTOVER: trading e online (nuvem). Daemon LOOP local nao roda (evita
+# double-trade). A nuvem chama com -Once, que BYPASSA este gate. Reversivel: rm o flag.
+if ((Test-Path (Join-Path $journalDir "LOCAL_TRADING_DISABLED.flag")) -and -not $Once) {
+    Write-Host "[CUTOVER] gem_loop LOOP local desativado (trading online na nuvem). -Once bypassa."
+    exit 0
+}
+
 function Write-GemLog {
     param([string]$Level, [string]$Message)
     $ts = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")

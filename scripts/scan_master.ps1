@@ -52,6 +52,14 @@ $scriptDir = Split-Path $MyInvocation.MyCommand.Path -Parent
 $agentsDir = Join-Path $scriptDir "..\agents"
 $logDir    = Join-Path $scriptDir "..\logs"
 
+# 2026-06-18 CUTOVER: trading e online (nuvem). scan_master LOOP local nao roda
+# (evita double-trade com a nuvem). -Once bypassa. Reversivel: rm o flag.
+$__cutoverJournal = Join-Path (Split-Path $scriptDir -Parent) "journal"
+if ((Test-Path (Join-Path $__cutoverJournal "LOCAL_TRADING_DISABLED.flag")) -and -not $Once) {
+    Write-Host "[CUTOVER] scan_master LOOP local desativado (trading online na nuvem). -Once bypassa."
+    exit 0
+}
+
 if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Force | Out-Null }
 
 # Dot-source de tudo numa vez — evita re-importar no loop
