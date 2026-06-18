@@ -279,7 +279,7 @@ function Invoke-GemExecute {
     )
 
     $mkt = $Gem.market
-    $sz  = $Gem.sizing
+    $sizing_pct = $Gem.sizing_pct
     $vd  = $Gem.vol_data
 
     Write-Host ""
@@ -345,8 +345,8 @@ function Invoke-GemExecute {
         # B fix 2026-05-21: retornar PSCustomObject blocked com reason explicit pra caller
         return [PSCustomObject]@{ blocked = $true; blocked_by = @("score_below_min_$($Gem.score)_lt_$scoreMin"); market = $mkt }
     }
-    if (-not $sz -or $sz.sizing_pct -le 0) {
-        Write-Host "BLOQUEADO: sizing invalido" -ForegroundColor Red
+    if (-not $sizing_pct -or $sizing_pct -le 0) {
+        Write-Host "BLOQUEADO: sizing invalido (sizing_pct=$sizing_pct)" -ForegroundColor Red
         return [PSCustomObject]@{ blocked = $true; blocked_by = @("sizing_invalido"); market = $mkt }
     }
     if ($vd.spike_type -eq "BEARISH") {
@@ -435,14 +435,14 @@ function Invoke-GemExecute {
     # Fallback: Kelly ou legacy
     if (-not $usd_size -or $usd_size -le 0) {
         if (Get-Command Get-ExecutorSize -ErrorAction SilentlyContinue) {
-            $szResolved = Get-ExecutorSize -Market $mkt -Mode "GEM" -Capital $capital -BasePct $sz.sizing_pct
+            $szResolved = Get-ExecutorSize -Market $mkt -Mode "GEM" -Capital $capital -BasePct $sizing_pct
             $usd_size = [double]$szResolved.size_usd
             $sizingMethod = $szResolved.method ?? "kelly_adaptive"
             if ($szResolved.method -eq "kelly_adaptive") {
                 Write-Host "  [SIZING] Kelly adaptive: f_used=$($szResolved.f_used) win_prob=$($szResolved.win_prob) (n=$($szResolved.n_trades))" -ForegroundColor DarkCyan
             }
         } else {
-            $usd_size = [math]::Round($capital * $sz.sizing_pct, 2)
+            $usd_size = [math]::Round($capital * $sizing_pct, 2)
             $sizingMethod = "legacy_pct"
         }
     }
@@ -451,10 +451,10 @@ function Invoke-GemExecute {
 
     Write-Host "  Mercado    : $mkt [$($Gem.mode)] score=$($Gem.score) tipo=$marketType" -ForegroundColor White
     Write-Host "  Capital    : $capital USDT ($marketType real)" -ForegroundColor Gray
-    Write-Host "  Sizing     : $([math]::Round($sz.sizing_pct*100,3))% = $usd_size USDT" -ForegroundColor Yellow
+    Write-Host "  Sizing     : $([math]::Round($sizing_pct*100,3))% = $usd_size USDT" -ForegroundColor Yellow
     Write-Host "  Preco      : $price  Qtd: $qty" -ForegroundColor White
     Write-Host "  Vol spike  : $($vd.spike_ratio)x $($vd.spike_type) (+${spike_pct}%)" -ForegroundColor Gray
-    Write-Host "  Max dias   : $($sz.max_days)d" -ForegroundColor Gray
+    Write-Host "  Max dias   : $($Gem.max_days)d" -ForegroundColor Gray
 
     if ($marketType -eq "FUTURES") {
         Write-Host "  LEMBRETE: margem isolated deve estar configurada para $mkt" -ForegroundColor DarkYellow
@@ -645,10 +645,10 @@ function Invoke-GemExecute {
     # 2026-06-17 fix: gems TRIGGER tem sizing sem stop_pct/target_pct -> StopPct=0 lancava.
     # Resolve-StopTargetPct devolve fracoes validas (default R:R 1:5) se ausentes/invalidas.
     $__stp = if (Get-Command Resolve-StopTargetPct -ErrorAction SilentlyContinue) {
-        Resolve-StopTargetPct -Sizing $sz
+        Resolve-StopTargetPct -Sizing $Gem
     } else {
-        @{ stop_pct = (&{ if ([double]$sz.stop_pct -gt 0 -and [double]$sz.stop_pct -lt 1) { [double]$sz.stop_pct } else { 0.02 } });
-           target_pct = (&{ if ([double]$sz.target_pct -gt 0) { [double]$sz.target_pct } else { 0.10 } }) }
+        @{ stop_pct = (&{ if ([double]$Gem.stop_pct -gt 0 -and [double]$Gem.stop_pct -lt 1) { [double]$Gem.stop_pct } else { 0.02 } });
+           target_pct = (&{ if ([double]$Gem.target_pct -gt 0) { [double]$Gem.target_pct } else { 0.10 } }) }
     }
     try {
         $st = Calculate-StopTarget `
