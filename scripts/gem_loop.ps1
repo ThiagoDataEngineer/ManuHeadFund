@@ -273,11 +273,15 @@ function Invoke-GemCycle-Once {
         # Resolve PEAQ/PROVE re-detection spam.
         if (Get-Command Test-GemRecentlyRejected -ErrorAction SilentlyContinue -and $gems.Count -gt 0) {
             $cachePath = Join-Path $global:JOURNAL_DIR "gem_recent_decisions.json"
+            # 2026-06-17: com CONVICTION_GATE on, tori_skip/wait nao bloqueiam (re-avalia
+            # via ensemble no executor). conviction_low/sizing/etc continuam bloqueando.
+            $bypass = @()
+            if (Test-Path (Join-Path $global:JOURNAL_DIR "CONVICTION_GATE.flag")) { $bypass = @("tori_skip","tori_wait") }
             $filtered = @(); $skipped = @()
             foreach ($g in $gems) {
                 # 2026-06-03: Reduzido TTL de 60 para 5 minutos
                 # Tori agora FORÇA ENTRY, então gems rejeitados devem ser re-tentados rapidamente
-                if (Test-GemRecentlyRejected -Path $cachePath -Market $g.market -TtlMinutes 5) {
+                if (Test-GemRecentlyRejected -Path $cachePath -Market $g.market -TtlMinutes 5 -BypassReasons $bypass) {
                     $skipped += $g.market
                 } else { $filtered += $g }
             }

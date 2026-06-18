@@ -446,10 +446,13 @@ function Invoke-GemCycle {
         # so dentro de Invoke-GemExecute (apos log GemScan), gerando spam.
         if (Get-Command Test-GemRecentlyRejected -ErrorAction SilentlyContinue -and $gems.Count -gt 0) {
             $cachePath = Join-Path $global:JOURNAL_DIR "gem_recent_decisions.json"
+            # 2026-06-17: bypass tori_skip/wait com CONVICTION_GATE on (re-avalia via ensemble)
+            $bypass = @()
+            if (Test-Path (Join-Path $global:JOURNAL_DIR "CONVICTION_GATE.flag")) { $bypass = @("tori_skip","tori_wait") }
             $filtered = @()
             $skipCached = @()
             foreach ($g in $gems) {
-                if (Test-GemRecentlyRejected -Path $cachePath -Market $g.market -TtlMinutes 60) {
+                if (Test-GemRecentlyRejected -Path $cachePath -Market $g.market -TtlMinutes 60 -BypassReasons $bypass) {
                     $skipCached += $g.market
                 } else {
                     $filtered += $g

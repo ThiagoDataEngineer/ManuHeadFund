@@ -310,7 +310,10 @@ function Invoke-GemExecute {
     if (Get-Command Test-GemRecentlyRejected -ErrorAction SilentlyContinue) {
         $cachePath = Join-Path $global:JOURNAL_DIR "gem_recent_decisions.json"
         $skipReason = "score=$($Gem.score) mode=$($Gem.mode)"
-        if (Test-GemRecentlyRejected -Path $cachePath -Market $mkt -Reason $skipReason -TtlMinutes 60) {
+        # 2026-06-17: bypass tori_skip/wait com CONVICTION_GATE on (deixa re-chegar ao gate)
+        $__cacheBypass = @()
+        if (Test-Path (Join-Path $global:JOURNAL_DIR "CONVICTION_GATE.flag")) { $__cacheBypass = @("tori_skip","tori_wait") }
+        if (Test-GemRecentlyRejected -Path $cachePath -Market $mkt -Reason $skipReason -TtlMinutes 60 -BypassReasons $__cacheBypass) {
             Write-Host "SKIP CACHE: $mkt mesma condicao <60min (poupanca LLM)" -ForegroundColor DarkGray
             return [PSCustomObject]@{ blocked = $true; blocked_by = @("recent_decision_cache"); cache_hit = $true }
         }
@@ -575,11 +578,13 @@ function Invoke-GemExecute {
         # alta, o SKIP do Tori e vencido. FAIL-SAFE: so com CONVICTION_GATE.flag;
         # nunca overrida dados-ausentes; loga a decisao. Default OFF.
         $toriOverridden = $false
+        $convictionEvaluated = $false
         $__gateFlag = Join-Path $PSScriptRoot "..\journal\CONVICTION_GATE.flag"
         if ((Test-Path $__gateFlag) -and -not $isDataAbsent -and (Get-Command Resolve-ConvictionOverride -ErrorAction SilentlyContinue)) {
             try {
                 $convM = Get-MarketConviction -Market $mkt -Direction $direction -IsFutures $hasFutures
                 if ($convM) {
+                    $convictionEvaluated = $true
                     $ovr = Resolve-ConvictionOverride -ToriSignal $tori_signal -Conviction $convM.conviction -DataAbsent $false -FlagOn $true -Threshold 75
                     if ($ovr.allow) {
                         $toriOverridden = $true
@@ -599,10 +604,13 @@ function Invoke-GemExecute {
                 try { Send-TelegramAlert -Message "GEM bloqueado por Tori ($tori_signal): $mkt -- $tori_reason" | Out-Null } catch {}
             }
             # C fix 2026-05-21: TTL cache pra prevenir loop re-aprovacao em market sem dados.
-            # Sem isso, PROVE reaparece a cada cycle horario e user re-aprova inutilmente.
-            # TTL 24h pra dados ausentes (só muda com tempo); 1h pra Tori SKIP normal.
+            # 2026-06-17: se o gate de conviction RODOU e nao aprovou, cacheia
+            # "conviction_low" (NAO bypassed) -> nao re-avalia todo ciclo (evita loop).
+            # Senao mantem tori_skip (que e bypassed quando gate on -> re-avalia).
             if (Get-Command Add-GemRejection -ErrorAction SilentlyContinue) {
-                $cacheReason = if ($isDataAbsent) { "tori_data_absent" } else { "tori_$($tori_signal.ToLower())" }
+                $cacheReason = if ($isDataAbsent) { "tori_data_absent" }
+                               elseif ($convictionEvaluated) { "conviction_low_$($tori_signal.ToLower())" }
+                               else { "tori_$($tori_signal.ToLower())" }
                 try { Add-GemRejection -Path (Join-Path $global:JOURNAL_DIR "gem_recent_decisions.json") -Market $mkt -Reason $cacheReason } catch {}
             }
             return [PSCustomObject]@{ blocked = $true; blocked_by = @("tori_$($tori_signal.ToLower())_$tori_reason"); market = $mkt; tori_data_absent = $isDataAbsent }

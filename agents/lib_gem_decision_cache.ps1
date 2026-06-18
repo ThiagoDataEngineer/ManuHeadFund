@@ -82,16 +82,28 @@ function Test-GemRecentlyRejected {
         [Parameter(Mandatory)] [string] $Market,
         [string] $Reason = "",
         [int] $TtlMinutes = 60,
-        [switch] $MatchReason
+        [switch] $MatchReason,
+        [string[]] $BypassReasons = @()
     )
     if ($TtlMinutes -le 0) { return $false }
     $entries = @(_GemCache-Load -Path $Path)
     if ($entries.Count -eq 0) { return $false }
     $normReason = if ($Reason) { _GemCache-NormReason $Reason } else { "" }
+    # 2026-06-17: razoes a IGNORAR (re-avaliar). Ex.: tori_skip quando CONVICTION_GATE on
+    # -> o gem re-chega ao executor pro ensemble decidir override. Outras razoes
+    # (conviction_low, sizing, etc) AINDA bloqueiam (evita loop de re-avaliacao).
+    $bypassNorm = @($BypassReasons | ForEach-Object { _GemCache-NormReason $_ } | Where-Object { $_ })
     $cutoff = (Get-Date).ToUniversalTime().AddMinutes(-$TtlMinutes)
     foreach ($e in $entries) {
         if ($e.market -ne $Market) { continue }
         if ($MatchReason -and ((_GemCache-NormReason $e.reason) -ne $normReason)) { continue }
+        # Pula entradas cuja razao esta na lista de bypass (nao contam como bloqueio)
+        if ($bypassNorm.Count -gt 0) {
+            $eNorm = _GemCache-NormReason $e.reason
+            $isBypassed = $false
+            foreach ($b in $bypassNorm) { if ($eNorm -eq $b -or $eNorm -like "*$b*") { $isBypassed = $true; break } }
+            if ($isBypassed) { continue }
+        }
         try {
             $entryTs = [datetime]::Parse($e.ts, [System.Globalization.CultureInfo]::InvariantCulture).ToUniversalTime()
             if ($entryTs -ge $cutoff) { return $true }
