@@ -12,13 +12,73 @@
 # 2026-06-17. ASCII-only (PS 5.1 safe). Sem Export-ModuleMember (dot-source).
 
 function Get-ConvictionDefaultWeights {
-    @{
-        structure  = 0.20
-        btc_rs     = 0.25
-        volume     = 0.20
-        multitf    = 0.20
-        historical = 0.15
+    # 2026-06-17: pesos DIRECIONAIS. SHORT e LONG tem precursores diferentes:
+    #   LONG  = trend-following (multitf/volume/btc_rs pesam mais)
+    #   SHORT = mean-reversion de overextension (overextension/structure pesam mais)
+    #           dumps comecam esticados pra cima, nao em downtrend confirmado.
+    [CmdletBinding()]
+    param([string] $Direction = "LONG")
+
+    if ("$Direction".ToUpper() -eq "SHORT") {
+        return @{
+            overextension = 0.28
+            structure     = 0.18
+            btc_rs        = 0.15
+            volume        = 0.15
+            historical    = 0.12
+            multitf       = 0.12
+        }
     }
+    # LONG (default)
+    @{
+        multitf       = 0.22
+        btc_rs        = 0.22
+        volume        = 0.18
+        structure     = 0.15
+        historical    = 0.13
+        overextension = 0.10
+    }
+}
+
+function Get-OverextensionScore {
+    # Eixo Overextension (reversao a media). Dumps comecam ESTICADOS pra cima
+    # (overbought + longe da SMA); bounces comecam esticados pra baixo.
+    # SHORT: esticado UP = alto. LONG: esticado DOWN = alto. Pure.
+    [CmdletBinding()]
+    param(
+        [double[]] $Closes,
+        [string]   $Direction = "SHORT",
+        [int]      $SmaPeriod = 20
+    )
+
+    if ($null -eq $Closes -or $Closes.Count -lt ($SmaPeriod + 1)) { return 50 }
+
+    $window = $Closes[-$SmaPeriod..-1]
+    $sma = ($window | Measure-Object -Average).Average
+    if ($sma -le 0) { return 50 }
+    $cur = $Closes[-1]
+    $devPct = ($cur - $sma) / $sma * 100   # +acima / -abaixo da media
+
+    $rsi = if (Get-Command Get-RSI -ErrorAction SilentlyContinue) { Get-RSI -Closes $Closes -Period 14 } else { 50 }
+
+    $isShort = ("$Direction".ToUpper() -eq "SHORT")
+    $score = 50.0
+
+    if ($isShort) {
+        # quer esticado pra cima
+        if ($devPct -gt 0) { $score += [math]::Min($devPct, 15) / 15 * 30 }
+        if     ($rsi -ge 70) { $score += 20 }
+        elseif ($rsi -ge 60) { $score += 10 }
+    } else {
+        # LONG quer esticado pra baixo
+        if ($devPct -lt 0) { $score += [math]::Min(-$devPct, 15) / 15 * 30 }
+        if     ($rsi -le 30) { $score += 20 }
+        elseif ($rsi -le 40) { $score += 10 }
+    }
+
+    if ($score -gt 100) { $score = 100 }
+    if ($score -lt 0)   { $score = 0 }
+    [int][math]::Round($score, 0)
 }
 
 function Get-EntryConviction {
@@ -34,7 +94,7 @@ function Get-EntryConviction {
         return @{ conviction = 0.0; ready = $false; axes_used = @(); contributions = @{} }
     }
 
-    if (-not $Weights) { $Weights = Get-ConvictionDefaultWeights }
+    if (-not $Weights) { $Weights = Get-ConvictionDefaultWeights -Direction $Direction }
 
     $totalW = 0.0
     $weighted = 0.0
@@ -339,6 +399,11 @@ function Get-MarketConviction {
         if (Get-Command Get-VolumeConvictionScore -ErrorAction SilentlyContinue) {
             $vols = @($c1H | ForEach-Object { [double]$_.volume })
             $axes.volume = Get-VolumeConvictionScore -Volumes $vols
+        }
+        # Eixo Overextension (reversao a media) -- KEY pro SHORT (esticado pra cima)
+        if ((Get-Command Get-OverextensionScore -ErrorAction SilentlyContinue) -and $c1H.Count -ge 21) {
+            $clz = @($c1H | ForEach-Object { [double]$_.close })
+            $axes.overextension = Get-OverextensionScore -Closes $clz -Direction $Direction
         }
         # Eixo Estrutura (trendline/S-R real) -- usa highs/lows/closes do 4H
         if ((Get-Command Get-StructureFromCandles -ErrorAction SilentlyContinue) -and $c4H -and $c4H.Count -ge 5) {
