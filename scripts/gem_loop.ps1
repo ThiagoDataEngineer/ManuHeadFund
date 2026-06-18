@@ -25,11 +25,13 @@ param(
 $scriptRoot   = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot  = Split-Path -Parent $scriptRoot
 $agentsDir    = Join-Path $projectRoot "agents"
-$gemLog       = Join-Path $projectRoot "journal\gem_loop.log"
+$journalDir   = Join-Path $projectRoot "journal"
+$gemLog       = Join-Path $journalDir "gem_loop.log"
 
 # 2026-06-18 Fase 3 cloud: prova o stack na nuvem SEM disparar ordem real.
 # Enquanto CLOUD_DRY_RUN.flag existir, todo execute vira DryRun. Remover o flag = LIVE.
-if (Test-Path (Join-Path $projectRoot "journal\CLOUD_DRY_RUN.flag")) { $DryRun = $true }
+# Join-Path aninhado (cross-platform: backslash literal quebrava no ubuntu).
+if (Test-Path (Join-Path $journalDir "CLOUD_DRY_RUN.flag")) { $DryRun = $true }
 
 function Write-GemLog {
     param([string]$Level, [string]$Message)
@@ -45,7 +47,7 @@ function Write-GemLog {
 # o singleton ja toma lock stale automaticamente, entao -Force virou no-op aqui).
 $myPid = $PID
 $__singletonLib = Join-Path $agentsDir "lib_daemon_singleton.ps1"
-$__lockDir      = Join-Path $projectRoot "journal\daemon_locks"
+$__lockDir      = Join-Path $journalDir "daemon_locks"
 if (Test-Path $__singletonLib) {
     . $__singletonLib
     if (-not (Enter-DaemonSingleton -Name "gem_loop" -LockDir $__lockDir)) {
@@ -55,7 +57,7 @@ if (Test-Path $__singletonLib) {
 }
 
 # Verifica LIVE mode flag (mesmo flag do scan_master)
-$liveFlag = Join-Path $projectRoot "journal\LIVE_MODE_ENABLED.flag"
+$liveFlag = Join-Path $journalDir "LIVE_MODE_ENABLED.flag"
 $isLive = Test-Path $liveFlag
 $modeLabel = if ($isLive) { "LIVE" } else { "DRY" }
 
