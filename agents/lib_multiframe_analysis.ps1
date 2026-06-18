@@ -127,4 +127,47 @@ function Test-MultiTimeframeAlignment {
     return $aligned
 }
 
+# -----------------------------------------------------------------------------
+# Get-MultiTimeframeConviction -- Eixo 4 do ensemble: gradiente 0-100 (NAO binario)
+# 2026-06-17: o Test-MultiTimeframeAlignment acima retorna true/false (gate). Aqui
+# devolvemos um SCORE: quanto MAIS TFs alinham e mais forte, maior a conviccao.
+# 1D pesa mais (macro), 4H confirma, 1H da timing.
+# -----------------------------------------------------------------------------
+function Get-MultiTimeframeConviction {
+    param(
+        [string]$Trend1D,
+        [string]$Trend4H,
+        [string]$Trend1H,
+        [string]$Direction = "LONG"
+    )
+
+    # Fator por TF: quanto a tendencia favorece a direcao (0..1)
+    $factor = {
+        param($trend, $dir)
+        if ($dir -eq "SHORT") {
+            switch ($trend) {
+                "STRONG_DOWN" { 1.0 }
+                "DOWN"        { 0.7 }
+                "NEUTRAL"     { 0.3 }
+                default       { 0.0 }   # UP / STRONG_UP contra SHORT
+            }
+        } else {
+            switch ($trend) {
+                "STRONG_UP" { 1.0 }
+                "UP"        { 0.7 }
+                "NEUTRAL"   { 0.3 }
+                default     { 0.0 }     # DOWN / STRONG_DOWN contra LONG
+            }
+        }
+    }
+
+    $w1D = 45; $w4H = 35; $w1H = 20   # soma 100
+    $f1D = & $factor $Trend1D $Direction
+    $f4H = & $factor $Trend4H $Direction
+    $f1H = & $factor $Trend1H $Direction
+
+    $score = ($w1D * $f1D) + ($w4H * $f4H) + ($w1H * $f1H)
+    [int][math]::Round($score, 0)
+}
+
 # Functions automatically available after dot-sourcing

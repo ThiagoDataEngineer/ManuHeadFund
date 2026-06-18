@@ -73,6 +73,12 @@ if (Test-Path $__riskManagerPath) { . $__riskManagerPath }
 $__sizingDynamicsPath = Join-Path $PSScriptRoot "lib_sizing_dynamics.ps1"
 if (Test-Path $__sizingDynamicsPath) { . $__sizingDynamicsPath }
 
+# 2026-06-17: Entry Conviction Ensemble (eixos ortogonais; modo observacao por flag)
+foreach ($__convDep in @("lib_btc_relative_strength.ps1","lib_entry_conviction_ensemble.ps1")) {
+    $__convPath = Join-Path $PSScriptRoot $__convDep
+    if (Test-Path $__convPath) { . $__convPath }
+}
+
 # 2026-05-29: Order validation (retry+fallback SL/TP) + Position protection (garante TP/SL reais).
 # Causa raiz corrigida: SL/TP embutido em ordem MARKET nao aplica confiavel na CoinEx V2.
 # Solucao: aplicar SL/TP via set-position-* APOS fill + validar + retry.
@@ -789,6 +795,44 @@ function Invoke-GemExecute {
                 }
 
                 Write-Host "  [MULTI-TF OK] $mkt aligned: 1D=$trend1D | 4H=$trend4H | 1H=$trend1H | Dir=$direction" -ForegroundColor Green
+
+                # ── CONVICTION ENSEMBLE (modo observacao; NUNCA bloqueia) ─────────
+                # 2026-06-17: registra conviccao 0-100 combinando eixos ortogonais
+                # (BTC relative strength + multi-TF gradiente). So roda com a flag
+                # CONVICTION_OBSERVE.flag presente. Falha sempre silenciosa.
+                $__convFlag = Join-Path $PSScriptRoot "..\journal\CONVICTION_OBSERVE.flag"
+                if ((Test-Path $__convFlag) -and (Get-Command Get-EntryConviction -ErrorAction SilentlyContinue)) {
+                    try {
+                        $axes = @{}
+
+                        # Eixo multi-TF (reusa trends ja calculados acima -- custo zero)
+                        if (Get-Command Get-MultiTimeframeConviction -ErrorAction SilentlyContinue) {
+                            $axes.multitf = Get-MultiTimeframeConviction -Trend1D $trend1D -Trend4H $trend4H -Trend1H $trend1H -Direction $direction
+                        }
+
+                        # Eixo BTC relative strength (1 fetch extra de BTC 1H, so com flag)
+                        if (Get-Command Get-BtcRelativeStrength -ErrorAction SilentlyContinue) {
+                            $btcCandles1H = Get-CoinExCandles -Market "BTCUSDT" -Period "1hour" -Limit 50 -IsFutures $true
+                            if ($btcCandles1H -and $btcCandles1H.Count -ge 2) {
+                                $altCloses = @($candles1H | ForEach-Object { [double]$_.close })
+                                $btcCloses = @($btcCandles1H | ForEach-Object { [double]$_.close })
+                                $rsInfo = Get-BtcRelativeStrength -AltCloses $altCloses -BtcCloses $btcCloses -Beta 1.0
+                                if ($rsInfo) {
+                                    $axes.btc_rs = Get-RsConvictionScore -Rs $rsInfo.rs -BtcReturn $rsInfo.btc_return -Direction $direction
+                                }
+                            }
+                        }
+
+                        if ($axes.Count -gt 0) {
+                            $conv = Get-EntryConviction -Axes $axes -Direction $direction
+                            $obsPath = Join-Path $PSScriptRoot "..\journal\conviction_observations.jsonl"
+                            Write-ConvictionObservation -Market $mkt -Direction $direction -Conviction $conv.conviction -Axes $axes -Path $obsPath
+                            Write-Host "  [CONVICTION] $mkt $direction = $($conv.conviction)/100 (eixos: $($axes.Keys -join ',')) ready=$($conv.ready)" -ForegroundColor Magenta
+                        }
+                    } catch {
+                        # observacao nunca afeta execucao
+                    }
+                }
             }
         } catch {
             Write-Host "  [MULTI-TF ERROR] $_" -ForegroundColor Yellow
