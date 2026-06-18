@@ -1029,6 +1029,56 @@ jobs:
           }
 
   # ============================================================================
+  # JOB 23: CLOUD TRADING (gem_loop -Once - signal+gates+execucao, a cada 15min)
+  # "Tudo online tradando": roda 1 ciclo completo do gem_loop na nuvem.
+  # SEGURANCA: CLOUD_DRY_RUN.flag (versionado) forca dry ate provar o stack carrega
+  # no ubuntu. Remover o flag = LIVE. Gates existentes (Tori/conviction/safety/
+  # circuit-breaker/capital 1%) protegem como no local.
+  # ============================================================================
+  cloud-trading:
+    name: Cloud Trading (gem_loop -Once)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
+          $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
+          $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content += "`$env:ANTHROPIC_API_KEY = '${{ secrets.ANTHROPIC_API_KEY }}'" + "`n"
+          $content += "`$env:GROQ_API_KEY = '${{ secrets.GROQ_API_KEY }}'" + "`n"
+          $content += "`$env:MISTRAL_API_KEY = '${{ secrets.MISTRAL_API_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run gem_loop -Once (a cada 15min; dry ate provar stack)
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $minute = (Get-Date).Minute
+          if ($minute % 15 -lt 5) {
+            Write-Host "=== CLOUD TRADING (gem_loop -Once) ===" -ForegroundColor Cyan
+            $dry = Test-Path "journal/CLOUD_DRY_RUN.flag"
+            Write-Host "DryRun ativo (prova stack): $dry" -ForegroundColor $(if($dry){'Yellow'}else{'Green'})
+            try {
+              & ./scripts/gem_loop.ps1 -Once
+              Write-Host "OK (stack carregou + ciclo completo)" -ForegroundColor Green
+            } catch {
+              Write-Host "ERRO no ciclo cloud: $_" -ForegroundColor Red
+            }
+          } else {
+            Write-Host "Skipped (runs every 15min)" -ForegroundColor Yellow
+          }
+
+  # ============================================================================
   # JOB 22: CLOUD CONVICTION SCAN (Fase 3 - OBSERVE, a cada hora no :20)
   # Varre movers, computa ensemble 7 eixos (LONG+SHORT), LOGA observacoes.
   # NAO executa trade -- valida edge ~1 semana antes de virar live.

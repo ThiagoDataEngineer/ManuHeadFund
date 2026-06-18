@@ -17,14 +17,19 @@
 
 param(
     [int]$CheckInterval = 60,   # minutos entre cycles GemScan
-    [switch]$Once,              # roda 1 cycle e sai (teste)
-    [switch]$Force              # ignora idempotent
+    [switch]$Once,              # roda 1 cycle e sai (teste / cloud)
+    [switch]$Force,             # ignora idempotent
+    [switch]$DryRun             # nao executa ordens reais (passa -DryRun ao executor)
 )
 
 $scriptRoot   = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot  = Split-Path -Parent $scriptRoot
 $agentsDir    = Join-Path $projectRoot "agents"
 $gemLog       = Join-Path $projectRoot "journal\gem_loop.log"
+
+# 2026-06-18 Fase 3 cloud: prova o stack na nuvem SEM disparar ordem real.
+# Enquanto CLOUD_DRY_RUN.flag existir, todo execute vira DryRun. Remover o flag = LIVE.
+if (Test-Path (Join-Path $projectRoot "journal\CLOUD_DRY_RUN.flag")) { $DryRun = $true }
 
 function Write-GemLog {
     param([string]$Level, [string]$Message)
