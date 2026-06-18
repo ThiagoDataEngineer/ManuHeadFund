@@ -1158,6 +1158,43 @@ jobs:
           }
 
   # ============================================================================
+  # JOB 24: TELEGRAM CLOUD (listener -Once - respond comandos, a cada 5min)
+  # sem PC ligado. Offset persistido em state_store. /status /halt /fechar.
+  # ============================================================================
+  telegram-cloud:
+    name: Telegram Cloud (listener -Once)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
+          $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
+          $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run Telegram Listener -Once (a cada 5min)
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          Write-Host "=== TELEGRAM CLOUD (listener -Once) ===" -ForegroundColor Cyan
+          try {
+            & ./scripts/telegram_listener.ps1 -Once
+            Write-Host "OK (1 ciclo completo)" -ForegroundColor Green
+          } catch {
+            Write-Host "WARN: $_" -ForegroundColor Yellow
+          }
+
+  # ============================================================================
   # JOB 6: HEALTH CHECK
   # ============================================================================
   health-check:
