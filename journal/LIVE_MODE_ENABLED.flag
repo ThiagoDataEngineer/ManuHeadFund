@@ -1,9 +1,1 @@
-﻿LIVE_MODE_ENABLED
-ativado_em: 2026-05-18 01:19:55
-guards_ativos:
-  - sizing_min_usd: 25
-  - sizing_max_usd: 100
-  - max_trades_per_week: 5
-  - tier_filter: PAPER (A+B)
-  - custodial_cap: DESATIVADO (privacy/responsabilidade user)
-desativar: deletar este arquivo OU "desativa LIVE"
+[ENABLED] Live trading
