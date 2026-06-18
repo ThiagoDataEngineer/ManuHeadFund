@@ -21,23 +21,67 @@ function Get-ConvictionDefaultWeights {
 
     if ("$Direction".ToUpper() -eq "SHORT") {
         return @{
-            overextension = 0.28
-            structure     = 0.18
-            btc_rs        = 0.15
-            volume        = 0.15
-            historical    = 0.12
-            multitf       = 0.12
+            overextension = 0.24
+            funding       = 0.18   # longs lotados = squeeze down (top sinal pre-dump)
+            structure     = 0.16
+            btc_rs        = 0.13
+            volume        = 0.13
+            historical    = 0.08
+            multitf       = 0.08
         }
     }
     # LONG (default)
     @{
-        multitf       = 0.22
-        btc_rs        = 0.22
-        volume        = 0.18
-        structure     = 0.15
-        historical    = 0.13
+        multitf       = 0.20
+        btc_rs        = 0.20
+        volume        = 0.16
+        structure     = 0.14
+        historical    = 0.12
         overextension = 0.10
+        funding       = 0.08
     }
+}
+
+function Get-FundingConvictionScore {
+    # Eixo Funding: crowding de posicoes via funding rate (por periodo, fracao).
+    # Positivo alto = longs pagam = longs lotados = squeeze down (favorece SHORT).
+    # Negativo = shorts lotados = squeeze up (favorece LONG). ~0 = neutro.
+    [CmdletBinding()]
+    param(
+        $FundingRate,
+        [string] $Direction = "SHORT",
+        [double] $HighRef = 0.0005   # 0.05% por periodo = funding "alto"
+    )
+
+    if ($null -eq $FundingRate) { return 50 }
+    $fr = [double]$FundingRate
+
+    # Sinal favoravel: SHORT gosta de funding positivo; LONG de negativo
+    $signed = if ("$Direction".ToUpper() -eq "SHORT") { $fr } else { -$fr }
+    $norm = $signed / $HighRef
+    if ($norm -gt 1.5)  { $norm = 1.5 }   # extremo = bonus extra
+    if ($norm -lt -1.0) { $norm = -1.0 }
+
+    $score = 50 + ($norm * 33)
+    if ($score -gt 100) { $score = 100 }
+    if ($score -lt 0)   { $score = 0 }
+    [int][math]::Round($score, 0)
+}
+
+function Get-FundingRate {
+    # I/O: busca funding rate da CoinEx (next se disponivel, senao latest). Fail-soft null.
+    [CmdletBinding()]
+    param([string] $Market)
+    if (-not $global:COINEX_BASE_URL) { return $null }
+    try {
+        $r = Invoke-RestMethod -Uri "$($global:COINEX_BASE_URL)/v2/futures/funding-rate?market=$Market" -Method GET -TimeoutSec 8
+        if ($r.code -eq 0 -and $r.data) {
+            $d = $r.data[0]
+            if ($d.PSObject.Properties['next_funding_rate'] -and $d.next_funding_rate) { return [double]$d.next_funding_rate }
+            if ($d.PSObject.Properties['latest_funding_rate']) { return [double]$d.latest_funding_rate }
+        }
+    } catch {}
+    return $null
 }
 
 function Get-OverextensionScore {
@@ -404,6 +448,11 @@ function Get-MarketConviction {
         if ((Get-Command Get-OverextensionScore -ErrorAction SilentlyContinue) -and $c1H.Count -ge 21) {
             $clz = @($c1H | ForEach-Object { [double]$_.close })
             $axes.overextension = Get-OverextensionScore -Closes $clz -Direction $Direction
+        }
+        # Eixo Funding (crowding) -- top sinal pre-dump em perpetuos
+        if ($IsFutures -and (Get-Command Get-FundingRate -ErrorAction SilentlyContinue)) {
+            $fr = Get-FundingRate -Market $Market
+            if ($null -ne $fr) { $axes.funding = Get-FundingConvictionScore -FundingRate $fr -Direction $Direction }
         }
         # Eixo Estrutura (trendline/S-R real) -- usa highs/lows/closes do 4H
         if ((Get-Command Get-StructureFromCandles -ErrorAction SilentlyContinue) -and $c4H -and $c4H.Count -ge 5) {
