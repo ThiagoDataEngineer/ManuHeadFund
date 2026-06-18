@@ -167,6 +167,110 @@ function Get-RangePositionScore {
     [int][math]::Round($score, 0)
 }
 
+function Get-StructureFromCandles {
+    # Eixo Estrutura (trendline/S-R real): conta toques no suporte (LONG) ou
+    # resistencia (SHORT) e alimenta Get-StructureScore (toques+span+rejeicao).
+    [CmdletBinding()]
+    param(
+        [double[]] $Highs,
+        [double[]] $Lows,
+        [double[]] $Closes,
+        [string]   $Direction = "LONG",
+        [double]   $TolerancePct = 0.012
+    )
+
+    if ($null -eq $Highs -or $null -eq $Lows -or $null -eq $Closes) { return 50 }
+    $n = $Lows.Count
+    if ($n -lt 5) { return 50 }
+
+    $isShort = ("$Direction".ToUpper() -eq "SHORT")
+    $touchIdx = @()
+    $rejection = $false
+
+    if ($isShort) {
+        $level = ($Highs | Measure-Object -Maximum).Maximum
+        $band  = $level * (1 - $TolerancePct)
+        for ($i = 0; $i -lt $n; $i++) {
+            if ($Highs[$i] -ge $band) {
+                $touchIdx += $i
+                if ($Highs[$i] -gt 0 -and (($Highs[$i] - $Closes[$i]) / $Highs[$i]) -gt 0.003) { $rejection = $true }
+            }
+        }
+    } else {
+        $level = ($Lows | Measure-Object -Minimum).Minimum
+        $band  = $level * (1 + $TolerancePct)
+        for ($i = 0; $i -lt $n; $i++) {
+            if ($Lows[$i] -le $band) {
+                $touchIdx += $i
+                if ($Lows[$i] -gt 0 -and (($Closes[$i] - $Lows[$i]) / $Lows[$i]) -gt 0.003) { $rejection = $true }
+            }
+        }
+    }
+
+    $touches = $touchIdx.Count
+    $span = if ($touches -ge 2) { $touchIdx[-1] - $touchIdx[0] } else { 0 }
+
+    if (Get-Command Get-StructureScore -ErrorAction SilentlyContinue) {
+        return Get-StructureScore -Touches $touches -CandleSpan $span -Rejection $rejection
+    }
+    # fallback simples
+    [int][math]::Min(100, $touches * 25)
+}
+
+function Get-PrePumpFingerprintScore {
+    # Eixo Historico: fingerprint de pre-pump (analogia com o que precede pumps).
+    # Precursores: compressao de range + volume subindo + higher-lows (LONG) /
+    # lower-highs (SHORT). Pure. Base 50; cada precursor adiciona.
+    [CmdletBinding()]
+    param(
+        [double[]] $Highs,
+        [double[]] $Lows,
+        [double[]] $Closes,
+        [double[]] $Volumes,
+        [string]   $Direction = "LONG"
+    )
+
+    if ($null -eq $Highs -or $null -eq $Lows -or $null -eq $Closes -or $null -eq $Volumes) { return 50 }
+    $n = $Closes.Count
+    if ($n -lt 8 -or $Highs.Count -lt $n -or $Lows.Count -lt $n -or $Volumes.Count -lt $n) { return 50 }
+
+    $half = [int][math]::Floor($n / 2)
+    $isShort = ("$Direction".ToUpper() -eq "SHORT")
+
+    # 1. Compressao de range (recent mais apertado que earlier = energia acumulando)
+    $earlierRanges = @(); $recentRanges = @()
+    for ($i = 0; $i -lt $half; $i++)      { $earlierRanges += ($Highs[$i] - $Lows[$i]) }
+    for ($i = $half; $i -lt $n; $i++)     { $recentRanges  += ($Highs[$i] - $Lows[$i]) }
+    $eR = ($earlierRanges | Measure-Object -Average).Average
+    $rR = ($recentRanges  | Measure-Object -Average).Average
+    $compBonus = 0.0
+    if ($eR -gt 0 -and $rR -lt $eR) {
+        $ratio = ($eR - $rR) / $eR
+        $compBonus = [math]::Min(1.0, $ratio) * 20
+    }
+
+    # 2. Volume subindo (recent vs earlier)
+    $eVol = (@($Volumes[0..($half-1)]) | Measure-Object -Average).Average
+    $rVol = (@($Volumes[$half..($n-1)]) | Measure-Object -Average).Average
+    $volBonus = 0.0
+    if ($eVol -gt 0 -and $rVol -gt $eVol) {
+        $volBonus = [math]::Min(1.0, (($rVol / $eVol) - 1)) * 20
+    }
+
+    # 3. Estrutura direcional (higher-lows LONG / lower-highs SHORT) no recent
+    $structBonus = 0.0
+    if ($isShort) {
+        if ($Highs[$n-1] -lt $Highs[$half]) { $structBonus = 10 }
+    } else {
+        if ($Lows[$n-1] -gt $Lows[$half]) { $structBonus = 10 }
+    }
+
+    $score = 50 + $compBonus + $volBonus + $structBonus
+    if ($score -gt 100) { $score = 100 }
+    if ($score -lt 0)   { $score = 0 }
+    [int][math]::Round($score, 0)
+}
+
 function Resolve-ConvictionOverride {
     # Decide se a conviccao do ensemble destrava um veto do Tori (SKIP/WAIT).
     # FAIL-SAFE: so com FlagOn; nunca overrida DataAbsent; ENTER nao se aplica.
@@ -236,12 +340,20 @@ function Get-MarketConviction {
             $vols = @($c1H | ForEach-Object { [double]$_.volume })
             $axes.volume = Get-VolumeConvictionScore -Volumes $vols
         }
-        # Eixo Estrutura (posicao no range) -- usa highs/lows do 4H
-        if ((Get-Command Get-RangePositionScore -ErrorAction SilentlyContinue) -and $c4H -and $c4H.Count -ge 5) {
-            $highs = @($c4H | ForEach-Object { [double]$_.high })
-            $lows  = @($c4H | ForEach-Object { [double]$_.low })
-            $cur   = [double]$c1H[-1].close
-            $axes.structure = Get-RangePositionScore -Highs $highs -Lows $lows -CurrentPrice $cur -Direction $Direction
+        # Eixo Estrutura (trendline/S-R real) -- usa highs/lows/closes do 4H
+        if ((Get-Command Get-StructureFromCandles -ErrorAction SilentlyContinue) -and $c4H -and $c4H.Count -ge 5) {
+            $h4 = @($c4H | ForEach-Object { [double]$_.high })
+            $l4 = @($c4H | ForEach-Object { [double]$_.low })
+            $cl4 = @($c4H | ForEach-Object { [double]$_.close })
+            $axes.structure = Get-StructureFromCandles -Highs $h4 -Lows $l4 -Closes $cl4 -Direction $Direction
+        }
+        # Eixo Historico (fingerprint pre-pump) -- usa 4H (highs/lows/closes/volumes)
+        if ((Get-Command Get-PrePumpFingerprintScore -ErrorAction SilentlyContinue) -and $c4H -and $c4H.Count -ge 8) {
+            $h4 = @($c4H | ForEach-Object { [double]$_.high })
+            $l4 = @($c4H | ForEach-Object { [double]$_.low })
+            $cl4 = @($c4H | ForEach-Object { [double]$_.close })
+            $v4 = @($c4H | ForEach-Object { [double]$_.volume })
+            $axes.historical = Get-PrePumpFingerprintScore -Highs $h4 -Lows $l4 -Closes $cl4 -Volumes $v4 -Direction $Direction
         }
 
         if ($axes.Count -eq 0) { return $null }
