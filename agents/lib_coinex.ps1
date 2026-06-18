@@ -469,13 +469,16 @@ function CoinEx-GetPendingPositions {
     if ($r.code -ne 0) { return @() }
     
     # API retorna array diretamente em $r.data
-    # Usa ,@() para prevenir PS5.1 single-element array unwrapping no return
-    if ($r.data -is [array]) {
-        return ,$r.data
-    } elseif ($r.data) {
-        return ,@($r.data)
-    }
-    return ,@()
+    # 2026-06-18 fix: FILTRA fantasmas (entradas sem market). A API devolvia 1
+    # elemento vazio quando nao ha posicoes -> consumidores estouravam
+    # "Cannot bind argument to parameter 'Market'" (quebrava o trailing na nuvem).
+    # Usa ,@() para prevenir PS5.1 single-element array unwrapping no return.
+    $raw = if ($r.data) { @($r.data) } else { @() }
+    $valid = @($raw | Where-Object { $_ -and "$($_.market)".Trim() -ne "" })
+    # Retorno explicito por contagem: ',@()' criava fantasma (1 elemento = array vazio).
+    if ($valid.Count -eq 0) { return @() }
+    if ($valid.Count -eq 1) { return ,$valid }
+    return $valid
 }
 
 # Posicoes abertas consolidadas (SPOT holdings + FUTURES positions).
