@@ -73,25 +73,43 @@ RESULT: Double execution risk + unpredictable behavior
 
 ## ✅ SOLUTION
 
-### Step 1: Disable All (Can do without admin)
+### Approach 1: Disable All (Safest — works without full admin)
 ```powershell
 Get-ScheduledTask | Where-Object { $_.TaskName -match "^CoinEx|^ManuHeadFund" } | 
   Disable-ScheduledTask
 ```
-⚠️ Some may fail with "Access denied" (need admin)
+✅ This WORKS — disables tasks without deleting them  
+⚠️ Tasks remain in registry but won't execute
 
-### Step 2: Delete All (REQUIRES ADMIN ELEVATED)
+### Approach 2: Delete via Task Scheduler GUI (Recommended)
+1. Open Task Scheduler (`taskschd.msc`)
+2. Browse to **Library Root** (top level)
+3. Right-click each CoinEx/ManuHeadFund task
+4. Select **Delete**
+5. Repeat for all 22 tasks
+
+**Why this works**: GUI has higher privilege escalation  
+**Time**: ~5 min for 22 tasks
+
+### Approach 3: Delete via Registry (DANGEROUS — last resort)
+⚠️ Only if Approach 1 or 2 fail
 ```powershell
-# Run PowerShell as Administrator
-$taskNames = @(
-  "CoinExDaemonRestart", "CoinExDailyDigest", "CoinExFundingScanner", 
-  "CoinExHourlyHeartbeat", "CoinExKellyGraduation", "CoinExParallelGraduation",
-  # ... (rest of list)
-)
+# BACKUP registry first!
+reg export HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Explorer\RunMRU C:\backup_runmru.reg
 
-foreach ($name in $taskNames) {
-  Unregister-ScheduledTask -TaskName $name -Confirm:$false
-}
+# Remove tasks (risky)
+Get-ChildItem 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Schedule\TaskCache\Tree' | 
+  Where-Object { $_.PSChildName -match 'CoinEx|ManuHeadFund' } | 
+  Remove-Item -Force -Recurse
+```
+
+### Approach 4: Disable at Boot (Interim fix)
+```powershell
+# Temporarily prevent auto-run
+$tasks = Get-ScheduledTask | Where-Object { $_.TaskName -match "^CoinEx|^ManuHeadFund" }
+$tasks | Disable-ScheduledTask
+
+# Result: Tasks disabled but still visible in registry
 ```
 
 ---
