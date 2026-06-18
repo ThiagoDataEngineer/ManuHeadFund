@@ -28,6 +28,8 @@ try {
     . (Join-Path $agentsDir "lib_position_price.ps1") -ErrorAction Stop
     . (Join-Path $agentsDir "lib_daemon_singleton.ps1") -ErrorAction SilentlyContinue
     . (Join-Path $agentsDir "lib_trailing_peak_update.ps1") -ErrorAction SilentlyContinue  # 2026-06-17: trailing cego fix
+    . (Join-Path $agentsDir "lib_coinex_position_management.ps1") -ErrorAction SilentlyContinue  # CoinEx-ModifyPositionStopLoss
+    . (Join-Path $agentsDir "lib_trailing_sync.ps1") -ErrorAction SilentlyContinue  # 2026-06-17: empurra SL journal->corretora
 } catch {
     Write-WatchLog "ERROR" "Falha ao carregar libs: $_"
     exit 1
@@ -212,6 +214,22 @@ while ($true) {
                 $lastAlert["${mkt}_SL_WARN"] = Get-Date
                 Write-WatchLog "WARN" "SPOT ${mkt}: Proximo do SL ($currentPrice vs $sl)"
             }
+        }
+
+        # 8. 2026-06-17: SYNC journal->corretora (empurra SL real, com trava de seguranca)
+        # Elo que faltava: trailing executa de verdade. Nunca empurra SL que dispararia.
+        if (Get-Command Sync-TrailingToExchange -ErrorAction SilentlyContinue) {
+            try {
+                $sync = Sync-TrailingToExchange
+                foreach ($s in @($sync)) {
+                    if ($s.pushed) {
+                        Write-WatchLog "SL_PUSH" "$($s.market) [$($s.side)]: SL $($s.exch_sl) -> $($s.journal_sl) na corretora"
+                        Send-TelegramAlert -Message "Trailing: SL $($s.market) movido p/ $($s.journal_sl) (protege lucro)" | Out-Null
+                    } elseif ($s.should_push -and $s.error) {
+                        Write-WatchLog "WARN" "$($s.market): push SL falhou: $($s.error)"
+                    }
+                }
+            } catch { Write-WatchLog "WARN" "sync trailing falhou: $_" }
         }
 
         Start-Sleep -Seconds $CheckInterval
