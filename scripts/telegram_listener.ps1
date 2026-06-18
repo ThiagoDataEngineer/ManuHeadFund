@@ -253,6 +253,38 @@ function Cmd-Resume {
     return "LIVE flag ja estava on."
 }
 
+# 2026-06-18: Novos botoes (controle + vigilancia)
+function Cmd-Balance {
+    try {
+        if (Get-Command CoinEx-GetBalance -ErrorAction SilentlyContinue) {
+            $bal = @(CoinEx-GetBalance | Where-Object { [double]$_.available -gt 0 -or [double]$_.frozen -gt 0 })
+            $total = 0
+            $bal | ForEach-Object { $total += [double]$_.available + [double]$_.frozen }
+            $msg = "Capital TOTAL: `$$('{0:N2}' -f $total)`n`n"
+            $bal | ForEach-Object {
+                $msg += "$($_.coin): avail=$($_.available) frozen=$($_.frozen)`n"
+            }
+            return $msg
+        }
+    } catch {}
+    return "Balance indisponivel"
+}
+
+function Cmd-Stops {
+    try {
+        if (Get-Command CoinEx-GetOpenOrders -ErrorAction SilentlyContinue) {
+            $orders = @(CoinEx-GetOpenOrders | Where-Object { $_.stop_price -and [double]$_.stop_price -gt 0 })
+            if ($orders.Count -eq 0) { return "Nenhum stop order ativo (vigilancia OK)" }
+            $msg = "STOP ORDERS EM VIGILANCIA: $($orders.Count)`n`n"
+            $orders | ForEach-Object {
+                $msg += "$($_.market) | price=$($_.price) | stop=$($_.stop_price)`n"
+            }
+            return $msg
+        }
+    } catch {}
+    return "Stops indisponivel"
+}
+
 
 function Build-AskContext {
     $ctx = @{}
@@ -337,6 +369,9 @@ function Process-Update {
             "approve"       { $reply = if (Get-Command Process-ApprovalCommand -ErrorAction SilentlyContinue) { (Process-ApprovalCommand -Command "/approve" -Market $arg -JournalDir $journalDir).message } else { "Approval handler indisponivel" } }
             "reject"        { $reply = if (Get-Command Process-ApprovalCommand -ErrorAction SilentlyContinue) { (Process-ApprovalCommand -Command "/reject" -Market $arg -JournalDir $journalDir).message } else { "Approval handler indisponivel" } }
             "pause"         { $reply = if (Get-Command Process-ApprovalCommand -ErrorAction SilentlyContinue) { (Process-ApprovalCommand -Command "/pause" -JournalDir $journalDir).message } else { "Approval handler indisponivel" } }
+            # 2026-06-18: Botoes novos (controle + vigilancia)
+            "balance"       { $reply = Cmd-Balance }
+            "stops"         { $reply = Cmd-Stops }
             default         { $reply = "Comando desconhecido. /help" }
         }
     } else {
