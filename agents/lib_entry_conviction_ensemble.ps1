@@ -116,6 +116,80 @@ function Write-ConvictionObservation {
     Add-Content -Path $Path -Value $json -Encoding UTF8
 }
 
+function Resolve-ConvictionOverride {
+    # Decide se a conviccao do ensemble destrava um veto do Tori (SKIP/WAIT).
+    # FAIL-SAFE: so com FlagOn; nunca overrida DataAbsent; ENTER nao se aplica.
+    [CmdletBinding()]
+    param(
+        [string] $ToriSignal,
+        [double] $Conviction,
+        [bool]   $DataAbsent = $false,
+        [bool]   $FlagOn = $false,
+        [double] $Threshold = 75
+    )
+
+    $sig = "$ToriSignal".ToUpper()
+
+    if ($sig -notin @("SKIP","WAIT")) {
+        return @{ allow = $false; reason = "not_applicable (tori=$sig, sem veto)" }
+    }
+    if (-not $FlagOn) {
+        return @{ allow = $false; reason = "conviction_gate_off" }
+    }
+    if ($DataAbsent) {
+        return @{ allow = $false; reason = "data_absent (sem base p/ override)" }
+    }
+    if ($Conviction -ge $Threshold) {
+        return @{ allow = $true; reason = "conviction_override: $Conviction >= $Threshold (tori $sig vencido)" }
+    }
+    return @{ allow = $false; reason = "conviction $Conviction < $Threshold (respeita veto Tori)" }
+}
+
+function Get-MarketConviction {
+    # Orquestrador I/O: busca candles + BTC, computa eixos, retorna conviccao.
+    # Reusa funcoes ja dot-sourced (Get-CoinExCandles, Get-TrendDirection,
+    # Get-MultiTimeframeConviction, Get-BtcRelativeStrength). Fail-soft = null.
+    [CmdletBinding()]
+    param(
+        [string] $Market,
+        [string] $Direction = "LONG",
+        [bool]   $IsFutures = $true
+    )
+
+    if (-not (Get-Command Get-CoinExCandles -ErrorAction SilentlyContinue)) { return $null }
+
+    try {
+        $c1H = Get-CoinExCandles -Market $Market -Period "1hour" -Limit 100 -IsFutures $IsFutures
+        $c4H = Get-CoinExCandles -Market $Market -Period "4hour" -Limit 60  -IsFutures $IsFutures
+        $c1D = Get-CoinExCandles -Market $Market -Period "1day"  -Limit 60  -IsFutures $IsFutures
+        if (-not $c1H -or $c1H.Count -lt 20) { return $null }
+
+        $axes = @{}
+        if (Get-Command Get-MultiTimeframeConviction -ErrorAction SilentlyContinue) {
+            $t1D = Get-TrendDirection -Candles $c1D -Timeframe "1D"
+            $t4H = Get-TrendDirection -Candles $c4H -Timeframe "4H"
+            $t1H = Get-TrendDirection -Candles $c1H -Timeframe "1H"
+            $axes.multitf = Get-MultiTimeframeConviction -Trend1D $t1D -Trend4H $t4H -Trend1H $t1H -Direction $Direction
+        }
+        if (Get-Command Get-BtcRelativeStrength -ErrorAction SilentlyContinue) {
+            $btc = Get-CoinExCandles -Market "BTCUSDT" -Period "1hour" -Limit 100 -IsFutures $true
+            if ($btc -and $btc.Count -ge 2) {
+                $alt = @($c1H | ForEach-Object { [double]$_.close })
+                $btcCloses = @($btc | ForEach-Object { [double]$_.close })
+                $rs = Get-BtcRelativeStrength -AltCloses $alt -BtcCloses $btcCloses -Beta 1.0
+                if ($rs) { $axes.btc_rs = Get-RsConvictionScore -Rs $rs.rs -BtcReturn $rs.btc_return -Direction $Direction }
+            }
+        }
+
+        if ($axes.Count -eq 0) { return $null }
+        $conv = Get-EntryConviction -Axes $axes -Direction $Direction
+        $conv.axes_detail = $axes
+        return $conv
+    } catch {
+        return $null
+    }
+}
+
 function Get-ConvictionStats {
     [CmdletBinding()]
     param(

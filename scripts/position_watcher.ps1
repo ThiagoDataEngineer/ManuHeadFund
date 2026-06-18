@@ -27,6 +27,7 @@ try {
     . (Join-Path $agentsDir "lib_telegram.ps1") -ErrorAction SilentlyContinue
     . (Join-Path $agentsDir "lib_position_price.ps1") -ErrorAction Stop
     . (Join-Path $agentsDir "lib_daemon_singleton.ps1") -ErrorAction SilentlyContinue
+    . (Join-Path $agentsDir "lib_trailing_peak_update.ps1") -ErrorAction SilentlyContinue  # 2026-06-17: trailing cego fix
 } catch {
     Write-WatchLog "ERROR" "Falha ao carregar libs: $_"
     exit 1
@@ -135,6 +136,16 @@ while ($true) {
                     Write-WatchLog "HIGH" "${mkt}: NOVO MÁXIMO | Price=$price_to_use | PnL=$([math]::Round($pnl_pct,2))%"
                 }
 
+                # 4b. 2026-06-17 FIX trailing cego: ATUALIZA peak/SL no journal a cada ciclo
+                # (antes so vivia na memoria -> trailing_positions.json congelava -> SL nunca subia).
+                # Side-aware (LONG/SHORT) + lock fino +2.5% breakeven. Fail-soft.
+                if (Get-Command Update-TrailingPeakLive -ErrorAction SilentlyContinue) {
+                    try {
+                        $tu = Update-TrailingPeakLive -Market $mkt -CurrentPrice $price_to_use
+                        if ($tu.updated) { Write-WatchLog "TRAIL" "${mkt}: peak/SL atualizado (price=$([math]::Round($price_to_use,6)))" }
+                    } catch { Write-WatchLog "WARN" "${mkt}: trailing update falhou: $_" }
+                }
+
                 # 5. Alerta se chegou perto do TP
                 $tp_distance = (($tp - $price_to_use) / $price_to_use) * 100
                 if ($tp_distance -lt 2 -and -not $lastAlert["${mkt}_TP"]) {
@@ -182,6 +193,14 @@ while ($true) {
             }
             if ($currentPrice -gt $positionState["SPOT_$mkt"].highest_price) {
                 $positionState["SPOT_$mkt"].highest_price = $currentPrice
+            }
+
+            # 2026-06-17 FIX trailing cego (SPOT): atualiza peak/SL no journal a cada ciclo
+            if (Get-Command Update-TrailingPeakLive -ErrorAction SilentlyContinue) {
+                try {
+                    $tu = Update-TrailingPeakLive -Market $mkt -CurrentPrice $currentPrice
+                    if ($tu.updated) { Write-WatchLog "TRAIL" "SPOT ${mkt}: peak/SL atualizado (price=$currentPrice)" }
+                } catch { Write-WatchLog "WARN" "SPOT ${mkt}: trailing update falhou: $_" }
             }
 
             $pnl_emoji = if ($pnl_pct -gt 0) { "GANHO" } elseif ($pnl_pct -lt 0) { "PERDA" } else { "FLAT" }

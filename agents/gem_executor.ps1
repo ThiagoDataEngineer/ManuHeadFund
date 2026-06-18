@@ -570,19 +570,43 @@ function Invoke-GemExecute {
             } catch {}
         }
 
-        if ($isDataAbsent) {
-            Write-Host "  [GEM TORI SKIP-SILENT] ${mkt}: dados ausentes -- nao spam TG" -ForegroundColor DarkYellow
-        } else {
-            try { Send-TelegramAlert -Message "GEM bloqueado por Tori ($tori_signal): $mkt -- $tori_reason" | Out-Null } catch {}
+        # ── 2026-06-17: CONVICTION OVERRIDE (destrava Tori veta-tudo) ───────────
+        # Se o ensemble (multi-TF gradiente + BTC relative strength) der conviccao
+        # alta, o SKIP do Tori e vencido. FAIL-SAFE: so com CONVICTION_GATE.flag;
+        # nunca overrida dados-ausentes; loga a decisao. Default OFF.
+        $toriOverridden = $false
+        $__gateFlag = Join-Path $PSScriptRoot "..\journal\CONVICTION_GATE.flag"
+        if ((Test-Path $__gateFlag) -and -not $isDataAbsent -and (Get-Command Resolve-ConvictionOverride -ErrorAction SilentlyContinue)) {
+            try {
+                $convM = Get-MarketConviction -Market $mkt -Direction $direction -IsFutures $hasFutures
+                if ($convM) {
+                    $ovr = Resolve-ConvictionOverride -ToriSignal $tori_signal -Conviction $convM.conviction -DataAbsent $false -FlagOn $true -Threshold 75
+                    if ($ovr.allow) {
+                        $toriOverridden = $true
+                        Write-Host "  [CONVICTION OVERRIDE] ${mkt}: $($ovr.reason) (eixos: $($convM.axes_detail.Keys -join ','))" -ForegroundColor Green
+                        try { Send-TelegramAlert -Message "CONVICCAO venceu Tori: $mkt $direction conv=$($convM.conviction)/100 (Tori dizia $tori_signal)" | Out-Null } catch {}
+                    } else {
+                        Write-Host "  [CONVICTION] ${mkt}: nao override ($($ovr.reason))" -ForegroundColor DarkGray
+                    }
+                }
+            } catch { Write-Host "  [CONVICTION ERROR] ${mkt}: $_" -ForegroundColor DarkGray }
         }
-        # C fix 2026-05-21: TTL cache pra prevenir loop re-aprovacao em market sem dados.
-        # Sem isso, PROVE reaparece a cada cycle horario e user re-aprova inutilmente.
-        # TTL 24h pra dados ausentes (só muda com tempo); 1h pra Tori SKIP normal.
-        if (Get-Command Add-GemRejection -ErrorAction SilentlyContinue) {
-            $cacheReason = if ($isDataAbsent) { "tori_data_absent" } else { "tori_$($tori_signal.ToLower())" }
-            try { Add-GemRejection -Path (Join-Path $global:JOURNAL_DIR "gem_recent_decisions.json") -Market $mkt -Reason $cacheReason } catch {}
+
+        if (-not $toriOverridden) {
+            if ($isDataAbsent) {
+                Write-Host "  [GEM TORI SKIP-SILENT] ${mkt}: dados ausentes -- nao spam TG" -ForegroundColor DarkYellow
+            } else {
+                try { Send-TelegramAlert -Message "GEM bloqueado por Tori ($tori_signal): $mkt -- $tori_reason" | Out-Null } catch {}
+            }
+            # C fix 2026-05-21: TTL cache pra prevenir loop re-aprovacao em market sem dados.
+            # Sem isso, PROVE reaparece a cada cycle horario e user re-aprova inutilmente.
+            # TTL 24h pra dados ausentes (só muda com tempo); 1h pra Tori SKIP normal.
+            if (Get-Command Add-GemRejection -ErrorAction SilentlyContinue) {
+                $cacheReason = if ($isDataAbsent) { "tori_data_absent" } else { "tori_$($tori_signal.ToLower())" }
+                try { Add-GemRejection -Path (Join-Path $global:JOURNAL_DIR "gem_recent_decisions.json") -Market $mkt -Reason $cacheReason } catch {}
+            }
+            return [PSCustomObject]@{ blocked = $true; blocked_by = @("tori_$($tori_signal.ToLower())_$tori_reason"); market = $mkt; tori_data_absent = $isDataAbsent }
         }
-        return [PSCustomObject]@{ blocked = $true; blocked_by = @("tori_$($tori_signal.ToLower())_$tori_reason"); market = $mkt; tori_data_absent = $isDataAbsent }
     }
 
     # ── 3. CALCULATE STOP/TARGET (precision math, fix sub-dollar 2026-05-14) ──
