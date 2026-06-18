@@ -38,8 +38,12 @@ function Read-CloudErrorLog {
         return @{ errors = @(); total_scanned = 0; error_rate = 0 }
     }
 
-    $logs = @(Get-Content $LogPath -Raw -ErrorAction SilentlyContinue |
-        Select-String -Pattern "\[BLOCKED\]|\[ERROR\]|\[SL.*HIT\]|\[REJECTED\]" |
+    # Read all lines first
+    $allLines = @(Get-Content $LogPath -ErrorAction SilentlyContinue)
+    $totalScanned = $allLines.Count
+
+    # Filter error lines
+    $logs = @($allLines | Select-String -Pattern "\[BLOCKED\]|\[ERROR\]|\[SL.*HIT\]|\[REJECTED\]" |
         ForEach-Object { $_.Line })
 
     $cutoff = (Get-Date).AddHours(-$Hours)
@@ -60,12 +64,11 @@ function Read-CloudErrorLog {
         }
     }
 
-    $total = $logs.Count
-    $errorRate = if ($total -gt 0) { $errors.Count / $total * 100 } else { 0 }
+    $errorRate = if ($totalScanned -gt 0) { $errors.Count / $totalScanned * 100 } else { 0 }
 
     @{
         errors = $errors
-        total_scanned = $total
+        total_scanned = $totalScanned
         error_rate = [math]::Round($errorRate, 2)
     }
 }
@@ -355,15 +358,4 @@ function Update-ConvictionFromLogs {
     }
 }
 
-# ============================================================================
-# EXPORT
-# ============================================================================
-
-Export-ModuleMember -Function @(
-    'Read-CloudErrorLog',
-    'Classify-ErrorPattern',
-    'Analyze-ErrorPatterns',
-    'Calculate-ConvictionAdjustment',
-    'Calculate-DSRAdjustment',
-    'Update-ConvictionFromLogs'
-)
+# Functions auto-exported (no Export-ModuleMember needed for tests)

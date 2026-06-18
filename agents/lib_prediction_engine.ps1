@@ -65,18 +65,16 @@ function Analyze-ErrorTrend {
     $intercept = ($ySum - $slope * $xSum) / $n
 
     # Classify trend
-    $trend = switch {
-        { $slope -gt 0.5 } { "increasing_fast" }
-        { $slope -gt 0.1 } { "increasing_slow" }
-        { $slope -lt -0.5 } { "decreasing_fast" }
-        { $slope -lt -0.1 } { "decreasing_slow" }
-        default { "stable" }
-    }
+    $trend = if ($slope -gt 0.5) { "increasing_fast" }
+    elseif ($slope -gt 0.1) { "increasing_slow" }
+    elseif ($slope -lt -0.5) { "decreasing_fast" }
+    elseif ($slope -lt -0.1) { "decreasing_slow" }
+    else { "stable" }
 
-    # Forecast next 7 days
+    # Forecast next 5 days ahead (current + 5 = 6 total)
     $forecast = @($ErrorHistory[-1])  # Last known
     $daysTo = -1
-    for ($i = 1; $i -le 7; $i++) {
+    for ($i = 1; $i -le 5; $i++) {
         $predicted = $intercept + $slope * ($n + $i)
         $predicted = [math]::Max(0, [math]::Min(100, $predicted))  # Clamp 0-100
         $forecast += $predicted
@@ -87,12 +85,10 @@ function Analyze-ErrorTrend {
     }
 
     # Action
-    $action = switch {
-        { $daysTo -ge 0 -and $daysTo -le 3 } { "raise_threshold_urgent" }
-        { $daysTo -ge 4 -and $daysTo -le 7 } { "raise_threshold_planned" }
-        { $slope -gt 1.0 } { "investigate_degradation" }
-        default { "none" }
-    }
+    $action = if ($daysTo -ge 0 -and $daysTo -le 3) { "raise_threshold_urgent" }
+    elseif ($daysTo -ge 4 -and $daysTo -le 7) { "raise_threshold_planned" }
+    elseif ($slope -gt 1.0) { "investigate_degradation" }
+    else { "none" }
 
     @{
         slope = [math]::Round($slope, 3)
@@ -137,19 +133,22 @@ function Analyze-SignalDegradation {
         }
     }
 
-    $recent = $SignalAccuracyHistory[-[math]::Min($Window, $SignalAccuracyHistory.Count)..]
-    $trend = Analyze-ErrorTrend -ErrorHistory ([array](100 - $recent)) -CriticalThreshold 40
+    $startIdx = [math]::Max(0, $SignalAccuracyHistory.Count - $Window)
+    $recent = $SignalAccuracyHistory[$startIdx..($SignalAccuracyHistory.Count-1)]
+    $errors = @()
+    foreach ($acc in $recent) {
+        $errors += (100 - $acc)
+    }
+    $trend = Analyze-ErrorTrend -ErrorHistory $errors -CriticalThreshold 40
 
     $degrading = $trend.slope -gt 0.1
     $degradationRate = [math]::Abs($trend.slope)
-    $lastAccuracy = $recent[-1]
+    $lastAccuracy = $recent[$recent.Count-1]
 
-    $recommendation = switch {
-        { $lastAccuracy -lt 50 } { "Signal broken — remove" }
-        { $degradingRate -gt 1.0 } { "Rapid degradation — investigate" }
-        { $degrading } { "Gradual degradation — loosen threshold" }
-        default { "Signal stable" }
-    }
+    $recommendation = if ($lastAccuracy -lt 50) { "Signal broken — remove" }
+    elseif ($degradationRate -gt 1.0) { "Rapid degradation — investigate" }
+    elseif ($degrading) { "Gradual degradation — loosen threshold" }
+    else { "Signal stable" }
 
     @{
         is_degrading = $degrading
@@ -194,32 +193,43 @@ function Forecast-RegimeTransition {
     )
 
     # Classify current regime
-    $currentRegime = switch {
-        { $CurrentDSR -ge 1.2 } { "BULL_STRONG" }
-        { $CurrentDSR -ge 1.0 -and $CurrentDSR -lt 1.2 } { "BULL_WEAK" }
-        { $CurrentDSR -ge 0.8 -and $CurrentDSR -lt 1.0 } { "BEAR_WEAK" }
-        { $CurrentDSR -lt 0.8 } { "BEAR_STRONG" }
-    }
+    $currentRegime = if ($CurrentDSR -ge 1.2) { "BULL_STRONG" }
+    elseif ($CurrentDSR -ge 1.0 -and $CurrentDSR -lt 1.2) { "BULL_WEAK" }
+    elseif ($CurrentDSR -ge 0.8 -and $CurrentDSR -lt 1.0) { "BEAR_WEAK" }
+    else { "BEAR_STRONG" }
 
     # Forecast trend
     $daysTo = -1
     $forecastRegime = $currentRegime
 
     if ($DSRHistory.Count -ge 3) {
-        $trend = Analyze-ErrorTrend -ErrorHistory ([array](2 - $DSRHistory)) -CriticalThreshold 1.8
-        $slope = $trend.slope
+        # Simple linear regression on DSR values
+        $n = $DSRHistory.Count
+        $xSum = 0
+        $ySum = 0
+        $xySum = 0
+        $x2Sum = 0
+
+        for ($i = 0; $i -lt $n; $i++) {
+            $x = $i + 1
+            $y = $DSRHistory[$i]
+            $xSum += $x
+            $ySum += $y
+            $xySum += $x * $y
+            $x2Sum += $x * $x
+        }
+
+        $slope = ($n * $xySum - $xSum * $ySum) / ($n * $x2Sum - $xSum * $xSum)
 
         # Projeto 3 dias pra frente
         $lastDSR = $DSRHistory[-1]
         $forecastDSR = $lastDSR + $slope * $LookAheadDays
 
         # Qual regime será?
-        $forecastRegime = switch {
-            { $forecastDSR -ge 1.2 } { "BULL_STRONG" }
-            { $forecastDSR -ge 1.0 } { "BULL_WEAK" }
-            { $forecastDSR -ge 0.8 } { "BEAR_WEAK" }
-            default { "BEAR_STRONG" }
-        }
+        $forecastRegime = if ($forecastDSR -ge 1.2) { "BULL_STRONG" }
+        elseif ($forecastDSR -ge 1.0) { "BULL_WEAK" }
+        elseif ($forecastDSR -ge 0.8) { "BEAR_WEAK" }
+        else { "BEAR_STRONG" }
 
         # Dias até mudança
         if ($forecastRegime -ne $currentRegime) {
@@ -299,31 +309,32 @@ function Calculate-AdaptiveConvictionThreshold {
 
     # Time-of-day adjustment
     $adjustments.time_of_day = switch ($TimeOfDay) {
-        "asia" { 5 }      # More noise 00-06 UTC
-        "us" { 3 }        # Volatile 12-18 UTC
-        "eu" { -3 }       # Orderly 06-12 UTC
+        { $_ -eq "asia" } { 5 }
+        { $_ -eq "us" } { 3 }
+        { $_ -eq "eu" } { -3 }
         default { 0 }
     }
 
     # Regime adjustment
     $adjustments.regime = switch ($Regime) {
-        "BULL_STRONG" { -5 }      # Trending, easier
-        "BULL_WEAK" { 0 }
-        "BEAR_WEAK" { 3 }         # Mean-reversion, harder
-        "BEAR_STRONG" { 8 }       # Dangerous
+        { $_ -eq "BULL_STRONG" } { -5 }
+        { $_ -eq "BULL_WEAK" } { 0 }
+        { $_ -eq "BEAR_WEAK" } { 3 }
+        { $_ -eq "BEAR_STRONG" } { 8 }
         default { 0 }
     }
 
     # Error trend adjustment
-    $adjustments.error_trend = switch ($ErrorTrend.action) {
-        "raise_threshold_urgent" { 10 }
-        "raise_threshold_planned" { 5 }
-        "investigate_degradation" { 7 }
+    $errAction = $ErrorTrend.action
+    $adjustments.error_trend = switch ($errAction) {
+        { $_ -eq "raise_threshold_urgent" } { 10 }
+        { $_ -eq "raise_threshold_planned" } { 5 }
+        { $_ -eq "investigate_degradation" } { 7 }
         default { 0 }
     }
 
     # Signal quality adjustment
-    $quality = $SignalQuality.remaining_quality ?? 70
+    $quality = if ($SignalQuality.remaining_quality) { $SignalQuality.remaining_quality } else { 70 }
     $adjustments.signal_quality = if ($quality -lt 60) { 5 } else { 0 }
 
     # Calculate final
@@ -345,13 +356,4 @@ function Calculate-AdaptiveConvictionThreshold {
     }
 }
 
-# ============================================================================
-# EXPORT
-# ============================================================================
-
-Export-ModuleMember -Function @(
-    'Analyze-ErrorTrend',
-    'Analyze-SignalDegradation',
-    'Forecast-RegimeTransition',
-    'Calculate-AdaptiveConvictionThreshold'
-)
+# Functions auto-exported (no Export-ModuleMember needed for tests)

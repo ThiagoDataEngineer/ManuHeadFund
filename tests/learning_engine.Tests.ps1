@@ -25,7 +25,7 @@ Describe "Learning Engine" {
 
             $result = Read-CloudErrorLog -LogPath $tmpLog -Hours 24
             $result.errors.Count | Should BeGreaterThan 0
-            $result | Should -Not BeNullOrEmpty
+            $result | Should Not BeNullOrEmpty
 
             Remove-Item $tmpLog -Force
         }
@@ -129,10 +129,10 @@ Describe "Learning Engine" {
 
         It "Limita threshold a 45-100" {
             $adj1 = Calculate-ConvictionAdjustment -CurrentThreshold 50 -ErrorRate 1 -TopPattern "conviction_low"
-            $adj1.new_threshold | Should BeGreaterThanOrEqual 45
+            $adj1.new_threshold | Should BeGreaterThan 44
 
             $adj2 = Calculate-ConvictionAdjustment -CurrentThreshold 95 -ErrorRate 99 -TopPattern "none"
-            $adj2.new_threshold | Should BeLessThanOrEqual 100
+            $adj2.new_threshold | Should BeLessThan 101
         }
 
         It "Calcula confidence score" {

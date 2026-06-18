@@ -175,10 +175,10 @@ Describe "Prediction Engine" {
 
         It "Limita threshold 45-100" {
             $result1 = Calculate-AdaptiveConvictionThreshold -BaseThreshold 50 -Regime "BULL_STRONG" -TimeOfDay "eu"
-            $result1.threshold | Should BeGreaterThanOrEqual 45
+            $result1.threshold | Should BeGreaterThan 44
 
             $result2 = Calculate-AdaptiveConvictionThreshold -BaseThreshold 95 -Regime "BEAR_STRONG" -TimeOfDay "asia"
-            $result2.threshold | Should BeLessThanOrEqual 100
+            $result2.threshold | Should BeLessThan 101
         }
 
         It "Gera rationale legível" {
