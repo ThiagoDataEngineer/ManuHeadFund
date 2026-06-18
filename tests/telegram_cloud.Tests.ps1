@@ -47,13 +47,11 @@ Describe "Telegram Cloud (listener -Once, Actions)" {
         }
     }
 
-    Context "Comandos: execucao" {
+    Context "Comandos: controle" {
         BeforeAll { $script:tg = Get-Content ".\scripts\telegram_listener.ps1" -Raw }
         It "implementa /halt (pause trading)" { $script:tg | Should Match "/halt|Cmd-Halt" }
         It "implementa /resume (resume)" { $script:tg | Should Match "/resume|Cmd-Resume" }
-        It "implementa /fechar (close position)" {
-            ($script:tg -match "/fechar|Cmd-Fechar|Cmd-Close") | Should Be $true
-        }
+        It "implementa /scan (trigger cron)" { $script:tg | Should Match "/scan|Cmd-Scan" }
     }
 
     Context "Sintaxe" {
