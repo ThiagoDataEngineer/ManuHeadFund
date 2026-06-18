@@ -10,7 +10,8 @@ function Update-TrailingPeakLive {
     )
 
     if (-not $TrailingFile) {
-        $TrailingFile = Join-Path (if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { (Join-Path (Split-Path $PSScriptRoot) "journal") }) "trailing_positions.json"
+        $__jdir = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path (Split-Path $PSScriptRoot) "journal" }
+        $TrailingFile = Join-Path $__jdir "trailing_positions.json"
     }
 
     if (-not (Test-Path $TrailingFile)) { return @{ updated=$false; reason="file_not_found" } }
@@ -96,7 +97,8 @@ function Get-MonusdtPeakStatus {
     param([string]$TrailingFile = "")
 
     if (-not $TrailingFile) {
-        $TrailingFile = Join-Path (if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { (Join-Path (Split-Path $PSScriptRoot) "journal") }) "trailing_positions.json"
+        $__jdir = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path (Split-Path $PSScriptRoot) "journal" }
+        $TrailingFile = Join-Path $__jdir "trailing_positions.json"
     }
 
     if (-not (Test-Path $TrailingFile)) { return $null }

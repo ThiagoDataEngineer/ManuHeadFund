@@ -98,6 +98,30 @@ Describe "Trailing Peak Update - side-aware + fino" {
         }
     }
 
+    Context "Path default (regressao do bug 'if' PS 5.1)" {
+
+        It "funciona SEM -TrailingFile usando JOURNAL_DIR (nao estoura no if)" {
+            # Bug: Join-Path (if ...) era invalido em PS 5.1 -> 'termo if nao reconhecido'
+            # (9173 falhas no position_watcher). Aqui exercita o caminho default.
+            $tmpDir = Join-Path $env:TEMP "trailjdir_$([guid]::NewGuid().ToString('N').Substring(0,8))"
+            New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null
+            $tf = Join-Path $tmpDir "trailing_positions.json"
+            ,@(@{ market="HYPEUSDT"; side="LONG"; entry=74.65; peak=75.0; stopCurrent=68.67; phase=0; active=$true }) | ConvertTo-Json -Depth 5 | Set-Content $tf -Encoding UTF8
+            $old = $global:JOURNAL_DIR
+            $global:JOURNAL_DIR = $tmpDir
+            try {
+                # NAO passa -TrailingFile -> usa o path default (linha que tinha o bug)
+                $r = Update-TrailingPeakLive -Market "HYPEUSDT" -CurrentPrice 77.08
+                $r.updated | Should Be $true
+                $p = (Get-Content $tf -Raw | ConvertFrom-Json) | Select-Object -First 1
+                $p.stopCurrent | Should Be 74.65
+            } finally {
+                $global:JOURNAL_DIR = $old
+                Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
+    }
+
     Context "Robustez" {
 
         It "arquivo inexistente nao quebra" {
