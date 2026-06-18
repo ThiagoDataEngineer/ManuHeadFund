@@ -61,6 +61,11 @@ $daemons = @(
     @{ name = "watchdog_paper";   pattern = "*watchdog_paper.ps1*";    script = "scripts\watchdog_paper.ps1";   lock = "watchdog_paper" }
 )
 
+# 2026-06-18: aposenta position_watcher quando trailing e online (JOB1 cobre). Reversivel.
+if (Test-Path (Join-Path $projectRoot "journal\POSITION_WATCHER_DISABLED.flag")) {
+    $daemons = @($daemons | Where-Object { $_.name -ne "position_watcher" })
+}
+
 # Kill ROBUSTO por lock (PID exato) ANTES do pattern-kill -- pega ate ghost S4U/elevado.
 $lockDir = Join-Path $projectRoot "journal\daemon_locks"
 $singletonLib = Join-Path $projectRoot "agents\lib_daemon_singleton.ps1"

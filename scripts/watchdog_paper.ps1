@@ -474,11 +474,16 @@ do {
     # ── 4. position_watcher (NEW 2026-06-05) ────────────────────────────────
     # Mantem o watcher de posicoes de pe (nao tinha keeper -> caia no reboot).
     # Deteccao via singleton lock (robusta vs sessao S4U/elevada).
+    # 2026-06-18: aposentado quando trailing e online (JOB1 cobre). Flag reversivel.
+    $__pwDisabled = Test-Path (Join-Path $projectRoot "journal\POSITION_WATCHER_DISABLED.flag")
     $pwAlive = $false
     if (Get-Command Test-DaemonRunning -ErrorAction SilentlyContinue) {
         $pwAlive = Test-DaemonRunning -Name "position_watcher" -LockDir $__lockDir
     }
-    if (-not $pwAlive) {
+    if ($__pwDisabled) {
+        Write-WatchdogLog $watchdogLog "INFO" "position_watcher APOSENTADO (POSITION_WATCHER_DISABLED.flag); trailing e online"
+    }
+    elseif (-not $pwAlive) {
         Write-WatchdogLog $watchdogLog "WARN" "position_watcher morto, respawn..."
         if (Get-Command Stop-DaemonByLock -ErrorAction SilentlyContinue) {
             Stop-DaemonByLock -Name "position_watcher" -LockDir $__lockDir | Out-Null
