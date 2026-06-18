@@ -1,7 +1,39 @@
 # 🚀 ManuHeadFund - CoinEx AI Trading System
 
 Sistema automatizado de trading com IA (Mentor Agent) + Auto-Trade Engine para CoinEx SPOT + FUTURES (HYBRID 50/50).  
-**Status**: ✅ **READY FOR LIVE SPOT $2.70** (FASE 1) | **Last Updated**: 2026-06-09
+**Status**: ✅ **CLOUD-ONLY LIVE** | Nuvem 24/7 | Local OFF | **Last Updated**: 2026-06-18
+
+---
+
+## ☁️ CLOUD-ONLY MODE (2026-06-18) — Nuvem é Única Fonte
+
+**Status**: ✅ LIVE | PC pode estar OFF | GitHub Actions roda autonomamente
+
+### O que mudou
+| Componente | Antes | Agora |
+|-----------|-------|-------|
+| **Execution** | Local loop (24/7 PC) | GitHub Actions (24/7 cloud) |
+| **Trailing Stop** | position_watcher local | trailing_stop_monitor JOB1 (cada 5 min) |
+| **gem_loop** | Loop contínuo local | gem_loop -Once JOB23 (cada 15 min) |
+| **Telegram** | Listener local | telegram_listener -Once JOB24 (cada 5 min) |
+| **State** | JSON local + Supabase | Supabase backend ÚNICO |
+| **PC Local** | Necessário 24/7 | Opcional (dev/debug apenas) |
+
+### Operação Nuvem
+```yaml
+# GitHub Actions runs continuously:
+- JOB 1:  trailing-stop-monitor (cada 5 min)   → protege posições
+- JOB 23: gem_loop -Once (cada 15 min)        → novos sinais + execução
+- JOB 24: telegram_listener (cada 5 min)      → responde comandos
+- Dashboard: auto-atualiza estado
+```
+
+### Segurança
+✅ Credenciais: GitHub Secrets (você controla)  
+✅ Local: config.local.ps1 gitignored + memory-only  
+✅ Reversível: rm `LOCAL_TRADING_DISABLED.flag` → local volta  
+
+**Documentação**: [docs/CREDENTIALS_PROTECTION.md](./docs/CREDENTIALS_PROTECTION.md)
 
 ---
 
@@ -23,12 +55,19 @@ Sistema automatizado de trading com IA (Mentor Agent) + Auto-Trade Engine para C
 
 ## 🎯 Quick Start
 
+**NUVEM (Production — Padrão)**
 ```bash
-# LOCAL EXECUTION (manual - development)
-.\scripts\scan_master.ps1
+# Automático: GitHub Actions roda 24/7
+# Nada a fazer — sistema roda sozinho
+# Verifique: https://github.com/ThiagoDataEngineer/ManuHeadFund/actions
+```
 
-# CI/CD EXECUTION (automatic - production)
-# Runs via GitHub Actions every 15 minutes
+**LOCAL (Development — Opcional)**
+```powershell
+# ⚠️  LOCAL_TRADING_DISABLED.flag ativo — LOOP local parado
+# Usar APENAS para teste/debug:
+.\scripts\gem_loop.ps1 -Once -DryRun      # teste seco
+.\scripts\scan_master.ps1 -Once           # 1 ciclo de teste
 ```
 
 ---
@@ -46,51 +85,51 @@ Sistema automatizado de trading com IA (Mentor Agent) + Auto-Trade Engine para C
 
 ## 🔄 Execution Modes
 
-### LOCAL (Development/Manual)
-Run manually on your machine for testing:
-
-```powershell
-# Single cycle
-.\scripts\scan_master.ps1 -Once
-
-# Continuous loop (15min intervals)
-.\scripts\scan_master.ps1
-
-# With specific pairs
-.\scripts\scan_master.ps1 -Pairs BTCUSDT,ETHUSDT -Once
-```
-
-**Use when:**
-- Testing new features
-- Debugging issues
-- Manual override needed
-
----
-
-### GITHUB ACTIONS (Production/Automatic)
-Runs automatically every 15 minutes via CI/CD:
+### GITHUB ACTIONS (Production/Cloud) — ⭐ ATIVO AGORA
+Runs automatically 24/7 via GitHub Actions:
 
 **Workflow**: `.github/workflows/trading-pipeline.yml`
 
 ```yaml
-# Executes every 15 minutes
-schedule:
-  - cron: '*/15 * * * *'
+on:
+  schedule:
+    - cron: '*/5 * * * *'   # A cada 5 minutos
+  workflow_dispatch:         # Manual trigger disponível
 ```
 
-**What it does:**
-1. ✅ Connects to Supabase (centralized data)
-2. ✅ Runs GemScan (market analysis)
-3. ✅ Runs Orchestrator V6 (mentor debate)
-4. ✅ Executes trades (if approved)
-5. ✅ Updates dashboard
-6. ✅ Logs everything
+**Jobs Críticos:**
+| Job | Intervalo | O que faz |
+|-----|-----------|----------|
+| JOB 1 | 5 min | Trailing stops: atualiza peaks + empurra SL |
+| JOB 23 | 15 min | gem_loop -Once: full stack novos sinais |
+| JOB 24 | 5 min | Telegram listener: responde /halt /resume /balance |
 
-**Advantages:**
-- ✅ Runs 24/7 without manual intervention
-- ✅ Scalable to production
-- ✅ Full audit trail
-- ✅ No local machine needed
+**Vantagens:**
+- ✅ Roda 24/7 sem PC ligado
+- ✅ Zero dependência de máquina local
+- ✅ Escalável e auditável
+- ✅ Credenciais via GitHub Secrets (seguro)
+
+---
+
+### LOCAL (Development/Debug) — ⚠️ PARADO (LOCAL_TRADING_DISABLED.flag)
+Para uso **APENAS em desenvolvimento**:
+
+```powershell
+# ⚠️  Teste seco (sem ordens reais)
+.\scripts\gem_loop.ps1 -Once -DryRun
+
+# ⚠️  1 ciclo apenas
+.\scripts\scan_master.ps1 -Once
+
+# ⚠️  Reativar local (remover flag):
+# rm journal/LOCAL_TRADING_DISABLED.flag
+```
+
+**Use quando:**
+- Testing new code locally
+- Debugging issues
+- Reversível: remova o flag pra reativar
 
 ---
 
@@ -180,7 +219,7 @@ $config = . .\agents\config.local.ps1
 - CoinEx API key (in `agents/config.local.ps1`)
 - Supabase URL and API key (optional, falls back to JSON)
 
-### Local Setup
+### Local Setup (Development Only)
 ```powershell
 # 1. Configure credentials
 # Edit agents/config.local.ps1 with:
@@ -189,12 +228,14 @@ $config = . .\agents\config.local.ps1
 # - SUPABASE_URL (optional)
 # - SUPABASE_SERVICE_KEY (optional)
 
-# 2. Run single cycle
-.\scripts\scan_master.ps1 -Once
+# 2. Test single cycle (dry-run mode)
+.\scripts\gem_loop.ps1 -Once -DryRun
 
 # 3. Check logs
-Get-Content logs/master_*.log -Tail 50
+Get-Content journal/gem_loop.log -Tail 50
 ```
+
+**⚠️ Nota**: Cloud está ativo por padrão. Para reativar local, remova `journal/LOCAL_TRADING_DISABLED.flag`
 
 ### Testing
 ```powershell
@@ -226,9 +267,9 @@ docs/               - Documentation (archived - see DEPLOYMENT_COMPLETE_2026_06_
 
 ---
 
-## 🚀 Deployment
+## 🚀 Deployment (Cloud — LIVE)
 
-### GitHub Actions Workflow
+### GitHub Actions Workflow — ATIVO 24/7
 
 **File**: `.github/workflows/trading-pipeline.yml`
 
@@ -237,17 +278,22 @@ name: Trading Pipeline
 
 on:
   schedule:
-    - cron: '*/15 * * * *'  # Every 15 minutes
+    - cron: '*/5 * * * *'   # A cada 5 minutos
   workflow_dispatch:         # Manual trigger
 
 jobs:
-  trade:
-    runs-on: windows-latest
+  trailing-stop-monitor:
+    runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
       
-      - name: Run Trading Cycle
+      - name: Update trailing stops (JOB 1)
+      
+  cloud-trading:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Run gem_loop -Once (JOB 23)
         run: |
           .\scripts\scan_master.ps1
       
