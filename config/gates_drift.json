@@ -2,6 +2,11 @@
   "version": "2026-06-18T20:45:32Z",
   "description": "Dynamic gates that tighten as system learns from errors. Gem_loop always active, gates improve gradually.",
   "gates": {
+    "mesa_score_bypass": 75,
+    "mesa_score_bypass_conviction": false,
+    "mesa_score_strong": 60,
+    "conviction_threshold_standard": 50,
+    "conviction_threshold_strong": 40,
     "conviction_threshold": 50,
     "conviction_floor": 40,
     "mesa_consensus_mode": "MEDIUM_or_FORTE",
