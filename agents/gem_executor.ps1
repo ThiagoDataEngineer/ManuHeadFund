@@ -642,11 +642,19 @@ function Invoke-GemExecute {
     $direction = if ($Gem.PSObject.Properties['direction']) { [string]$Gem.direction } else { "LONG" }
     $direction = if ($direction -in @("LONG","SHORT")) { $direction } else { "LONG" }
 
+    # 2026-06-17 fix: gems TRIGGER tem sizing sem stop_pct/target_pct -> StopPct=0 lancava.
+    # Resolve-StopTargetPct devolve fracoes validas (default R:R 1:5) se ausentes/invalidas.
+    $__stp = if (Get-Command Resolve-StopTargetPct -ErrorAction SilentlyContinue) {
+        Resolve-StopTargetPct -Sizing $sz
+    } else {
+        @{ stop_pct = (&{ if ([double]$sz.stop_pct -gt 0 -and [double]$sz.stop_pct -lt 1) { [double]$sz.stop_pct } else { 0.02 } });
+           target_pct = (&{ if ([double]$sz.target_pct -gt 0) { [double]$sz.target_pct } else { 0.10 } }) }
+    }
     try {
         $st = Calculate-StopTarget `
             -Entry     ([double]$price) `
-            -StopPct   ([double]$sz.stop_pct) `
-            -TargetPct ([double]$sz.target_pct) `
+            -StopPct   ([double]$__stp.stop_pct) `
+            -TargetPct ([double]$__stp.target_pct) `
             -Direction $direction `
             -Precision $pricePrec
     } catch {
@@ -655,8 +663,8 @@ function Invoke-GemExecute {
     }
     $stop_price  = $st.stop_price
     $tgt_price   = $st.target_price
-    $stop_pct_display   = [math]::Round($sz.stop_pct * 100, 0)
-    $target_pct_display = [math]::Round($sz.target_pct * 100, 0)
+    $stop_pct_display   = [math]::Round($__stp.stop_pct * 100, 0)
+    $target_pct_display = [math]::Round($__stp.target_pct * 100, 0)
 
     Write-Host "  Stop       : $stop_price  (-${stop_pct_display}%)" -ForegroundColor Red
     Write-Host "  Target     : $tgt_price   (+${target_pct_display}%)" -ForegroundColor Green

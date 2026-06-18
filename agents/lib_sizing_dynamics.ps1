@@ -69,4 +69,30 @@ function Test-SizingValidation {
     @{ valid = $true; size_pct = [math]::Round($singlePct, 2) }
 }
 
+function Resolve-StopTargetPct {
+    # 2026-06-17: conserta StopPct=0 -- gems TRIGGER tem sizing sem stop_pct/target_pct
+    # -> Calculate-StopTarget lancava. Aqui devolve fracoes validas com default R:R 1:5.
+    [CmdletBinding()]
+    param(
+        [object] $Sizing,
+        [double] $DefaultStop   = 0.02,
+        [double] $DefaultTarget = 0.10   # R:R 1:5
+    )
+
+    $stop = $null; $tgt = $null
+    if ($Sizing) {
+        if ($Sizing.PSObject.Properties['stop_pct'])   { $stop = $Sizing.stop_pct }
+        elseif ($Sizing -is [hashtable] -and $Sizing.ContainsKey('stop_pct')) { $stop = $Sizing['stop_pct'] }
+        if ($Sizing.PSObject.Properties['target_pct']) { $tgt = $Sizing.target_pct }
+        elseif ($Sizing -is [hashtable] -and $Sizing.ContainsKey('target_pct')) { $tgt = $Sizing['target_pct'] }
+    }
+
+    $stopD = [double]($stop)
+    $tgtD  = [double]($tgt)
+    if ($stopD -le 0 -or $stopD -ge 1) { $stopD = $DefaultStop }
+    if ($tgtD  -le 0)                  { $tgtD  = $DefaultTarget }
+
+    @{ stop_pct = $stopD; target_pct = $tgtD }
+}
+
 # Export-ModuleMember nao necessario em dot-source; comentado para compatibilidade Pester

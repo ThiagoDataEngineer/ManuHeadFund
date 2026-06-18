@@ -116,6 +116,57 @@ function Write-ConvictionObservation {
     Add-Content -Path $Path -Value $json -Encoding UTF8
 }
 
+function Get-VolumeConvictionScore {
+    # Eixo Volume: volume recente vs baseline. Spike = dinheiro entrando (move real).
+    # Pre-pump classico: volume sobe ANTES do preco. Direction-neutro (interesse = move).
+    [CmdletBinding()]
+    param(
+        [double[]] $Volumes,
+        [int]      $RecentN = 3
+    )
+
+    if ($null -eq $Volumes -or $Volumes.Count -lt ($RecentN + 3)) { return 50 }
+
+    $recent = $Volumes[-$RecentN..-1]
+    $baseline = $Volumes[0..($Volumes.Count - $RecentN - 1)]
+    $recentAvg = ($recent | Measure-Object -Average).Average
+    $baseAvg   = ($baseline | Measure-Object -Average).Average
+    if ($baseAvg -le 0) { return 50 }
+
+    $ratio = $recentAvg / $baseAvg
+    $score = 50 + (($ratio - 1) * 40)
+    if ($ratio -ge 2) { $score += 10 }   # spike forte = bonus
+
+    if ($score -gt 100) { $score = 100 }
+    if ($score -lt 0)   { $score = 0 }
+    [int][math]::Round($score, 0)
+}
+
+function Get-RangePositionScore {
+    # Eixo Estrutura: posicao do preco no range recente.
+    # LONG perto do suporte (fundo) = bom; SHORT perto da resistencia (topo) = bom.
+    [CmdletBinding()]
+    param(
+        [double[]] $Highs,
+        [double[]] $Lows,
+        [double]   $CurrentPrice,
+        [string]   $Direction = "LONG"
+    )
+
+    if ($null -eq $Highs -or $null -eq $Lows -or $Highs.Count -eq 0 -or $Lows.Count -eq 0) { return 50 }
+    $hi = ($Highs | Measure-Object -Maximum).Maximum
+    $lo = ($Lows  | Measure-Object -Minimum).Minimum
+    $range = $hi - $lo
+    if ($range -le 0) { return 50 }
+
+    $pos = ($CurrentPrice - $lo) / $range   # 0 = suporte, 1 = resistencia
+    if ($pos -lt 0) { $pos = 0 }
+    if ($pos -gt 1) { $pos = 1 }
+
+    $score = if ("$Direction".ToUpper() -eq "SHORT") { $pos * 100 } else { (1 - $pos) * 100 }
+    [int][math]::Round($score, 0)
+}
+
 function Resolve-ConvictionOverride {
     # Decide se a conviccao do ensemble destrava um veto do Tori (SKIP/WAIT).
     # FAIL-SAFE: so com FlagOn; nunca overrida DataAbsent; ENTER nao se aplica.
@@ -179,6 +230,18 @@ function Get-MarketConviction {
                 $rs = Get-BtcRelativeStrength -AltCloses $alt -BtcCloses $btcCloses -Beta 1.0
                 if ($rs) { $axes.btc_rs = Get-RsConvictionScore -Rs $rs.rs -BtcReturn $rs.btc_return -Direction $Direction }
             }
+        }
+        # Eixo Volume (volume-antes-do-preco) -- usa volumes do 1H
+        if (Get-Command Get-VolumeConvictionScore -ErrorAction SilentlyContinue) {
+            $vols = @($c1H | ForEach-Object { [double]$_.volume })
+            $axes.volume = Get-VolumeConvictionScore -Volumes $vols
+        }
+        # Eixo Estrutura (posicao no range) -- usa highs/lows do 4H
+        if ((Get-Command Get-RangePositionScore -ErrorAction SilentlyContinue) -and $c4H -and $c4H.Count -ge 5) {
+            $highs = @($c4H | ForEach-Object { [double]$_.high })
+            $lows  = @($c4H | ForEach-Object { [double]$_.low })
+            $cur   = [double]$c1H[-1].close
+            $axes.structure = Get-RangePositionScore -Highs $highs -Lows $lows -CurrentPrice $cur -Direction $Direction
         }
 
         if ($axes.Count -eq 0) { return $null }
