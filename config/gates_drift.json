@@ -1,0 +1,37 @@
+{
+  "version": "2026-06-18T20:45:32Z",
+  "description": "Dynamic gates that tighten as system learns from errors. Gem_loop always active, gates improve gradually.",
+  "gates": {
+    "conviction_threshold": 55,
+    "conviction_floor": 40,
+    "tori_bypass_allowed": false,
+    "pump_chase_detection": "off",
+    "leverage_max": 50,
+    "leverage_default": 2,
+    "max_days_open": 999,
+    "stop_coherence_check": "off",
+    "daily_loss_limit_pct": -5.0
+  },
+  "error_counts": {
+    "tori_skip_losses": 1,
+    "pump_chase_losses": 1,
+    "leverage_abuse_losses": 1,
+    "drift_timeout_losses": 1,
+    "stop_incoherent_losses": 0,
+    "total_error_events": 4
+  },
+  "drift_schedule": {
+    "t0_2026_06_18_20_45": "conviction=55, tori_bypass=false, pump_chase=off",
+    "t_6h_2026_06_19_02_45": "conviction+=5 if 2+ tori_skip_losses, pump_chase=on, leverage_max=5",
+    "t_12h_2026_06_19_08_45": "stop_coherence=on, max_days=7",
+    "t_24h_2026_06_19_20_45": "review gates_drift, consolidate changes"
+  },
+  "metrics": {
+    "current_win_rate_pct": 41.7,
+    "target_win_rate_pct": 50.0,
+    "trades_since_last_update": 12,
+    "trades_since_last_gate_tighten": 0
+  },
+  "last_update": "2026-06-18T20:45:32Z",
+  "last_learning_cycle": "pending"
+}
