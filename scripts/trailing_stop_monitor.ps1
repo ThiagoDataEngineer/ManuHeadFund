@@ -62,7 +62,9 @@ try {
     # 2026-06-18 Fase 1 online: peak update fino (+2.5% breakeven) + executor de SL
     . (Join-Path $agentsDir "lib_trailing_peak_update.ps1")
     . (Join-Path $agentsDir "lib_trailing_sync.ps1")
-    
+    # 2026-06-19 Fase 2: Exit Intelligence (saídas automáticas em lucro)
+    . (Join-Path $agentsDir "lib_exit_intelligence.ps1")
+
     Write-CrossPlatformLog "Libraries loaded successfully" -LogFile "trailing_stop_monitor.log"
 } catch {
     Write-CrossPlatformLog "ERROR loading libraries: $_" -Level ERROR -LogFile "trailing_stop_monitor.log"
@@ -186,6 +188,60 @@ try {
                 elseif ($s.should_push -and $s.error) { Write-CrossPlatformLog "  SL_PUSH FALHOU $($s.market): $($s.error)" -Level WARN -LogFile "trailing_stop_monitor.log" }
             }
         } catch { Write-CrossPlatformLog "sync SL: $_" -Level WARN -LogFile "trailing_stop_monitor.log" }
+    }
+
+    # 2.7 EXIT INTELLIGENCE (2026-06-19: sai de trades em lucro automaticamente)
+    Write-CrossPlatformLog "--- EXIT INTELLIGENCE (4-LAYER) ---" -LogFile "trailing_stop_monitor.log"
+    if (Get-Command Invoke-ExitIntelligence -ErrorAction SilentlyContinue) {
+        try {
+            $allPos = @(CoinEx-GetPendingPositions | Where-Object { $_.active -eq $true })
+            if ($allPos.Count -gt 0) {
+                # Build price cache (current prices)
+                $priceCache = @{}
+                $candleCache = @{}
+
+                foreach ($p in $allPos) {
+                    $mk = $p.market
+                    $priceCache[$mk] = [double]$p.mark_price
+
+                    # Fetch 1H candles (last 24)
+                    try {
+                        $kr = Invoke-RestMethod "https://api.coinex.com/v2/spot/kline?market=$mk&period=1hour&limit=24" -TimeoutSec 10 -EA Stop
+                        if ($kr.data) {
+                            $candleCache[$mk] = @($kr.data | ForEach-Object {
+                                [PSCustomObject]@{
+                                    open = [double]$_.open
+                                    high = [double]$_.high
+                                    low = [double]$_.low
+                                    close = [double]$_.close
+                                    volume = [double]$_.volume
+                                }
+                            })
+                        }
+                    } catch { }
+                }
+
+                # Invoke exit intelligence
+                $exitSignals = Invoke-ExitIntelligence -AllPositions $allPos -PriceCache $priceCache -CandleCache $candleCache
+
+                if ($exitSignals.Count -gt 0) {
+                    Write-CrossPlatformLog "EXIT SIGNALS DETECTED: $($exitSignals.Count)" -LogFile "trailing_stop_monitor.log"
+                    foreach ($exit in $exitSignals) {
+                        Write-CrossPlatformLog "  [$($exit.layer)] $($exit.market): SELL $($exit.qty_to_sell) @ `$$($exit.usd_value) PnL=$('{0:+0.00%}' -f $exit.pnl_pct)" -Level INFO -LogFile "trailing_stop_monitor.log"
+                        Write-CrossPlatformLog "    Reason: $($exit.reason)" -LogFile "trailing_stop_monitor.log"
+
+                        # TODO: Wire to gem_executor para executar SELL real
+                        # Por agora, apenas log (requer aprovação manual ou automated execution)
+                    }
+                } else {
+                    Write-CrossPlatformLog "No exit signals" -LogFile "trailing_stop_monitor.log"
+                }
+            }
+        } catch {
+            Write-CrossPlatformLog "EXIT INTELLIGENCE ERROR: $_" -Level WARN -LogFile "trailing_stop_monitor.log"
+        }
+    } else {
+        Write-CrossPlatformLog "Exit Intelligence not available" -Level WARN -LogFile "trailing_stop_monitor.log"
     }
 
     # 3. VALIDATION
