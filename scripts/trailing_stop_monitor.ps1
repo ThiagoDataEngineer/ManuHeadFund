@@ -64,6 +64,7 @@ try {
     . (Join-Path $agentsDir "lib_trailing_sync.ps1")
     # 2026-06-19 Fase 2: Exit Intelligence (saídas automáticas em lucro)
     . (Join-Path $agentsDir "lib_exit_intelligence.ps1")
+    . (Join-Path $agentsDir "lib_exit_intelligence_auto.ps1")
 
     Write-CrossPlatformLog "Libraries loaded successfully" -LogFile "trailing_stop_monitor.log"
 } catch {
@@ -242,6 +243,24 @@ try {
         }
     } else {
         Write-CrossPlatformLog "Exit Intelligence not available" -Level WARN -LogFile "trailing_stop_monitor.log"
+    }
+
+    # 2.8 EXIT INTELLIGENCE AUTO (2026-06-19: Execution automática Layer 2-4)
+    Write-CrossPlatformLog "--- EXIT INTELLIGENCE AUTO (Layer 2-4 execution) ---" -LogFile "trailing_stop_monitor.log"
+    if (Get-Command Invoke-ExitIntelligenceAuto -ErrorAction SilentlyContinue) {
+        try {
+            $autoExecResults = Invoke-ExitIntelligenceAuto -Debug:$false
+            if ($autoExecResults -and $autoExecResults.Count -gt 0) {
+                Write-CrossPlatformLog "EXIT AUTO: $($autoExecResults.Count) positions executed" -LogFile "trailing_stop_monitor.log"
+                foreach ($exec in $autoExecResults) {
+                    Write-CrossPlatformLog "  [Layer $($exec.layer)] $($exec.market): SOLD $($exec.pct)% ($($exec.qty)) - $($exec.reason)" -Level INFO -LogFile "trailing_stop_monitor.log"
+                }
+            } else {
+                Write-CrossPlatformLog "EXIT AUTO: No layers triggered" -LogFile "trailing_stop_monitor.log"
+            }
+        } catch {
+            Write-CrossPlatformLog "EXIT AUTO ERROR: $_" -Level WARN -LogFile "trailing_stop_monitor.log"
+        }
     }
 
     # 2.9 AUTO-SYNC SL/TP (2026-06-19: create missing stops automatically)
