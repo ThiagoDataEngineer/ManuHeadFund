@@ -96,6 +96,3 @@ function Test-ToriGateConsistent {
         return @{ pass = $false; reason = "tori_error_or_unknown_signal_$ToriSignal" }
     }
 }
-
-# Export
-Export-ModuleMember -Function @("Get-ToriRequirement", "Test-ToriGateConsistent")

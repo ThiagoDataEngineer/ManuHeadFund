@@ -960,8 +960,10 @@ function Invoke-GemScan {
                 }
             }
 
-            $gem | Add-Member -NotePropertyName vol_data  -NotePropertyValue $c.vol_data  -Force
-            $gem | Add-Member -NotePropertyName mcap_usd  -NotePropertyValue $c.mcap      -Force
+            $gem | Add-Member -NotePropertyName vol_data     -NotePropertyValue $c.vol_data  -Force
+            $gem | Add-Member -NotePropertyName mcap_usd     -NotePropertyValue $c.mcap      -Force
+            $gem | Add-Member -NotePropertyName conviction   -NotePropertyValue 0            -Force
+            $gem | Add-Member -NotePropertyName mesa_score   -NotePropertyValue 0            -Force
             if ($gem.score -gt 0) {
                 $sz = Get-GemSizing -Mode $gem.mode -Capital $Capital -BtcDominance 0
                 $gem | Add-Member -NotePropertyName sizing -NotePropertyValue $sz -Force

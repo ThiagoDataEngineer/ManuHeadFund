@@ -107,6 +107,3 @@ function Test-LeverageSafe {
         liquidation_buffer_pct = $actualLiquidationBuffer * 100
     }
 }
-
-# Export
-Export-ModuleMember -Function @("Get-SafeLeverage", "Test-LeverageSafe")

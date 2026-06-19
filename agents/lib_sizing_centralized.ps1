@@ -102,6 +102,3 @@ function Get-SafePositionSizeFromGem {
                                 -StopLossPercent $slPct `
                                 -ConvictionPercent $conviction
 }
-
-# Export
-Export-ModuleMember -Function @("Get-SafePositionSize", "Get-SafePositionSizeFromGem")

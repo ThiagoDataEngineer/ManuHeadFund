@@ -77,6 +77,3 @@ function Test-FqsGatePassesWithDefault {
         is_default = $Gem.fqs -eq $null -or $Gem.fqs -eq ""
     }
 }
-
-# Export
-Export-ModuleMember -Function @("Get-FqsQualityOrDefault", "Test-FqsGatePassesWithDefault")

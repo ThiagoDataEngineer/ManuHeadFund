@@ -84,7 +84,7 @@ $__gatesDriftPath = Join-Path $PSScriptRoot "lib_gates_drift_wire.ps1"
 if (Test-Path $__gatesDriftPath) { . $__gatesDriftPath }
 
 # 2026-06-18: TDD rebuild — all critical libs
-foreach ($__tddLib in @("lib_sizing_centralized.ps1","lib_leverage_cap.ps1","lib_tori_simplified.ps1","lib_fqs_default_quality.ps1")) {
+foreach ($__tddLib in @("lib_sizing_centralized.ps1","lib_leverage_cap.ps1","lib_tori_simplified.ps1","lib_fqs_default_quality.ps1","lib_entry_conviction_ensemble.ps1")) {
     $__tddPath = Join-Path $PSScriptRoot $__tddLib
     if (Test-Path $__tddPath) {
         try { . $__tddPath }
@@ -547,6 +547,19 @@ function Invoke-GemExecute {
         try {
             $mesa_score = if ($Gem.PSObject.Properties['mesa_score']) { [int]$Gem.mesa_score } else { 0 }
             $conviction = if ($Gem.PSObject.Properties['conviction']) { [int]$Gem.conviction } else { 0 }
+
+            # Calculate conviction if not already set
+            if ($conviction -le 0 -and (Get-Command Get-EntryConviction -ErrorAction SilentlyContinue)) {
+                try {
+                    $convRes = Get-EntryConviction -Market $mkt -Direction $direction -Gem $Gem
+                    if ($convRes.conviction -gt 0) {
+                        $conviction = [int]$convRes.conviction
+                        $Gem | Add-Member -NotePropertyName conviction -NotePropertyValue $conviction -Force
+                    }
+                } catch {
+                    # Fallback: use 0
+                }
+            }
 
             if (-not (Test-ConvictionGate -conviction $conviction -mesa_score $mesa_score)) {
                 Write-Host "  [CONVICTION BLOCKED] ${mkt}: conviction=$conviction mesa=$mesa_score (fails dynamic threshold)" -ForegroundColor Yellow
