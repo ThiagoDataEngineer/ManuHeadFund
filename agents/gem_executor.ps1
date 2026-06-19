@@ -83,6 +83,15 @@ foreach ($__convDep in @("lib_btc_relative_strength.ps1","lib_entry_conviction_e
 $__gatesDriftPath = Join-Path $PSScriptRoot "lib_gates_drift_wire.ps1"
 if (Test-Path $__gatesDriftPath) { . $__gatesDriftPath }
 
+# 2026-06-18: TDD rebuild — all critical libs
+foreach ($__tddLib in @("lib_sizing_centralized.ps1","lib_leverage_cap.ps1","lib_tori_simplified.ps1","lib_fqs_default_quality.ps1")) {
+    $__tddPath = Join-Path $PSScriptRoot $__tddLib
+    if (Test-Path $__tddPath) {
+        try { . $__tddPath }
+        catch { Write-Host "[WARN] Failed to load $__tddLib: $_" -ForegroundColor Yellow }
+    }
+}
+
 # 2026-05-29: Order validation (retry+fallback SL/TP) + Position protection (garante TP/SL reais).
 # Causa raiz corrigida: SL/TP embutido em ordem MARKET nao aplica confiavel na CoinEx V2.
 # Solucao: aplicar SL/TP via set-position-* APOS fill + validar + retry.
