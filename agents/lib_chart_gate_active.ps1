@@ -30,13 +30,18 @@ function Test-ChartPatternGate {
         return @{ pass = $true; reason = "insufficient_data"; confidence = 0 }
     }
 
-    # Check for PUMP signature (last 3 candles forming climax)
-    $recent = $HistoricalPrice[-3..-1]
-    $vol_recent = $Volume[-3..-1]
+    # Check for PUMP signature (volume climax + price spike)
+    $recent = $HistoricalPrice[-5..-1]  # Last 5 candles
+    $vol_recent = $Volume[-5..-1]
 
-    # Pump = rising prices + volume spike
-    $price_up = ($recent[-1] -gt $recent[0])
-    $vol_spike = ($vol_recent[-1] -gt ($vol_recent[0] * 2))  # 2x volume spike
+    # Pump = (1) rising prices in last 3, AND (2) volume spike anywhere in recent
+    $price_up = ($recent[-1] -gt $recent[0])  # Last close > 5-candle open
+
+    # Volume spike: any recent candle >2x the average of earlier candles
+    $vol_baseline = ($vol_recent[0] + $vol_recent[1]) / 2  # First 2 candles average
+    $vol_spike = ($vol_recent[-1] -gt ($vol_baseline * 2)) -or `
+                 ($vol_recent[-2] -gt ($vol_baseline * 2)) -or `
+                 ($vol_recent[-3] -gt ($vol_baseline * 2))  # Any of last 3 spike
 
     if ($price_up -and $vol_spike) {
         # This smells like pump — high risk
@@ -50,18 +55,21 @@ function Test-ChartPatternGate {
 
     # Check for TOPPING pattern (bearish reversal)
     if ($recent.Count -ge 3) {
-        # Hammer, shooting star, engulfing = reversal risk
-        $range = $recent[-1] - $recent[0]
-        $body = [math]::Abs($recent[-1] - $recent[-2])
-
         # Shooting star: long upper wick, small body = rejection
-        $upper_wick = $recent[-1] - [math]::Max($recent[-1], $recent[-2])
-        if ($upper_wick -gt ($range * 0.5)) {
-            return @{
-                pass = $false
-                reason = "shooting_star_rejection"
-                confidence = 70
-                pattern = "upper_wick_rejection"
+        $high = [math]::Max($recent[-1], $recent[-2])
+        $low = [math]::Min($recent[-1], $recent[-2])
+        $range = $high - $low
+
+        if ($range -gt 0) {
+            $upper_wick = $recent[-1] - $high
+            # If upper wick is >50% of range, it's a shooting star rejection
+            if ([math]::Abs($upper_wick) -gt ($range * 0.5)) {
+                return @{
+                    pass = $false
+                    reason = "shooting_star_rejection"
+                    confidence = 70
+                    pattern = "upper_wick_rejection"
+                }
             }
         }
     }
@@ -123,5 +131,4 @@ function Get-DailyAutoCalibrationAdvice {
     }
 }
 
-# Export
-Export-ModuleMember -Function @("Test-ChartPatternGate", "Get-DailyAutoCalibrationAdvice")
+# Dot-source only (not a module)
