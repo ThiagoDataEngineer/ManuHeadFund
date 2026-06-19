@@ -195,6 +195,16 @@ function CoinEx-GetFuturesMarkets() {
     return $r.data
 }
 
+function CoinEx-HasFuturesMarket($market) {
+    # Quick check if market exists in FUTURES
+    try {
+        $all = CoinEx-GetFuturesMarkets
+        return $null -ne ($all | Where-Object { $_.market -eq $market })
+    } catch {
+        return $false
+    }
+}
+
 # ── Market Precision Cache (fix bug AIUSDT 2026-05-14) ───────────────────────
 # Cacheia GET /spot/market e GET /futures/market por par para evitar:
 #  - latencia HTTP em cada calculo de stop/target
