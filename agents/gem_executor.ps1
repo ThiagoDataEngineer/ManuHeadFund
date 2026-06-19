@@ -548,18 +548,9 @@ function Invoke-GemExecute {
             $mesa_score = if ($Gem.PSObject.Properties['mesa_score']) { [int]$Gem.mesa_score } else { 0 }
             $conviction = if ($Gem.PSObject.Properties['conviction']) { [int]$Gem.conviction } else { 0 }
 
-            # Calculate conviction if not already set (but skip if expensive; conviction calc reqs 3-4 API calls)
-            # Default: use mesa_score; conviction as secondary signal only if computed elsewhere
-            # Fail-open: if conviction unavailable, use mesa_score bypass logic or allow low conviction
-            if ($conviction -le 0) {
-                # If mesa_score available, bypass conviction check per gate rules (mesa>75)
-                if ($mesa_score -gt 75) {
-                    $conviction = 60  # Synthetic high conviction if mesa is elite
-                } else {
-                    # Fallback: allow entry with low conviction (gate will check mesa threshold 60+ needs conv>40)
-                    $conviction = 25  # Neutral; will be checked by gate
-                }
-            }
+            # Conviction calculation deferred: too expensive to compute per-gem (3-4 API calls each)
+            # Gate logic handles this: if conviction=0 AND mesa=0, allow entry (conviction not yet ready)
+            # Otherwise: conviction must pass threshold based on mesa_score tier
 
             if (-not (Test-ConvictionGate -conviction $conviction -mesa_score $mesa_score)) {
                 Write-Host "  [CONVICTION BLOCKED] ${mkt}: conviction=$conviction mesa=$mesa_score (fails dynamic threshold)" -ForegroundColor Yellow

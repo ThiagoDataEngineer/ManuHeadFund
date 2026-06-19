@@ -72,7 +72,13 @@ function Test-ConvictionGate {
         return $passes
     }
 
-    # Regra 3: Standard threshold 50
+    # Regra 3: Standard threshold 50 (but relax to 0 if conviction unavailable = mesa also unavailable)
+    # If both conviction AND mesa are low/zero, assume conviction not yet calculated — allow entry
+    if ($conviction -le 0 -and $mesa_score -le 0) {
+        Write-Verbose "[GATES] Both conviction and mesa unavailable (conviction=$conviction mesa=$mesa_score) — allow entry (conviction calc deferred)"
+        return $true
+    }
+
     $threshold = $gates.conviction_threshold  # 50
     $passes = $conviction -gt $threshold
     Write-Verbose "[GATES] Standard conviction $conviction vs threshold $threshold = $passes"
