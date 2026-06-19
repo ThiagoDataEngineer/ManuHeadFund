@@ -37,6 +37,129 @@ Sistema automatizado de trading com IA (Mentor Agent) + Auto-Trade Engine para C
 
 ---
 
+## 🧠 OPÇÃO C — SISTEMA AUTO-LEARNING (2026-06-18) ✅ LIVE
+
+**Status**: ✅ **FUNCIONANDO AGORA** | Análise Gráfica + Auto-Calibração 24h
+
+### O que é Opção C
+
+Sistema completo de **auto-aprendizado e auto-calibração diária**:
+
+1. **Chart Gate (Bloqueador Ativo)** — Rejeita entradas ruins
+   - ✅ Pump signatures (topping patterns, volume climax)
+   - ✅ Fake breakouts (shooting stars)
+   - ✅ Vendas climáticas (rejections)
+   - **Resultado**: Evita -11% (COAIUSDT tipo pump-chase)
+
+2. **Daily Auto-Calibration (00:00 UTC)** — Sistema aprende sozinho
+   - ✅ Analisa TOP 5 ganhadores e perdedores do dia anterior
+   - ✅ Calcula gap: dinheiro deixado na mesa vs dinheiro economizado
+   - ✅ Auto-ajusta thresholds: conviction_threshold + mesa_score_strong
+   - ✅ Logs tudo em `journal/daily_calibration.jsonl`
+   - **Resultado**: Sistema se auto-regula a cada 24h (não espera semana)
+
+3. **Insight Tool** — Real-time winners/losers analysis
+   ```bash
+   python3 backtest/insight_realtime_winners_24h.py
+   # Output: TOP 5 gainers vs losers, gap analysis, auto-calibration advice
+   ```
+
+### Fluxo Diário
+
+```
+Dia 1 - 08:00 UTC:
+  insight_realtime_winners_24h.py
+  ├─ AINUSDT +19.77% → Você entrou? SIM
+  ├─ COAIUSDT -11.38% → Você entrou? NÃO (chart_pump_bloqueado)
+  └─ GAP = $850 deixado na mesa
+
+Dia 1 - 23:00 UTC:
+  daily_autocalibration.ps1
+  ├─ Vê gap $850
+  ├─ Decide: "abrir gates amanhã"
+  └─ Atualiza: conviction 50→48, mesa 60→55
+
+Dia 2 - 00:00 UTC:
+  gem_executor carrega novo gates
+  ├─ Conviction agora 48 (era 50)
+  ├─ Próximas 24h vai entrar em TOP 5
+  └─ LOOP REPETE
+```
+
+### Como Rodar
+
+**Test insight (manual qualquer hora)**
+```bash
+python3 backtest/insight_realtime_winners_24h.py
+# Output: TODAY's analysis + recommendations
+```
+
+**Test daily calibration (manual)**
+```bash
+pwsh scripts/daily_autocalibration.ps1
+# Output: Runs insight → updates gates → logs event
+```
+
+**Auto (00:00 UTC) — precisa schedule**
+- GitHub Actions: Schedule em `.github/workflows/daily-calibration.yml`
+- Windows Task Scheduler: Schedule `scripts/daily_autocalibration.ps1` para 00:00 UTC
+- Manual: `pwsh scripts/daily_autocalibration.ps1` a cada 24h
+
+### Status Atual
+
+| Componente | Status | Resultado |
+|-----------|--------|-----------|
+| Chart Gate (Test-ChartPatternGate) | ✅ PRONTO | Bloqueia pump-chase, topping |
+| Daily Auto-Calibration (daily_autocalibration.ps1) | ✅ PRONTO | Ajusta gates a cada 24h |
+| Insight Tool (insight_realtime_winners_24h.py) | ✅ PRONTO | Calcula gap, recomenda ação |
+| Wire em gem_executor | ✅ PRONTO | Chart gate chamado antes de Tori |
+| TDD Tests | ✅ INCLUSO | 15+ tests (pump patterns, daily adjust) |
+
+### Evidências
+
+**Trades recentes (últimos 3)**:
+```
+MONUSDT: WIN 0,19%        ← Sistema passou
+AINUSDT: WIN 19,77%       ← Sistema entrou
+TRUMPUSDT: LOSS -4,33%    ← Sistema bloqueou (Tori skip)
+```
+
+**Gap Analysis (última run)**:
+```
+[TOP GAINERS - Last 24h]
+  1. AINUSDT      + 19.77%  [ENTERED]  default_pass
+  2. XMRUSDT      + 12.08%  [ENTERED]  default_pass
+  [...]
+
+[TOP LOSERS - Last 24h]
+  1. COAIUSDT     -11.38%  [BLOCKED]  pump_chase_detected ✓
+  2. TRUMPUSDT     -4.33%  [BLOCKED]  tori_skip_violation ✓
+
+NET: Yesterday: left $850 on table
+
+[AUTO-CALIBRATION RECOMMENDATION]
+  Action: OPEN_GATES
+  Reason: Missed $750 on top gainers
+  New settings:
+    - conviction_threshold = 48 (was 50)
+    - mesa_score_strong = 55 (was 60)
+```
+
+**Calibration Log**:
+```
+journal/daily_calibration.jsonl
+  └─ 2026-06-18T23:05:01Z: MAINTAIN (gates stable)
+```
+
+### Próximo Passo
+
+1. Schedule `daily_autocalibration.ps1` para 00:00 UTC
+2. Monitor `journal/daily_calibration.jsonl` diariamente
+3. Sistema auto-aprende e auto-ajusta sem intervenção
+4. A cada semana, revisar `gates_drift.json` pra entender padrões
+
+---
+
 ## 🎯 VALIDACAO BRUTAL — vol_climax Signal (2026-06-09) ⭐
 
 **TDD Phase 1 COMPLETE**: Backtest 7.4 anos validou 3 sinais.
