@@ -79,6 +79,10 @@ foreach ($__convDep in @("lib_btc_relative_strength.ps1","lib_entry_conviction_e
     if (Test-Path $__convPath) { . $__convPath }
 }
 
+# 2026-06-18: Wire gates_drift.json — dynamic gate application (mesa score override + conviction threshold)
+$__gatesDriftPath = Join-Path $PSScriptRoot "lib_gates_drift_wire.ps1"
+if (Test-Path $__gatesDriftPath) { . $__gatesDriftPath }
+
 # 2026-05-29: Order validation (retry+fallback SL/TP) + Position protection (garante TP/SL reais).
 # Causa raiz corrigida: SL/TP embutido em ordem MARKET nao aplica confiavel na CoinEx V2.
 # Solucao: aplicar SL/TP via set-position-* APOS fill + validar + retry.
