@@ -1,0 +1,50 @@
+name: Hourly Auto-Calibration
+
+on:
+  schedule:
+    - cron: '0 * * * *'  # Run every hour at :00
+  workflow_dispatch:     # Manual trigger
+
+jobs:
+  autocalibration:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 1
+
+      - name: Setup PowerShell
+        uses: PowerShell/setup-powershell@v2
+        with:
+          pwsh-version: latest
+
+      - name: Run hourly calibration
+        shell: pwsh
+        run: |
+          Write-Host "======================================" -ForegroundColor Cyan
+          Write-Host "HOURLY AUTO-CALIBRATION" -ForegroundColor Cyan
+          Write-Host "Time: $(Get-Date -Format 'o')" -ForegroundColor Cyan
+          Write-Host "======================================" -ForegroundColor Cyan
+          Write-Host ""
+
+          # Run calibration
+          & ./scripts/daily_autocalibration.ps1
+
+          $exit_code = $LASTEXITCODE
+          Write-Host ""
+          Write-Host "======================================" -ForegroundColor Cyan
+          Write-Host "CALIBRATION EXIT CODE: $exit_code" -ForegroundColor Cyan
+          Write-Host "======================================" -ForegroundColor Cyan
+
+          exit $exit_code
+
+      - name: Upload calibration logs
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: calibration-logs-${{ github.run_id }}
+          path: journal/
+          retention-days: 7

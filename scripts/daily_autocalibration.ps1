@@ -100,5 +100,5 @@ $log_entry | Add-Content "$JournalDir/daily_calibration.jsonl"
 Write-Host "  Logged to journal/daily_calibration.jsonl"
 Write-Host ""
 
-Write-Host "[AUTOCALIBRATION] ✓ Daily calibration complete" -ForegroundColor Green
+Write-Host "[AUTOCALIBRATION] ✓ Calibration cycle complete" -ForegroundColor Green
 Write-Host ""

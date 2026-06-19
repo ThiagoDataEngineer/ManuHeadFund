@@ -92,6 +92,10 @@ foreach ($__tddLib in @("lib_sizing_centralized.ps1","lib_leverage_cap.ps1","lib
     }
 }
 
+# 2026-06-18: Chart patterns as ACTIVE BLOCKER (reject pump-chase, topping, fake breakouts)
+$__chartGatePath = Join-Path $PSScriptRoot "lib_chart_gate_active.ps1"
+if (Test-Path $__chartGatePath) { . $__chartGatePath }
+
 # 2026-05-29: Order validation (retry+fallback SL/TP) + Position protection (garante TP/SL reais).
 # Causa raiz corrigida: SL/TP embutido em ordem MARKET nao aplica confiavel na CoinEx V2.
 # Solucao: aplicar SL/TP via set-position-* APOS fill + validar + retry.
@@ -512,6 +516,26 @@ function Invoke-GemExecute {
         # 2026-05-20: confirmation policy = warning-only (segue trade). Wait-TelegramApproval
         # existe em lib_telegram.ps1:153 mas decisao explicita: GEM mantem aviso unico
         # (sizing 0.2% ja eh tao pequeno que double-confirm seria overkill).
+    }
+
+    # ── 2. CHART PATTERN GATE (2026-06-18: bloqueador ativo) ──
+    # Rejeita pump-chase, topping patterns, fake breakouts ANTES de qualquer outra gate
+    # Economia: evita -11% (COAIUSDT tipo) com zero LLM
+    if (Get-Command Test-ChartPatternGate -ErrorAction SilentlyContinue) {
+        try {
+            $chart = Test-ChartPatternGate -Market $mkt -HistoricalPrice $prices -Volume $volumes
+            if (-not $chart.pass) {
+                Write-Host "  [CHART PATTERN BLOCKED] ${mkt}: $($chart.reason) (confidence $($chart.confidence)%)" -ForegroundColor Red
+                if (Get-Command Add-GemRejection -ErrorAction SilentlyContinue) {
+                    try { Add-GemRejection -Path (Join-Path $global:JOURNAL_DIR "gem_recent_decisions.json") -Market $mkt -Reason "chart_pattern:$($chart.reason)" } catch {}
+                }
+                return [PSCustomObject]@{ blocked = $true; blocked_by = @("chart_pattern_$($chart.reason)"); market = $mkt }
+            } else {
+                Write-Host "  [CHART OK] ${mkt}: $($chart.reason)" -ForegroundColor DarkGray
+            }
+        } catch {
+            Write-Host "  [CHART PATTERN ERROR] ${mkt}: $_ (fallback: allow)" -ForegroundColor Yellow
+        }
     }
 
     # ── 2a. CONVICTION GATE (2026-06-18: entrada dinamica, mesa score override) ──
