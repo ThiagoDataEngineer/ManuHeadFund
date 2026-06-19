@@ -29,10 +29,30 @@
     "daily_loss_limit_pct": -5.0
   },
   "modes": {
-    "standard": {"enabled": true, "ttl_days": 7, "target_daily_volume": 5, "avg_size_usd": 400},
-    "scalp": {"enabled": true, "ttl_min": 15, "target_daily_volume": 15, "avg_size_usd": 150},
-    "swap": {"enabled": true, "ttl_hours": 24, "target_daily_volume": 5, "avg_size_usd": 150},
-    "pump_ride": {"enabled": true, "ttl_min": 120, "target_daily_volume": 3, "avg_size_usd": 200}
+    "standard": {
+      "enabled": true,
+      "ttl_days": 7,
+      "target_daily_volume": 5,
+      "avg_size_usd": 400
+    },
+    "scalp": {
+      "enabled": true,
+      "ttl_min": 15,
+      "target_daily_volume": 15,
+      "avg_size_usd": 150
+    },
+    "swap": {
+      "enabled": true,
+      "ttl_hours": 24,
+      "target_daily_volume": 5,
+      "avg_size_usd": 150
+    },
+    "pump_ride": {
+      "enabled": true,
+      "ttl_min": 120,
+      "target_daily_volume": 3,
+      "avg_size_usd": 200
+    }
   },
   "expected_daily_volume": 28,
   "approval_rate_target_pct": 20,
@@ -57,5 +77,8 @@
     "trades_since_last_gate_tighten": 0
   },
   "last_update": "2026-06-18T20:45:32Z",
-  "last_learning_cycle": "pending"
+  "last_learning_cycle": "pending",
+  "last_calibration_date": "2026-06-18T23:16:31.5110954-03:00",
+  "last_calibration_action": "MAINTAIN",
+  "last_calibration_reason": "Stable"
 }

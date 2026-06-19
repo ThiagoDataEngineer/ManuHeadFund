@@ -784,8 +784,9 @@ function CoinEx-PlaceSpotStopOrder {
         market        = $Market
         market_type   = "SPOT"
         side          = $Side
-        type          = "market"
+        type          = "limit"
         amount        = ([math]::Round($Amount, 6)).ToString($inv)
+        price         = ([math]::Round([decimal]$TriggerPrice, 8)).ToString($inv)  # execution price
         ccy           = $base
         # 2026-06-05 fix: Round(,8) ZERAVA precos sub-1e-8 (PEPE2 trigger 1.006e-9
         # -> "0" -> API rejeita -> posicao NUA). Usa decimal+12 casas pra preservar
