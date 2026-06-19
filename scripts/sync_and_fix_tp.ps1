@@ -40,8 +40,8 @@ foreach ($market in $Markets) {
     $pos = $openOrders | Where-Object { $_.market -eq $market }
 
     if ($pos) {
-        $size = $pos.quantity ?? $pos.size
-        $entry = $pos.entry_price ?? $pos.price
+        $size = $pos.amount ?? $pos.quantity ?? $pos.size  # CoinEx returns 'amount' field
+        $entry = $pos.price ?? $pos.entry_price  # CoinEx returns 'price' field for SPOT
         $hasSL = $pos.stop_loss_price -or $pos.sl_order_id
         $hasTP = $pos.take_profit_price -or $pos.tp_order_id
 

@@ -801,9 +801,18 @@ function CoinEx-PlaceSpotStopOrder {
     if ($StpMode -ne "none") {
         $body.stp_mode = $StpMode
     }
+
+    if ($global:DEBUG_COINEX) {
+        Write-Host "[DEBUG] CoinEx-PlaceSpotStopOrder: market=$Market side=$Side amount=$Amount trigger=$TriggerPrice" -ForegroundColor Magenta
+        Write-Host "[DEBUG] Body: $($body | ConvertTo-Json)" -ForegroundColor Magenta
+    }
+
     $r = $null
     try {
         $r = CoinEx-Post "/v2/spot/stop-order" $body
+        if ($global:DEBUG_COINEX) {
+            Write-Host "[DEBUG] Response code: $($r.code)" -ForegroundColor Magenta
+        }
         if ($r.code -ne 0) { throw "SpotStopOrder error [$($r.code)]: $($r.message)" }
         if ($clientId -and (Get-Command Update-OrderClientIdStatus -ErrorAction SilentlyContinue)) {
             $orderId = if ($r.data -and $r.data.order_id) { [string]$r.data.order_id } else { "" }
