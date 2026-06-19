@@ -3,7 +3,7 @@
 # Sincroniza posições da CoinEx e adiciona TP onde falta
 
 param(
-    [string[]]$Markets = @('BASEDUSDT', 'SPCXXUSDT', 'AINUSDT')
+    [string[]]$Markets = @()  # Empty = auto-detect ALL open positions
 )
 
 . agents/config.local.ps1
@@ -23,7 +23,7 @@ try {
         Write-Host "  ✓ Encontradas $($openOrders.Count) posições abertas" -ForegroundColor Green
     } else {
         Write-Host "  ✗ Nenhuma posição aberta" -ForegroundColor Red
-        exit 1
+        exit 0
     }
 } catch {
     Write-Host "  ✗ Erro ao buscar: $_" -ForegroundColor Red
@@ -32,8 +32,16 @@ try {
 
 Write-Host ""
 
+# 2026-06-19: Auto-detect markets se não especificado
+if ($Markets.Count -eq 0) {
+    Write-Host "[STEP 1.5] Auto-detectando mercados..." -ForegroundColor Yellow
+    $Markets = @($openOrders | Select-Object -ExpandProperty market -Unique)
+    Write-Host "  ✓ Auto-detectados: $($Markets -join ', ')" -ForegroundColor Cyan
+    Write-Host ""
+}
+
 # Filter for markets of interest
-Write-Host "[STEP 2] Verificando BASED, SPCXX, AIN..." -ForegroundColor Yellow
+Write-Host "[STEP 2] Sincronizando posições abertas..." -ForegroundColor Yellow
 Write-Host ""
 
 foreach ($market in $Markets) {

@@ -1,0 +1,331 @@
+╔═════════════════════════════════════════════════════════════════════════════╗
+║                      GEM_EXECUTOR — BLOQUEADORES EM ORDEM                   ║
+║  "POR QUÊ APENAS METUSDT ENTROU? QUAL GATE ESTÁ TRAVANDO OS OUTROS?"        ║
+╚═════════════════════════════════════════════════════════════════════════════╝
+
+═════════════════════════════════════════════════════════════════════════════════
+FLUXO COMPLETO — gem_scan → gem_executor → GATES → PlaceOrder
+═════════════════════════════════════════════════════════════════════════════════
+
+    [1] GEM_SCAN (gem_agent.ps1)
+        ├─ Universo: 365 pares
+        ├─ G1 (range > 15%): 73 pares
+        ├─ G2 (vol spike >= 1.5x): 9 pares
+        ├─ G4 (narrativa): 2 pares (BASED, MET)
+        └─ Saída: 2 gems para processar
+
+            ↓
+
+    [2] GEM_EXECUTOR (gem_executor.ps1)
+        ├─ Input: BASED (score=80), MET (score=75)
+        └─ Processa cada GEM através de 7 GATES
+
+            ↓↓↓↓↓↓↓ BLOCKADE PIPELINE ↓↓↓↓↓↓↓
+
+═════════════════════════════════════════════════════════════════════════════════
+GATE SEQUENCE — ORDEM DE EXECUÇÃO (cada gate bloqueia ou passa)
+═════════════════════════════════════════════════════════════════════════════════
+
+GATE 0: SCORE CHECK
+────────────────────
+  Arquivo: gem_executor.ps1, linhas 350-364
+
+  Função:
+    scoreMin = if (mode == "DISCOVERY") { 70 } else { 60 }
+    if (score < scoreMin) → BLOCKED
+
+  METUSDT teste:
+    score = 75
+    scoreMin = 70 (DISCOVERY)
+    Resultado: ✅ PASS (75 >= 70)
+
+  Blocador potencial:
+    Se scoreMin ajustado para 80+ → METUSDT bloqueado
+    Check: config/gates_drift.json → "min_score_discovery"
+
+────────────────────────────────────────────────────────────────────────────
+
+GATE 1: SIZING VALIDATION
+─────────────────────────
+  Arquivo: gem_executor.ps1, linhas 365-368
+
+  Função:
+    if (!sizing_pct || sizing_pct <= 0) → BLOCKED
+
+  METUSDT teste:
+    sizing_pct = 0.005 (0.5% do capital)
+    Resultado: ✅ PASS
+
+  Blocador potencial:
+    Se sizing = 0 ou negativo → bloqueado
+    Motivo comum: capital calculation falha
+
+────────────────────────────────────────────────────────────────────────────
+
+GATE 2: BEARISH SPIKE CHECK
+───────────────────────────
+  Arquivo: gem_executor.ps1, linhas 369-372
+
+  Função:
+    if (spike_type == "BEARISH") → BLOCKED
+
+  METUSDT teste:
+    spike_type = "BULLISH" (mercado subindo)
+    Resultado: ✅ PASS
+
+  Blocador potencial:
+    Raramente dispara (apenas em crashes)
+
+────────────────────────────────────────────────────────────────────────────
+
+GATE 3: MARKET SAFETY (CoinEx aviso)
+────────────────────────────────────
+  Arquivo: gem_executor.ps1, linhas 485-498
+
+  Função:
+    CoinEx-GetMarketInfo(market)
+    if (isSafe == false) → BLOCKED
+
+  METUSDT teste:
+    isSafe = true (nenhum aviso de delisting/manutenção)
+    Resultado: ✅ PASS
+
+  Blocador potencial:
+    Se CoinEx marca par como "em manutenção" ou "delisting" → bloqueado
+
+────────────────────────────────────────────────────────────────────────────
+
+GATE 4: GEM SAFETY GUARDS
+──────────────────────────
+  Arquivo: gem_executor.ps1, linhas 500-519
+
+  Função:
+    Test-GemSafetyGuards -TradeSizeUsdt -TotalCapitalUsdt -Market
+
+    Checks:
+      • Nunca > 5% portfolio em UM gem
+      • Nunca > 20% portfolio TOTAL em gems
+      • Capital diário limite (3 gems por dia)
+
+  METUSDT teste:
+    TradeSize = $18.56
+    TotalCapital = $3,645
+    Pct = 0.5% (OK)
+    GemsAbre dia = 2 (BASED + MET)
+    Resultado: ✅ PASS
+
+  Blocador potencial:
+    ❌ Se já abriu 3 gems HOJE → novo é bloqueado
+    ❌ Se portfolio já 20% em gems → novo é bloqueado
+    Motivo: Controle de concentração
+
+    DIAGNÓSTICO: Verificar journal/gem_safety_state.json
+
+────────────────────────────────────────────────────────────────────────────
+
+GATE 5: CHART PATTERN GATE
+──────────────────────────
+  Arquivo: gem_executor.ps1, linhas 524-539
+
+  Função:
+    Test-ChartPatternGate -Market -HistoricalPrice -Volume
+
+    Rejeita:
+      • Pump-chase patterns (já no pico)
+      • Topping formations (parece reversão)
+      • Fake breakouts (sem volume confirmação)
+
+  METUSDT teste:
+    Padrão = setup nascente (OK)
+    Resultado: ✅ PASS
+
+  Blocador potencial:
+    ❌ Se chart mostra "topping" → bloqueado
+    ❌ Se detecta "pump fake" → bloqueado
+    Motivo: Evitar chaser de picos
+
+    DIAGNÓSTICO: Verificar journal/chart_pattern_blocks.jsonl
+    Se vazio → gate NÃO está bloqueando aqui
+
+────────────────────────────────────────────────────────────────────────────
+
+GATE 6: CONVICTION GATE (Novo em 2026-06-18)
+──────────────────────────────────────────────
+  Arquivo: gem_executor.ps1, linhas 546-567
+
+  Função:
+    Test-ConvictionGate -conviction -mesa_score
+
+    Lógica:
+      mesa_score >= 75 → conviction bypass (elite confluence)
+      mesa_score 60-75 → conviction threshold = 40
+      mesa_score < 60  → conviction threshold = 50
+      conviction = 0 AND mesa = 0 → allow (não calculado ainda)
+
+  METUSDT teste:
+    conviction = 97/100 (multiTF + BTC RS aligned)
+    mesa_score = 0 (Tori não atribuiu)
+    Threshold = 50 (mesa baixo)
+    Resultado: ✅ PASS (97 >= 50)
+
+  Blocador potencial:
+    ❌ Se conviction < threshold → BLOQUEADO
+    ❌ Exemplo: conviction = 35, threshold = 50 → FAIL
+
+    DIAGNÓSTICO:
+      Verificar último sinal rejeitado:
+      $ grep "CONVICTION BLOCKED" journal/gem_executor_log.jsonl | tail -5
+
+      Se vê "conviction_blocked": Esse é o problema!
+
+    SOLUÇÃO:
+      1. Reduza threshold: config/gates_drift.json "conviction_threshold_low"
+      2. Ou force via /approve MARKET no Telegram
+
+────────────────────────────────────────────────────────────────────────────
+
+GATE 7: TORI TRENDLINE (The Final Decider)
+───────────────────────────────────────────
+  Arquivo: gem_executor.ps1, linhas 569-683
+
+  Função:
+    Get-ToriTrendlineSignal -Market
+
+    Retorna: "ENTER" | "SKIP" | "WAIT"
+
+    ENTER: trendline quality bom, 2+ pontos de toque
+    SKIP:  dados ausentes OU timing missed (já rompeu)
+    WAIT:  setup ripening, será bom em 6-12h
+
+  METUSDT teste:
+    signal = "ENTER"
+    reason = "quality B trendline, 2 touches"
+    Resultado: ✅ PASS
+
+  Blocador potencial:
+    ❌ Se signal = "SKIP" → BLOQUEADO
+       Motivo comum: "já distanciou da trendline" (timing missed)
+
+    ❌ Se signal = "WAIT" → BLOQUEADO
+       Motivo: setup ainda ripening, espere 6-12h
+
+    DIAGNÓSTICO:
+      Último signal rejeitado:
+      $ grep "GEM TORI BLOCK" journal/gem_executor_log.jsonl | tail -5
+
+      Se vê "SKIP" ou "WAIT": Tori está travando sistema!
+
+╔═════════════════════════════════════════════════════════════════════════════╗
+║                          CHECKLIST DE DIAGNÓSTICO                           ║
+╚═════════════════════════════════════════════════════════════════════════════╝
+
+PASSO 1: Há ALGUM sinal novo hoje?
+──────────────────────────────────
+$ tail -100 journal/gem_signals.csv | grep -E "$(date +%Y-%m-%d)"
+
+Esperado: 5-10 sinais com score >= 60
+Realidade: Se vazio → gem_scan nem rodou
+
+────────────────────────────────────
+
+PASSO 2: Quais sinais PASSARAM G1-G4?
+──────────────────────────────────────
+$ cat journal/gem_signals.csv | tail -20 | cut -d',' -f1,2,3,4,5
+
+Procure por: BASEDUSDT=80, METUSDT=75
+Se não aparecem: Problema está em gem_scan (não em gem_executor)
+
+────────────────────────────────────
+
+PASSO 3: Quais sinais foram BLOQUEADOS por qual gate?
+──────────────────────────────────────────────────────
+$ grep "BLOQUEADO\|BLOCKED\|blocked" journal/gem_executor_log.jsonl | tail -50
+
+Procure por: "blocked_by": [...]
+Exemplos:
+  - "score_below_min_60"         → GATE 0
+  - "gem_safety:daily_limit"     → GATE 4
+  - "chart_pattern_pump_chase"   → GATE 5
+  - "conviction_gate_failed"     → GATE 6
+  - "tori_skip"                  → GATE 7 (MAIS COMUM)
+
+────────────────────────────────────
+
+PASSO 4: Se TORI está bloqueando, por quê?
+────────────────────────────────────────────
+$ grep "tori_skip\|tori_wait" journal/gem_executor_log.jsonl -A2 | tail -20
+
+Procure por: "tori_reason": "..."
+Exemplos:
+  - "já distanciou da trendline" → Timing missed (era bom ayer)
+  - "dados insuficientes" → Sem histórico pra análise
+  - "sem pontos de ancoragem" → Sem suporte/resistência claro
+
+Se MAIORIA é "ja distanciou":
+  SIGNIFICA: Sinais chegam DEPOIS que o movimento já aconteceu
+
+  SOLUÇÃO: Reduzir G2 vol_spike de 2.0x para 1.5x (gem_agent.ps1 linha 9)
+  IMPACTO: Mais falsos positivos, mas pega setups MAIS CEDO
+
+────────────────────────────────────
+
+PASSO 5: Conviction está muito apertada?
+──────────────────────────────────────────
+$ cat journal/conviction_threshold.json | jq '.min_conviction_low, .min_conviction_mid'
+
+Esperado: 40-50 (baixo) / 60-70 (alto)
+Realidade: Se > 80 → conviction MUITO RESTRITIVO
+
+SOLUÇÃO:
+$ cat config/gates_drift.json | jq '.conviction_threshold_low'
+Se > 70: Reduzir para 60-65
+
+════════════════════════════════════════════════════════════════════════════════
+DIAGRAMA DO PROBLEMA MAIS COMUM (9/10 casos)
+════════════════════════════════════════════════════════════════════════════════
+
+Cenário: "Só METUSDT entrou, nenhum outro sinal"
+
+Causa raiz: TORI está rejeitando com "já distanciou" ou "dados ausentes"
+
+Fluxo:
+    365 pares
+    ↓ (G1, G2, G4)
+    2 finalists (BASED, MET)
+    ↓ gem_executor
+    METUSDT passa Tori ✅
+    BASED passa Tori ✅
+    ↓ Ambos SEM posição?
+    Ambos têm posição! (luck)
+    ↓ Próximo sinal?
+    PEAQ (score 75) passa G1-G4
+    ↓ gem_executor
+    Tori: "já distanciou" ❌ SKIP
+    ↓ Nada entra
+
+POR QUÊ Tori SKIP PEAQ mas ENTER METUSDT?
+  METUSDT: Entrou quando trendline estava FRESH (2-4h ago)
+  PEAQ: Detectado DEPOIS que move maior parte (8-12h depois)
+
+SOLUÇÃO:
+  1. /scan força agora (não espera 15min)
+  2. /idea PEAQ força monitoramento manual
+  3. Reduza G2 threshold 2.0x → 1.5x (pega mais cedo)
+  4. Ou espere novo pump em próximas 24h (natural)
+
+════════════════════════════════════════════════════════════════════════════════
+PRÓXIMO PASSO — EXECUTAR DIAGNÓSTICO REAL
+════════════════════════════════════════════════════════════════════════════════
+
+Qual arquivo você quer que eu analise?
+
+Opção A: journal/gem_executor_log.jsonl (últimas 50 linhas)
+  → Mostra EXATAMENTE qual gate está bloqueando cada sinal
+
+Opção B: journal/gem_signals.csv (últimas 20 linhas)
+  → Mostra quais sinais foram achados no último scan
+
+Opção C: config/gates_drift.json
+  → Mostra thresholds atuais (conviction, score, etc)
+
+Responda: "A", "B", ou "C"

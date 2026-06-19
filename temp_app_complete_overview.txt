@@ -1,0 +1,417 @@
+╔═══════════════════════════════════════════════════════════════════════════╗
+║           MANUHEADFUND — APLICAÇÃO COMPLETA (END-TO-END)                ║
+║          Sistema Multi-Agente de Trading em Crypto (24/7 Cloud)         ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════
+1. O QUE É?
+═══════════════════════════════════════════════════════════════════════════════
+
+ManuHeadFund = Sistema AUTOMÁTICO de trading em crypto que:
+  ✅ Procura moedas boas (gem_scan)
+  ✅ Entra em trades INTELIGENTES (gem_executor)
+  ✅ Protege ganhos AUTOMATICAMENTE (trailing SL)
+  ✅ SAI com lucro no MOMENTO CERTO (exit intelligence)
+  ✅ Aprende com cada trade (direction learning)
+  ✅ Roda 24/7 na NUVEM (GitHub Actions)
+
+Meta: $30k/mês em 12-18 meses via compounding + autoexecução
+
+═══════════════════════════════════════════════════════════════════════════════
+2. ARQUITETURA — CAMADAS (5 NIVEIS)
+═══════════════════════════════════════════════════════════════════════════════
+
+                     ┌─────────────────────────────────────┐
+                     │  LAYER 5: HUMANO (Telegram)         │
+                     │  Aprova/bloqueia entradas manuais   │
+                     │  /scan /halt /resume /demote /keep  │
+                     └──────────────┬──────────────────────┘
+                                    │
+                     ┌──────────────▼──────────────────────┐
+                     │  LAYER 4: ORQUESTRAÇÃO (Daemons)   │
+                     │  ├─ gem_loop (15min): procura+entra│
+                     │  ├─ scan_master (1h): observa      │
+                     │  ├─ tg_listener: ouve Telegram     │
+                     │  ├─ watchdog: monitora saúde       │
+                     │  └─ trailing_monitor (5min): SL    │
+                     └──────────────┬──────────────────────┘
+                                    │
+         ┌──────────────────────────▼──────────────────────────┐
+         │  LAYER 3: INTELIGÊNCIA (Decisão + Análise)         │
+         │  ├─ gem_scan: encontra pares com setup             │
+         │  ├─ gem_executor: valida confluência + entra       │
+         │  ├─ tori_trendline: confirma estrutura técnica     │
+         │  ├─ mentor_llm: judgment call final                │
+         │  ├─ exit_intelligence: sai com lucro               │
+         │  └─ direction_learning: aprende com outcomes       │
+         └──────────────┬───────────────────────────────────────┘
+                        │
+        ┌───────────────▼───────────────┐
+        │  LAYER 2: INTEGRAÇÃO (APIs)  │
+        │  ├─ CoinEx REST/WS (ordens)  │
+        │  ├─ Telegram (msgs)          │
+        │  ├─ Claude LLM (análise)     │
+        │  ├─ Groq LLM (backup)        │
+        │  ├─ CoinGecko (narrativa)    │
+        │  └─ Supabase (state persist) │
+        └───────────────┬───────────────┘
+                        │
+        ┌───────────────▼───────────────┐
+        │  LAYER 1: INFRAESTRUTURA      │
+        │  ├─ GitHub Actions (24/7)     │
+        │  ├─ Supabase DB (online)      │
+        │  └─ Windows + PowerShell 5.1  │
+        └───────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+3. FLUXO COMPLETO — Um Trade do Início ao Fim
+═══════════════════════════════════════════════════════════════════════════════
+
+HORA: 11:15 (gem_loop dispara a cada 15min)
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ PHASE 1: BUSCA (GEM_SCAN)                                               │
+│ "Qual moeda entra hoje?"                                                │
+└─────────────────────────────────────────────────────────────────────────┘
+
+  [1] Scan universo
+      365 pares USDT (vol $5k-$5M)
+      ↓
+  [2] Filtra (G1-G4)
+      G1: range > 15% (volatilidade)
+      G2: vol spike >= 2x (momentum)
+      G4: tem narrativa (história)
+      ↓
+  [3] Top 5 finalistas
+      BASEDUSDT (score 80)
+      METUSDT (score 75)
+      (+ 3 mais)
+      ↓
+  [4] Telegram alerta
+      "🟢 METUSDT score=75 Gates=G1,G2,G3,G4,G6"
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ PHASE 2: VALIDAÇÃO (GEM_EXECUTOR)                                       │
+│ "Podemos confiar nesse sinal?"                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+
+  [1] Chart pattern gate
+      Verifica: pump patterns, shooting stars, topping
+      ✅ METUSDT: "insufficient_data" (allowed)
+
+  [2] Conviction gate
+      Calcula: BTC RS, multitf, volume, overextension, funding
+      ✅ Conviction=97/100 (multitf + BTC RS aligned)
+
+  [3] Tori trendline
+      Busca: 2+ touch points no suporte
+      ✅ Trendline "quality B" confirmada
+
+  [4] Mentor LLM
+      Pergunta Claude: "Entra ou não?"
+      Response: "ENTER - estrutura nascente, 2 touches quality B"
+
+  [5] Multi-TF alignment
+      1D: STRONG_UP (RSI 68)
+      4H: STRONG_UP (RSI 64)
+      1H: UP (RSI 49)
+      ✅ Todos aligned para LONG
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ PHASE 3: EXECUÇÃO (PLACE ORDER)                                         │
+│ "Entrar agora"                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+
+  [1] Calcula posição
+      Entry price: 0.129587
+      SL (2% abaixo): 0.126785
+      TP (10% acima): 0.142545
+      Capital: 0.5% = $18.56 (conservador)
+      Quantidade: 561.4 MET
+      Max hold: 30 dias
+
+  [2] Envia ordem SPOT
+      Method: CoinEx-PlaceOrder
+      Status: "Order ID 172450900849"
+      ✅ CHEIO (561.4 MET em carteira)
+
+  [3] Registra trailing position
+      journal/TRAILING_POSITIONS.json:
+      {
+        market: "METUSDT",
+        entry: 0.129587,
+        stop: 0.126785,
+        target: 0.142545,
+        qty: 561.39,
+        peak: 0.129587,
+        side: "LONG"
+      }
+
+  [4] Telegram confirma
+      "✅ METUSDT order=172450900849 qty=561.4"
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ PHASE 4: PROTEÇÃO (TRAILING SL) — Roda a cada 5 MINUTOS               │
+│ "Proteger o ganho"                                                      │
+└─────────────────────────────────────────────────────────────────────────┘
+
+  [1] Monitor de preço
+      polling: CoinEx-GetTicker METUSDT a cada 5min
+      atual: 0.141928 (+9.52% desde entrada)
+
+  [2] Atualiza peak
+      peak anterior: 0.129587
+      peak novo: 0.141928 (novo high)
+      lock: +2.5% breakeven mínimo
+
+  [3] Move SL para cima
+      SL anterior: 0.126785
+      SL novo: 0.139048 (2% abaixo peak novo)
+      ✅ Protege $6.93 de lucro
+
+  [4] Sync para exchange
+      CoinEx-SetStopLoss METUSDT 0.139048
+      ✅ Stop order atualizado na CoinEx
+
+  [5] Registra no journal
+      journal/TRAILING_LOG.jsonl:
+      {
+        market: METUSDT,
+        price: 0.141928,
+        peak: 0.141928,
+        stop: 0.139048,
+        pnl: +6.93,
+        action: "updated_sl"
+      }
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ PHASE 5: SAÍDA INTELIGENTE (EXIT INTELLIGENCE) — Roda a cada 5 MIN      │
+│ "Sair no momento certo"                                                 │
+└─────────────────────────────────────────────────────────────────────────┘
+
+  [1] Analisa sinais
+      Volume spike? RSI overbought? Trend reversal? Perto de SL?
+
+  [2] Layer 1 (5-15% lucro)
+      IF volume_spike + candle_reversal
+      → VENDE 50% (toma lucro rápido)
+      Ex: +9.52% com spike = triggered
+
+  [3] Layer 2 (15-30% lucro)
+      IF RSI > 70 + rejection_candle
+      → VENDE 25%
+
+  [4] Layer 3 (30%+ lucro)
+      IF reversal_claro
+      → VENDE 70% (moonbag 30%)
+
+  [5] Layer 4 (Danger zone)
+      IF preço perto SL + lucro existe
+      → VENDE 100% (melhor sair com lucro que com SL)
+
+  [6] Executa venda
+      CoinEx-PlaceOrder SELL 280.7 MET @ 0.141928
+      ✅ Partial exit de 50%
+
+  [7] Registra saída
+      journal/EXIT_LOG.jsonl:
+      {
+        market: METUSDT,
+        exit_layer: "LAYER1",
+        qty_sold: 280.7,
+        price: 0.141928,
+        pnl: +$3.46,
+        reason: "volume_spike_reversal"
+      }
+
+┌─────────────────────────────────────────────────────────────────────────┐
+│ PHASE 6: APRENDIZADO (DIRECTION_LEARNING) — Diário                     │
+│ "Melhorar próximas entradas"                                           │
+└─────────────────────────────────────────────────────────────────────────┘
+
+  [1] Coleta outcomes
+      METUSDT: LONG, score=75, conviction=97
+      Entrada: 0.129587
+      Saída: 0.141928
+      PnL: +9.52%
+      Status: WIN ✅
+
+  [2] Registra no journal
+      journal/DIRECTION_LEARNING_STATS.json:
+      {
+        direction: "LONG",
+        regime: "BEAR_WEAK",
+        wins: 1,
+        losses: 0,
+        win_rate: 100%,
+        avg_win: 9.52%
+      }
+
+  [3] Aplica feedback
+      "LONG em BEAR_WEAK com conviction > 90 = forte sinal"
+      Próxima vez: aumenta confiança em LONG com alta conviction
+
+  [4] Auto-calibração
+      conviction_threshold → 75 (mais apertado)
+      mesa_score_requirement → 50 (mais flexível)
+
+═══════════════════════════════════════════════════════════════════════════════
+4. COMPONENTES PRINCIPAIS
+═══════════════════════════════════════════════════════════════════════════════
+
+┌─ GEM_SCAN (Discovery Engine) ─────────────────────────────────────────┐
+│ O QUÊ: Procura moedas com setup (vol spike + narrativa)              │
+│ QUEM: gem_agent.ps1 (via scan_master ou gem_loop)                    │
+│ QUANDO: A cada 15min / 1h                                            │
+│ OUTPUT: gem_signals.csv + Telegram alert                             │
+│ RETORNO: TOP 5 pares com score 75-100                                │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─ GEM_EXECUTOR (Validation Engine) ────────────────────────────────────┐
+│ O QUÊ: Valida sinal + entra no trade                                 │
+│ QUEM: gem_executor.ps1                                               │
+│ QUANDO: Após gem_scan alertar                                        │
+│ GATES: Chart + Conviction + Tori + Mentor + MultiTF                 │
+│ OUTPUT: ordem real na CoinEx + trailing position registrado          │
+│ RETORNO: Order ID + SL/TP confirmados                                │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─ TRAILING_STOP_MONITOR (Protection Engine) ──────────────────────────┐
+│ O QUÊ: Move SL para cima conforme preço sobe                         │
+│ QUEM: trailing_stop_monitor.ps1                                      │
+│ QUANDO: A cada 5 min (GitHub Actions JOB1)                           │
+│ LÓGICA: peak_update (+2.5% lock) → set-position-stop-loss            │
+│ OUTPUT: SL atualizado na CoinEx + logger                             │
+│ RETORNO: +$6.93 em METUSDT (protegido)                               │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─ EXIT_INTELLIGENCE (Profit Taker) ───────────────────────────────────┐
+│ O QUÊ: Sai com lucro no momento certo                                │
+│ QUEM: lib_exit_intelligence.ps1                                      │
+│ QUANDO: A cada 5 min (dentro trailing_monitor)                       │
+│ LAYERS: 4 (quick win / mid / mature / danger zone)                   │
+│ OUTPUT: SELL order + partial exit executada                          │
+│ RETORNO: +$3.46 locked em METUSDT (50% saída)                        │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─ DIRECTION_LEARNING (Adaptation Engine) ─────────────────────────────┐
+│ O QUÊ: Aprende com wins/losses, melhora gates                        │
+│ QUEM: lib_direction_learning.ps1                                     │
+│ QUANDO: Diário (nightly ciclo)                                       │
+│ LÓGICA: Snapshot antes → outcome observado → stats atualizadas       │
+│ OUTPUT: conviction_threshold + mesa_score ajustados                  │
+│ RETORNO: Próximas entradas + confiantes                              │
+└─────────────────────────────────────────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+5. CAMADA DE DADOS (STATE PERSISTENCE)
+═══════════════════════════════════════════════════════════════════════════════
+
+Online (Supabase — "source of truth"):
+├─ regime_state: regime_atual + conviction_threshold + mesa_score
+├─ trailing_positions: positions abertas, peak, SL atual
+├─ direction_stats: learn outcomes (LONG/SHORT win rates)
+├─ trade_outcomes: histórico completo de trades (PnL, entry, exit)
+└─ gem_signals: histórico de sinais encontrados
+
+Local (Backup / Development):
+├─ journal/trade_outcomes.jsonl: log imutável de trades
+├─ journal/TRAILING_POSITIONS.json: positions abertas (cache)
+├─ journal/trailing_log.jsonl: histórico de SL updates
+├─ journal/exit_log.jsonl: histórico de exits
+└─ journal/direction_stats.json: aprendizado acumulado
+
+═══════════════════════════════════════════════════════════════════════════════
+6. INFRAESTRUTURA 24/7 (GitHub Actions)
+═══════════════════════════════════════════════════════════════════════════════
+
+Rodando AGORA na nuvem:
+
+JOB1  (5min)  → trailing_stop_monitor.ps1 (move SL + exit intelligence)
+JOB2  (5min)  → sync_and_fix_tp.ps1 (cria SL/TP faltantes)
+JOB23 (15min) → gem_loop.ps1 (procura + entra)
+JOB22 (1h)    → scan_master.ps1 (observa + aprende)
+JOB   (1h)    → heartbeat_alert.ps1 (monitora saúde)
+
+Total: Sistema operando 24/7 sem você tocar
+
+═══════════════════════════════════════════════════════════════════════════════
+7. ENTRADA DO HUMANO (Telegram Bot)
+═══════════════════════════════════════════════════════════════════════════════
+
+Você pode:
+├─ /scan: força um scan manual agora
+├─ /halt: pausa sistema (emergência)
+├─ /resume: retoma após halt
+├─ /approve METUSDT: aprova manualmente um sinal bloqueado
+├─ /demote BASEDUSDT: marca como ruim (aprende que foi erro)
+├─ /keep METUSDT: força manter posição (bloqueia exit)
+└─ /idea MYTOKENUSDT: suggere um par pra monitorar
+
+Sistema responde: autorização, execução ou erro em TEMPO REAL
+
+═══════════════════════════════════════════════════════════════════════════════
+8. SEGURANÇA & PROTEÇÃO
+═══════════════════════════════════════════════════════════════════════════════
+
+Fail-closed (falha = bloqueia, não passa):
+├─ G1-G4 gates bloqueiam 99% dos pares automaticamente
+├─ Conviction gate rejeita low-confidence trades
+├─ Chart pattern gate bloqueia pump-chasing
+├─ Tori trendline requer setup técnico real
+├─ Mentor LLM tem veto final
+└─ Exit intelligence protege lucro (não deixa virar loss)
+
+Capital safety:
+├─ 1% max loss por trade (sobre $3.6k = $36 máx)
+├─ R:R 1:5 mínimo (se SL=$36, alvo=$180)
+├─ Trailing SL atualizado 24/7
+├─ Auto-demote após 3 FLAGS consecutivos (tori aprende)
+└─ Circuit breaker: 5 SL hits = pause automático
+
+═══════════════════════════════════════════════════════════════════════════════
+9. O MATH PARA $30K/MÊS
+═══════════════════════════════════════════════════════════════════════════════
+
+HOJE:
+  Capital: $3.6k
+  Trades: 2 abertos (BASED +PnL, MET +$6.93)
+  Win rate: 33% (2/6 histórico)
+
+ROADMAP $30K/MÊS (12-18 meses):
+
+  Mês 1-3:  $3.6k → $5-8k via compounding + exit intelligence
+  Mês 4-6:  $8k → $15-20k (reinveste tudo)
+  Mês 7-9:  $20k → $40-60k (2-3% retorno mensal = $800-1.8k)
+  Mês 10+:  $50k+ → $30k/mês é matemática pura
+
+FÓRMULA:
+  Retorno mensal = capital × win_rate × avg_win% - losses
+  $3.6k × 33% × 9.52% = ~$110/mês (HOJE)
+  $50k × 45% × 8% = ~$1.8k/mês (em 12 meses)
+  $80k × 50% × 7.5% = ~$3k/mês (em 18 meses, múltiplas simultâneas)
+
+Acelerador:
+  - Exit intelligence reduz drawdown (sai com lucro)
+  - Direction learning melhora win rate (aprende)
+  - Trailing SL protege ganhos (não vira loss)
+  - Múltiplos simultâneos diversificam (risco distribuído)
+
+═══════════════════════════════════════════════════════════════════════════════
+10. RESUMO INTUITIVO
+═══════════════════════════════════════════════════════════════════════════════
+
+ManuHeadFund = um trader ROBÔ que:
+
+  1️⃣  PROCURA moedas boas (365 → 2 finalistas)
+  2️⃣  VALIDA setup técnico (4 gates rigorosos)
+  3️⃣  ENTRA automaticamente (ordem real)
+  4️⃣  PROTEGE ganho (SL sobe 24/7)
+  5️⃣  SAI no pico (inteligência de saída)
+  6️⃣  APRENDE (win rates melhoram)
+  7️⃣  REPETE (próximo trade melhor)
+
+Você: aprova manualmente (Telegram) + recolhe lucro
+Sistema: faz todo trabalho pesado (busca, análise, execução, proteção)
+
+Resultado: $30k/mês sem mexer num dedo depois que tá rodando

@@ -1,0 +1,320 @@
+╔═════════════════════════════════════════════════════════════════════════════╗
+║         MANUHEADFUND — TODOS OS MECANISMOS DE ENTRADA DE TRADES             ║
+║              "Por que não entra nada além de METUSDT/BASED?"                 ║
+╚═════════════════════════════════════════════════════════════════════════════╝
+
+═════════════════════════════════════════════════════════════════════════════════
+1. MECANISMOS DE ENTRADA (5 formas diferentes)
+═════════════════════════════════════════════════════════════════════════════════
+
+MECANISMO 1: GEM_LOOP (Automático, a cada 15 min)
+────────────────────────────────────────────────
+Arquivo: agents/gem_loop.ps1
+Função:
+  1. Chama gem_agent.ps1 (procura sinais)
+  2. Filtra por gates G1, G2, G4
+  3. Passa survivors para gem_executor.ps1
+  4. Executa trades automáticamente
+
+Status:
+  ✅ ATIVO em GitHub Actions (JOB23, a cada 15 min)
+  ✅ Entrou METUSDT via este mecanismo
+  ✅ Entrou BASED via este mecanismo
+
+Bloqueadores possíveis:
+  ❓ Gate de convicção muito alto (>90)?
+  ❓ Gate de Tori rejeitando padrões?
+  ❓ Gate de Mentor dizendo "não"?
+  ❓ Todos os sinais já têm posição aberta?
+
+────────────────────────────────────────────────
+
+MECANISMO 2: SCAN_MASTER (Observação contínua, a cada 1h)
+────────────────────────────────────────────────────────
+Arquivo: agents/scan_master.ps1
+Função:
+  1. Roda gem_agent.ps1 com modo "observation" (não entra)
+  2. Registra pares em "observação" que podem entrar depois
+  3. Aprende qual padrão funciona melhor
+
+Status:
+  ✅ ATIVO em GitHub Actions (JOB22, a cada 1h)
+  ⚠️  NÃO executa trades (apenas observa)
+  ⚠️  Pode ser BLOCKED se tiver gate muito restritivo
+
+Bloqueadores:
+  ❓ Se scan_master travado → gem_loop pode herdar seu estado ruim
+
+────────────────────────────────────────────────
+
+MECANISMO 3: TELEGRAM /idea (Manual, usuário)
+──────────────────────────────────────────────
+Arquivo: agents/tg_listener.ps1
+Função:
+  /idea MYTOKEN → adiciona MYTOKEN em watchlist manual
+  → gem_loop pega na próxima rodada
+  → Se passou gates → executa
+
+Status:
+  ✅ ATIVO se tg_listener rodando
+  ✅ Você pode forçar sinal manual
+  ⚠️  Ainda precisa passar gates (conviction, tori, mentor)
+
+Bloqueadores:
+  ❓ Se gates muito apertados → /idea rejeitada automaticamente
+
+────────────────────────────────────────────────
+
+MECANISMO 4: TELEGRAM /approve (Manual, usuário)
+────────────────────────────────────────────────
+Arquivo: agents/tg_listener.ps1
+Função:
+  /approve METUSDT → força entrada mesmo se gate bloqueador
+
+Status:
+  ✅ ATIVO se tg_listener rodando
+  ✅ Você tem "veto final" sobre qualquer sinal
+  ⚠️  Bypassa gates de segurança!
+
+Bloqueadores:
+  ❓ Se tg_listener travado → comando não chega
+
+────────────────────────────────────────────────
+
+MECANISMO 5: SCAN_ORBIT (Futuro, não implementado)
+──────────────────────────────────────────────────
+Descrição: Modo especial para entrar em pares já em pump (não está em prod)
+
+Status:
+  ❌ NÃO ativo
+  ⚠️  Não afeta sistema atual
+
+═════════════════════════════════════════════════════════════════════════════════
+2. GATES BLOQUEADORES (Por que sinais são rejeitados?)
+═════════════════════════════════════════════════════════════════════════════════
+
+GATE 1: G1 — RANGE > 15%
+└─ Rejeita pares dormindo
+└─ 292/365 pares bloqueados aqui
+
+GATE 2: G2 — VOL SPIKE >= 1.5x
+└─ Rejeita sem momentum
+└─ 64/73 pares bloqueados aqui
+
+GATE 3: G4 — NARRATIVA (Keywords Tier 1-3)
+└─ Rejeita sem história
+└─ 7/9 pares bloqueados aqui
+
+GATE 4: CONVICTION (lib_entry_conviction_ensemble)
+└─ Threshold: >= 75/100 (por default)
+└─ Se sinal tem conviction=45 → BLOQUEADO
+└─ Se sinal tem conviction=97 → PASSA ✅
+
+GATE 5: TORI TRENDLINE
+└─ Requer: 2+ pontos de toque em suporte
+└─ Se chart "ruim" → BLOQUEADO
+└─ Se chart "bom" → PASSA ✅
+
+GATE 6: MENTOR LLM
+└─ Pergunta Claude: "Entra?"
+└─ Se Mentor diz "NO" → BLOQUEADO
+└─ Se Mentor diz "ENTER" → PASSA ✅
+
+GATE 7: CHART PATTERN
+└─ Rejeita pump-chasing
+└─ Rejeita topping patterns
+└─ Se detecta "risco alto" → BLOQUEADO
+
+GATE 8: MULTI-TF ALIGNMENT
+└─ 1D trend deve estar "alinhado"
+└─ Se 1D down mas queremos LONG → CONFLITO
+└─ Resolve automaticamente com aprendizado
+
+═════════════════════════════════════════════════════════════════════════════════
+3. POR QUE APENAS METUSDT E BASED ENTRARAM? (Diagnóstico)
+═════════════════════════════════════════════════════════════════════════════════
+
+Cenário Real:
+  365 pares scaneados
+  ↓ G1 (range)
+  73 pares com movimento
+  ↓ G2 (volume spike)
+  9 pares com momentum
+  ↓ G4 (narrativa)
+  2 pares com história (BASED, MET)
+  ↓ Conviction gate
+  2 pares aprovados (BASED=80, MET=75)
+  ↓ Tori trendline
+  2 pares confirmados
+  ↓ Mentor LLM
+  2 pares finalizados
+  ↓ Posição aberta?
+  2 SIM → SKIP (já dentro)
+
+RESULTADO: 0 novos sinais hoje
+
+═════════════════════════════════════════════════════════════════════════════════
+4. INVESTIGAR BLOCADORES SILENCIOSOS
+═════════════════════════════════════════════════════════════════════════════════
+
+PERGUNTA: "Por que não aparece OUTRO sinal além de METUSDT e BASED?"
+
+RESPOSTA RÁPIDA:
+  ✅ Porque apenas 2 pares de 365 passam TODOS os gates SIMULTANEAMENTE
+  ✅ Isso é NORMAL e desejável (filtra 99.4% do lixo)
+  ✅ Quando METUSDT ou BASED SAIR → terá próximo
+
+MAS... há 3 possíveis blocadores SILENCIOSOS:
+
+BLOQUEADOR 1: CONVICTION GATE APERTADO
+───────────────────────────────────────
+Check:
+  $ cat journal/conviction_threshold.json
+
+Expected:
+  "min_conviction": 75
+
+Reality check:
+  Se "min_conviction": 95 (muito alto)
+  → Sinais com 80-90 conviction serão bloqueados
+  → Motivo: Aprendizado anterior rejeitou padrão
+
+Fix:
+  Reduza threshold manualmente
+  Se ainda apertado → usa /idea pra forçar
+
+────────────────────────────────────────────
+
+BLOQUEADOR 2: TORI TRENDLINE QUEBRADO
+──────────────────────────────────────
+Check:
+  $ grep -A10 "Get-ToriRequirement" agents/gem_executor.ps1
+
+Expected:
+  Retorna "PASS" ou "FAIL" com reason
+
+Reality check:
+  Se Tori retorna erro silencioso
+  → Todos sinais bloqueados automaticamente
+  → Motivo: Bug na lib_tori_simplified.ps1
+
+Fix:
+  Restart daemons
+  Recarregue lib_tori_simplified
+  Rode /scan manual
+
+────────────────────────────────────────────
+
+BLOQUEADOR 3: GEM_LOOP TRAVADO
+───────────────────────────────
+Check:
+  $ ps aux | grep gem_loop
+  $ Get-Process -Name pwsh | grep gem_loop (Windows)
+
+Expected:
+  Processo rodando, PID ativo
+
+Reality check:
+  Se gem_loop nunca executa
+  → Sinais nunca são processados
+  → Motivo: GitHub Actions job falhou ou runspace morreu
+
+Fix:
+  Restart GitHub Actions manualmente
+  Check logs em Actions tab
+  Recarregue runspace em Supabase
+
+═════════════════════════════════════════════════════════════════════════════════
+5. COMO FORÇAR ENTRADA (Bypass dos Bloqueadores)
+═════════════════════════════════════════════════════════════════════════════════
+
+Opção A: Use /idea no Telegram
+───────────────────────────────
+/idea MYTOKEN
+→ Sistema monitora
+→ Se passa gates (conviction + tori + mentor) → entra
+
+Opção B: Use /approve no Telegram
+──────────────────────────────────
+/approve MYTOKEN
+→ Bypassa TODOS gates
+→ ⚠️  Cuidado: pode entrar em lixo
+
+Opção C: Ajuste threshold
+─────────────────────────
+1. Abra journal/conviction_threshold.json
+2. Mude "min_conviction": 75 → 60
+3. Restart gem_loop
+4. Próximo scan pega sinais com conviction >= 60
+
+Opção D: Rode scan manual
+────────────────────────
+/scan
+→ Força gem_loop rodar AGORA (não espera 15 min)
+→ Se houver novo sinal com conviction >= 75 → entra
+
+═════════════════════════════════════════════════════════════════════════════════
+6. CHECKLIST — Diagnosticar Blocadores
+═════════════════════════════════════════════════════════════════════════════════
+
+□ Check 1: Gem_loop rodando?
+  $ Get-Process -Name pwsh | Where-Object {$_.CommandLine -like "*gem_loop*"}
+  Expected: PID ativo
+  If hung: Restart daemon
+
+□ Check 2: Gem_scan encontrando sinais?
+  $ tail -100 journal/gem_signals.csv
+  Expected: Último scan <= 15 min
+  If old: Scan travado
+
+□ Check 3: Conviction threshold está qual?
+  $ cat journal/conviction_threshold.json | jq '.min_conviction'
+  Expected: 60-75
+  If > 90: Muito apertado
+
+□ Check 4: Últimos sinais rejeitados por quê?
+  $ grep "BLOCKED\|REJECTED" journal/gem_executor_log.jsonl | tail -20
+  Expected: Reason clara (conviction, tori, mentor)
+  If no reason: Bug silencioso
+
+□ Check 5: Tori trendline funciona?
+  $ pwsh -Command ". ./agents/lib_tori_simplified.ps1; Get-ToriRequirement -ChartData @{...}"
+  Expected: "PASS" ou "FAIL" com reason
+  If error: Lib quebrada
+
+□ Check 6: Mentor responde?
+  $ tail -50 journal/llm_calls.jsonl | grep -i "mentor"
+  Expected: Último call <= 15 min, response clara
+  If timeout/error: LLM travado
+
+□ Check 7: Telegram listener ativo?
+  $ Get-Process | grep tg_listener
+  Expected: PID ativo
+  If none: Listener morto
+
+═════════════════════════════════════════════════════════════════════════════════
+7. RESUMO
+═════════════════════════════════════════════════════════════════════════════════
+
+Existem 5 mecanismos de ENTRADA de trades:
+  1. GEM_LOOP (automático) ← PRINCIPAL
+  2. SCAN_MASTER (observação)
+  3. Telegram /idea (manual)
+  4. Telegram /approve (força entry)
+  5. Scan ORBIT (futuro, não pronto)
+
+Apenas 2 pares (BASED, MET) passam gates porque:
+  365 → 73 (G1) → 9 (G2) → 2 (G4) → 0 novos (já tem posição)
+
+Para FORÇAR novo sinal:
+  /idea MYTOKEN (recomendado)
+  ou /approve MYTOKEN (cuidado)
+  ou /scan (força rodar agora)
+
+Blocadores possíveis:
+  1. Conviction threshold apertado (> 90)
+  2. Tori trendline quebrada (bug)
+  3. Gem_loop travado (daemon morto)
+  4. Telegram listener off (cmd não chega)
+
+Próximo: Vamos diagnosticar qual está blocando hoje.

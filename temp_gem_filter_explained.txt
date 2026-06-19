@@ -1,0 +1,247 @@
+╔═══════════════════════════════════════════════════════════════════════════╗
+║              GEM FILTER PIPELINE — COMO FUNCIONA CADA GATE               ║
+╚═══════════════════════════════════════════════════════════════════════════╝
+
+═══════════════════════════════════════════════════════════════════════════════
+PASSO 0: UNIVERSO INICIAL (365 pares)
+═══════════════════════════════════════════════════════════════════════════════
+
+Todos os pares USDT com volume entre $5k-$5M:
+├─ BASEDUSDT
+├─ PEAQUSDT
+├─ HEIUSDT
+├─ WINGUSDT
+├─ METUSDT
+├─ ... (360 mais)
+└─ Objetivo: Acharmicroçaps com potencial pump
+
+═══════════════════════════════════════════════════════════════════════════════
+PASSO 1: GATE G1 — RANGE > 15% (Volatilidade mínima)
+═══════════════════════════════════════════════════════════════════════════════
+
+O QUE FAZ?
+  Calcula: (HIGH_24h - LOW_24h) / OPEN
+  Rejeita pares "dormindo" (low volatility)
+
+EXEMPLO:
+  BASEDUSDT:  LOW=0.070, HIGH=0.098  → Range = 40%  ✅ PASSA
+  PEAQUSDT:   LOW=0.50,  HIGH=0.51   → Range = 2%   ❌ FALHA (muito quieto)
+  HEIUSDT:    LOW=0.10,  HIGH=0.15   → Range = 50%  ✅ PASSA
+
+POR QUÊ?
+  "Mercado dormindo = sem oportunidade. Precisa movimento real."
+
+RESULTADO APÓS G1:
+  ✅ 73 pares passaram (têm movimento >= 15%)
+  ❌ 292 foram rejeitados (dormindo)
+
+═══════════════════════════════════════════════════════════════════════════════
+PASSO 2: GATE G2 — VOLUME SPIKE >= 2x (Momentum confirmado)
+═══════════════════════════════════════════════════════════════════════════════
+
+O QUE FAZ?
+  Compara volume de hoje vs média 3 dias
+  Rejeita se volume normal
+
+EXEMPLO:
+  BASEDUSDT:
+    Vol hoje = 288k USDT
+    Vol 3d média = 139k USDT
+    Spike = 288k / 139k = 2.08x ✅ PASSA (está bombando)
+
+  HEIUSDT:
+    Vol hoje = 50k USDT
+    Vol 3d média = 48k USDT
+    Spike = 50k / 48k = 1.04x ❌ FALHA (volume normal)
+
+  METUSDT:
+    Vol hoje = 77k USDT
+    Vol 3d média = 25k USDT
+    Spike = 77k / 25k = 3.02x ✅ PASSA (muito bombeado!)
+
+POR QUÊ?
+  "Volume spike = whales ou pump iniciando. Sem volume, é só preço mastigado."
+
+RESULTADO APÓS G2:
+  ✅ 9 pares passaram (têm volume spike real)
+  ❌ 64 foram rejeitados (volume dormindo)
+
+═══════════════════════════════════════════════════════════════════════════════
+PASSO 3: GATE G4 — NARRATIVA CONFIRMADA (Keyword tier 1)
+═══════════════════════════════════════════════════════════════════════════════
+
+O QUE FAZ?
+  Procura por keywords IMPORTANTES no nome/descrição
+  Ex: AI, MEME, SOL, DEFI, etc.
+
+EXEMPLO:
+  BASEDUSDT:
+    Nome = "BASED" (Solana meme baseado no influenciador)
+    Match = Tier 1 keyword "MEME/SOL ecosystem" ✅ PASSA
+    Narrativa = "Tier1 keyword: BASED"
+
+  PEAQUSDT:
+    Nome = "PEAQ"
+    Match = NENHUM keyword relevante ❌ FALHA
+    Bloqueado = "sem narrativa (bloqueado G4)"
+
+  METUSDT:
+    Nome = "META" (trending no CoinGecko rank 11)
+    Match = Trending rank confirmado ✅ PASSA
+    Narrativa = "trending rank 11"
+
+  HEIUSDT:
+    Nome = "HEI" (unknown)
+    Match = NENHUM ❌ FALHA
+
+  WINGUSDT:
+    Nome = "WING"
+    Match = NENHUM ❌ FALHA
+
+POR QUÊ?
+  "Sem narrativa = sem buyers. Pump precisa de história pra convencer."
+
+RESULTADO APÓS G4:
+  ✅ 2 pares passaram (têm narrativa forte)
+  ❌ 7 foram rejeitados (sem stories)
+
+  Rejeições:
+    PEAQUSDT ← sem narrativa
+    HEIUSDT ← sem narrativa
+    PRCLUSDT ← sem narrativa
+    WINGUSDT ← sem narrativa
+    NPCUSDT ← sem narrativa
+    BEFIUSDT ← sem narrativa
+    ACTUSDT ← sem narrativa
+
+═══════════════════════════════════════════════════════════════════════════════
+PASSO 4: VERIFICAR POSIÇÕES ABERTAS (Já tem ordem?)
+═══════════════════════════════════════════════════════════════════════════════
+
+O QUE FAZ?
+  Checa se gem_executor já abriu posição
+  Se sim → pode ignorar (já entramos lá)
+
+EXEMPLO:
+  BASEDUSDT ✅ PASSOU G1-G4 MAS JÁ TEM POSIÇÃO ABERTA
+    → Skip (não entra 2x mesmo mercado)
+
+  METUSDT ✅ PASSOU G1-G4 MAS JÁ TEM POSIÇÃO ABERTA
+    → Skip (não entra 2x)
+
+RESULTADO:
+  🎯 0 sinais NOVOS
+  (todos os survivors já têm posição)
+
+═══════════════════════════════════════════════════════════════════════════════
+VISUALIZAÇÃO COMPLETA DO PIPELINE
+═══════════════════════════════════════════════════════════════════════════════
+
+                    ┌─────────────────────────────────┐
+                    │  365 pares USDT (universo)      │
+                    └──────────┬──────────────────────┘
+                               │
+                               ↓
+                    ┌─────────────────────────────────┐
+                 G1 │ Range > 15%?                    │
+                    │ (Volatilidade mínima)           │
+                    └──────────┬──────────────────────┘
+                               │
+                    ✅ 73 SIM   │   ❌ 292 NÃO
+                               │
+                               ↓
+                    ┌─────────────────────────────────┐
+                 G2 │ Vol spike >= 2x?                │
+                    │ (Momentum confirmado)           │
+                    └──────────┬──────────────────────┘
+                               │
+                    ✅ 9 SIM    │   ❌ 64 NÃO
+                               │
+                               ↓
+                    ┌─────────────────────────────────┐
+                 G4 │ Tem narrativa (keyword)?        │
+                    │ (Tem história = buyers)         │
+                    └──────────┬──────────────────────┘
+                               │
+                    ✅ 2 SIM    │   ❌ 7 NÃO
+                    (BASED)     │   (PEAQ, HEI, PRC, WING, NPC, BEFI, ACT)
+                    (MET)       │
+                               ↓
+                    ┌─────────────────────────────────┐
+                      Já tem posição aberta?          │
+                    └──────────┬──────────────────────┘
+                               │
+                    ✅ 2 SIM    │   ❌ 0 NÃO
+                    (SKIP)      │
+                               │
+                               ↓
+                    ┌─────────────────────────────────┐
+                    │ 🎯 0 SINAIS NOVOS               │
+                    │ (ambos já em posição)           │
+                    └─────────────────────────────────┘
+
+═══════════════════════════════════════════════════════════════════════════════
+GATES MAIS DETALHADOS — POR QUE CADA UM EXISTE?
+═══════════════════════════════════════════════════════════════════════════════
+
+G1 — RANGE > 15%
+  Problema que resolve: "Trader compra par morto, nada acontece"
+  Realidade: Sem volatilidade = sem oportunidade = tempo perdido
+  Exemplo: STABLECOIN (apenas 0.1% range) → skip
+
+G2 — VOL SPIKE >= 2x
+  Problema: "Preço sobe 30% mas ninguém vê"
+  Realidade: Volume spike = início de pump real
+  Exemplo: BASEDUSDT +2% com 2x volume = gente entrando
+
+G4 — NARRATIVA (Keyword)
+  Problema: "Entro em XYZUSDT por spike, perde 50%"
+  Realidade: Sem história = pump fake = crash rápido
+  Exemplo: BASED (meme narrative) = buyers querem
+           PEAQ (ninguém sabe o que é) = crash
+
+═══════════════════════════════════════════════════════════════════════════════
+CENÁRIO REAL — POR QUE TEM APENAS 2 SINAIS HOJE?
+═══════════════════════════════════════════════════════════════════════════════
+
+Resposta: A MAIORIA dos pares no universo:
+  • NÃO move (range < 15%) — dormindo
+  • OU move com volume normal (sem spike) — gente dormindo
+  • OU move com volume alto MAS sem narrativa — pump fake
+
+Estatísticas reais:
+  365 → 73 → 9 → 2 → 0 novos
+
+Isso É NORMAL. Significa:
+  ✅ Filtros estão funcionando (rejeitando lixo)
+  ✅ Apenas pares bons ficam (BASED, MET)
+  ✅ Mas ambos já têm posição (luck — pegamos cedo!)
+
+═══════════════════════════════════════════════════════════════════════════════
+QUANDO HAVERÁ PRÓXIMO SINAL?
+═══════════════════════════════════════════════════════════════════════════════
+
+Cenário 1: BASED/MET saem (SL hit ou +20% exit intelligence)
+  → Gem_scan procura novo
+  → Encontra outro par com vol spike + narrativa
+  → Entra automático
+
+Cenário 2: Novo pump começa em 2-3 dias (ciclo natural)
+  → Diferente moeda + spike + keyword relevante
+  → Scan pega
+  → Entra
+
+Resumo: Sistema está TRAVANDO em 2 sinais porque foi LUCKY.
+        Quando BASIC ou MET saírem, terá próximo.
+
+═══════════════════════════════════════════════════════════════════════════════
+RESUMO INTUITIVO
+═══════════════════════════════════════════════════════════════════════════════
+
+Imagine 365 vendedores de pipoca:
+  G1: "Só vendo para fila COM MOVIMENTO" → fica 73 (dormindo 292)
+  G2: "Fila TRIPLICOU de volume" → fica 9 (volume normal 64)
+  G4: "Fila é de FAMOSOS ou TREND" → fica 2 (lixo 7)
+
+Resultado: Só 2 filas boas encontradas hoje, e AMBAS você já está dentro.
+           Quando uma sair, haverá próxima.

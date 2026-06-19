@@ -245,16 +245,19 @@ try {
     }
 
     # 2.9 AUTO-SYNC SL/TP (2026-06-19: create missing stops automatically)
+    # 2026-06-19 FIX: Sync TODAS as posições abertas (não hardcoded)
     Write-CrossPlatformLog "--- AUTO-SYNC SL/TP ---" -LogFile "trailing_stop_monitor.log"
     try {
         $syncScript = Join-Path $projectRoot "scripts" "sync_and_fix_tp.ps1"
         if (Test-Path $syncScript) {
-            Write-CrossPlatformLog "Running sync_and_fix_tp..." -LogFile "trailing_stop_monitor.log"
-            & $syncScript -Markets @('BASEDUSDT', 'SPCXXUSDT', 'AINUSDT', 'OPNUSDT') -ErrorAction SilentlyContinue
-            Write-CrossPlatformLog "Sync completed" -LogFile "trailing_stop_monitor.log"
+            Write-CrossPlatformLog "Running sync_and_fix_tp (auto-detect all open positions)..." -LogFile "trailing_stop_monitor.log"
+            # CHANGE: Remover hardcoded markets, deixar sync_and_fix_tp auto-detectar
+            & $syncScript -ErrorAction Stop
+            Write-CrossPlatformLog "Sync completed (all open positions synchronized)" -LogFile "trailing_stop_monitor.log"
         }
     } catch {
-        Write-CrossPlatformLog "AUTO-SYNC ERROR: $_" -Level WARN -LogFile "trailing_stop_monitor.log"
+        Write-CrossPlatformLog "AUTO-SYNC ERROR: $_" -Level ERROR -LogFile "trailing_stop_monitor.log"
+        Write-CrossPlatformLog "ERROR Details: $($_.ScriptStackTrace)" -Level ERROR -LogFile "trailing_stop_monitor.log"
     }
 
     # 3. VALIDATION
