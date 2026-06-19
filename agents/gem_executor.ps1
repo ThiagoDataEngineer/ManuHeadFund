@@ -88,7 +88,7 @@ foreach ($__tddLib in @("lib_sizing_centralized.ps1","lib_leverage_cap.ps1","lib
     $__tddPath = Join-Path $PSScriptRoot $__tddLib
     if (Test-Path $__tddPath) {
         try { . $__tddPath }
-        catch { Write-Host "[WARN] Failed to load $__tddLib: $_" -ForegroundColor Yellow }
+        catch { Write-Host "[WARN] Failed to load ${__tddLib}: $_" -ForegroundColor Yellow }
     }
 }
 
