@@ -29,9 +29,7 @@ function Invoke-ExitIntelligenceAuto {
     #>
 
     [CmdletBinding()]
-    param(
-        [switch]$Debug
-    )
+    param()
 
     $positions = @(
         @{
@@ -55,17 +53,22 @@ function Invoke-ExitIntelligenceAuto {
     $executed = @()
 
     foreach ($pos in $positions) {
+        Write-Host "[$($pos.name)]" -ForegroundColor Cyan
         try {
-            # Buscar dados
-            $candles = CoinEx-GetCandles -Market $pos.market -Interval "1h" -Limit 14 -ErrorAction SilentlyContinue
+            # Buscar ticker (preço atual)
             $ticker = CoinEx-GetTicker -Market $pos.market -ErrorAction SilentlyContinue
+            if (-not $ticker) { continue }
 
-            if (-not $candles -or -not $ticker) { continue }
+            # Buscar candles via API direto (mais simples)
+            $candleResp = CoinEx-Get "/v2/spot/kline?market=$($pos.market)&period=1hour&limit=14" -ErrorAction SilentlyContinue
+            $candles = $candleResp.data
+
+            if (-not $candles) { continue }
 
             $current = [double]$ticker.last
             $currentGain = (($current - $pos.entry) / $pos.entry) * 100
             $distToSL = (($current - $pos.sl) / $current) * 100
-            $closes = $candles | ForEach-Object { [double]$_[2] }
+            $closes = $candles | ForEach-Object { [double]$_.close }
 
             # ════════════════════════════════════════════════════════════
             # Calcular RSI
@@ -87,25 +90,24 @@ function Invoke-ExitIntelligenceAuto {
             $recent3 = $closes[-3..-1]
             $isReversal = $recent3[-1] -lt $recent3[-2] -and $recent3[-2] -lt $recent3[-3]
 
-            if ($Debug) {
-                Write-Host "[$($pos.name)] RSI=$([Math]::Round($rsi,1)) Reversal=$isReversal Gain=$([Math]::Round($currentGain,1))% DistSL=$([Math]::Round($distToSL,1))%" -ForegroundColor Gray
-            }
+            Write-Host "  Preço: $current (Ganho: $('{0:+0.0;-0.0}' -f $currentGain)%) | RSI: $('{0:F1}' -f $rsi) | Dist SL: $('{0:F1}' -f $distToSL)% | Reversal: $isReversal" -ForegroundColor Gray
 
             # ════════════════════════════════════════════════════════════
             # LAYER 4: Perto SL com ganho → VENDER 100%
             # ════════════════════════════════════════════════════════════
-            if (($distToSL -lt 2) -and ($currentGain -gt 0)) {
+            if (($distToSL -le 2.5) -and ($currentGain -gt 0)) {
                 Write-Host "[EXIT-L4] $($pos.name) CRÍTICO: Perto SL ($([Math]::Round($distToSL,1))%) com ganho ($([Math]::Round($currentGain,1))%)" -ForegroundColor Red
                 Write-Host "          Vendendo 100% = $($pos.qty) em $current" -ForegroundColor Red
 
                 try {
                     # VENDER 100%
+                    $inv = [System.Globalization.CultureInfo]::InvariantCulture
                     $body = @{
                         market      = $pos.market
                         market_type = "SPOT"
                         side        = "sell"
                         type        = "market"
-                        amount      = ([math]::Round($pos.qty, 8))
+                        amount      = ([math]::Round($pos.qty, 8)).ToString($inv)
                         ccy         = "USDT"
                     }
                     $r = CoinEx-Post "/v2/spot/place-order" $body
@@ -135,12 +137,13 @@ function Invoke-ExitIntelligenceAuto {
                 Write-Host "          Vendendo 70% = $qty70 em $current" -ForegroundColor Yellow
 
                 try {
+                    $inv = [System.Globalization.CultureInfo]::InvariantCulture
                     $body = @{
                         market      = $pos.market
                         market_type = "SPOT"
                         side        = "sell"
                         type        = "market"
-                        amount      = $qty70
+                        amount      = $qty70.ToString($inv)
                         ccy         = "USDT"
                     }
                     $r = CoinEx-Post "/v2/spot/place-order" $body
@@ -162,20 +165,21 @@ function Invoke-ExitIntelligenceAuto {
             }
 
             # ════════════════════════════════════════════════════════════
-            # LAYER 2: RSI >70 → VENDER 25%
+            # LAYER 2: RSI >=70 → VENDER 25%
             # ════════════════════════════════════════════════════════════
-            if (($rsi -gt 70) -and ($currentGain -gt 0)) {
+            if (($rsi -ge 70) -and ($currentGain -gt 0)) {
                 $qty25 = [math]::Round($pos.qty * 0.25, 8)
                 Write-Host "[EXIT-L2] $($pos.name) RSI sobrecomprado ($([Math]::Round($rsi,1)))" -ForegroundColor Yellow
                 Write-Host "          Vendendo 25% = $qty25 em $current" -ForegroundColor Yellow
 
                 try {
+                    $inv = [System.Globalization.CultureInfo]::InvariantCulture
                     $body = @{
                         market      = $pos.market
                         market_type = "SPOT"
                         side        = "sell"
                         type        = "market"
-                        amount      = $qty25
+                        amount      = $qty25.ToString($inv)
                         ccy         = "USDT"
                     }
                     $r = CoinEx-Post "/v2/spot/place-order" $body
@@ -203,6 +207,3 @@ function Invoke-ExitIntelligenceAuto {
 
     return $executed
 }
-
-# Export
-Export-ModuleMember -Function Invoke-ExitIntelligenceAuto
