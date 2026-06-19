@@ -1,10 +1,10 @@
 {
   "market": "TEST1",
-  "status": "PENDING",
-  "size_usd": 100
+  "size_usd": 100,
+  "status": "PENDING"
 }
 {
   "market": "TEST2",
-  "status": "PENDING",
-  "size_usd": 200
+  "size_usd": 200,
+  "status": "PENDING"
 }

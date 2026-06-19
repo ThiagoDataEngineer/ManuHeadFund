@@ -1,7 +1,28 @@
 # 🚀 ManuHeadFund - CoinEx AI Trading System
 
 Sistema automatizado de trading com IA (Mentor Agent) + Auto-Trade Engine para CoinEx SPOT + FUTURES (HYBRID 50/50).  
-**Status**: ✅ **CLOUD-ONLY LIVE** | Nuvem 24/7 | Local OFF | **Last Updated**: 2026-06-18
+**Status**: ✅ **CLOUD-ONLY LIVE** | Nuvem 24/7 | Local OFF | **Last Updated**: 2026-06-19
+
+---
+
+## 🎯 UPDATE 2026-06-19 — TDD Completo + Position Sync Fix
+
+### ✅ O que foi feito
+1. **sync_and_fix_tp.ps1** — Agora auto-detecta TODAS as posições abertas (não hardcoded)
+2. **trailing_stop_monitor.ps1** — Remove hardcoded markets, chama sync sem filtro
+3. **TDD Completo** — Validados todos 5 caminhos de entrada de trade ✅
+
+### 5 Caminhos de Entrada (Todos Testados)
+| Caminho | Frequência | Status | Tipo |
+|---------|-----------|--------|------|
+| **gem_loop** | 15 min | ✅ LIVE | Automático |
+| **scan_master** | 1h | ✅ LIVE | Observação |
+| **/idea** | Manual | ✅ LIVE | Manual |
+| **/approve** | Manual | ✅ LIVE | Manual |
+| **sync_and_fix_tp** | 5 min | ✅ LIVE (FIXED) | Auto |
+
+**Resultado**: Sistema 100% automático e sincronizado. Posições sempre atualizadas.
+Ver: [TDD_FINAL_RESULTS_2026_06_19.md](./TDD_FINAL_RESULTS_2026_06_19.md)
 
 ---
 
