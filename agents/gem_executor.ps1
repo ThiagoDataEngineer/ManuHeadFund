@@ -505,6 +505,30 @@ function Invoke-GemExecute {
         # (sizing 0.2% ja eh tao pequeno que double-confirm seria overkill).
     }
 
+    # ── 2a. CONVICTION GATE (2026-06-18: entrada dinamica, mesa score override) ──
+    # Checkpoint NOVO: conviction check ANTES de Tori (filtra low-conviction trades)
+    # Mesa score 75+ = bypass conviction entirely (elite confluence)
+    # Mesa score 60-75 = use conviction threshold 40 (strong signal)
+    # Mesa score <60 = use conviction threshold 50 (standard)
+    if (Get-Command Test-ConvictionGate -ErrorAction SilentlyContinue) {
+        try {
+            $mesa_score = if ($Gem.PSObject.Properties['mesa_score']) { [int]$Gem.mesa_score } else { 0 }
+            $conviction = if ($Gem.PSObject.Properties['conviction']) { [int]$Gem.conviction } else { 0 }
+
+            if (-not (Test-ConvictionGate -conviction $conviction -mesa_score $mesa_score)) {
+                Write-Host "  [CONVICTION BLOCKED] ${mkt}: conviction=$conviction mesa=$mesa_score (fails dynamic threshold)" -ForegroundColor Yellow
+                return [PSCustomObject]@{ blocked = $true; blocked_by = @("conviction_gate_failed_$conviction`_mesa_$mesa_score"); market = $mkt }
+            } else {
+                Write-Host "  [CONVICTION PASS] ${mkt}: conviction=$conviction mesa=$mesa_score" -ForegroundColor DarkGray
+            }
+        } catch {
+            Write-Host "  [CONVICTION CHECK ERROR] ${mkt}: $_ (fallback: allow)" -ForegroundColor Yellow
+            # Fallback: if conviction check fails, allow trade (fail-open for robustness)
+        }
+    } else {
+        Write-Host "  [CONVICTION WARN] Test-ConvictionGate not available (lib_gates_drift_wire not loaded)" -ForegroundColor Yellow
+    }
+
     # ── 2. TORI GATE (qualidade tecnica de trendline; ENTER|SKIP|WAIT) ───────
     # Bloqueia GEMs sem ancora tecnica antes de comprometer capital. Defensivo:
     # qualquer falha upstream (Claude indisponivel, exception) aborta o trade.
