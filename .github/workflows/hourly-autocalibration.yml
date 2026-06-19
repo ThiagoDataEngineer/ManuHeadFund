@@ -1,14 +1,19 @@
-name: Hourly Auto-Calibration
+name: Hourly Auto-Calibration (Cloud-Only)
 
 on:
   schedule:
-    - cron: '0 * * * *'  # Run every hour at :00
-  workflow_dispatch:     # Manual trigger
+    - cron: '0 * * * *'  # Every hour at :00
+  workflow_dispatch:
 
 jobs:
   autocalibration:
     runs-on: ubuntu-latest
-    timeout-minutes: 5
+    timeout-minutes: 10
+    environment: production
+
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
 
     steps:
       - name: Checkout
@@ -16,35 +21,33 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Setup PowerShell
+      - name: Setup PowerShell 7
         uses: PowerShell/setup-powershell@v2
         with:
           pwsh-version: latest
 
-      - name: Run hourly calibration
+      - name: Run hourly auto-calibration
         shell: pwsh
         run: |
-          Write-Host "======================================" -ForegroundColor Cyan
-          Write-Host "HOURLY AUTO-CALIBRATION" -ForegroundColor Cyan
-          Write-Host "Time: $(Get-Date -Format 'o')" -ForegroundColor Cyan
-          Write-Host "======================================" -ForegroundColor Cyan
+          Write-Host "╔════════════════════════════════════════════════════╗" -ForegroundColor Cyan
+          Write-Host "║  HOURLY AUTO-CALIBRATION (Cloud-Only)            ║" -ForegroundColor Cyan
+          Write-Host "║  Time: $(Get-Date -Format 'o')  ║" -ForegroundColor Cyan
+          Write-Host "╚════════════════════════════════════════════════════╝" -ForegroundColor Cyan
           Write-Host ""
 
-          # Run calibration
+          # Run calibration with Supabase credentials
           & ./scripts/daily_autocalibration.ps1
 
-          $exit_code = $LASTEXITCODE
+          $exit = $LASTEXITCODE
           Write-Host ""
-          Write-Host "======================================" -ForegroundColor Cyan
-          Write-Host "CALIBRATION EXIT CODE: $exit_code" -ForegroundColor Cyan
-          Write-Host "======================================" -ForegroundColor Cyan
+          Write-Host "Exit code: $exit" -ForegroundColor $(if ($exit -eq 0) { "Green" } else { "Red" })
+          exit $exit
 
-          exit $exit_code
-
-      - name: Upload calibration logs
+      - name: Commit updates if gates changed
         if: always()
-        uses: actions/upload-artifact@v3
-        with:
-          name: calibration-logs-${{ github.run_id }}
-          path: journal/
-          retention-days: 7
+        run: |
+          git config user.name "CloudBot"
+          git config user.email "cloud@manuheadfund.local"
+          git add -A
+          git commit -m "auto: hourly calibration update" || true
+          git push origin main || true

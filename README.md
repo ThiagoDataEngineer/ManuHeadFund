@@ -86,24 +86,23 @@ Dia 2 - 00:00 UTC:
   └─ LOOP REPETE
 ```
 
-### Como Rodar
+### Como Funciona (Cloud-Only)
 
-**Test insight (manual qualquer hora)**
-```bash
-python3 backtest/insight_realtime_winners_24h.py
-# Output: TODAY's analysis + recommendations
-```
+**Automático via GitHub Actions** (rodando agora):
+- ✅ `.github/workflows/hourly-autocalibration.yml`
+- ✅ Cron: `0 * * * *` (a cada hora)
+- ✅ Persiste estado em Supabase (não local)
+- ✅ Sem necessidade de máquina local
 
-**Test daily calibration (manual)**
-```bash
-pwsh scripts/daily_autocalibration.ps1
-# Output: Runs insight → updates gates → logs event
-```
+**O que precisa estar configurado**:
+- Secrets no GitHub (Settings → Secrets):
+  - `SUPABASE_URL`: URL do projeto Supabase
+  - `SUPABASE_SERVICE_KEY`: Service key Supabase
 
-**Auto (00:00 UTC) — precisa schedule**
-- GitHub Actions: Schedule em `.github/workflows/daily-calibration.yml`
-- Windows Task Scheduler: Schedule `scripts/daily_autocalibration.ps1` para 00:00 UTC
-- Manual: `pwsh scripts/daily_autocalibration.ps1` a cada 24h
+**Status**:
+- Veja runs em: Actions tab
+- Logs: Artifacts com journal/daily_calibration.jsonl
+- Estado persistido: Supabase `regime_state` table
 
 ### Status Atual
 

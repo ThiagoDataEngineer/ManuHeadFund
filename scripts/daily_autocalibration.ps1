@@ -1,11 +1,13 @@
 #!/usr/bin/env pwsh
 # daily_autocalibration.ps1
-# 2026-06-18: Daily self-learning calibration
-# Runs at 00:00 UTC: analyzes yesterday, updates gates for today
+# 2026-06-18: Hourly self-learning calibration (CLOUD-ONLY)
+# Runs via GitHub Actions every hour
+# Uses: Supabase for state persistence (no local files)
 
 param(
     [string]$JournalDir = "journal",
-    [string]$ConfigDir = "config"
+    [string]$SupabaseUrl = $env:SUPABASE_URL,
+    [string]$SupabaseKey = $env:SUPABASE_SERVICE_KEY
 )
 
 # Load insight tool
@@ -25,10 +27,51 @@ Write-Host $gap_line
 Write-Host $action_line
 Write-Host ""
 
-# Step 2: Load current gates
+# Step 2: Load current gates (from Supabase or local fallback)
 Write-Host "[STEP 2] Loading current gates..." -ForegroundColor Yellow
-$gates_file = "$ConfigDir/gates_drift.json"
-$gates = Get-Content $gates_file | ConvertFrom-Json
+
+$gates = $null
+
+# Try Supabase first
+if ($SupabaseUrl -and $SupabaseKey) {
+    try {
+        $headers = @{
+            "Authorization" = "Bearer $SupabaseKey"
+            "Content-Type" = "application/json"
+            "Prefer" = "return=representation"
+        }
+        $response = Invoke-RestMethod -Uri "$SupabaseUrl/rest/v1/regime_state?select=*" -Headers $headers -ErrorAction Stop
+        if ($response -and $response.Count -gt 0) {
+            $gates = @{
+                gates = @{
+                    conviction_threshold = $response[0].conviction_threshold ?? 50
+                    mesa_score_strong = $response[0].mesa_score_strong ?? 60
+                }
+            }
+            Write-Host "  [SUPABASE] Loaded gates from cloud" -ForegroundColor Green
+        }
+    } catch {
+        Write-Host "  [WARN] Supabase load failed: $_ (using fallback)" -ForegroundColor Yellow
+    }
+}
+
+# Fallback: load from local JSON
+if (-not $gates) {
+    $gates_file = "config/gates_drift.json"
+    if (Test-Path $gates_file) {
+        $gates = Get-Content $gates_file | ConvertFrom-Json
+        Write-Host "  [LOCAL] Loaded gates from JSON (Supabase unavailable)" -ForegroundColor Yellow
+    } else {
+        # Hardcoded defaults
+        $gates = @{
+            gates = @{
+                conviction_threshold = 50
+                mesa_score_strong = 60
+            }
+        }
+        Write-Host "  [DEFAULT] Using hardcoded defaults" -ForegroundColor Yellow
+    }
+}
 
 Write-Host "  Current conviction: $($gates.gates.conviction_threshold)"
 Write-Host "  Current mesa_strong: $($gates.gates.mesa_score_strong)"
@@ -65,21 +108,60 @@ Write-Host "  New conviction: $new_conviction (was $($gates.gates.conviction_thr
 Write-Host "  New mesa_strong: $new_mesa (was $($gates.gates.mesa_score_strong))"
 Write-Host ""
 
-# Step 4: Update gates
+# Step 4: Update gates (to Supabase or local)
 Write-Host "[STEP 4] Updating gates configuration..." -ForegroundColor Yellow
 
 $gates.gates.conviction_threshold = $new_conviction
 $gates.gates.mesa_score_strong = $new_mesa
+$calibration_ts = (Get-Date -Format 'o')
 
-# Add metadata
-$gates | Add-Member -NotePropertyName "last_calibration_date" -NotePropertyValue (Get-Date -Format 'o') -Force
-$gates | Add-Member -NotePropertyName "last_calibration_action" -NotePropertyValue $action -Force
-$gates | Add-Member -NotePropertyName "last_calibration_reason" -NotePropertyValue $reason -Force
+# Try Supabase update first
+$updated_supabase = $false
+if ($SupabaseUrl -and $SupabaseKey) {
+    try {
+        $headers = @{
+            "Authorization" = "Bearer $SupabaseKey"
+            "Content-Type" = "application/json"
+            "Prefer" = "return=representation"
+        }
+        $body = @{
+            conviction_threshold = $new_conviction
+            mesa_score_strong = $new_mesa
+            last_calibration = $calibration_ts
+            last_calibration_action = $action
+            last_calibration_reason = $reason
+        } | ConvertTo-Json
 
-$gates_json = $gates | ConvertTo-Json -Depth 10
-$gates_json | Set-Content $gates_file
+        $response = Invoke-RestMethod `
+            -Uri "$SupabaseUrl/rest/v1/regime_state?id=eq.1" `
+            -Method PATCH `
+            -Headers $headers `
+            -Body $body `
+            -ErrorAction Stop
 
-Write-Host "  gates_drift.json updated"
+        Write-Host "  [SUPABASE] Gates updated in cloud" -ForegroundColor Green
+        $updated_supabase = $true
+    } catch {
+        Write-Host "  [WARN] Supabase update failed: $_ (falling back to local)" -ForegroundColor Yellow
+    }
+}
+
+# Also update local JSON for redundancy
+if (Test-Path "$ConfigDir/gates_drift.json") {
+    try {
+        $gates | Add-Member -NotePropertyName "last_calibration_date" -NotePropertyValue $calibration_ts -Force
+        $gates | Add-Member -NotePropertyName "last_calibration_action" -NotePropertyValue $action -Force
+        $gates | Add-Member -NotePropertyName "last_calibration_reason" -NotePropertyValue $reason -Force
+        $gates_json = $gates | ConvertTo-Json -Depth 10
+        $gates_json | Set-Content "$ConfigDir/gates_drift.json"
+        Write-Host "  [LOCAL] JSON backup updated"
+    } catch {}
+}
+
+if (-not $updated_supabase) {
+    Write-Host "  [WARN] Update not persisted to Supabase" -ForegroundColor Yellow
+}
+
 Write-Host ""
 
 # Step 5: Log calibration
