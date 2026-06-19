@@ -9,15 +9,13 @@ param(
 )
 
 # Load insight tool
-$insight_script = "python3 backtest/insight_realtime_winners_24h.py"
-
 Write-Host "[AUTOCALIBRATION] Starting daily calibration cycle" -ForegroundColor Cyan
 Write-Host "[AUTOCALIBRATION] Time: $(Get-Date -Format 'o')" -ForegroundColor Cyan
 Write-Host ""
 
 # Step 1: Run insight tool
 Write-Host "[STEP 1] Running insight analysis..." -ForegroundColor Yellow
-$insight_output = & $insight_script 2>&1 | Out-String
+$insight_output = & python3 backtest/insight_realtime_winners_24h.py 2>&1 | Out-String
 
 # Parse output
 $gap_line = $insight_output | Select-String "NET:" | ForEach-Object { $_.Line }
@@ -72,9 +70,11 @@ Write-Host "[STEP 4] Updating gates configuration..." -ForegroundColor Yellow
 
 $gates.gates.conviction_threshold = $new_conviction
 $gates.gates.mesa_score_strong = $new_mesa
-$gates.last_calibration_date = (Get-Date -Format 'o')
-$gates.last_calibration_action = $action
-$gates.last_calibration_reason = $reason
+
+# Add metadata
+$gates | Add-Member -NotePropertyName "last_calibration_date" -NotePropertyValue (Get-Date -Format 'o') -Force
+$gates | Add-Member -NotePropertyName "last_calibration_action" -NotePropertyValue $action -Force
+$gates | Add-Member -NotePropertyName "last_calibration_reason" -NotePropertyValue $reason -Force
 
 $gates_json = $gates | ConvertTo-Json -Depth 10
 $gates_json | Set-Content $gates_file
