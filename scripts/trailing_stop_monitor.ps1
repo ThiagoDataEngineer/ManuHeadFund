@@ -274,21 +274,11 @@ try {
         }
     }
 
-    # 2.9 AUTO-SYNC SL/TP (2026-06-19: create missing stops automatically)
-    # 2026-06-19 FIX: Sync TODAS as posições abertas (não hardcoded)
-    Write-CrossPlatformLog "--- AUTO-SYNC SL/TP ---" -LogFile "trailing_stop_monitor.log"
-    try {
-        $syncScript = Join-Path $projectRoot "scripts" "sync_and_fix_tp.ps1"
-        if (Test-Path $syncScript) {
-            Write-CrossPlatformLog "Running sync_and_fix_tp (auto-detect all open positions)..." -LogFile "trailing_stop_monitor.log"
-            # CHANGE: Remover hardcoded markets, deixar sync_and_fix_tp auto-detectar
-            & $syncScript -ErrorAction Stop
-            Write-CrossPlatformLog "Sync completed (all open positions synchronized)" -LogFile "trailing_stop_monitor.log"
-        }
-    } catch {
-        Write-CrossPlatformLog "AUTO-SYNC ERROR: $_" -Level ERROR -LogFile "trailing_stop_monitor.log"
-        Write-CrossPlatformLog "ERROR Details: $($_.ScriptStackTrace)" -Level ERROR -LogFile "trailing_stop_monitor.log"
-    }
+    # 2.9 AUTO-SYNC SL/TP (DISABLED 2026-06-20)
+    # 2026-06-20 BUGFIX: sync_and_fix_tp.ps1 criava duplicatas a cada ciclo (5min)
+    # Desabilitado até ter guard contra duplicatas. Manual sync será via SETUP_SUPABASE_*.sql
+    Write-CrossPlatformLog "--- AUTO-SYNC SL/TP (DISABLED) ---" -LogFile "trailing_stop_monitor.log"
+    Write-CrossPlatformLog "Note: sync_and_fix_tp disabled (created duplicates every 5min). Use manual cleanup script." -LogFile "trailing_stop_monitor.log"
 
     # 3. VALIDATION
     Write-CrossPlatformLog "--- VALIDATION ---" -LogFile "trailing_stop_monitor.log"
