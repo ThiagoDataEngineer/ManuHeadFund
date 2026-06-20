@@ -1064,7 +1064,9 @@ jobs:
         continue-on-error: true
         run: |
           $minute = (Get-Date).Minute
-          if ($minute % 15 -lt 5) {
+          # dispatch manual SEMPRE executa (debug/diagnostico); cron mantem janela 15min
+          $force = "${{ github.event_name }}" -eq "workflow_dispatch"
+          if ($force -or $minute % 15 -lt 5) {
             Write-Host "=== CLOUD TRADING (gem_loop -Once) ===" -ForegroundColor Cyan
             $dry = Test-Path "journal/CLOUD_DRY_RUN.flag"
             Write-Host "DryRun ativo (prova stack): $dry" -ForegroundColor $(if($dry){'Yellow'}else{'Green'})
