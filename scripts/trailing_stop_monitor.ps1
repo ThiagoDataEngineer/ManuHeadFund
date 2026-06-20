@@ -169,15 +169,26 @@ try {
     # Atualiza peak/phase com lock fino (+2.5% breakeven) e EMPURRA a SL pra corretora.
     # Sync-TrailingToExchange tem trava propria: nunca empurra SL que ja dispararia.
     # Aditivo e idempotente -- nao conflita com Update-AllTrailingStops acima.
+    # 2026-06-20 FIX: Usar CoinEx-GetOpenOrders (que tem as posições reais) em vez de GetPendingPositions (não retorna nada)
     Write-CrossPlatformLog "--- PEAK UPDATE + SL SYNC ---" -LogFile "trailing_stop_monitor.log"
-    if ((Get-Command Update-TrailingPeakLive -ErrorAction SilentlyContinue) -and (Get-Command CoinEx-GetPendingPositions -ErrorAction SilentlyContinue)) {
+    if ((Get-Command Update-TrailingPeakLive -ErrorAction SilentlyContinue) -and (Get-Command CoinEx-GetOpenOrders -ErrorAction SilentlyContinue)) {
         try {
-            foreach ($p in @(CoinEx-GetPendingPositions)) {
-                $mk = "$($p.market)"; $mark = [double]$p.mark_price
-                if ($mark -le 0) {
-                    try { $ft = Invoke-RestMethod "https://api.coinex.com/v2/futures/ticker?market=$mk" -TimeoutSec 8 -EA Stop; if ($ft.data) { $mark = [double]$ft.data[0].last } } catch {}
+            $allPositions = CoinEx-GetOpenOrders -ErrorAction SilentlyContinue
+            foreach ($p in @($allPositions)) {
+                $mk = "$($p.market)"
+                # Buscar preço atual via API
+                try {
+                    $ticker = CoinEx-GetTicker -Market $mk -ErrorAction SilentlyContinue
+                    $mark = if ($ticker) { [double]$ticker.last } else { 0 }
+                } catch {
+                    $mark = 0
                 }
-                if ($mark -gt 0) { Update-TrailingPeakLive -Market $mk -CurrentPrice $mark | Out-Null }
+
+                # Se preço encontrado, atualiza trailing peak
+                if ($mark -gt 0) {
+                    Write-CrossPlatformLog "  Updating peak: $mk @ $mark" -LogFile "trailing_stop_monitor.log"
+                    Update-TrailingPeakLive -Market $mk -CurrentPrice $mark | Out-Null
+                }
             }
         } catch { Write-CrossPlatformLog "peak update: $_" -Level WARN -LogFile "trailing_stop_monitor.log" }
     }
