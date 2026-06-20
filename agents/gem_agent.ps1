@@ -539,10 +539,22 @@ function Get-GemSpotTickers {
         [double] $MinVol = 5000.0,
         [double] $MaxVol = 5000000.0
     )
+    # 2026-06-20: NUNCA falhar em silencio. Cloud retornava "0 pares" sem pista da
+    # causa (try/catch engolia tudo); local devolve 352. Distinguir os casos:
+    #   URL vazia (scope) | code!=0 (CoinEx erro) | excecao (conectividade/geo) | filtro.
+    $baseUrl = $COINEX_BASE_URL
+    if (-not $baseUrl) {
+        Write-Warning "[Get-GemSpotTickers] COINEX_BASE_URL vazio no escopo -> universo 0. (config.ps1 carregado neste runspace?)"
+        return @()
+    }
     try {
-        $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/spot/ticker" -Method GET
-        if ($r.code -ne 0) { return @() }
-        return $r.data | Where-Object {
+        $r = Invoke-RestMethod -Uri "$baseUrl/v2/spot/ticker" -Method GET -TimeoutSec 30
+        if ($r.code -ne 0) {
+            Write-Warning "[Get-GemSpotTickers] CoinEx code=$($r.code) msg=$($r.message) -> 0 tickers."
+            return @()
+        }
+        $all = @($r.data)
+        $filtered = @($all | Where-Object {
             $_.market -match "USDT$" -and
             [double]$_.value -ge $MinVol -and
             [double]$_.value -le $MaxVol
@@ -555,8 +567,13 @@ function Get-GemSpotTickers {
                 low_24h  = [double]$_.low
                 open_24h = [double]$_.open
             }
-        }
-    } catch { return @() }
+        })
+        Write-Host ("        [tickers] CoinEx OK: {0} recebidos, {1} no range [{2:N0}-{3:N0}] USDT" -f $all.Count, $filtered.Count, $MinVol, $MaxVol)
+        return $filtered
+    } catch {
+        Write-Warning "[Get-GemSpotTickers] FALHA buscar CoinEx ticker em '$baseUrl' (conectividade/geo?): $_"
+        return @()
+    }
 }
 
 # ─────────────────────────────────────────────────────────────────────────────

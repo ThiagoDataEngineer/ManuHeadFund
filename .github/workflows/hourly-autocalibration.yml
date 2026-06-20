@@ -21,10 +21,9 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Setup PowerShell 7
-        uses: PowerShell/setup-powershell@v2
-        with:
-          pwsh-version: latest
+      # ubuntu-latest ja vem com pwsh. A Action PowerShell/setup-powershell@v2 NAO
+      # existe (404) e fazia este workflow falhar 100% em "Set up job" (mesma classe
+      # do bug do heartbeat-monitor, fix e82a150). Removida 2026-06-20.
 
       - name: Run hourly auto-calibration
         shell: pwsh
