@@ -118,7 +118,7 @@ foreach ($__amaDep in @("lib_chart_patterns.ps1","lib_trailing_stop_intelligent.
 function CoinEx-HasFuturesMarket {
     param([string]$Market)
     try {
-        $r = Invoke-RestMethod -Uri "$global:COINEX_BASE_URL/v2/futures/market?market=$Market" -Method GET -ErrorAction Stop
+        $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/futures/market?market=$Market" -Method GET -ErrorAction Stop
         return ($r.code -eq 0 -and $r.data -and $r.data.Count -gt 0)
     } catch { return $false }
 }
@@ -419,7 +419,7 @@ function Invoke-GemExecute {
 
     # ── Preco atual ───────────────────────────────────────────────────────────
     $tickerEndpoint = if ($hasFutures) { "/v2/futures/ticker?market=$mkt" } else { "/v2/spot/ticker?market=$mkt" }
-    $ticker = Invoke-RestMethod -Uri "$global:COINEX_BASE_URL$tickerEndpoint" -Method GET
+    $ticker = Invoke-RestMethod -Uri "$COINEX_BASE_URL$tickerEndpoint" -Method GET
     if ($ticker.code -ne 0 -or -not $ticker.data) { throw "Ticker indisponivel para $mkt" }
     $price = [double]$ticker.data[0].last
 
@@ -1101,7 +1101,7 @@ function Invoke-GemExecute {
                 . "$ScriptRoot\lib_position_risk_manager.ps1"
                 $result = Update-TrailingStop -Market $Market -AtrMultiplier 2.0 -MinProfitPct 2.0
                 return $result
-            } -ArgumentList $mkt, $PSScriptRoot, $env:COINEX_ACCESS_ID, $env:COINEX_SECRET_KEY, $global:COINEX_BASE_URL
+            } -ArgumentList $mkt, $PSScriptRoot, $env:COINEX_ACCESS_ID, $env:COINEX_SECRET_KEY, $COINEX_BASE_URL
             
             Write-Host "  [TRAILING STOP] Job ID: $($trailingJob.Id) (rodando em background)" -ForegroundColor DarkGray
         } catch {
