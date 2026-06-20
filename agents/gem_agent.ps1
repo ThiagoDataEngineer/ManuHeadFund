@@ -540,7 +540,7 @@ function Get-GemSpotTickers {
         [double] $MaxVol = 5000000.0
     )
     try {
-        $r = Invoke-RestMethod -Uri "$global:COINEX_BASE_URL/v2/spot/ticker" -Method GET
+        $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/spot/ticker" -Method GET
         if ($r.code -ne 0) { return @() }
         return $r.data | Where-Object {
             $_.market -match "USDT$" -and
@@ -665,7 +665,7 @@ function Get-GemFingerprintScore {
 
     # Fonte 2: journal local (gem_signals.csv) — gems aprovados com outcome futuro
     # Usa apenas entradas onde gate_failed está vazio (aprovados) como referência positiva
-    $journalFile = Join-Path $global:JOURNAL_DIR "gem_signals.csv"
+    $journalFile = Join-Path $JOURNAL_DIR "gem_signals.csv"
     if (Test-Path $journalFile) {
         try {
             $approved = Import-Csv $journalFile -Encoding utf8 |
@@ -769,7 +769,7 @@ function Invoke-GemScan {
     # Capital FUTURES real (CoinEx-first) — GemAgent opera futures com fallback spot
     if ($Capital -le 0) {
         try   { $Capital = CoinEx-GetFuturesCapitalUSDT }
-        catch { $Capital = $global:CAPITAL_FUTURES }
+        catch { $Capital = $CAPITAL_FUTURES }
     }
 
     $sep = "-" * 60
@@ -812,7 +812,7 @@ function Invoke-GemScan {
     $spike_candidates = @()
     foreach ($t in $pre_filtered) {
         try {
-            $kr = Invoke-RestMethod -Uri "$global:COINEX_BASE_URL/v2/spot/kline?market=$($t.market)&period=1day&limit=4" -Method GET
+            $kr = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/spot/kline?market=$($t.market)&period=1day&limit=4" -Method GET
             if ($kr.code -ne 0) { continue }
             $daily = $kr.data | ForEach-Object {
                 [PSCustomObject]@{ open=[double]$_.open; high=[double]$_.high; low=[double]$_.low; close=[double]$_.close; volume=[double]$_.volume; ts=$_.created_at }
@@ -897,7 +897,7 @@ function Invoke-GemScan {
         $mkt = $c.ticker.market
         try {
             # 1H para estrutura (G5) — ADD TIMEOUT (2026-06-09: fix GemScan hang)
-            $kr1h = Invoke-RestMethod -Uri "$global:COINEX_BASE_URL/v2/spot/kline?market=$mkt&period=1hour&limit=24" -Method GET -TimeoutSec 10
+            $kr1h = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/spot/kline?market=$mkt&period=1hour&limit=24" -Method GET -TimeoutSec 10
             $c1h = @()
             if ($kr1h.code -eq 0) {
                 $c1h = $kr1h.data | ForEach-Object {
@@ -907,7 +907,7 @@ function Invoke-GemScan {
             $structure = Get-GemStructureScore -Candles1H $c1h
 
             # 5min para deteccao organica (G6) — ADD TIMEOUT
-            $kr5 = Invoke-RestMethod -Uri "$global:COINEX_BASE_URL/v2/spot/kline?market=$mkt&period=5min&limit=60" -Method GET -TimeoutSec 10
+            $kr5 = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/spot/kline?market=$mkt&period=5min&limit=60" -Method GET -TimeoutSec 10
             $c5 = @()
             if ($kr5.code -eq 0) {
                 $c5 = $kr5.data | ForEach-Object {
@@ -916,7 +916,7 @@ function Invoke-GemScan {
             }
 
             # 1min para fingerprint (G7) — ADD TIMEOUT
-            $kr1 = Invoke-RestMethod -Uri "$global:COINEX_BASE_URL/v2/spot/kline?market=$mkt&period=1min&limit=60" -Method GET -TimeoutSec 10
+            $kr1 = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/spot/kline?market=$mkt&period=1min&limit=60" -Method GET -TimeoutSec 10
             $c1 = @()
             if ($null -ne $kr1 -and $kr1.code -eq 0) {
                 $c1 = $kr1.data | ForEach-Object {
