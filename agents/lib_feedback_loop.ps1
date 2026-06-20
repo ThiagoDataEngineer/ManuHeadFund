@@ -18,7 +18,18 @@ if (-not $global:JOURNAL_DIR) {
     $global:JOURNAL_DIR = Join-Path (Split-Path $PSScriptRoot -Parent) "journal"
 }
 
+# state_store p/ espelho Supabase de outcomes (cloud ground-truth). Carrega so
+# se ainda nao disponivel — evita re-source quando ja carregado pelo runner.
+if (-not (Get-Command Save-StateRecords -ErrorAction SilentlyContinue)) {
+    $_fbStateStore = Join-Path $PSScriptRoot "lib_state_store.ps1"
+    if (Test-Path $_fbStateStore) { . $_fbStateStore }
+}
+
 $script:DEFAULT_OUTCOME_PATH = Join-Path $global:JOURNAL_DIR "trade_outcomes.jsonl"
+# Schema Supabase onde vive a tabela trade_outcomes (unico DDL existente:
+# docs/SUPABASE_STATE_SCHEMA.md -> manuheadfund.trade_outcomes). Aplicado SO na
+# chamada de espelho (save/restore), sem alterar o schema global que o trailing usa.
+$script:SUPABASE_OUTCOME_SCHEMA = "manuheadfund"
 $script:MIN_TRADES_ADJUSTMENT = 10
 $script:BOOST_THRESHOLD_R = 0.30    # avg R >= 0.30 = BOOST
 $script:REDUCE_THRESHOLD_R = 0.0    # avg R <= 0 = REDUCE
@@ -63,6 +74,69 @@ function Add-TradeOutcome {
     }
     $line = $obj | ConvertTo-Json -Compress
     Add-Content -Path $OutcomePath -Value $line -Encoding UTF8
+
+    # Espelho Supabase (cloud ground-truth). Best-effort: o JSONL local ja foi
+    # gravado acima, entao falha aqui NUNCA bloqueia o fechamento do trade. Mas
+    # tambem NUNCA falha em silencio — emite warning (licao do audit 2026-06-20).
+    if ((Get-Command Test-StateBackend -ErrorAction SilentlyContinue) -and
+        ((Test-StateBackend) -eq "supabase") -and
+        (Get-Command Save-StateRecords -ErrorAction SilentlyContinue)) {
+        $prevSchema = $global:STATE_STORE_SCHEMA
+        try {
+            $supaRow = ConvertTo-SupabaseOutcome -Outcome $obj
+            # mira o schema da tabela trade_outcomes so nesta chamada
+            $global:STATE_STORE_SCHEMA = $script:SUPABASE_OUTCOME_SCHEMA
+            Save-StateRecords -Table "trade_outcomes" -Records @($supaRow)
+        } catch {
+            Write-Warning "[feedback_loop] Falha ao espelhar trade_outcome no Supabase (JSONL local gravado OK): $_"
+        } finally {
+            $global:STATE_STORE_SCHEMA = $prevSchema
+        }
+    }
+}
+
+
+function ConvertTo-SupabaseOutcome {
+    # PURA. Mapeia o objeto de outcome local (schema JSONL) para as colunas da
+    # tabela manuheadfund.trade_outcomes. O objeto integral vai em 'payload'
+    # (JSONB) — lossless, preserva pnl_usd/duration_days/regime/score etc.
+    [CmdletBinding()]
+    param([Parameter(Mandatory)] $Outcome)
+
+    $get = {
+        param($key)
+        if ($null -eq $Outcome) { return $null }
+        if ($Outcome -is [System.Collections.IDictionary]) {
+            if ($Outcome.Contains($key)) { return $Outcome[$key] }
+            return $null
+        }
+        $p = $Outcome.PSObject.Properties[$key]
+        if ($p) { return $p.Value }
+        return $null
+    }
+
+    # payload: copia integral como hashtable plano (ConvertTo-Json serializa em JSONB)
+    $payload = @{}
+    if ($Outcome -is [System.Collections.IDictionary]) {
+        foreach ($k in $Outcome.Keys) { $payload[[string]$k] = $Outcome[$k] }
+    } else {
+        foreach ($p in $Outcome.PSObject.Properties) { $payload[$p.Name] = $p.Value }
+    }
+
+    return @{
+        market       = [string](& $get "market")
+        side         = [string](& $get "side")
+        mode         = [string](& $get "mode")
+        entry        = (& $get "entry_price")
+        exit_price   = (& $get "exit_price")
+        stop         = (& $get "stop_price")
+        target       = (& $get "target_price")
+        r_multiple   = (& $get "r")
+        closed_at    = [string](& $get "ts")
+        close_reason = [string](& $get "exit_reason")
+        source       = "feedback_loop"
+        payload      = $payload
+    }
 }
 
 

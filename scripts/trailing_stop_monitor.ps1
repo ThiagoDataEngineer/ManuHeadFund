@@ -53,6 +53,10 @@ try {
     . (Join-Path $agentsDir "lib_coinex.ps1")
     . (Join-Path $agentsDir "lib_telegram.ps1")
     . (Join-Path $agentsDir "lib_trailing.ps1")
+    # 2026-06-20: registra trade_outcome ao fechar (JSONL local + espelho Supabase).
+    # Sem este load, Add-TradeOutcome nao existe e a chamada gated em lib_trailing
+    # eh pulada -> nenhum outcome registrado (causa de 0 rows no Supabase).
+    . (Join-Path $agentsDir "lib_feedback_loop.ps1")
     . (Join-Path $agentsDir "lib_trailing_stop_intelligent.ps1")
     . (Join-Path $agentsDir "lib_trailing_orphan_detection.ps1")
     # 2026-05-29: auto-reparo de protecao (SL+TP reais na corretora)
