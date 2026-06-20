@@ -20,6 +20,21 @@ Write-Host ""
 $tradeFile = "$JournalDir/trade_outcomes.jsonl"
 if (-not (Test-Path $tradeFile)) {
     Write-Host "[ALERT] trade_outcomes.jsonl não encontrado" -ForegroundColor Red
+
+    # trade_outcomes.jsonl não é versionado no git (local-only) — em runner cloud
+    # ele nunca existe. Isso é uma lacuna estrutural, não necessariamente sistema parado.
+    if ($env:TELEGRAM_BOT_TOKEN -and $env:TELEGRAM_CHAT_ID) {
+        $message = "⚠️ HEARTBEAT: trade_outcomes.jsonl não existe neste ambiente.`n" +
+                   "Esse arquivo não é versionado no git, então todo runner cloud parte sem ele.`n" +
+                   "Não significa sistema parado — significa que o heartbeat não tem como verificar.`n" +
+                   "Fix real: persistir trade outcomes no Supabase e ler de lá."
+        try {
+            $uri = "https://api.telegram.org/bot$($env:TELEGRAM_BOT_TOKEN)/sendMessage"
+            $body = @{ chat_id = $env:TELEGRAM_CHAT_ID; text = $message } | ConvertTo-Json
+            Invoke-RestMethod -Uri $uri -Method POST -Body $body -ContentType "application/json" | Out-Null
+        } catch {}
+    }
+
     exit 1
 }
 

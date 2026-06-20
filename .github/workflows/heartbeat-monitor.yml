@@ -20,11 +20,6 @@ jobs:
         with:
           fetch-depth: 1
 
-      - name: Setup PowerShell
-        uses: PowerShell/setup-powershell@v2
-        with:
-          pwsh-version: latest
-
       - name: Load credentials
         shell: pwsh
         run: |
@@ -62,3 +57,9 @@ jobs:
         shell: pwsh
         run: |
           Write-Host "✗ Heartbeat check FAILED — system may be broken" -ForegroundColor Red
+          if ($env:TELEGRAM_BOT_TOKEN -and $env:TELEGRAM_CHAT_ID) {
+            $msg = "🚨 HEARTBEAT MONITOR FALHOU (job-level)`nRun: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`nVerifique heartbeat_alert.ps1 / dependencias do job."
+            $uri = "https://api.telegram.org/bot$($env:TELEGRAM_BOT_TOKEN)/sendMessage"
+            $body = @{ chat_id = $env:TELEGRAM_CHAT_ID; text = $msg } | ConvertTo-Json
+            try { Invoke-RestMethod -Uri $uri -Method POST -Body $body -ContentType "application/json" | Out-Null } catch {}
+          }
