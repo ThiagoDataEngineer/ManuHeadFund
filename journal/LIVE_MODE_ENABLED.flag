@@ -1,0 +1,5 @@
+LIVE MODE ENABLED 2026-06-21
+Ativado apos: discovery fix (4309b41) + executor fix (d7c9772) + LLM cascade
+secrets (14 GitHub secrets) verificada funcionando. Pipeline provado ponta-a-ponta
+em DRY (ALICEUSDT -> Tori ENTER). Sizing 0.5%/trade, GEM_AUTO_APPROVE ativo.
+Reversivel: deletar este arquivo e commitar -> volta a DRY.
