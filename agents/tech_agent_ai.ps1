@@ -80,6 +80,7 @@ function Invoke-TechFallback {
     Write-Host "  [TechAgent] FALLBACK hardcoded — Claude indisponivel | $sinal forca=$forca score=$($Data.totalScore) consenso=$($Data.consensus)" -ForegroundColor DarkYellow
     return [PSCustomObject]@{
         sinal             = $sinal
+        llm_fallback      = $true
         forca             = $forca
         qualidade_setup   = "C"
         justificativa     = "Fallback hardcoded — Claude indisponivel (score=$($Data.totalScore), consenso=$($Data.consensus))"
@@ -152,8 +153,12 @@ function Get-ToriTrendlineSignal {
     )
     $r = Invoke-TechAgent -Market $Market
     if (-not $r) {
-        return [PSCustomObject]@{ signal = "WAIT"; conviction = 0; reason = "tech_agent_null" }
+        return [PSCustomObject]@{ signal = "WAIT"; conviction = 0; reason = "tech_agent_null"; tech_sinal = ""; llm_fallback = $true }
     }
+
+    # 2026-06-21: surfacea direcao tecnica + flag de fallback p/ o gate de qualidade
+    $techSinal   = if ($r.PSObject.Properties['sinal']) { "$($r.sinal)" } else { "" }
+    $llmFallback = [bool]($r.PSObject.Properties['llm_fallback'] -and $r.llm_fallback)
 
     # Extrai conviction de tori_proximity (0-100 gradation)
     $conviction = 0
@@ -175,11 +180,11 @@ function Get-ToriTrendlineSignal {
     if ($r.trendline -and $r.trendline.verdict) {
         $verdict = "$($r.trendline.verdict)".ToUpper()
         if ($verdict -eq "SKIP") {
-            return [PSCustomObject]@{ signal = "SKIP"; conviction = $conviction; reason = "$($r.trendline.reason)" }
+            return [PSCustomObject]@{ signal = "SKIP"; conviction = $conviction; reason = "$($r.trendline.reason)"; tech_sinal = $techSinal; llm_fallback = $llmFallback }
         }
     }
     $reasonTxt = if ($r.trendline -and $r.trendline.reason) { "$($r.trendline.reason)" } else { "sem_verdict_mentor_decide" }
-    return [PSCustomObject]@{ signal = "ENTER"; conviction = $conviction; reason = $reasonTxt }
+    return [PSCustomObject]@{ signal = "ENTER"; conviction = $conviction; reason = $reasonTxt; tech_sinal = $techSinal; llm_fallback = $llmFallback }
 }
 
 function Invoke-TechAgent {

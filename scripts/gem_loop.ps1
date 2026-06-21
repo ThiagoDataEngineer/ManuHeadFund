@@ -80,6 +80,15 @@ try {
     exit 1
 }
 
+# 2026-06-21 DIAGNOSTICO: presenca das keys de LLM (SO comprimento, nunca o valor).
+# Causa de "Todas cascadas falharam" e [TechAgent] FALLBACK em producao -> confirmar
+# se os secrets chegam ao processo (len>0) ou estao vazios.
+try {
+    $__keyDiag = @("ANTHROPIC_API_KEY","GROQ_API_KEY","GROQ_API_KEY_2","MISTRAL_API_KEY","CEREBRAS_API_KEY","FRED_API_KEY") |
+        ForEach-Object { $v = [Environment]::GetEnvironmentVariable($_); "$_=$(if ($v) { "len$($v.Length)" } else { 'EMPTY' })" }
+    Write-GemLog "DEBUG" "LLM keys (env): $($__keyDiag -join ' | ')"
+} catch {}
+
 # Core libs (ordem importa)
 try {
     . (Join-Path $agentsDir "lib_coinex.ps1") -ErrorAction Stop

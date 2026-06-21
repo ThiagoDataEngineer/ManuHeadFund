@@ -10,6 +10,8 @@
 # 2026-06-08: Multi-TF alignment validation before execution
 . (Join-Path $PSScriptRoot "lib_multiframe_analysis.ps1")
 . (Join-Path $PSScriptRoot "lib_candle_fetcher.ps1")
+# 2026-06-21: gate fail-closed de qualidade de entrada (direcao + entrada cega)
+. (Join-Path $PSScriptRoot "lib_entry_quality_gate.ps1")
 # 2026-06-09: Direction learning (counterfactual: learn from rejections)
 . (Join-Path $PSScriptRoot "lib_direction_learning.ps1")
 # 2026-06-17: Triagem agent (aplica aprendizado a conviction scores)
@@ -579,6 +581,8 @@ function Invoke-GemExecute {
     $tori_signal = "ENTER"
     $tori_conviction = 0
     $tori_reason = ""
+    $tori_tech_sinal = ""
+    $tori_llm_fallback = $false
     try {
         $tori = Get-ToriTrendlineSignal -Market $mkt
         $tori_conviction = if ($tori.PSObject.Properties['conviction']) { [int]$tori.conviction } else { 0 }
@@ -586,6 +590,9 @@ function Invoke-GemExecute {
         # Bypass "sempre ENTER" de 2026-06-11 custou TRUMPUSDT -4.4% (Tori dizia SKIP).
         $tori_signal = if ($tori.PSObject.Properties['signal']) { "$($tori.signal)".ToUpper() } else { "ENTER" }
         $tori_reason = "$($tori.reason)"
+        # 2026-06-21: direcao tecnica + flag de fallback p/ o gate de qualidade fail-closed
+        $tori_tech_sinal = if ($tori.PSObject.Properties['tech_sinal']) { "$($tori.tech_sinal)" } else { "" }
+        $tori_llm_fallback = [bool]($tori.PSObject.Properties['llm_fallback'] -and $tori.llm_fallback)
     } catch {
         Write-Host "  [GEM TORI ERROR] ${mkt}: $_" -ForegroundColor Red
         try { Send-TelegramAlert -Message "GEM bloqueado por Tori (error): $mkt -- $_" | Out-Null } catch {}
@@ -734,6 +741,29 @@ function Invoke-GemExecute {
     Write-Host "  Stop       : $stop_price  (-${stop_pct_display}%)" -ForegroundColor Red
     Write-Host "  Target     : $tgt_price   (+${target_pct_display}%)" -ForegroundColor Green
     Write-Host "  Tori       : $tori_signal ($tori_reason)" -ForegroundColor DarkGreen
+
+    # ── 3.5 ENTRY QUALITY GATE (2026-06-21: FAIL-CLOSED, Regra de Ouro #5) ───────
+    # Fecha as brechas vistas no run #677: comprar contra o sinal tecnico (SHORT-FORTE
+    # em LONG) e entrada cega (LLM caido + conviction 0 + chart sem dados).
+    # Desligavel via ENTRY_QUALITY_GATE_OFF.flag (default ON = protege capital real).
+    if ((Get-Command Test-EntryQualityGate -ErrorAction SilentlyContinue) -and
+        -not (Test-Path (Join-Path $global:JOURNAL_DIR "ENTRY_QUALITY_GATE_OFF.flag"))) {
+        $gConv  = if ($Gem.PSObject.Properties['conviction']) { [int]$Gem.conviction } else { [int]$tori_conviction }
+        $gMesa  = if ($Gem.PSObject.Properties['mesa_score'])  { [int]$Gem.mesa_score }  else { 0 }
+        $gChart = if ($chart -and $chart.PSObject.Properties['reason']) { "$($chart.reason)" } else { "" }
+        $qg = Test-EntryQualityGate -TradeDirection $direction -TechConsensus $tori_tech_sinal `
+                -LlmFallback $tori_llm_fallback -Conviction $gConv -MesaScore $gMesa -ChartStatus $gChart
+        if ($qg.blocked) {
+            $qreason = ($qg.reasons -join ",")
+            Write-Host "  [QUALITY GATE BLOCK] ${mkt}: $qreason (dir=$direction tech=$tori_tech_sinal llm_fallback=$tori_llm_fallback conv=$gConv mesa=$gMesa)" -ForegroundColor Red
+            if (Get-Command Write-SignalSkip -ErrorAction SilentlyContinue) {
+                $regimeQ = if ($global:MARKET_REGIME) { "$($global:MARKET_REGIME)" } else { "UNKNOWN" }
+                try { Write-SignalSkip -Market $mkt -Direction $direction -Gate "quality_gate" -EntryPrice $price -Regime $regimeQ -Source "entry_quality_gate" | Out-Null } catch {}
+            }
+            return [PSCustomObject]@{ blocked = $true; blocked_by = @("quality_gate:$qreason"); market = $mkt }
+        }
+        Write-Host "  [QUALITY GATE PASS] ${mkt}: dir=$direction tech=$tori_tech_sinal conv=$gConv mesa=$gMesa" -ForegroundColor DarkGray
+    }
 
     # ── 4. EXIT LADDER (multi TP/SL knowledge-driven) ───────────────────────────
     # Decide template baseado em context (GEM/STANDARD/regime/spike) e instancia.
