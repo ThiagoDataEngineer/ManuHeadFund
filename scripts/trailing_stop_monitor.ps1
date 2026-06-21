@@ -69,6 +69,10 @@ try {
     # 2026-06-19 Fase 2: Exit Intelligence (saídas automáticas em lucro)
     . (Join-Path $agentsDir "lib_exit_intelligence.ps1")
     . (Join-Path $agentsDir "lib_exit_intelligence_auto.ps1")
+    # 2026-06-21: motor de politica de saida gated (runner em uptrend, validado walk-forward)
+    . (Join-Path $agentsDir "lib_trailing_baseline.ps1")
+    . (Join-Path $agentsDir "lib_trailing_policy.ps1")
+    . (Join-Path $agentsDir "lib_trailing_policy_live.ps1")
 
     Write-CrossPlatformLog "Libraries loaded successfully" -LogFile "trailing_stop_monitor.log"
 } catch {
@@ -196,6 +200,43 @@ try {
             }
         } catch { Write-CrossPlatformLog "peak update: $_" -Level WARN -LogFile "trailing_stop_monitor.log" }
     }
+
+    # 2.55 TRAILING POLICY GATED (ATIVO 2026-06-21) -- runner em uptrend (walk-forward validado).
+    # Ratchet-only no stopCurrent (nunca afrouxa); Sync abaixo empurra (push UNICO -> sem duplicata).
+    # NAO executa parciais/saidas (dono = exit_intelligence_auto -> sem double-sell).
+    # Gate defere ao trailing ATUAL no regime bear corrente. Kill-switch: remover TRAILING_POLICY_ENABLED.flag
+    $tpJournalDir = Join-Path (Split-Path $agentsDir -Parent) "journal"
+    $tpFlag = Join-Path $tpJournalDir "TRAILING_POLICY_ENABLED.flag"
+    if ((Test-Path $tpFlag) -and (Get-Command Invoke-TrailingPolicyLive -ErrorAction SilentlyContinue)) {
+        Write-CrossPlatformLog "--- TRAILING POLICY (gated, ATIVO) ---" -LogFile "trailing_stop_monitor.log"
+        try {
+            $tpRegime = Get-RegimeFromState
+            $tpPos = @(Get-TrailingPositions | Where-Object { $_.active })
+            if ($tpPos.Count -gt 0) {
+                $tpMap = @{}
+                foreach ($pp in $tpPos) {
+                    $mk = [string]$pp.market
+                    try {
+                        $kr = Invoke-RestMethod "https://api.coinex.com/v2/spot/kline?market=$mk&period=1day&limit=60" -TimeoutSec 10 -EA Stop
+                        if ($kr.data) {
+                            $tpMap[$mk] = @($kr.data | ForEach-Object { [PSCustomObject]@{ open=[double]$_.open; high=[double]$_.high; low=[double]$_.low; close=[double]$_.close; volume=[double]$_.volume } })
+                        }
+                    } catch { }
+                }
+                $tpRes = Invoke-TrailingPolicyLive -Positions $tpPos -CandleMap $tpMap -Regime $tpRegime
+                if (@($tpRes.changes).Count -gt 0) {
+                    Save-TrailingPositions -Positions $tpRes.positions | Out-Null
+                    Write-TrailingPolicyAudit -Changes $tpRes.changes | Out-Null
+                    foreach ($c in $tpRes.changes) {
+                        Write-CrossPlatformLog "  TP_RATCHET $($c.market) [$($c.selected)]: $($c.old_stop) -> $($c.new_stop) (r=$($c.r_now) regime=$($c.regime))" -Level INFO -LogFile "trailing_stop_monitor.log"
+                    }
+                } else {
+                    Write-CrossPlatformLog "  Nenhum ratchet (regime=$tpRegime defere ao atual / stop ja otimo)" -LogFile "trailing_stop_monitor.log"
+                }
+            }
+        } catch { Write-CrossPlatformLog "TRAILING POLICY erro: $_" -Level WARN -LogFile "trailing_stop_monitor.log" }
+    }
+
     if (Get-Command Sync-TrailingToExchange -ErrorAction SilentlyContinue) {
         try {
             $sync = Sync-TrailingToExchange

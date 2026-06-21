@@ -1,0 +1,3 @@
+ATIVO 2026-06-21 -- motor de politica de saida gated (runner em uptrend, walk-forward validado).
+Ratchet-only no stopCurrent; push unico via Sync-TrailingToExchange; sem parciais/saidas (sem double-sell).
+Gate defere ao trailing ATUAL no regime bear corrente. Kill-switch: deletar este arquivo + commit.
