@@ -104,6 +104,8 @@ function Invoke-ExitReplay {
             realized_r = $realizedR; r_now = $rNowClose
             best_price = $bestPrice; worst_price = $worstPrice
             peak = $bestPrice
+            atr = $(if ($b.PSObject.Properties['atr']) { $b.atr } else { $null })
+            signals = $(if ($b.PSObject.Properties['signals']) { $b.signals } else { $null })
         }
         $d = & $PolicyFn $ctx
         if ($null -ne $d) {
