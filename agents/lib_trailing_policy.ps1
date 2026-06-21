@@ -69,6 +69,44 @@ function Resolve-ExitPolicy {
 }
 
 
+function Resolve-ExitPolicyGated {
+    <#
+    .SYNOPSIS
+    Seletor GATED por tendencia/regime -- encoda o achado validado (walk-forward
+    2026-06-21): runner (trail largo, deixa correr) so vence em UPTREND
+    (delta +0.183 ROBUST); em DOWNTREND PERDE (delta -0.111). Logo:
+      - LONG em uptrend confirmado + regime nao-bear -> runner
+      - resto -> politica ATUAL (melhor em downtrend/chop)
+    Conservador: regime BEAR_* vence o sinal de SMA (nao liga runner em bear).
+
+    .PARAMETER TrendUp  close > SMA (ex: SMA50) na entrada/no momento.
+    .PARAMETER Regime   regime corrente (BULL_STRONG/BULL_WEAK/BEAR_WEAK/...).
+    .PARAMETER Direction LONG|SHORT (achado validado e LONG; SHORT defere ao atual).
+    #>
+    [CmdletBinding()]
+    param(
+        [bool]   $TrendUp = $false,
+        [string] $Regime = "",
+        [string] $Direction = "LONG"
+    )
+    $isBear = ($Regime -match '^(?i)bear')
+    $useRunner = ($Direction -eq "LONG") -and $TrendUp -and (-not $isBear)
+
+    if ($useRunner) {
+        $p = Resolve-ExitPolicy -TradeType "runner" -Direction "LONG"
+        $p.selected = "runner"
+        $p.gate_reason = "uptrend+non_bear -> let it run (validated +0.18R)"
+    } else {
+        $p = Get-CurrentTrailingPolicy
+        $p.selected = "atual"
+        $p.gate_reason = if ($isBear) { "regime bear -> atual (runner perde -0.11R em downtrend)" }
+                         elseif (-not $TrendUp) { "downtrend -> atual (melhor em chop/down)" }
+                         else { "short/outro -> atual" }
+    }
+    return $p
+}
+
+
 function Get-ExitDecision {
     [CmdletBinding()]
     param(

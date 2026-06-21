@@ -5,6 +5,7 @@
 $ErrorActionPreference = "Stop"
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"
 . (Join-Path $agentsDir "lib_exit_backtest.ps1")
+. (Join-Path $agentsDir "lib_trailing_baseline.ps1")
 . (Join-Path $agentsDir "lib_trailing_policy.ps1")
 
 function _C { param($o,$h,$l,$c,$atr=0,$v=1000) [PSCustomObject]@{ open=$o; high=$h; low=$l; close=$c; atr=$atr; volume=$v } }
@@ -95,6 +96,30 @@ Describe "Get-ExitDecision -- regras puras" {
         $ctx = @{ side="SHORT"; entry=100; risk=10; r_now=1.5; peak=85; current_stop=110; remaining_size=1.0; bars_held=3; signals=0; atr=0 }
         $d = Get-ExitDecision -Policy $pol -Context $ctx
         $d.new_stop | Should Be 100
+    }
+}
+
+Describe "Resolve-ExitPolicyGated -- gate validado (uptrend->runner)" {
+
+    It "LONG uptrend + regime bull -> runner" {
+        $p = Resolve-ExitPolicyGated -TrendUp $true -Regime "BULL_WEAK" -Direction "LONG"
+        $p.selected | Should Be "runner"
+        $p.trade_type | Should Be "runner"
+    }
+
+    It "LONG downtrend -> atual (runner perde em downtrend)" {
+        $p = Resolve-ExitPolicyGated -TrendUp $false -Regime "BULL_WEAK" -Direction "LONG"
+        $p.selected | Should Be "atual"
+    }
+
+    It "Uptrend MAS regime bear -> atual (gate conservador)" {
+        $p = Resolve-ExitPolicyGated -TrendUp $true -Regime "BEAR_WEAK" -Direction "LONG"
+        $p.selected | Should Be "atual"
+    }
+
+    It "SHORT defere ao atual (achado validado e LONG)" {
+        $p = Resolve-ExitPolicyGated -TrendUp $true -Regime "BULL_STRONG" -Direction "SHORT"
+        $p.selected | Should Be "atual"
     }
 }
 
