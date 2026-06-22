@@ -25,7 +25,9 @@ function Test-CronDue {
 
     $last = $null
     if ($LastRunIso) {
-        try { $last = ([datetime]::Parse($LastRunIso, $null, [System.Globalization.DateTimeStyles]::AdjustToUniversal -bor [System.Globalization.DateTimeStyles]::AssumeUniversal)) } catch { $last = $null }
+        # InvariantCulture: o valor pode vir re-stringificado em cultura local (pt-BR
+        # dd/MM/yyyy) ao round-tripar pelo Supabase -> parse culture-dependente quebrava.
+        try { $last = ([datetime]::Parse($LastRunIso, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::AdjustToUniversal -bor [System.Globalization.DateTimeStyles]::AssumeUniversal)) } catch { $last = $null }
     }
 
     $parts = $Schedule.Split(':')

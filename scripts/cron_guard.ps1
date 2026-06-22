@@ -15,6 +15,8 @@ $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"
 $configLocal = Join-Path $agentsDir "config.local.ps1"
 if (Test-Path $configLocal) { . $configLocal }
 . (Join-Path $agentsDir "lib_cron_guard.ps1")
+# cron_state vive no schema manuheadfund (nao public, o default do state store).
+if (-not $env:STATE_STORE_SCHEMA) { $env:STATE_STORE_SCHEMA = "manuheadfund" }
 $stateOk = $false
 try { . (Join-Path $agentsDir "lib_state_store.ps1"); $stateOk = $true } catch { }
 
@@ -24,7 +26,11 @@ if ($stateOk) {
     try {
         $rec = @(Get-StateRecords -Table $table -Filter @{ job_id = $JobId })
         if ($rec.Count -gt 0 -and $rec[0].PSObject.Properties['last_run_utc']) {
-            $lastIso = "$($rec[0].last_run_utc)"
+            $raw = $rec[0].last_run_utc
+            # se o cliente ja desserializou pra [datetime], normaliza p/ ISO invariant
+            # (evita re-stringificacao em cultura local que quebra o parse a jusante).
+            if ($raw -is [datetime]) { $lastIso = ([datetime]$raw).ToUniversalTime().ToString("o") }
+            else { $lastIso = "$raw" }
         }
     } catch { }
 }
