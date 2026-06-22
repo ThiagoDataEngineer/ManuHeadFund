@@ -3,7 +3,7 @@
   "tier": "MIXED",
   "note": "Universo SHORT. 'markets' = observatorio (loga candidatos). 'tier_a_live' = subset autorizado p/ ORDEM REAL (futures) quando live_enabled=true. Rollout seguro 2026-06-22: so BTC+ETH, Tier S WSS, sizing pelo cap do capital_safety (1% notional ~0.02% risco/trade), stack completa (capital safety + dedup posicao + idempotencia). Edge backtest-only (EV +2.85pp/505 sinais T6) -> este live e a validacao forward. Reversivel: live_enabled=false + commit. Git-tracked p/ chegar no cloud (journal/ gitignored).",
   "live_enabled": true,
-  "tier_a_live": [ "BTCUSDT", "ETHUSDT" ],
+  "tier_a_live": [ "BTCUSDT", "ETHUSDT", "TNSR" ],
   "markets": [
     { "market": "BTCUSDT", "note": "SHORT V1 conservative; futures principal; EV +2.85pp T6" },
     { "market": "ETHUSDT", "note": "futures liquido; beta amplifica em bear" },
