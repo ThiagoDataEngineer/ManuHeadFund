@@ -257,13 +257,12 @@ jobs:
         shell: pwsh
         run: |
           try {
-            $minute = (Get-Date).Minute
-            if ($minute % 15 -eq 0) {
+            # 2026-06-22: gate %15==0 (exato) raramente casava sob GH throttle. Risk mgmt
+            # quer frequencia e e idempotente -> roda em todo fire.
+            if ($true) {
               Write-Host "=== POSITION RISK ===" -ForegroundColor Cyan
               & ./scripts/position_risk_cron.ps1
               Write-Host "OK" -ForegroundColor Green
-            } else {
-              Write-Host "Skipped (runs every 15min)" -ForegroundColor Yellow
             }
           } catch {
             Write-Host "ERRO: $_" -ForegroundColor Red
@@ -377,13 +376,13 @@ jobs:
         shell: pwsh
         run: |
           try {
-            $minute = (Get-Date).Minute
-            if ($minute -eq 0) {
+            # 2026-06-22: gate $minute -eq 0 NUNCA casava (GH throttle nunca cai no :00
+            # exato) -> short scanner rodou 0x. Observatorio (so loga candidatos SHORT,
+            # nao executa; dedup de alerta interno). Roda em todo fire p/ alimentar learning.
+            if ($true) {
               Write-Host "=== SHORT SCANNER ===" -ForegroundColor Cyan
               & ./scripts/short_scanner.ps1
               Write-Host "OK" -ForegroundColor Green
-            } else {
-              Write-Host "Skipped (runs hourly)" -ForegroundColor Yellow
             }
           } catch {
             Write-Host "ERRO: $_" -ForegroundColor Red
@@ -598,9 +597,9 @@ jobs:
         shell: pwsh
         continue-on-error: true
         run: |
-          $minute = (Get-Date).Minute
-          # Roda a cada 15min (0, 15, 30, 45)
-          if ($minute % 15 -eq 0) {
+          # 2026-06-22: gate %15==0 (exato) raramente casava sob GH throttle. Scanner
+          # idempotente -> roda em todo fire p/ nao perder proximidade de entrada.
+          if ($true) {
             Write-Host "=== TORI PROXIMITY SCANNER ===" -ForegroundColor Cyan
             try {
               & ./scripts/tori_proximity_scanner.ps1
@@ -1066,10 +1065,11 @@ jobs:
         shell: pwsh
         continue-on-error: true
         run: |
-          $minute = (Get-Date).Minute
-          # dispatch manual SEMPRE executa (debug/diagnostico); cron mantem janela 15min
-          $force = "${{ github.event_name }}" -eq "workflow_dispatch"
-          if ($force -or $minute % 15 -lt 5) {
+          # 2026-06-22: GH Actions throttla o cron */5 p/ ~30-45min e atrasa o minuto
+          # exato; gate %15<5 pegava so ~30% dos runs -> gem_loop rodava ~1x/2h e perdia
+          # vol spikes. Roda em TODO fire agora (dedup market_already_open + cap 3/dia
+          # GEM_AUTO_APPROVE protegem de over-entry). Scan e barato (ticker publico).
+          if ($true) {
             Write-Host "=== CLOUD TRADING (gem_loop -Once) ===" -ForegroundColor Cyan
             $dry = Test-Path "journal/CLOUD_DRY_RUN.flag"
             Write-Host "DryRun ativo (prova stack): $dry" -ForegroundColor $(if($dry){'Yellow'}else{'Green'})
