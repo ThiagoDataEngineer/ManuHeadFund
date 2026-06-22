@@ -50,3 +50,17 @@ Describe "Resolve-ShortUniverse -- vazio" {
         @($r).Count | Should Be 0
     }
 }
+
+Describe "Resolve-TierUniverse -- generico (LONG tiers)" {
+    It "le tiers LONG do whitelist" {
+        $wl = _wl @{ TIER_A_LIVE = @([PSCustomObject]@{market='BTCUSDT'}); TIER_B_PAPER = @([PSCustomObject]@{market='XRPUSDT'}) }
+        $r = Resolve-TierUniverse -Whitelist $wl -TierKeys @('TIER_A_LIVE','TIER_B_PAPER')
+        $r.Count | Should Be 2
+    }
+    It "whitelist sem os tiers LONG -> fallback config" {
+        $wl = _wl @{ SHORT_TIER_B_PAPER = @([PSCustomObject]@{market='SOLUSDT'}) }  # so SHORT
+        $cfg = _wl @{ markets = @([PSCustomObject]@{market='RENDERUSDT'}) }
+        $r = Resolve-TierUniverse -Whitelist $wl -TierKeys @('TIER_A_LIVE','TIER_B_PAPER') -ConfigFallback $cfg
+        ($r -contains 'RENDERUSDT') | Should Be $true
+    }
+}

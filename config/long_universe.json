@@ -1,0 +1,17 @@
+{
+  "version": "observatory_v1_2026_06_22",
+  "note": "Fallback git-tracked do universo LONG p/ scanners observatorio (vol_climax) que liam o per_asset_whitelist em journal/ (gitignored -> vazio no cloud). Origem: TIER_A_LIVE + TIER_B_PAPER do per_asset_whitelist v3.10 (lista validada estavel). Observatorio: scanner so LOGA.",
+  "markets": [
+    { "market": "RENDERUSDT", "tier": "A_LIVE" },
+    { "market": "BTCUSDT", "tier": "A_LIVE" },
+    { "market": "INJUSDT", "tier": "A_LIVE" },
+    { "market": "XMRUSDT", "tier": "A_LIVE" },
+    { "market": "ZECUSDT", "tier": "B_PAPER" },
+    { "market": "CFGUSDT", "tier": "B_PAPER" },
+    { "market": "PENDLEUSDT", "tier": "B_PAPER" },
+    { "market": "SKYUSDT", "tier": "B_PAPER" },
+    { "market": "XRPUSDT", "tier": "B_PAPER" },
+    { "market": "BCHUSDT", "tier": "B_PAPER" },
+    { "market": "SUIUSDT", "tier": "B_PAPER" }
+  ]
+}

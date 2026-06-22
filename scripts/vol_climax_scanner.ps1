@@ -41,18 +41,20 @@ function Log { param($M) "[$((Get-Date).ToString('HH:mm:ss'))] $M" | Tee-Object 
 
 $alertsPath = Join-Path $projectRoot "journal\vol_climax_alerts.jsonl"
 
-# Lista markets: whitelist + cache 1day disponivel
-$markets = @()
+# Lista markets: whitelist journal -> fallback git-tracked (journal/ gitignored = vazio no cloud)
+. (Join-Path $PSScriptRoot "..\agents\lib_short_universe.ps1")
+$wl = $null
 $wlFiles = Get-ChildItem (Join-Path $projectRoot "journal") -Filter "per_asset_whitelist_*.json" -ErrorAction SilentlyContinue |
             Sort-Object LastWriteTime -Descending | Select-Object -First 1
 if ($wlFiles) {
-    try {
-        $wl = Get-Content $wlFiles.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
-        foreach ($e in $wl.TIER_A_LIVE)  { if ($e.market) { $markets += $e.market } }
-        foreach ($e in $wl.TIER_B_PAPER) { if ($e.market) { $markets += $e.market } }
-    } catch {}
+    try { $wl = Get-Content $wlFiles.FullName -Raw -Encoding UTF8 | ConvertFrom-Json } catch {}
 }
-$markets = @($markets | Select-Object -Unique)
+$cfgLong = $null
+$cfgLongPath = Join-Path $projectRoot "config/long_universe.json"
+if (Test-Path $cfgLongPath) {
+    try { $cfgLong = Get-Content $cfgLongPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch {}
+}
+$markets = @(Resolve-TierUniverse -Whitelist $wl -TierKeys @('TIER_A_LIVE','TIER_B_PAPER') -ConfigFallback $cfgLong)
 
 Log "=== Vol Climax Scanner (universe=$($markets.Count) markets) ==="
 
