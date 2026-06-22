@@ -323,7 +323,7 @@ try {
                                 try { Send-TelegramAlert -Message "[SHORT LIVE EXECUTADO] $mkt`namount=$amount (~$usd_size USDT)`nstop=$($plan.stop) target=$($plan.target)`nWSS=$wssScore Tier S (rollout BTC/ETH)" | Out-Null } catch {}
                             }
                         }
-                    } catch { Log "  [SHORT LIVE] erro $mkt: $($_.Exception.Message)" }
+                    } catch { Log "  [SHORT LIVE] erro ${mkt}: $($_.Exception.Message)" }
                 } elseif ($tier -eq "A") {
                     Log "  $mkt TIER A SHORT obs (no TG, log only)"
                 } else {
