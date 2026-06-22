@@ -59,6 +59,39 @@ Describe "Test-ShortLiveGate -- fail-closed (dormente)" {
     }
 }
 
+Describe "Test-ShortEntryReady -- consolida stack (fail-closed)" {
+    $okArgs = @{ PlanValid=$true; GateAllow=$true; Tier="S"; ClusterExceeded=$false; HasPosition=$false; CapitalSafe=$true }
+    It "tudo ok + tier S -> ready" {
+        (Test-ShortEntryReady @okArgs).ready | Should Be $true
+    }
+    It "tier A (nao S) -> bloqueia" {
+        $a = $okArgs.Clone(); $a.Tier = "A"
+        $r = Test-ShortEntryReady @a
+        $r.ready | Should Be $false
+        ($r.reason -match "tier_not_S") | Should Be $true
+    }
+    It "posicao ja aberta -> bloqueia (dedup)" {
+        $a = $okArgs.Clone(); $a.HasPosition = $true
+        (Test-ShortEntryReady @a).ready | Should Be $false
+    }
+    It "capital unsafe -> bloqueia" {
+        $a = $okArgs.Clone(); $a.CapitalSafe = $false
+        (Test-ShortEntryReady @a).ready | Should Be $false
+    }
+    It "cluster cap excedido -> bloqueia" {
+        $a = $okArgs.Clone(); $a.ClusterExceeded = $true
+        (Test-ShortEntryReady @a).ready | Should Be $false
+    }
+    It "plano invalido -> bloqueia" {
+        $a = $okArgs.Clone(); $a.PlanValid = $false
+        (Test-ShortEntryReady @a).ready | Should Be $false
+    }
+    It "gate negado (sem flag/tier) -> bloqueia" {
+        $a = $okArgs.Clone(); $a.GateAllow = $false
+        (Test-ShortEntryReady @a).ready | Should Be $false
+    }
+}
+
 Describe "Invoke-ShortEntry -- dormente por padrao" {
     It "sem flag dir -> observa, nao coloca ordem" {
         $r = Invoke-ShortEntry -Market "BTCUSDT" -EntryPrice 100 -Capital 1000 -Atr 1 -ShortTierA @("BTCUSDT")

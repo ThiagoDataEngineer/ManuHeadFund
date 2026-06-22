@@ -275,6 +275,55 @@ try {
                                 -WindowBars 3 -Side "SHORT"
                         } catch {}
                     }
+
+                    # ===== SHORT LIVE (rollout seguro, opt-in via config) =====
+                    # So dispara com config live_enabled=true + market em tier_a_live + Tier S.
+                    # Stack: plano (stop/target ATR, R:R 1:5) + capital safety + dedup posicao.
+                    # Sizing ~0.5% notional (mesma convencao do LONG; passa no cap 1%).
+                    try {
+                        . (Join-Path $agentsDir "lib_short_executor.ps1")
+                        . (Join-Path $agentsDir "lib_capital_safety_enforcer.ps1")
+                        . (Join-Path $agentsDir "lib_atr_stop.ps1")
+                        . (Join-Path $agentsDir "lib_coinex.ps1") 2>$null
+                        if (Get-Command Get-ExecutorSize -ErrorAction SilentlyContinue) { } else { . (Join-Path $agentsDir "lib_executor_sizing.ps1") 2>$null }
+
+                        $cfgSL = $null
+                        $cfgSLPath = Join-Path $projectRoot "config/short_universe.json"
+                        if (Test-Path $cfgSLPath) { try { $cfgSL = Get-Content $cfgSLPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch {} }
+                        $liveOn = ($cfgSL -and $cfgSL.live_enabled -eq $true)
+                        $tierA  = @(); if ($cfgSL -and $cfgSL.tier_a_live) { $tierA = @($cfgSL.tier_a_live) }
+
+                        # So computa/loga p/ markets do tier_a_live (relevantes p/ live).
+                        if ($tierA -contains $mkt) {
+                            $gate    = Test-ShortLiveGate -Market $mkt -FlagPresent $liveOn -ShortTierA $tierA
+                            $entryPx = [double]$closes[-1]
+                            $atr = Get-AtrFromHighLow -Highs $highs -Lows $lows -Period 14
+                            $capital = 0.0; try { $capital = [double](CoinEx-GetFuturesCapitalUSDT) } catch {}
+                            $plan = Build-ShortOrderPlan -EntryPrice $entryPx -Capital ([math]::Max($capital,1)) -Atr $atr
+                            # sizing notional ~0.5% (convencao do LONG; passa no cap 1% do capital_safety)
+                            $usd_size = [math]::Round($capital * 0.005, 2)
+                            if (Get-Command Get-ExecutorSize -ErrorAction SilentlyContinue) {
+                                try { $usd_size = [double](Get-ExecutorSize -Market $mkt -Mode "GEM" -Capital $capital -BasePct 0.005).size_usd } catch {}
+                            }
+                            $cs = Invoke-CapitalSafetyCheck -AccountBalanceUsd $capital -EntryPrice $entryPx `
+                                    -StoplossPrice $plan.stop -TargetPrice $plan.target -ProposedSizeUsd $usd_size -Market $mkt
+                            $pos = $null; try { $pos = CoinEx-GetPosition $mkt } catch {}
+                            $hasPos = ($pos -and @($pos).Count -gt 0)
+                            $ready = Test-ShortEntryReady -PlanValid $plan.valid -GateAllow $gate.allow -Tier $tier `
+                                        -ClusterExceeded ([bool]($cluster -and $cluster.exceeded)) -HasPosition $hasPos -CapitalSafe ([bool]$cs.passes)
+
+                            # Log SEMPRE (auditoria), dispara ordem so se gate.allow (live_enabled+tier) e ready.
+                            $liveTag = if ($liveOn) { "LIVE" } else { "DRY(live_off)" }
+                            Log "  [SHORT $liveTag] $mkt plan: entry=$entryPx stop=$($plan.stop) target=$($plan.target) size=$usd_size cs_pass=$($cs.passes) pos=$hasPos -> ready=$($ready.ready) ($($ready.reason))"
+
+                            if ($ready.ready -and $capital -gt 0 -and $usd_size -gt 0) {
+                                $amount = [math]::Round($usd_size / $entryPx, 6)
+                                $order = CoinEx-PlaceOrder $mkt "sell" "market" $amount $null $plan.stop $plan.target
+                                Log "  [SHORT LIVE] $mkt ORDEM SHORT ENVIADA amount=$amount (~$usd_size USDT) stop=$($plan.stop) target=$($plan.target)"
+                                try { Send-TelegramAlert -Message "[SHORT LIVE EXECUTADO] $mkt`namount=$amount (~$usd_size USDT)`nstop=$($plan.stop) target=$($plan.target)`nWSS=$wssScore Tier S (rollout BTC/ETH)" | Out-Null } catch {}
+                            }
+                        }
+                    } catch { Log "  [SHORT LIVE] erro $mkt: $($_.Exception.Message)" }
                 } elseif ($tier -eq "A") {
                     Log "  $mkt TIER A SHORT obs (no TG, log only)"
                 } else {

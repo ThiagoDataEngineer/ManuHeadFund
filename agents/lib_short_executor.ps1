@@ -90,6 +90,32 @@ function Test-ShortLiveGate {
 }
 
 # ----------------------------------------------------------------------------
+# Test-ShortEntryReady -- PURO. Consolida TODOS os gates antes de ordem real.
+# Espelha a stack do LONG: plano valido + gate live + tier S + sem cluster cap +
+# sem posicao aberta + capital safety ok. Qualquer falha -> nao opera (fail-closed).
+# ----------------------------------------------------------------------------
+function Test-ShortEntryReady {
+    [CmdletBinding()]
+    param(
+        [bool]$PlanValid = $false,
+        [bool]$GateAllow = $false,
+        [string]$Tier = "",
+        [bool]$ClusterExceeded = $false,
+        [bool]$HasPosition = $false,
+        [bool]$CapitalSafe = $false,
+        [bool]$RequireTierS = $true
+    )
+    $reasons = @()
+    if (-not $PlanValid)                       { $reasons += "invalid_plan" }
+    if (-not $GateAllow)                        { $reasons += "gate_denied" }
+    if ($RequireTierS -and $Tier -ne "S")      { $reasons += "tier_not_S($Tier)" }
+    if ($ClusterExceeded)                       { $reasons += "cluster_cap" }
+    if ($HasPosition)                           { $reasons += "position_exists" }
+    if (-not $CapitalSafe)                      { $reasons += "capital_unsafe" }
+    return [PSCustomObject]@{ ready = ($reasons.Count -eq 0); reason = ($reasons -join ",") }
+}
+
+# ----------------------------------------------------------------------------
 # Invoke-ShortEntry -- wrapper gateado. DRY/observe por padrao. NAO esta wired.
 # Ativar = criar SHORT_LIVE_ENABLED.flag + por o market em SHORT_TIER_A_LIVE.
 # ----------------------------------------------------------------------------
