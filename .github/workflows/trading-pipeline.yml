@@ -461,10 +461,9 @@ jobs:
         shell: pwsh
         continue-on-error: true
         run: |
-          $hour = (Get-Date).Hour
-          $minute = (Get-Date).Minute
-          # Roda a cada 6h (0, 6, 12, 18) no minuto 0
-          if (($hour % 6 -eq 0) -and $minute -eq 0) {
+          # 2026-06-22: cron_guard robusto a throttle (era minuto exato -> nunca rodava)
+          & ./scripts/cron_guard.ps1 -JobId "staleness_audit" -Schedule "interval:360"
+          if ($LASTEXITCODE -eq 0) {
             Write-Host "=== STALENESS AUDIT ===" -ForegroundColor Cyan
             try {
               & ./scripts/cron_staleness_audit.ps1 -SendTg
@@ -472,8 +471,6 @@ jobs:
             } catch {
               Write-Host "WARN: $_" -ForegroundColor Yellow
             }
-          } else {
-            Write-Host "Skipped (runs every 6h)" -ForegroundColor Yellow
           }
 
   # ============================================================================
@@ -506,10 +503,9 @@ jobs:
         shell: pwsh
         continue-on-error: true
         run: |
-          $hour = (Get-Date).Hour
-          $minute = (Get-Date).Minute
-          # Roda 1x/dia as 05:00 UTC (02:00 BRT)
-          if ($hour -eq 5 -and $minute -eq 0) {
+          # 2026-06-22: cron_guard 1x/dia robusto a throttle (era $hour==5 && $minute==0)
+          & ./scripts/cron_guard.ps1 -JobId "kelly_audit" -Schedule "daily:5"
+          if ($LASTEXITCODE -eq 0) {
             Write-Host "=== KELLY AUDIT ===" -ForegroundColor Cyan
             try {
               & ./scripts/daily_kelly_audit.ps1
@@ -517,8 +513,6 @@ jobs:
             } catch {
               Write-Host "WARN: $_" -ForegroundColor Yellow
             }
-          } else {
-            Write-Host "Skipped (runs daily 05:00 UTC)" -ForegroundColor Yellow
           }
 
   # ============================================================================
@@ -551,10 +545,9 @@ jobs:
         shell: pwsh
         continue-on-error: true
         run: |
-          $hour = (Get-Date).Hour
-          $minute = (Get-Date).Minute
-          # Roda 1x/dia as 02:55 UTC (23:55 BRT)
-          if ($hour -eq 2 -and $minute -eq 55) {
+          # 2026-06-22: cron_guard 1x/dia robusto a throttle (era $hour==2 && $minute==55)
+          & ./scripts/cron_guard.ps1 -JobId "daily_digest" -Schedule "daily:3"
+          if ($LASTEXITCODE -eq 0) {
             Write-Host "=== DAILY DIGEST ===" -ForegroundColor Cyan
             try {
               & ./scripts/daily_summary_digest.ps1
@@ -562,8 +555,6 @@ jobs:
             } catch {
               Write-Host "WARN: $_" -ForegroundColor Yellow
             }
-          } else {
-            Write-Host "Skipped (runs daily 02:55 UTC)" -ForegroundColor Yellow
           }
 
   # ============================================================================
@@ -642,9 +633,9 @@ jobs:
         shell: pwsh
         continue-on-error: true
         run: |
-          $minute = (Get-Date).Minute
-          # Roda 1x/hora no minuto 5
-          if ($minute -eq 5) {
+          # 2026-06-22: cron_guard 1x/hora robusto a throttle (era $minute==5, raro)
+          & ./scripts/cron_guard.ps1 -JobId "vol_climax" -Schedule "interval:60"
+          if ($LASTEXITCODE -eq 0) {
             Write-Host "=== VOL CLIMAX SCANNER ===" -ForegroundColor Cyan
             try {
               & ./scripts/vol_climax_scanner.ps1
@@ -652,8 +643,6 @@ jobs:
             } catch {
               Write-Host "WARN: $_" -ForegroundColor Yellow
             }
-          } else {
-            Write-Host "Skipped (runs hourly at :05)" -ForegroundColor Yellow
           }
 
   # ============================================================================
@@ -687,9 +676,9 @@ jobs:
         shell: pwsh
         continue-on-error: true
         run: |
-          $minute = (Get-Date).Minute
-          # Roda 1x/hora no minuto 10
-          if ($minute -eq 10) {
+          # 2026-06-22: cron_guard 1x/hora robusto a throttle (era $minute==10, raro)
+          & ./scripts/cron_guard.ps1 -JobId "wss_forward" -Schedule "interval:60"
+          if ($LASTEXITCODE -eq 0) {
             Write-Host "=== WSS FORWARD RESOLVE ===" -ForegroundColor Cyan
             try {
               & ./scripts/cron_wss_forward_resolve.ps1
@@ -697,8 +686,6 @@ jobs:
             } catch {
               Write-Host "WARN: $_" -ForegroundColor Yellow
             }
-          } else {
-            Write-Host "Skipped (runs hourly at :10)" -ForegroundColor Yellow
           }
 
   # ============================================================================
@@ -735,8 +722,9 @@ jobs:
           $day = (Get-Date).DayOfWeek
           $hour = (Get-Date).Hour
           $minute = (Get-Date).Minute
-          # Roda Domingo as 03:00 UTC (sunday at 03:00 UTC = 00:00 BRT)
-          if ($day -eq 'Sunday' -and $hour -eq 3 -and $minute -eq 0) {
+          # 2026-06-22: cron_guard semanal robusto a throttle (era dia+hora+minuto exato)
+          & ./scripts/cron_guard.ps1 -JobId "weekly_data_refresh" -Schedule "weekly:Sunday:3"
+          if ($LASTEXITCODE -eq 0) {
             Write-Host "=== WEEKLY DATA REFRESH ===" -ForegroundColor Cyan
             try {
               & ./scripts/weekly_data_refresh.ps1
@@ -744,8 +732,6 @@ jobs:
             } catch {
               Write-Host "WARN: $_" -ForegroundColor Yellow
             }
-          } else {
-            Write-Host "Skipped (runs Sunday 03:00 UTC)" -ForegroundColor Yellow
           }
 
   # ============================================================================
@@ -782,8 +768,9 @@ jobs:
           $day = (Get-Date).DayOfWeek
           $hour = (Get-Date).Hour
           $minute = (Get-Date).Minute
-          # Roda Segunda as 04:00 UTC
-          if ($day -eq 'Monday' -and $hour -eq 4 -and $minute -eq 0) {
+          # 2026-06-22: cron_guard semanal robusto a throttle (era dia+hora+minuto exato)
+          & ./scripts/cron_guard.ps1 -JobId "promotion_weekly" -Schedule "weekly:Monday:4"
+          if ($LASTEXITCODE -eq 0) {
             Write-Host "=== PROMOTION WEEKLY CRON ===" -ForegroundColor Cyan
             try {
               & ./scripts/promotion_weekly_cron.ps1
@@ -791,8 +778,6 @@ jobs:
             } catch {
               Write-Host "WARN: $_" -ForegroundColor Yellow
             }
-          } else {
-            Write-Host "Skipped (runs Monday 04:00 UTC)" -ForegroundColor Yellow
           }
 
   # ============================================================================
@@ -828,8 +813,9 @@ jobs:
           $day = (Get-Date).DayOfWeek
           $hour = (Get-Date).Hour
           $minute = (Get-Date).Minute
-          # Roda Segunda as 05:00 UTC
-          if ($day -eq 'Monday' -and $hour -eq 5 -and $minute -eq 0) {
+          # 2026-06-22: cron_guard semanal robusto a throttle (era dia+hora+minuto exato)
+          & ./scripts/cron_guard.ps1 -JobId "weekly_cost_report" -Schedule "weekly:Monday:5"
+          if ($LASTEXITCODE -eq 0) {
             Write-Host "=== WEEKLY COST REPORT ===" -ForegroundColor Cyan
             try {
               & ./scripts/weekly_provider_cost_report.ps1
@@ -837,8 +823,6 @@ jobs:
             } catch {
               Write-Host "WARN: $_" -ForegroundColor Yellow
             }
-          } else {
-            Write-Host "Skipped (runs Monday 05:00 UTC)" -ForegroundColor Yellow
           }
   
   # ============================================================================
@@ -945,13 +929,12 @@ jobs:
         shell: pwsh
         run: |
           try {
-            $minute = (Get-Date).Minute
-            if ($minute % 30 -eq 0) {
+            # 2026-06-22: cron_guard 30min robusto a throttle (era $minute%30==0)
+            & ./scripts/cron_guard.ps1 -JobId "layer2_mentor" -Schedule "interval:30"
+            if ($LASTEXITCODE -eq 0) {
               Write-Host "=== LAYER 2 (Mentor Reflection) ===" -ForegroundColor Cyan
               & ./scripts/layers_review_runner.ps1 -Layer 2
               Write-Host "OK" -ForegroundColor Green
-            } else {
-              Write-Host "Skipped (runs every 30min)" -ForegroundColor Yellow
             }
           } catch {
             Write-Host "WARN: $_" -ForegroundColor Yellow
