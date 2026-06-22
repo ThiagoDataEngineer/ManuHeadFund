@@ -74,22 +74,21 @@ function Log {
 try {
     $alertsPath = Join-Path $cpEnv.JournalDir "short_alerts.jsonl"
 
-    # Universe: SHORT tier markets
-    $markets = @()
+    # Universe: SHORT tier markets. journal/ e gitignored (vazio no cloud) -> fallback
+    # git-tracked config/short_universe.json garante universo. Logica pura testada.
+    . (Join-Path $agentsDir "lib_short_universe.ps1")
+    $wl = $null
     $wlFiles = Get-ChildItem $cpEnv.JournalDir -Filter "per_asset_whitelist_*.json" -ErrorAction SilentlyContinue |
                 Sort-Object LastWriteTime -Descending | Select-Object -First 1
-if ($wlFiles) {
-    try {
-        $wl = Get-Content $wlFiles.FullName -Raw -Encoding UTF8 | ConvertFrom-Json
-        if ($wl.PSObject.Properties['SHORT_TIER_A_LIVE']) {
-            foreach ($e in $wl.SHORT_TIER_A_LIVE) { if ($e.market) { $markets += $e.market } }
-        }
-        if ($wl.PSObject.Properties['SHORT_TIER_B_PAPER']) {
-            foreach ($e in $wl.SHORT_TIER_B_PAPER) { if ($e.market) { $markets += $e.market } }
-        }
-    } catch {}
+    if ($wlFiles) {
+        try { $wl = Get-Content $wlFiles.FullName -Raw -Encoding UTF8 | ConvertFrom-Json } catch {}
     }
-    $markets = @($markets | Select-Object -Unique)
+    $cfgShort = $null
+    $cfgShortPath = Join-Path $projectRoot "config/short_universe.json"
+    if (Test-Path $cfgShortPath) {
+        try { $cfgShort = Get-Content $cfgShortPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch {}
+    }
+    $markets = @(Resolve-ShortUniverse -Whitelist $wl -ConfigFallback $cfgShort)
 
     # TDD Sprint 1 (2026-05-23): Regime-specific thresholds
     # Detect current regime for adaptive thresholds

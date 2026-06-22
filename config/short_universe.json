@@ -1,0 +1,12 @@
+{
+  "version": "observatory_v1_2026_06_22",
+  "tier": "PAPER",
+  "note": "Universo SHORT do observatorio. short_scanner SO LOGA candidatos (alertas), NAO executa ordem. Ir live exige decisao explicita: popular SHORT_TIER_A_LIVE com mercados validados + wire de executor. Origem: SHORT_TIER_B_PAPER do per_asset_whitelist v3.10 (tier2_block1_v1, EV +2.85pp historical T6). Git-tracked p/ existir no checkout cloud (journal/ e gitignored).",
+  "markets": [
+    { "market": "BTCUSDT", "note": "SHORT V1 conservative; futures principal; EV +2.85pp T6" },
+    { "market": "ETHUSDT", "note": "futures liquido; beta amplifica em bear" },
+    { "market": "SOLUSDT", "note": "futures; high beta layer 1" },
+    { "market": "INJUSDT", "note": "futures; beta 1.21" },
+    { "market": "XRPUSDT", "note": "futures; bidirectional historical" }
+  ]
+}
