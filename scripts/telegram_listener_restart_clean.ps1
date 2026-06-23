@@ -40,11 +40,23 @@ $state | ConvertTo-Json | Out-File (Join-Path $journalDir "tg_listener_state.jso
 Write-Host "[RESTART] State resetado"
 
 if (-not $NoStart) {
-    # Start new instance
-    $env:TELEGRAM_BOT_TOKEN = "8763265579:AAFPaVZjeS_rQSzs4xpzb9stMG5veP_Qo54"
-    $env:TELEGRAM_CHAT_ID = "5592104053"
+    # Load config from telegram.json (git-tracked)
+    $configPath = Join-Path $projectRoot "config" "telegram.json"
+    if (Test-Path $configPath) {
+        try {
+            $config = Get-Content $configPath -Raw | ConvertFrom-Json
+            $env:TELEGRAM_BOT_TOKEN = $config.bot_token
+            $env:TELEGRAM_CHAT_ID = $config.chat_id
+        } catch {
+            Write-Host "[ERROR] Failed to load telegram config: $_"
+            exit 1
+        }
+    } else {
+        Write-Host "[ERROR] telegram.json not found"
+        exit 1
+    }
 
-    Start-Process pwsh -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$(Join-Path $scriptDir 'telegram_listener.ps1')`"" -WindowStyle Hidden
+    Start-Process pwsh -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$(Join-Path $scriptDir 'telegram_listener_wrapper.ps1')`"" -WindowStyle Hidden
     Write-Host "[RESTART] Nova instância iniciada"
 
     Start-Sleep -Seconds 5

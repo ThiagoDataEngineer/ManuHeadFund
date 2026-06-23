@@ -1,10 +1,24 @@
 ﻿# Test script para telegram listener — apenas getUpdates
 # Sem lógica de commands, apenas testa se consegue receber updates
 
-$env:TELEGRAM_BOT_TOKEN = "8763265579:AAFPaVZjeS_rQSzs4xpzb9stMG5veP_Qo54"
-$env:TELEGRAM_CHAT_ID = "5592104053"
+$projectRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+$configPath = Join-Path $projectRoot "config" "telegram.json"
 
-$logFile = "$PSScriptRoot\..\journal\tg_listener_test.log"
+if (Test-Path $configPath) {
+    try {
+        $config = Get-Content $configPath -Raw | ConvertFrom-Json
+        $env:TELEGRAM_BOT_TOKEN = $config.bot_token
+        $env:TELEGRAM_CHAT_ID = $config.chat_id
+    } catch {
+        Write-Host "Failed to load telegram config: $_"
+        exit 1
+    }
+} else {
+    Write-Host "telegram.json not found"
+    exit 1
+}
+
+$logFile = Join-Path $projectRoot "journal" "tg_listener_test.log"
 
 function Write-Log { param([string]$Msg)
     $ts = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
