@@ -1,0 +1,136 @@
+================================================================================
+SISTEMA STATUS — 2026-06-23
+================================================================================
+
+MODO DE OPERAÇÃO: AUTOMÁTICO TRAILING (SEM INTERVENÇÃO MANUAL)
+
+================================================================================
+POSIÇÕES MONITORADAS (12 TOTAL)
+================================================================================
+
+TRAILING ATIVO (4 NOVAS ORPHAN RECOVERY):
+  ✓ UBUSDT     | Entry: $0.0948   | SL: $0.0905 (-4.5%)  | TP: $0.1185 (+25%) | Status: TRAILING
+  ✓ PAXGUSDT   | Entry: $4,147    | SL: $4,064  (-2.0%)  | TP: $4,527  (+9%)  | Status: TRAILING
+  ✓ TNSR       | Entry: $0.0393   | SL: $0.0315 (-20%)   | TP: $0.0590 (+50%) | Status: TRAILING
+  ✓ XRPUSDT    | Entry: $1.126    | SL: $1.013  (-10%)   | TP: $1.58   (+40%) | Status: TRAILING
+
+TRAILING ATIVO (8 EXISTENTES):
+  ✓ AINUSDT, BASEDUSDT, COAIUSDT, PEPE2USDT, FIROUSDT, OPNUSDT, SPCXXUSDT, METUSDT
+
+================================================================================
+DAEMON MONITOR RODANDO
+================================================================================
+
+Process: position_watcher.ps1
+├─ Check interval: 15 segundos
+├─ Função: Monitora SL/TP, harvest automático, trailing update
+├─ Log: journal/position_watcher.log (stream de eventos)
+└─ Status: RUNNING 24/7
+
+Alerts:
+├─ Telegram: Notificações quando SL/TP próximos (critical only)
+├─ Daily report: Sumário de harvest/losses
+└─ Auto-rebalance: Se capital safety violado, corta posição
+
+================================================================================
+SISTEMA COMPORTAMENTO ESPERADO
+================================================================================
+
+Cada 15 segundos:
+  1. Fetch preço de todos os 12 ativos
+  2. Compare com SL (stop loss)
+  3. Compare com TP (take profit)
+  4. IF SL atingido → PlaceOrder SELL (market order, saída imediata)
+  5. IF TP atingido → PlaceOrder SELL 50% (breakeven trigger) + keep 50% trailing
+  6. IF peak subiu > 2.5% → Move SL para +0% (breakeven)
+  7. Log resultado + enviar Telegram alert
+
+Exemplo fluxo TNSR:
+  Entry: $0.0393 | Peak: $0.0393
+  Preço sobe → $0.0430 (+9.4%)
+    └─ Peak update: $0.0430
+    └─ SL move: $0.0315 → $0.0430 (breakeven)
+  Preço sobe mais → $0.0492 (TP1)
+    └─ Vende 50%: colhe +$3.68 (breakeven trigger)
+    └─ Trailing 50%: SL fica breakeven, TP = $0.0590
+  Preço puxado pra trás → $0.0430
+    └─ SL breakeven ativa → VENDA automática (zero loss)
+
+================================================================================
+CATALYSTS SENDO MONITORADOS
+================================================================================
+
+TNSR:     SOL breakout >$145 (próximos 30-45 dias)
+  └─ Monitor: daily SOL price, TP2 @$0.059 se SOL >$145
+
+XRPUSDT:  SEC lawsuit resolução (próximos 2-6 meses)
+  └─ Monitor: lawsuit news, TP2 @$1.58 se lawsuit positivo
+
+PAXGUSDT: Ouro suporte $2,300 (macro dependent)
+  └─ Monitor: XAU/USD weekly, SL triggers se quebra
+
+UBUSDT:   Low-cap volatility, sem catalyst específico
+  └─ Monitor: price action, SL/TP mecânico
+
+================================================================================
+CAPITAL SEGURANÇA
+================================================================================
+
+Risco total portfoli: -$200 (current PnL)
+Max loss se TODOS SL ativem: -$26.48 (1.1% capital)
+  ├─ UBUSDT: -$1.61
+  ├─ PAXGUSDT: -$10.70
+  ├─ TNSR: -$11.64
+  └─ XRPUSDT: -$2.53
+
+Regra de Ouro #2 respeitada: Risco máximo 1% por trade
+Fail-closed: Se daemon cai, SL ainda ativa no exchange (automático)
+
+================================================================================
+LOGS PARA MONITORAR
+================================================================================
+
+Daily audit:
+  tail -50 journal/position_watcher.log
+  └─ Procura por "SL atingido", "TP colhido", "trailing update"
+
+Harvest report (semanal):
+  grep "VENDA\|HARVEST\|TP" journal/position_watcher.log | wc -l
+  └─ Quantas posições foram colhidas
+
+Alerts Telegram:
+  Monitorar chat @Telegram regularmente
+  └─ Notificações quando SL/TP próximos ou ativados
+
+================================================================================
+PRÓXIMAS FASES
+================================================================================
+
+Fase 1 (THIS WEEK): SPOT stabilize
+  - Deixar trailing rodar (4 novas + 8 existentes)
+  - Harvest automático quando TP hit
+  - Daily audit (sem manual override)
+
+Fase 2 (NEXT WEEK): v7 Arbitrage prototype
+  - Scanner 5min cycles (SPOT/FUTURES basis spread)
+  - Target: +$2/cycle x 250 ciclos = $500/dia
+  - Capital: ~$500 dual (250 spot + 250 futures)
+
+Fase 3 (MONTH 2): Maestria orquestração
+  - Unified LONG/SHORT/SPOT decision engine
+  - Tori + Conviction + Multi-TF routing
+  - Final v7 production version
+
+================================================================================
+SYSTEM READY
+================================================================================
+
+Trailing: ATIVO
+Daemon: RODANDO
+Alerts: TELEGRAM
+Logs: STREAMING
+Capital safety: LOCKED
+
+Deixar sistema trabalhar. Próxima intervenção manual: 2026-06-30 (weekly audit)
+
+================================================================================
