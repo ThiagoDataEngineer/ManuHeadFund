@@ -306,6 +306,40 @@ function Test-MissedWinner {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
+# Get-GateKey (PURA) -- normaliza a FRASE de veto da LLM numa chave canonica.
+# 2026-06-23 Evolucao A: skip_quality chaveava pela frase inteira (unica cada vez)
+# -> 1092 chaves com n~1, counterfactual nao agregava. Mapeia padroes conhecidos;
+# fallback = slug das 1as palavras (agrupa parcial, nunca a frase toda).
+# ─────────────────────────────────────────────────────────────────────────────
+function Get-GateKey {
+    param([string]$Text)
+    if ([string]::IsNullOrWhiteSpace($Text)) { return "unknown" }
+    $t = $Text.ToLowerInvariant()
+    # padroes ordenados (mais especifico primeiro)
+    $patterns = @(
+        @{ rx = 'mesa consensus forte';                key = 'mesa_consensus_forte' }
+        @{ rx = 'self-?consistency';                   key = 'self_consistency' }
+        @{ rx = '\bfqs\b';                             key = 'fqs' }
+        @{ rx = '\bbeta\b';                            key = 'beta' }
+        @{ rx = 'r:?r|risk.?reward|target.*(acima|invertid)|stop.*invertid'; key = 'rr' }
+        @{ rx = '\btori\b';                            key = 'tori' }
+        @{ rx = 'drawdown|\bdd\b';                     key = 'drawdown' }
+        @{ rx = 'alpha.?corr|correlation';             key = 'alpha_corr' }
+        @{ rx = 'blacklist';                           key = 'blacklist' }
+        @{ rx = 'regime|bear|bull';                    key = 'regime' }
+    )
+    foreach ($p in $patterns) {
+        if ($t -match $p.rx) { return $p.key }
+    }
+    # fallback: slug das primeiras 4 palavras
+    $words = ($t -replace '[^a-z0-9 ]',' ') -split '\s+' | Where-Object { $_ } | Select-Object -First 4
+    $slug = ($words -join '_')
+    if ($slug.Length -gt 38) { $slug = $slug.Substring(0,38) }
+    if (-not $slug) { return "unknown" }
+    return $slug
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # Get-SkipQualityStats (PURA) -- agrega rejeicoes por gate p/ achar quais custam
 # oportunidade. costly=true quando missed_rate alto e amostra suficiente.
 # Input: Skips[] com {gate, direction, regime, entry_price, exit_price}.
@@ -323,7 +357,8 @@ function Get-SkipQualityStats {
     $groups = @{}
     foreach ($s in $Skips) {
         if (-not $s) { continue }
-        $gate = if ($s.PSObject.Properties['gate'] -and $s.gate) { [string]$s.gate } else { "unknown" }
+        $gateRaw = if ($s.PSObject.Properties['gate'] -and $s.gate) { [string]$s.gate } else { "unknown" }
+        $gate = Get-GateKey $gateRaw   # 2026-06-23 Evolucao A: normaliza p/ agregar
         $dir  = if ($s.PSObject.Properties['direction'] -and $s.direction) { [string]$s.direction } else { "LONG" }
         $reg  = if ($s.PSObject.Properties['regime'] -and $s.regime) { [string]$s.regime } else { "UNKNOWN" }
         $key  = "$gate|$dir|$reg"

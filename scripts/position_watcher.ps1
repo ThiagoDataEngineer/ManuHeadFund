@@ -30,6 +30,9 @@ try {
     . (Join-Path $agentsDir "lib_trailing_peak_update.ps1") -ErrorAction SilentlyContinue  # 2026-06-17: trailing cego fix
     . (Join-Path $agentsDir "lib_coinex_position_management.ps1") -ErrorAction SilentlyContinue  # CoinEx-ModifyPositionStopLoss
     . (Join-Path $agentsDir "lib_trailing_sync.ps1") -ErrorAction SilentlyContinue  # 2026-06-17: empurra SL journal->corretora
+    . (Join-Path $agentsDir "lib_spot_stop_guard.ps1") -ErrorAction SilentlyContinue  # 2026-06-23: SPOT stop fail-closed (OPN -69% fix)
+    . (Join-Path $agentsDir "lib_asymmetric_trail.ps1") -ErrorAction SilentlyContinue  # 2026-06-23: trail assimetrico opt-in (Evolucao B)
+    . (Join-Path $agentsDir "lib_futures_stop_guard.ps1") -ErrorAction SilentlyContinue  # 2026-06-23: futures fail-closed
 } catch {
     Write-WatchLog "ERROR" "Falha ao carregar libs: $_"
     exit 1
@@ -164,6 +167,31 @@ while ($true) {
                     $positionState.Remove($mkt)
                 }
 
+                # 6b. 2026-06-23 FUTURES FAIL-CLOSED: garante que toda posicao tem SL na corretora.
+                # Furo: posicao nua (sl=0) nao rastreada no journal ficava sem protecao.
+                # PlannedStop = SL ja setado, senao journal stopCurrent, senao default 15% do entry.
+                if (Get-Command Resolve-FuturesStopGuard -ErrorAction SilentlyContinue) {
+                    $sideF = "$($pos.side)".ToUpper(); if (-not $sideF) { $sideF = "LONG" }
+                    $planned = if ($sl -gt 0) { $sl } else {
+                        if ($sideF -eq "SHORT") { [math]::Round($entry * 1.15, 8) } else { [math]::Round($entry * 0.85, 8) }
+                    }
+                    $g = Resolve-FuturesStopGuard -Side $sideF -MarkPrice $price_to_use -ExchangeStop $sl -PlannedStop $planned -HasPosition $true
+                    try {
+                        if ($g.action -eq "SET" -and (Get-Command CoinEx-ModifyPositionStopLoss -ErrorAction SilentlyContinue)) {
+                            $resp = CoinEx-ModifyPositionStopLoss -Market $mkt -Price ([decimal]$g.stop)
+                            if ($resp.success) {
+                                Write-WatchLog "FUT_STOP" "${mkt}: SL fail-closed setado na corretora ($($g.stop))"
+                                Send-TelegramAlert -Message "FUTURES ${mkt}: SL fail-closed setado ($($g.stop))" | Out-Null
+                            } else { Write-WatchLog "WARN" "${mkt}: set SL futures falhou" }
+                        } elseif ($g.action -eq "CLOSE_FALLBACK" -and (Get-Command CoinEx-ClosePosition -ErrorAction SilentlyContinue)) {
+                            CoinEx-ClosePosition $mkt | Out-Null
+                            Write-WatchLog "SL_HIT" "${mkt}: FUTURES fallback fecha a mercado ($($g.reason))"
+                            Send-TelegramAlert -Message "FUTURES ${mkt}: fechado a mercado (fallback nua+furou)" | Out-Null
+                            $positionState.Remove($mkt)
+                        }
+                    } catch { Write-WatchLog "WARN" "${mkt}: futures stop guard falhou: $_" }
+                }
+
                 # 7. Log contínuo conciso
                 $pnl_dir = if ($pnl_pct -gt 0) { "UP" } elseif ($pnl_pct -lt 0) { "DOWN" } else { "FLAT" }
                 $pnl_str = "$([math]::Round($pnl_pct,2))pct"
@@ -214,6 +242,34 @@ while ($true) {
                 $lastAlert["${mkt}_SL_WARN"] = Get-Date
                 Write-WatchLog "WARN" "SPOT ${mkt}: Proximo do SL ($currentPrice vs $sl)"
             }
+        }
+
+        # 7b. 2026-06-23 FIX OPN -69%: SPOT stop FAIL-CLOSED na corretora.
+        # Antes o loop SPOT acima SO alertava no SL (nunca vendia) -> daemon morto = capital nu.
+        # Agora coloca stop-order real na CoinEx (sobrevive daemon caido), idempotente
+        # (Resolve-SpotStopActions nao duplica -> sem repetir bug das 178 stops).
+        if (Get-Command Sync-SpotStopsToExchange -ErrorAction SilentlyContinue) {
+            try {
+                $spotStops = Sync-SpotStopsToExchange -Positions $spotPositions
+                foreach ($ss in @($spotStops)) {
+                    if ($ss.action -eq "PLACE" -and $ss.ok) {
+                        Write-WatchLog "SPOT_STOP" "$($ss.market): stop FAIL-CLOSED colocado na corretora ($($ss.detail))"
+                        Send-TelegramAlert -Message "SPOT $($ss.market): stop protegido na corretora ($($ss.detail))" | Out-Null
+                    } elseif ($ss.action -eq "UPDATE" -and $ss.ok) {
+                        Write-WatchLog "SPOT_STOP" "$($ss.market): trailing $($ss.detail)"
+                        Send-TelegramAlert -Message "SPOT $($ss.market): trailing $($ss.detail)" | Out-Null
+                    } elseif ($ss.action -eq "FALLBACK_SELL" -and $ss.ok) {
+                        Write-WatchLog "SL_HIT" "$($ss.market): FALLBACK venda a mercado ($($ss.detail))"
+                        Send-TelegramAlert -Message "SPOT $($ss.market): SL FALLBACK - vendido a mercado ($($ss.detail))" | Out-Null
+                    } elseif ($ss.action -eq "CANCEL" -and $ss.ok) {
+                        Write-WatchLog "SPOT_STOP" "$($ss.market): stop redundante cancelado ($($ss.detail))"
+                    } elseif ($ss.action -eq "SKIP_DUST") {
+                        # silencioso (poeira/sub-nano/simbolo) — nao polui o log
+                    } elseif (-not $ss.ok) {
+                        Write-WatchLog "WARN" "SPOT $($ss.market): stop $($ss.action) falhou ($($ss.detail))"
+                    }
+                }
+            } catch { Write-WatchLog "WARN" "sync spot stops falhou: $_" }
         }
 
         # 8. 2026-06-17: SYNC journal->corretora (empurra SL real, com trava de seguranca)

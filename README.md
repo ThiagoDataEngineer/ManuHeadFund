@@ -1,7 +1,34 @@
 # 🚀 ManuHeadFund - CoinEx AI Trading System
 
 Sistema automatizado de trading com IA (Mentor Agent) + Auto-Trade Engine para CoinEx SPOT + FUTURES (HYBRID 50/50).  
-**Status**: ✅ **CLOUD-ONLY LIVE** | Nuvem 24/7 | Local OFF | **Last Updated**: 2026-06-19
+**Status**: ✅ **CLOUD-ONLY LIVE** | Nuvem 24/7 | Local OFF | **Last Updated**: 2026-06-23
+
+---
+
+## 🛡️ UPDATE 2026-06-23 — Stops FAIL-CLOSED (SPOT completo + FUTURES) + Learning Evolution
+
+**Causa raiz corrigida**: o loop SPOT do `position_watcher` só *alertava* no SL, **nunca vendia**
+(stop era software-side; daemon morto 19→23/06 deixou OPNUSDT cair a −69%). Agora há proteção
+real em 3 camadas + reconciliação de estado + evolução do motor de aprendizado. **59 TDD.**
+
+### Proteção SPOT (3 camadas, sem stop-market — que já deu problema)
+1. **Stop-limit agressivo na corretora** — `lib_spot_stop_guard.ps1`. Preço de execução 3% abaixo
+   do trigger (`Get-SpotStopLimitPrice`) → vira limit marketável que **preenche no gap mesmo com
+   daemon morto**. Idempotente (`Resolve-SpotStopActions`: PLACE/OK/UPDATE/CANCEL) — sem o bug das
+   178 duplicatas. **UPDATE quando o trailing sobe** + auto-upgrade self-heal de stops legados.
+2. **Fallback market-sell** — `Test-SpotStopFallback`: se o preço atravessa o stop e o limit não
+   executou, o daemon vende a mercado (cobre gap com daemon vivo).
+3. **Dust guard** — `Test-SpotStopPlaceable`: pula poeira/sub-nano/símbolo-inválido sem spam.
+
+### Proteção FUTURES (`lib_futures_stop_guard.ps1`)
+SL exchange-side (mark-price, fecha a mercado) — sólido. Furos cobertos por `Resolve-FuturesStopGuard`:
+**SET** (posição nua não-rastreada → seta SL) / **CLOSE_FALLBACK** (nua + já furou → fecha a mercado).
+
+### Reconcile + Learning
+- `lib_state_reconcile.ps1` — uma fonte de verdade (remove duplicatas, marca CSV fantasma CLOSED).
+- `Get-GateKey` (lib_direction_learning) — counterfactual agrega de verdade (1092→26 chaves;
+  revela que vetos SHORT em bear perdem 44–70% de ganhadores).
+- `lib_asymmetric_trail.ps1` — deixa o ganhador correr (**opt-in** `ASYMMETRIC_TRAIL_ENABLED`, default OFF até forward-test).
 
 ---
 

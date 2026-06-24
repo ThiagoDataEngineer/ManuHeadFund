@@ -55,19 +55,33 @@ function Update-TrailingPeakLive {
             $newStop = $null
             $newPhase = $phase
 
-            if ($phase -lt 1 -and $gainPct -ge 2.5) {
-                $newStop = $entry            # breakeven
-                $newPhase = 1
-            }
-            if ($gainPct -ge 5.0) {
-                $lock = if ($isShort) { $newPeak * 1.015 } else { $newPeak * 0.985 }
-                $newStop = [math]::Round($lock, 8)
-                $newPhase = [math]::Max($newPhase, 2)
-            }
-            if ($gainPct -ge 10.0) {
-                $lock = if ($isShort) { $newPeak * 1.03 } else { $newPeak * 0.97 }
-                $newStop = [math]::Round($lock, 8)
-                $newPhase = [math]::Max($newPhase, 3)
+            # 2026-06-23 Evolucao B (OPT-IN, default OFF): trail ASSIMETRICO p/ deixar o
+            # winner correr e consertar o R:R invertido (ganho $1.15 vs perda $4.45).
+            # So liga com flag ASYMMETRIC_TRAIL_ENABLED=1 APOS forward-test (cultura do projeto:
+            # nunca wire no money-path sem validar). Flag OFF = comportamento FINO original intacto.
+            $asymOn = ($env:ASYMMETRIC_TRAIL_ENABLED -eq "1") -or ($global:ASYMMETRIC_TRAIL_ENABLED -eq $true)
+            if ($asymOn -and (Get-Command Resolve-AsymmetricStop -ErrorAction SilentlyContinue)) {
+                $baseStop = [double]$pos.stop   # SL planejado original
+                $newStop = Resolve-AsymmetricStop -Entry $entry -Peak $newPeak -BaseStop $baseStop -Side $side -BreakevenTriggerPct 0.05 -TrailWidthPct 0.12
+                if ($gainPct -ge 5.0)  { $newPhase = [math]::Max($newPhase, 2) }
+                if ($gainPct -ge 15.0) { $newPhase = [math]::Max($newPhase, 4) }  # runner largo
+            } else {
+                # ── Thresholds FINOS (2026-06-17): lock cedo p/ pegar micro-swings (DEFAULT) ──
+                #   +2.5% -> breakeven | +5% -> peak +/-1.5% | +10% -> peak +/-3%
+                if ($phase -lt 1 -and $gainPct -ge 2.5) {
+                    $newStop = $entry            # breakeven
+                    $newPhase = 1
+                }
+                if ($gainPct -ge 5.0) {
+                    $lock = if ($isShort) { $newPeak * 1.015 } else { $newPeak * 0.985 }
+                    $newStop = [math]::Round($lock, 8)
+                    $newPhase = [math]::Max($newPhase, 2)
+                }
+                if ($gainPct -ge 10.0) {
+                    $lock = if ($isShort) { $newPeak * 1.03 } else { $newPeak * 0.97 }
+                    $newStop = [math]::Round($lock, 8)
+                    $newPhase = [math]::Max($newPhase, 3)
+                }
             }
 
             if ($null -ne $newStop) {

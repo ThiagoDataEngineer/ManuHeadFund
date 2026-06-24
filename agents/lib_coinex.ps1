@@ -779,9 +779,13 @@ function CoinEx-PlaceSpotStopOrder {
         [Parameter(Mandatory)] [string] $Side,
         [Parameter(Mandatory)] [double] $TriggerPrice,
         [Parameter(Mandatory)] [double] $Amount,
+        [double] $LimitPrice = 0,   # 2026-06-23: preco de execucao do limit (abaixo do trigger p/ preencher no gap). 0 = usa trigger.
         [string] $StpMode = "ct"
     )
     $base = if ($Market -match "USDT$") { $Market.Substring(0, $Market.Length - 4) } else { $Market }
+    # 2026-06-23: limit agressivo. stop-MARKET spot ja deu problema; limit no trigger nao
+    # preenche em gap. LimitPrice abaixo do trigger torna o limit marketavel (preenche).
+    $execPrice = if ($LimitPrice -gt 0) { $LimitPrice } else { $TriggerPrice }
     # CoinEx exige dot-separated decimais (locale invariante).
     # ToString() em PT-BR/etc usa virgula e a API rejeita (code 3639) -- usar InvariantCulture.
     $inv = [System.Globalization.CultureInfo]::InvariantCulture
@@ -796,7 +800,7 @@ function CoinEx-PlaceSpotStopOrder {
         side          = $Side
         type          = "limit"
         amount        = ([math]::Round($Amount, 6)).ToString($inv)
-        price         = ([math]::Round([decimal]$TriggerPrice, 8)).ToString($inv)  # execution price
+        price         = ([math]::Round([decimal]$execPrice, 8)).ToString($inv)  # execution price (limit agressivo)
         ccy           = $base
         # 2026-06-05 fix: Round(,8) ZERAVA precos sub-1e-8 (PEPE2 trigger 1.006e-9
         # -> "0" -> API rejeita -> posicao NUA). Usa decimal+12 casas pra preservar
