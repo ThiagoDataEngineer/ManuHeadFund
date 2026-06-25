@@ -117,6 +117,28 @@ Describe "Resolve-SpotStopActions - UPDATE quando trailing subiu (nao so pular)"
     }
 }
 
+Describe "Resolve-DesiredStop - sempre um stop VALIDO abaixo do preco (nunca morto)" {
+    It "Posicao rastreada (CSV stop valido abaixo do preco) -> usa o CSV stop" {
+        Resolve-DesiredStop -Last 100 -CsvStop 90 -JournalStop 0 | Should Be 90
+    }
+    It "Trailing subiu acima do CSV -> usa o maior (ratchet)" {
+        Resolve-DesiredStop -Last 100 -CsvStop 90 -JournalStop 95 | Should Be 95
+    }
+    It "Posicao NAO rastreada (sem CSV/journal) -> default 12% abaixo do preco" {
+        Resolve-DesiredStop -Last 100 -CsvStop 0 -JournalStop 0 -DefaultStopPct 0.12 | Should Be 88
+    }
+    It "Stop planejado ACIMA do preco (posicao furada) -> re-ancora abaixo do preco (nao morto)" {
+        # PAXG: CSV stop 4064 mas preco caiu p/ 3988 -> stop acima do mercado NUNCA dispara.
+        # Re-ancora em last*(1-buffer) p/ virar stop FUNCIONAL.
+        $r = Resolve-DesiredStop -Last 3988 -CsvStop 4064 -JournalStop 0 -MinBufferPct 0.02
+        ($r -lt 3988) | Should Be $true
+        $r | Should Be ([math]::Round(3988*0.98,8))
+    }
+    It "Last invalido (<=0) -> 0 (caller ignora)" {
+        Resolve-DesiredStop -Last 0 -CsvStop 90 -JournalStop 0 | Should Be 0
+    }
+}
+
 Describe "Get-SpotStopLimitPrice - limit agressivo abaixo do gatilho (preenche no gap)" {
     It "Limit fica X% abaixo do trigger (preenche mesmo se preco atravessa)" {
         # stop-MARKET spot ja deu problema no passado -> usa stop-LIMIT com price abaixo

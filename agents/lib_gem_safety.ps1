@@ -240,6 +240,37 @@ function Test-GemSafetyGuards {
     return $base
 }
 
+function Test-CoinExposureCap {
+    <#
+      Bloqueia trades GIGANTES / acumulacao olhando o SALDO REAL (nao o ledger que desviava).
+      HeldUsd      = valor ja segurado dessa moeda na corretora (qty*preco)
+      TradeUsd     = tamanho do novo trade
+      PortfolioUsd = capital total (referencia do cap %)
+      Regras:
+        - ja segura posicao relevante (HeldUsd >= ReentryBlockUsd) -> bloqueia (anti-acumulacao)
+        - projetado (Held+Trade)/Portfolio >= MaxPerCoinPct        -> bloqueia (trade gigante)
+      Fail-safe: PortfolioUsd<=0 -> permite (nao trava por dado ruim). PURO.
+    #>
+    param(
+        [double]$HeldUsd,
+        [double]$TradeUsd,
+        [double]$PortfolioUsd,
+        [double]$MaxPerCoinPct  = 10.0,
+        [double]$ReentryBlockUsd = 5.0
+    )
+    if ($PortfolioUsd -le 0) {
+        return [pscustomobject]@{ allowed=$true; reason="ok"; projected_pct=0 }
+    }
+    if ($HeldUsd -ge $ReentryBlockUsd) {
+        return [pscustomobject]@{ allowed=$false; reason="ja_posicionado"; projected_pct=[math]::Round($HeldUsd/$PortfolioUsd*100,2) }
+    }
+    $projPct = [math]::Round(($HeldUsd + $TradeUsd) / $PortfolioUsd * 100, 2)
+    if ($projPct -ge $MaxPerCoinPct) {
+        return [pscustomobject]@{ allowed=$false; reason="cap_por_moeda"; projected_pct=$projPct }
+    }
+    return [pscustomobject]@{ allowed=$true; reason="ok"; projected_pct=$projPct }
+}
+
 function Add-GemTradeResult {
     param(
         [Parameter(Mandatory)] [string] $Market,

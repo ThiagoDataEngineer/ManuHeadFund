@@ -520,6 +520,35 @@ function Invoke-GemExecute {
         # (sizing 0.2% ja eh tao pequeno que double-confirm seria overkill).
     }
 
+    # ── 1b. COIN EXPOSURE CAP (2026-06-24: anti trade-gigante por SALDO REAL) ──
+    # Causa raiz: dedup olhava ledger local (desviava) -> PAXG re-comprado ate 45%.
+    # Agora checa o SALDO REAL da corretora: bloqueia re-entrada + cap % por moeda.
+    if (Get-Command Test-CoinExposureCap -ErrorAction SilentlyContinue) {
+        try {
+            $baseCcy = if ($mkt -match "USDT$") { $mkt.Substring(0, $mkt.Length - 4) } else { $mkt }
+            $heldUsd = 0.0
+            $balR = CoinEx-Get "/v2/assets/spot/balance"
+            if ($balR.code -eq 0) {
+                $coin = $balR.data | Where-Object { "$($_.ccy)".ToUpper() -eq $baseCcy.ToUpper() } | Select-Object -First 1
+                if ($coin) {
+                    $heldQty = ([double]$coin.available) + ([double]$coin.frozen)
+                    $px = 0.0
+                    try { $tk = Invoke-RestMethod "https://api.coinex.com/v2/spot/ticker?market=$mkt" -TimeoutSec 6 -EA Stop; if ($tk.data) { $px = [double]$tk.data[0].last } } catch {}
+                    $heldUsd = $heldQty * $px
+                }
+            }
+            $cap = Test-CoinExposureCap -HeldUsd $heldUsd -TradeUsd $usd_size -PortfolioUsd $capital
+            if (-not $cap.allowed) {
+                Write-Host "  [EXPOSURE CAP BLOCK] ${mkt}: $($cap.reason) (held=`$$([math]::Round($heldUsd,2)) proj=$($cap.projected_pct)%)" -ForegroundColor Red
+                try { Send-TelegramAlert -Message "GEM bloqueado ${mkt}: $($cap.reason) - ja segura `$$([math]::Round($heldUsd,2)) (anti trade-gigante)" | Out-Null } catch {}
+                if (Get-Command Add-GemRejection -ErrorAction SilentlyContinue) {
+                    try { Add-GemRejection -Path (Join-Path $global:JOURNAL_DIR "gem_recent_decisions.json") -Market $mkt -Reason "exposure_cap:$($cap.reason)" } catch {}
+                }
+                return [PSCustomObject]@{ blocked = $true; blocked_by = @("exposure_cap:$($cap.reason)"); market = $mkt }
+            }
+        } catch { Write-Host "  [EXPOSURE CAP] ${mkt}: check falhou (fallback allow): $_" -ForegroundColor Yellow }
+    }
+
     # ── 2. CHART PATTERN GATE (2026-06-18: bloqueador ativo) ──
     # Rejeita pump-chase, topping patterns, fake breakouts ANTES de qualquer outra gate
     # Economia: evita -11% (COAIUSDT tipo) com zero LLM

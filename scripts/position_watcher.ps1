@@ -250,7 +250,12 @@ while ($true) {
         # (Resolve-SpotStopActions nao duplica -> sem repetir bug das 178 stops).
         if (Get-Command Sync-SpotStopsToExchange -ErrorAction SilentlyContinue) {
             try {
-                $spotStops = Sync-SpotStopsToExchange -Positions $spotPositions
+                # 2026-06-24 CAUSA RAIZ: cobre TODA holding do saldo real (nao so o CSV).
+                # Compras da nuvem/manual nao registradas tambem ganham stop fail-closed.
+                $stopTargets = if (Get-Command Get-SpotHoldingsForStop -ErrorAction SilentlyContinue) {
+                    Get-SpotHoldingsForStop -MinUsd 5
+                } else { $spotPositions }
+                $spotStops = Sync-SpotStopsToExchange -Positions $stopTargets
                 foreach ($ss in @($spotStops)) {
                     if ($ss.action -eq "PLACE" -and $ss.ok) {
                         Write-WatchLog "SPOT_STOP" "$($ss.market): stop FAIL-CLOSED colocado na corretora ($($ss.detail))"

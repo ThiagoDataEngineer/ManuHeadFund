@@ -69,6 +69,7 @@ try {
     # 2026-06-19 Fase 2: Exit Intelligence (saídas automáticas em lucro)
     . (Join-Path $agentsDir "lib_exit_intelligence.ps1")
     . (Join-Path $agentsDir "lib_exit_intelligence_auto.ps1")
+    . (Join-Path $agentsDir "lib_spot_stop_guard.ps1")  # 2026-06-24: cobertura spot por saldo (nuvem)
     # 2026-06-21: motor de politica de saida gated (runner em uptrend, validado walk-forward)
     . (Join-Path $agentsDir "lib_trailing_baseline.ps1")
     . (Join-Path $agentsDir "lib_trailing_policy.ps1")
@@ -319,11 +320,26 @@ try {
         }
     }
 
-    # 2.9 AUTO-SYNC SL/TP (DISABLED 2026-06-20)
-    # 2026-06-20 BUGFIX: sync_and_fix_tp.ps1 criava duplicatas a cada ciclo (5min)
-    # Desabilitado até ter guard contra duplicatas. Manual sync será via SETUP_SUPABASE_*.sql
-    Write-CrossPlatformLog "--- AUTO-SYNC SL/TP (DISABLED) ---" -LogFile "trailing_stop_monitor.log"
-    Write-CrossPlatformLog "Note: sync_and_fix_tp disabled (created duplicates every 5min). Use manual cleanup script." -LogFile "trailing_stop_monitor.log"
+    # 2.9 SPOT STOP FAIL-CLOSED por SALDO REAL (2026-06-24: substitui sync_and_fix_tp)
+    # Causa raiz: nuvem comprava spot e ficava NUA (sem stop). sync_and_fix_tp foi
+    # desabilitado por criar 178 dups. Agora Sync-SpotStopsToExchange e IDEMPOTENTE
+    # (Resolve-SpotStopActions: nao duplica) + cobre TODA holding do saldo (nao so CSV).
+    Write-CrossPlatformLog "--- SPOT STOP FAIL-CLOSED (por saldo) ---" -LogFile "trailing_stop_monitor.log"
+    if ((Get-Command Get-SpotHoldingsForStop -ErrorAction SilentlyContinue) -and (Get-Command Sync-SpotStopsToExchange -ErrorAction SilentlyContinue)) {
+        try {
+            $spotTargets = Get-SpotHoldingsForStop -MinUsd 5
+            $spotStopRes = Sync-SpotStopsToExchange -Positions $spotTargets
+            $placed = @($spotStopRes | Where-Object { $_.action -in @("PLACE","UPDATE","FALLBACK_SELL") -and $_.ok }).Count
+            Write-CrossPlatformLog "SPOT STOPS: $(@($spotTargets).Count) holdings cobertas, $placed acao(oes)" -LogFile "trailing_stop_monitor.log"
+            foreach ($ss in @($spotStopRes | Where-Object { $_.action -in @("PLACE","FALLBACK_SELL") -and $_.ok })) {
+                Write-CrossPlatformLog "  [$($ss.action)] $($ss.market): $($ss.detail)" -Level INFO -LogFile "trailing_stop_monitor.log"
+            }
+        } catch {
+            Write-CrossPlatformLog "SPOT STOP FAIL-CLOSED erro: $_" -Level WARN -LogFile "trailing_stop_monitor.log"
+        }
+    } else {
+        Write-CrossPlatformLog "SPOT STOP guard indisponivel (lib nao carregada)" -Level WARN -LogFile "trailing_stop_monitor.log"
+    }
 
     # 3. VALIDATION
     Write-CrossPlatformLog "--- VALIDATION ---" -LogFile "trailing_stop_monitor.log"

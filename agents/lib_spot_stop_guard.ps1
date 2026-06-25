@@ -89,6 +89,33 @@ function Resolve-SpotStopActions {
     return $actions
 }
 
+# --- STOP DESEJADO (PURO) -------------------------------------------------------
+
+function Resolve-DesiredStop {
+    <#
+      Calcula um stop SEMPRE VALIDO (abaixo do preco) p/ qualquer holding, rastreado ou nao.
+      Causa raiz: protetor so cobria gem_trades.csv -> compras da nuvem ficavam nuas.
+      Agora toda posicao (vinda do SALDO) ganha stop:
+        - rastreada (CSV/journal) -> usa o stop conhecido (o maior = ratchet)
+        - nao rastreada            -> default DefaultStopPct abaixo do preco
+        - stop ACIMA do preco (furada) -> re-ancora em last*(1-MinBufferPct) (nunca stop morto)
+      PURO. Last invalido -> 0 (caller ignora).
+    #>
+    param(
+        [double]$Last,
+        [double]$CsvStop = 0,
+        [double]$JournalStop = 0,
+        [double]$DefaultStopPct = 0.12,
+        [double]$MinBufferPct = 0.02
+    )
+    if ($Last -le 0) { return 0 }
+    $known = [math]::Max([double]$CsvStop, [double]$JournalStop)
+    $stop = if ($known -gt 0) { $known } else { $Last * (1 - $DefaultStopPct) }
+    # nunca stop morto (acima/no preco) -> re-ancora abaixo
+    if ($stop -ge $Last) { $stop = $Last * (1 - $MinBufferPct) }
+    return [math]::Round($stop, 8)
+}
+
 # --- LIMIT AGRESSIVO (PURO) -----------------------------------------------------
 
 function Get-SpotStopLimitPrice {
@@ -153,6 +180,60 @@ function Test-SpotStopPlaceable {
     return @{ placeable=$true; reason="ok" }
 }
 
+# --- COBERTURA POR SALDO REAL (wire) --------------------------------------------
+
+function Get-SpotHoldingsForStop {
+    <#
+      CAUSA RAIZ: o protetor lia gem_trades.csv -> compras da nuvem (nao registradas)
+      ficavam NUAS. Agora le o SALDO REAL da corretora (ground truth): TODA holding com
+      valor >= MinUsd ganha stop, rastreada ou nao. Stop desejado via Resolve-DesiredStop
+      (CSV/journal se conhecido, senao default % abaixo do preco).
+      Retorna { market, qty, stop_price } pronto p/ Sync-SpotStopsToExchange.
+    #>
+    param(
+        [double]$MinUsd = 5.0,
+        [string]$GemTradesPath = "",
+        [string]$TrailingFile = ""
+    )
+    $out = @()
+    if (-not (Get-Command CoinEx-Get -ErrorAction SilentlyContinue)) { return $out }
+    $jdir = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path (Split-Path $PSScriptRoot) "journal" }
+    if (-not $GemTradesPath) { $GemTradesPath = Join-Path $jdir "gem_trades.csv" }
+    if (-not $TrailingFile)  { $TrailingFile  = Join-Path $jdir "trailing_positions.json" }
+
+    # mapas de stop conhecido (CSV + journal trailing) por market
+    $csvStop = @{}; $jStop = @{}
+    if (Test-Path $GemTradesPath) {
+        try { foreach ($t in (Import-Csv $GemTradesPath)) {
+            if ($t.market_type -eq "SPOT" -and $t.status -eq "OPEN" -and [double]$t.stop_price -gt 0) { $csvStop["$($t.market)"] = [double]$t.stop_price }
+        } } catch {}
+    }
+    if (Test-Path $TrailingFile) {
+        try { foreach ($p in (Get-Content $TrailingFile -Raw | ConvertFrom-Json)) {
+            if ($p.active -eq $true -and $p.PSObject.Properties['stopCurrent'] -and [double]$p.stopCurrent -gt 0) { $jStop["$($p.market)"] = [double]$p.stopCurrent }
+        } } catch {}
+    }
+
+    $stable = @("USDT","USDC","USD","DAI","TUSD","BUSD")
+    $bal = try { CoinEx-Get "/v2/assets/spot/balance" } catch { $null }
+    if (-not $bal -or $bal.code -ne 0) { return $out }
+    foreach ($c in @($bal.data)) {
+        $ccy = "$($c.ccy)".ToUpper()
+        if ($ccy -in $stable) { continue }
+        $qty = ([double]$c.available) + ([double]$c.frozen)
+        if ($qty -le 0) { continue }
+        $mkt = "${ccy}USDT"
+        $last = 0.0
+        try { $tk = Invoke-RestMethod "https://api.coinex.com/v2/spot/ticker?market=$mkt" -TimeoutSec 6 -ErrorAction Stop; if ($tk.data) { $last = [double]$tk.data[0].last } } catch {}
+        if ($last -le 0) { continue }
+        if (($qty * $last) -lt $MinUsd) { continue }   # poeira
+        $desired = Resolve-DesiredStop -Last $last -CsvStop ([double]$csvStop[$mkt]) -JournalStop ([double]$jStop[$mkt])
+        if ($desired -le 0) { continue }
+        $out += [pscustomobject]@{ market = $mkt; qty = ([double]$c.available); stop_price = $desired }
+    }
+    return $out
+}
+
 # --- WIRE FINO (I/O CoinEx; nao testado por unit, so smoke) ---------------------
 
 function Sync-SpotStopsToExchange {
@@ -169,28 +250,9 @@ function Sync-SpotStopsToExchange {
     $results = @()
     if (-not (Get-Command CoinEx-Get -ErrorAction SilentlyContinue)) { return $results }
 
-    # Stop DESEJADO = o trailing stopCurrent quando MAIOR que o SL original (ratchet).
-    # Assim o stop na corretora SEGUE o trailing pra cima (nao fica preso no SL inicial).
-    if (-not $TrailingFile) {
-        $__jdir = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path (Split-Path $PSScriptRoot) "journal" }
-        $TrailingFile = Join-Path $__jdir "trailing_positions.json"
-    }
-    $trailMap = @{}
-    if (Test-Path $TrailingFile) {
-        try {
-            foreach ($tp in (Get-Content $TrailingFile -Raw | ConvertFrom-Json)) {
-                if ($tp.active -eq $true -and $tp.PSObject.Properties['stopCurrent']) {
-                    $trailMap["$($tp.market)"] = [double]$tp.stopCurrent
-                }
-            }
-        } catch {}
-    }
-    $Positions = @($Positions | ForEach-Object {
-        $sp = [double]$_.stop_price
-        $tc = if ($trailMap.ContainsKey("$($_.market)")) { $trailMap["$($_.market)"] } else { 0.0 }
-        $desired = if ($tc -gt $sp) { $tc } else { $sp }   # LONG ratchet: pega o mais alto
-        [pscustomobject]@{ market=$_.market; qty=$_.qty; stop_price=$desired }
-    })
+    # NOTA 2026-06-24: o stop_price desejado JA vem pronto de Get-SpotHoldingsForStop
+    # (incorpora CSV + trailing stopCurrent COM re-ancora abaixo do preco). Nao re-mesclar
+    # trailing aqui -> mesclar reintroduzia o stopCurrent MORTO acima do preco (PAXG 4064).
 
     # Filtra poeira/sub-nano/simbolo invalido ANTES de tentar (evita erro+spam todo ciclo).
     $priceMap = @{}
@@ -213,19 +275,26 @@ function Sync-SpotStopsToExchange {
     }
     $Positions = $placeable
 
-    # Coleta stops SL pendentes por mercado (so sells com trigger abaixo do last = SL).
+    # Coleta stops SL pendentes por mercado.
+    # SL vs TP: um sell e SL se (trigger <= preco atual) OU (trigger ~= stop desejado).
+    # 2026-06-24 FIX: o filtro antigo (trig>=last => TP) confundia o SL com TP quando o
+    # preco CAIA ABAIXO do stop (PAXG: trigger 4064 > preco 3988) -> Resolve nao via o stop
+    # -> recolocava todo ciclo -> 14 duplicatas (bug 178 de novo). Casa pelo stop desejado.
     $existing = @()
     foreach ($pos in @($Positions)) {
         $mkt = "$($pos.market)"
+        $desired = [double]$pos.stop_price
         try {
             $last = [double]$priceMap[$mkt]
-            $so = CoinEx-Get "/v2/spot/pending-stop-order?market=$mkt&market_type=SPOT&page=1&limit=20"
+            $so = CoinEx-Get "/v2/spot/pending-stop-order?market=$mkt&market_type=SPOT&page=1&limit=100"
             if ($so.code -eq 0) {
                 foreach ($s in @($so.data)) {
                     if ("$($s.side)" -ne "sell") { continue }
                     $trig = [double]$s.trigger_price
                     if ($trig -le 0) { continue }
-                    if ($last -gt 0 -and $trig -ge $last) { continue }  # TP, nao SL -> ignora
+                    $nearDesired = ($desired -gt 0) -and ([math]::Abs($trig - $desired) / $desired -le 0.05)
+                    $belowPrice  = ($last -gt 0 -and $trig -le $last)
+                    if (-not ($nearDesired -or $belowPrice)) { continue }  # TP real (acima do preco e longe do stop) -> ignora
                     # API /v2/spot/pending-stop-order retorna 'stop_id' (nao 'order_id').
                     $sid = if ($s.PSObject.Properties['stop_id']) { "$($s.stop_id)" } else { "$($s.order_id)" }
                     $lim = if ($s.PSObject.Properties['price']) { [double]$s.price } else { 0 }
@@ -287,7 +356,9 @@ function Sync-SpotStopsToExchange {
                     CoinEx-CancelStopOrder -Market $mkt -StopId $sid -MarketType "SPOT" | Out-Null
                 }
             }
-            CoinEx-PlaceSpotOrder -Market $mkt -Side "sell" -Type "market" -Amount ([double]$pos.qty) | Out-Null
+            # haircut 0.3% + floor 6 casas: arredondar p/ cima estourava o saldo ("balance not enough")
+            $sellQty = [math]::Floor([double]$pos.qty * 0.997 * 1e6) / 1e6
+            CoinEx-PlaceSpotOrder -Market $mkt -Side "sell" -Type "market" -Amount $sellQty | Out-Null
             $results += [pscustomobject]@{ market=$mkt; action="FALLBACK_SELL"; ok=$true; detail=$fb.reason }
         } catch {
             $results += [pscustomobject]@{ market=$mkt; action="FALLBACK_SELL"; ok=$false; detail="erro: $_" }
