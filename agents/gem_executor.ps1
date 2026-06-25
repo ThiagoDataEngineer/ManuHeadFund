@@ -7,6 +7,7 @@
 . (Join-Path $PSScriptRoot "lib_telegram.ps1")
 . (Join-Path $PSScriptRoot "lib_gem_safety.ps1")
 . (Join-Path $PSScriptRoot "lib_btc_regime_gate.ps1")  # 2026-06-24: BTC-core gate (bloqueia LONG alt em bear)
+. (Join-Path $PSScriptRoot "lib_market_scenario.ps1")  # 2026-06-24: motor de cenario (capitulacao/bear/bull -> estrategia)
 . (Join-Path $PSScriptRoot "lib_market_router.ps1")
 # 2026-06-08: Multi-TF alignment validation before execution
 . (Join-Path $PSScriptRoot "lib_multiframe_analysis.ps1")
@@ -550,22 +551,26 @@ function Invoke-GemExecute {
         } catch { Write-Host "  [EXPOSURE CAP] ${mkt}: check falhou (fallback allow): $_" -ForegroundColor Yellow }
     }
 
-    # ── 1c. BTC-CORE GATE (2026-06-24: bloqueia LONG alt em BTC bear) ──
+    # ── 1c. CENARIO BTC-CORE GATE (2026-06-24: identifica cenario -> estrategia com edge) ──
     # Causa real das perdas: comprou alt LONG com BTC -20%/mes (alt sangra 2-4x em bear).
-    # SHORT segue (bear favorece). BTC/ETH majors tambem gateados (sofrem no bear).
-    if (Get-Command Get-BtcRegimeGate -ErrorAction SilentlyContinue) {
-        $dirForGate = if ($direction) { "$direction" } else { "LONG" }
+    # CAPITULACAO -> libera LONG (compra fundo) | BEAR -> bloqueia LONG, libera SHORT
+    # BULL -> libera LONG | NEUTRO -> espera. Substitui o gate simples.
+    if (Get-Command Get-MarketScenario -ErrorAction SilentlyContinue) {
+        $dirForGate = if ($direction) { "$direction".ToUpper() } else { "LONG" }
         try {
-            $btcGate = Get-BtcRegimeGate -Direction $dirForGate
-            if (-not $btcGate.allowed) {
-                Write-Host "  [BTC-CORE BLOCK] ${mkt}: BTC em bear bloqueia LONG de alt ($($btcGate.reason))" -ForegroundColor Red
-                try { Send-TelegramAlert -Message "GEM bloqueado ${mkt}: BTC-core (BTC em downtrend, alt sangra 2-4x)" | Out-Null } catch {}
+            $scen = Get-MarketScenario
+            $blockLong  = ($dirForGate -eq "LONG")  -and (-not $scen.allow_long)
+            $blockShort = ($dirForGate -eq "SHORT") -and (-not $scen.allow_short)
+            if ($blockLong -or $blockShort) {
+                Write-Host "  [CENARIO BLOCK] ${mkt}: cenario=$($scen.scenario) bloqueia $dirForGate ($($scen.reason))" -ForegroundColor Red
+                try { Send-TelegramAlert -Message "GEM bloqueado ${mkt}: cenario BTC=$($scen.scenario), estrategia=$($scen.strategy) -> $dirForGate sem edge" | Out-Null } catch {}
                 if (Get-Command Add-GemRejection -ErrorAction SilentlyContinue) {
-                    try { Add-GemRejection -Path (Join-Path $global:JOURNAL_DIR "gem_recent_decisions.json") -Market $mkt -Reason "btc_core:$($btcGate.reason)" } catch {}
+                    try { Add-GemRejection -Path (Join-Path $global:JOURNAL_DIR "gem_recent_decisions.json") -Market $mkt -Reason "cenario:$($scen.scenario)" } catch {}
                 }
-                return [PSCustomObject]@{ blocked = $true; blocked_by = @("btc_core:$($btcGate.reason)"); market = $mkt }
+                return [PSCustomObject]@{ blocked = $true; blocked_by = @("cenario:$($scen.scenario)"); market = $mkt }
             }
-        } catch { Write-Host "  [BTC-CORE] ${mkt}: check falhou (fallback allow): $_" -ForegroundColor Yellow }
+            Write-Host "  [CENARIO OK] ${mkt}: $($scen.scenario) -> $($scen.strategy) (libera $dirForGate)" -ForegroundColor DarkGray
+        } catch { Write-Host "  [CENARIO] ${mkt}: check falhou (fallback allow): $_" -ForegroundColor Yellow }
     }
 
     # ── 2. CHART PATTERN GATE (2026-06-18: bloqueador ativo) ──
