@@ -6,6 +6,7 @@
 . (Join-Path $PSScriptRoot "lib_journal.ps1")
 . (Join-Path $PSScriptRoot "lib_telegram.ps1")
 . (Join-Path $PSScriptRoot "lib_gem_safety.ps1")
+. (Join-Path $PSScriptRoot "lib_btc_regime_gate.ps1")  # 2026-06-24: BTC-core gate (bloqueia LONG alt em bear)
 . (Join-Path $PSScriptRoot "lib_market_router.ps1")
 # 2026-06-08: Multi-TF alignment validation before execution
 . (Join-Path $PSScriptRoot "lib_multiframe_analysis.ps1")
@@ -547,6 +548,24 @@ function Invoke-GemExecute {
                 return [PSCustomObject]@{ blocked = $true; blocked_by = @("exposure_cap:$($cap.reason)"); market = $mkt }
             }
         } catch { Write-Host "  [EXPOSURE CAP] ${mkt}: check falhou (fallback allow): $_" -ForegroundColor Yellow }
+    }
+
+    # ── 1c. BTC-CORE GATE (2026-06-24: bloqueia LONG alt em BTC bear) ──
+    # Causa real das perdas: comprou alt LONG com BTC -20%/mes (alt sangra 2-4x em bear).
+    # SHORT segue (bear favorece). BTC/ETH majors tambem gateados (sofrem no bear).
+    if (Get-Command Get-BtcRegimeGate -ErrorAction SilentlyContinue) {
+        $dirForGate = if ($direction) { "$direction" } else { "LONG" }
+        try {
+            $btcGate = Get-BtcRegimeGate -Direction $dirForGate
+            if (-not $btcGate.allowed) {
+                Write-Host "  [BTC-CORE BLOCK] ${mkt}: BTC em bear bloqueia LONG de alt ($($btcGate.reason))" -ForegroundColor Red
+                try { Send-TelegramAlert -Message "GEM bloqueado ${mkt}: BTC-core (BTC em downtrend, alt sangra 2-4x)" | Out-Null } catch {}
+                if (Get-Command Add-GemRejection -ErrorAction SilentlyContinue) {
+                    try { Add-GemRejection -Path (Join-Path $global:JOURNAL_DIR "gem_recent_decisions.json") -Market $mkt -Reason "btc_core:$($btcGate.reason)" } catch {}
+                }
+                return [PSCustomObject]@{ blocked = $true; blocked_by = @("btc_core:$($btcGate.reason)"); market = $mkt }
+            }
+        } catch { Write-Host "  [BTC-CORE] ${mkt}: check falhou (fallback allow): $_" -ForegroundColor Yellow }
     }
 
     # ── 2. CHART PATTERN GATE (2026-06-18: bloqueador ativo) ──
