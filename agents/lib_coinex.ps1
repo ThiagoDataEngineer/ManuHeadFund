@@ -1196,11 +1196,16 @@ function CoinEx-CancelOrder {
     }
 
     $endpoint = if ($MarketType -eq "SPOT") { "/v2/spot/cancel-order" } else { "/v2/futures/cancel-order" }
-    
+
+    # 2026-06-25 fix: API v2 exige order_id NUMERICO (mesmo bug ja corrigido em
+    # CoinEx-CancelStopOrder 2026-06-05). Enviar como string retorna code=3639
+    # "Invalid Parameter" e a ordem NUNCA cancela. Bateu ao cancelar o TP do FAI.
+    $orderIdNum = $OrderId
+    if ($OrderId -match '^\d+$') { $orderIdNum = [int64]$OrderId }
     $body = @{
         market      = $Market
         market_type = $MarketType
-        order_id    = $OrderId
+        order_id    = $orderIdNum
     }
 
     try {
