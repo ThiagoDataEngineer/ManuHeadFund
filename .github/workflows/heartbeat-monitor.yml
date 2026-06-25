@@ -5,6 +5,10 @@ on:
     - cron: '0 * * * *'  # Every hour at :00
   workflow_dispatch:
 
+permissions:
+  actions: read
+  contents: read
+
 jobs:
   heartbeat-check:
     runs-on: ubuntu-latest
@@ -13,57 +17,67 @@ jobs:
     env:
       TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
       TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
-      # heartbeat le trade_outcomes do Supabase (ground-truth cloud)
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-      SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 1
-
-      - name: Load credentials
+      - name: Check pipeline liveness (NUNCA falha o run)
         shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
-          # Load local config for Telegram
-          if (Test-Path agents/config.local.ps1) {
-            . agents/config.local.ps1
-            echo "TELEGRAM_BOT_TOKEN=$env:TELEGRAM_BOT_TOKEN" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
-            echo "TELEGRAM_CHAT_ID=$env:TELEGRAM_CHAT_ID" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          # 2026-06-25 redesign. O heartbeat antigo lia trade_outcomes do Supabase,
+          # mas essa tabela esta AUSENTE (PGRST205) -> no runner cloud nao ha fallback
+          # JSONL -> via 0 outcomes -> exit 1 TODA HORA -> spam de email "Run failed" +
+          # alerta Telegram. Pior: "nenhum trade fechou em 6h" != "sistema morto"
+          # (o sistema e seletivo e segura posicoes em trailing).
+          #
+          # Novo sinal de "vivo": o PROPRIO trading-pipeline. Ele roda a cada 5min;
+          # se nao rodou na ultima StaleHours, o sistema esta REALMENTE parado.
+          # Independe do Supabase. E o job NUNCA falha (exit 0) -> zero email-spam;
+          # so alerta via Telegram quando genuinamente morto.
+          $StaleHours = 2.0   # 5min/ciclo; folga p/ throttle do schedule do GitHub
+          $repo = "${{ github.repository }}"
+          $uri  = "https://api.github.com/repos/$repo/actions/workflows/trading-pipeline.yml/runs?per_page=1"
+          $headers = @{
+            Authorization  = "Bearer $env:GH_TOKEN"
+            Accept         = "application/vnd.github+json"
+            "User-Agent"   = "manuheadfund-heartbeat"
           }
 
-      - name: Check system heartbeat
-        shell: pwsh
-        run: |
-          Write-Host "Checking if system is alive..."
-          & ./scripts/heartbeat_alert.ps1 -AlertThresholdHours 6
+          $lastRunUtc = $null
+          try {
+            $resp = Invoke-RestMethod -Uri $uri -Headers $headers -Method GET
+            if ($resp.workflow_runs -and $resp.workflow_runs.Count -gt 0) {
+              $lastRunUtc = [datetime]::Parse(
+                $resp.workflow_runs[0].created_at,
+                [System.Globalization.CultureInfo]::InvariantCulture,
+                [System.Globalization.DateTimeStyles]::AdjustToUniversal)
+            }
+          } catch {
+            Write-Host "[WARN] nao consegui consultar runs do pipeline: $_" -ForegroundColor Yellow
+          }
 
-          $exit_code = $LASTEXITCODE
-
-          if ($exit_code -eq 0) {
-            Write-Host "✓ System is alive" -ForegroundColor Green
+          $alert = $false; $reason = ""
+          if ($null -eq $lastRunUtc) {
+            $alert = $true; $reason = "nenhum run do trading-pipeline encontrado"
           } else {
-            Write-Host "✗ System appears to be broken" -ForegroundColor Red
+            $hours = ([datetime]::UtcNow - $lastRunUtc).TotalHours
+            $h = [math]::Round($hours, 2)
+            if ($hours -gt $StaleHours) {
+              $alert = $true; $reason = "pipeline sem rodar ha ${h}h (limite ${StaleHours}h)"
+            } else {
+              Write-Host "[OK] sistema vivo: trading-pipeline rodou ha ${h}h" -ForegroundColor Green
+            }
           }
 
-          exit $exit_code
-
-      - name: Notify success
-        if: success()
-        shell: pwsh
-        run: |
-          Write-Host "✓ Heartbeat check PASSED" -ForegroundColor Green
-
-      - name: Notify failure
-        if: failure()
-        shell: pwsh
-        run: |
-          Write-Host "✗ Heartbeat check FAILED — system may be broken" -ForegroundColor Red
-          if ($env:TELEGRAM_BOT_TOKEN -and $env:TELEGRAM_CHAT_ID) {
-            $msg = "🚨 HEARTBEAT MONITOR FALHOU (job-level)`nRun: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}`nVerifique heartbeat_alert.ps1 / dependencias do job."
-            $uri = "https://api.telegram.org/bot$($env:TELEGRAM_BOT_TOKEN)/sendMessage"
-            $body = @{ chat_id = $env:TELEGRAM_CHAT_ID; text = $msg } | ConvertTo-Json
-            try { Invoke-RestMethod -Uri $uri -Method POST -Body $body -ContentType "application/json" | Out-Null } catch {}
+          if ($alert) {
+            Write-Host "[ALERT] $reason" -ForegroundColor Red
+            if ($env:TELEGRAM_BOT_TOKEN -and $env:TELEGRAM_CHAT_ID) {
+              $msg  = "ALERTA HEARTBEAT: sistema parado? $reason`nRepo: $repo`nVerifique o trading-pipeline em Actions."
+              $turi = "https://api.telegram.org/bot$($env:TELEGRAM_BOT_TOKEN)/sendMessage"
+              $body = @{ chat_id = $env:TELEGRAM_CHAT_ID; text = $msg } | ConvertTo-Json
+              try { Invoke-RestMethod -Uri $turi -Method POST -Body $body -ContentType "application/json" | Out-Null } catch {}
+            }
           }
+
+          # SEMPRE verde: o heartbeat nunca deve falhar o run (era a causa do email-spam).
+          exit 0
