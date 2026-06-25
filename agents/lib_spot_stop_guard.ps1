@@ -199,6 +199,7 @@ function Get-SpotHoldingsForStop {
     if (-not (Get-Command CoinEx-Get -ErrorAction SilentlyContinue)) { return $out }
     $jdir = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path (Split-Path $PSScriptRoot) "journal" }
     if (-not $GemTradesPath) { $GemTradesPath = Join-Path $jdir "gem_trades.csv" }
+    $explicitTrailingFile = [bool]$TrailingFile
     if (-not $TrailingFile)  { $TrailingFile  = Join-Path $jdir "trailing_positions.json" }
 
     # mapas de stop conhecido (CSV + journal trailing) por market
@@ -208,9 +209,29 @@ function Get-SpotHoldingsForStop {
             if ($t.market_type -eq "SPOT" -and $t.status -eq "OPEN" -and [double]$t.stop_price -gt 0) { $csvStop["$($t.market)"] = [double]$t.stop_price }
         } } catch {}
     }
-    if (Test-Path $TrailingFile) {
+    # 2026-06-25 fix: desde a migracao p/ Supabase (USE_SUPABASE_STATE.flag), o
+    # arquivo local trailing_positions.json NAO EXISTE MAIS -- ler direto daqui
+    # sempre achava vazio, e o stop adaptativo (breakeven/lock+33%/trailing)
+    # NUNCA chegava na corretora; o stop real ficava parado no default 12% ou
+    # no nivel de entrada original (causa raiz de ZANO/AIN/SPCXX etc. com stop
+    # real muito mais largo que o pretendido). Usa a abstracao Get-TrailingPositions
+    # (resolve Supabase-vs-arquivo) quando disponivel e nenhum -TrailingFile
+    # explicito foi passado (preserva comportamento p/ chamadas com path custom).
+    # Tambem nao filtra mais por active=true: active e bookkeeping interno do
+    # Adaptive Trailing (pode ficar false por um "stop hit" so-software nunca
+    # confirmado na corretora) -- a protecao real nao pode regredir por causa
+    # disso. Resolve-DesiredStop so usa o MAIOR (ratchet), entao isso nunca afrouxa.
+    if (-not $explicitTrailingFile -and (Get-Command Get-TrailingPositions -ErrorAction SilentlyContinue)) {
+        try {
+            foreach ($p in @(Get-TrailingPositions)) {
+                if ($p.PSObject.Properties['stopCurrent'] -and [double]$p.stopCurrent -gt 0) {
+                    $jStop["$($p.market)"] = [double]$p.stopCurrent
+                }
+            }
+        } catch {}
+    } elseif (Test-Path $TrailingFile) {
         try { foreach ($p in (Get-Content $TrailingFile -Raw | ConvertFrom-Json)) {
-            if ($p.active -eq $true -and $p.PSObject.Properties['stopCurrent'] -and [double]$p.stopCurrent -gt 0) { $jStop["$($p.market)"] = [double]$p.stopCurrent }
+            if ($p.PSObject.Properties['stopCurrent'] -and [double]$p.stopCurrent -gt 0) { $jStop["$($p.market)"] = [double]$p.stopCurrent }
         } } catch {}
     }
 

@@ -361,11 +361,15 @@ function Update-TrailingStopsAdaptive {
                     try { Send-TelegramAlertFiltered -Message $msg -Tier "IMPORTANT" | Out-Null } catch { }
                 }
 
-                # Tenta mover stop na exchange
+                # Tenta mover stop na exchange (FUTURES; pos SPOT cai no catch e e
+                # protegida de verdade via lib_spot_stop_guard, que le este mesmo
+                # stopCurrent). 2026-06-25 fix: chamava com -OrderId/-StopPrice que
+                # nao existem na assinatura real CoinEx-SetStopLoss($market,$price)
+                # -- PowerShell ignorava os nomeados sem dar erro, $price ficava
+                # $null e a chamada nunca movia nada (sempre silenciosamente noop).
                 if (Get-Command CoinEx-SetStopLoss -ErrorAction SilentlyContinue) {
                     try {
-                        CoinEx-SetStopLoss -Market $pos.market -OrderId $pos.orderId `
-                                          -StopPrice $calc.newStop | Out-Null
+                        CoinEx-SetStopLoss -market $pos.market -price $calc.newStop | Out-Null
                     } catch {
                         Write-Host "  [Adaptive Trailing] Aviso: não foi possível mover stop: $_" -ForegroundColor DarkYellow
                     }
@@ -438,31 +442,66 @@ function Sync-TrailingPositionsWithExchange {
             $market = [string]$order.market
             $orderId = [string]$order.order_id
             
-            # Procura posição correspondente. 2026-06-11: entradas órfãs
-            # (orphan_auto_register) têm orderId vazio — match por market só,
-            # senão o sync duplica a posição.
+            # Procura posição correspondente por MARKET (2026-06-25 fix: orderId
+            # rotaciona a cada novo stop colocado na corretora -- exigir
+            # orderId igual fazia o sync nao reconhecer uma posicao previamente
+            # fechada (active=false, orderId antigo) quando ela reabria com um
+            # novo stop, e criava uma entrada DUPLICATA "exchange_sync" pro
+            # mesmo market (causa raiz do caso ZANOUSDT: registro GEM fechado
+            # por stop ficava orfao enquanto um 2o registro fantasma nascia sem
+            # pk_id/qty, quebrando o upsert Supabase por pk_id=market e
+            # deixando a posicao real mal gerenciada). Exclui moon bag legs
+            # (moonBagKind) do match -- esses sao geridos por lib_moon_bag, nao
+            # pelo sync da exchange.
             $existing = $positions | Where-Object {
-                $_.market -eq $market -and ($_.orderId -eq $orderId -or -not $_.orderId)
+                $_.market -eq $market -and -not $_.moonBagKind
             } | Select-Object -First 1
-            
+
             if ($existing) {
-                # Atualiza com dados reais da exchange
+                $wasInactive = -not $existing.active
                 $oldStop = $existing.stopCurrent
                 $oldTarget = $existing.target
-                
+
                 # Busca stop loss e take profit reais
                 $newStop = if ($order.stop_price) { [double]$order.stop_price } else { $existing.stopCurrent }
                 $newTarget = if ($order.take_profit_price) { [double]$order.take_profit_price } else { $existing.target }
-                
+
+                # Reabre registro antigo quando a exchange mostra ordem viva de
+                # novo no mesmo market (posicao fechada e reentrada) -- sem isso
+                # o registro ficava com active=false e invisivel pro
+                # Update-TrailingStopsAdaptive, mesmo com posicao real aberta.
+                if ($wasInactive) {
+                    Write-Host ("  [Sync Trailing] {0}: posicao reaberta na exchange (orderId {1} -> {2}) -- reativando registro" -f $market, $existing.orderId, $orderId) -ForegroundColor Yellow
+                    $existing.active = $true
+                    $existing.entry = [double]$order.price
+                    $existing.peak = [double]$order.price
+                    $existing.phase = 0
+                    $existing.openedAt = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+                    $existing | Add-Member -NotePropertyName "closedAt" -NotePropertyValue $null -Force
+                    $existing | Add-Member -NotePropertyName "closeReason" -NotePropertyValue $null -Force
+                    $existing | Add-Member -NotePropertyName "exitPrice" -NotePropertyValue $null -Force
+                    $updated = $true
+                }
+                if ($orderId -and $existing.orderId -ne $orderId) {
+                    $existing.orderId = $orderId
+                    $updated = $true
+                }
+
                 if ($newStop -ne $oldStop -or $newTarget -ne $oldTarget) {
                     Write-Host ("  [Sync Trailing] {0}: stop {1} -> {2}, target {3} -> {4}" -f $market, $oldStop, $newStop, $oldTarget, $newTarget) -ForegroundColor Cyan
                     $existing.stopCurrent = $newStop
                     $existing.target = $newTarget
                     $existing.updatedAt = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
                     $updated = $true
-                    
+
                     # Notificar via Telegram
                     $msg = "SYNC: $market stop atualizado $oldStop -> $newStop (mudanca manual detectada)"
+                    if (Get-Command Send-TelegramAlertFiltered -ErrorAction SilentlyContinue) {
+                        try { Send-TelegramAlertFiltered -Message $msg -Tier "IMPORTANT" | Out-Null } catch { }
+                    }
+                } elseif ($wasInactive) {
+                    $existing.updatedAt = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+                    $msg = "SYNC: $market reaberto na exchange -- registro de trailing reativado (era stop_atingido)"
                     if (Get-Command Send-TelegramAlertFiltered -ErrorAction SilentlyContinue) {
                         try { Send-TelegramAlertFiltered -Message $msg -Tier "IMPORTANT" | Out-Null } catch { }
                     }

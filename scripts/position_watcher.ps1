@@ -27,6 +27,7 @@ try {
     . (Join-Path $agentsDir "lib_telegram.ps1") -ErrorAction SilentlyContinue
     . (Join-Path $agentsDir "lib_position_price.ps1") -ErrorAction Stop
     . (Join-Path $agentsDir "lib_daemon_singleton.ps1") -ErrorAction SilentlyContinue
+    . (Join-Path $agentsDir "lib_trailing.ps1") -ErrorAction SilentlyContinue  # 2026-06-25: Get-TrailingPositions (Supabase-aware) p/ spot/futures stop sync abaixo
     . (Join-Path $agentsDir "lib_trailing_peak_update.ps1") -ErrorAction SilentlyContinue  # 2026-06-17: trailing cego fix
     . (Join-Path $agentsDir "lib_coinex_position_management.ps1") -ErrorAction SilentlyContinue  # CoinEx-ModifyPositionStopLoss
     . (Join-Path $agentsDir "lib_trailing_sync.ps1") -ErrorAction SilentlyContinue  # 2026-06-17: empurra SL journal->corretora

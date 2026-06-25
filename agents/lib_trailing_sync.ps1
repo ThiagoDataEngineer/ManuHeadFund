@@ -49,14 +49,25 @@ function Sync-TrailingToExchange {
         [switch] $DryRun
     )
 
-    if (-not $TrailingFile) {
-        $jdir = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { (Join-Path (Split-Path $PSScriptRoot) "journal") }
-        $TrailingFile = Join-Path $jdir "trailing_positions.json"
-    }
-    if (-not (Test-Path $TrailingFile)) { return @() }
-
+    # 2026-06-25 fix: ler o arquivo local direto sempre achava vazio desde a
+    # migracao p/ Supabase (USE_SUPABASE_STATE.flag) -- trailing_positions.json
+    # nao existe mais no disco, entao esta funcao nunca via posicao alguma e o
+    # SL adaptativo nunca chegava na corretora (mesma causa raiz do lado SPOT,
+    # ver lib_spot_stop_guard.ps1 Get-SpotHoldingsForStop). Usa Get-TrailingPositions
+    # (resolve Supabase-vs-arquivo) quando disponivel e nenhum -TrailingFile
+    # explicito foi passado (preserva comportamento de teste com path custom).
+    $explicitTrailingFile = [bool]$TrailingFile
     $positions = @()
-    try { $positions = @(Get-Content $TrailingFile -Raw | ConvertFrom-Json) } catch { return @() }
+    if (-not $explicitTrailingFile -and (Get-Command Get-TrailingPositions -ErrorAction SilentlyContinue)) {
+        try { $positions = @(Get-TrailingPositions) } catch { $positions = @() }
+    } else {
+        if (-not $TrailingFile) {
+            $jdir = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { (Join-Path (Split-Path $PSScriptRoot) "journal") }
+            $TrailingFile = Join-Path $jdir "trailing_positions.json"
+        }
+        if (-not (Test-Path $TrailingFile)) { return @() }
+        try { $positions = @(Get-Content $TrailingFile -Raw | ConvertFrom-Json) } catch { return @() }
+    }
 
     # Snapshot das posicoes da corretora (preco atual + SL atual)
     $live = @{}
