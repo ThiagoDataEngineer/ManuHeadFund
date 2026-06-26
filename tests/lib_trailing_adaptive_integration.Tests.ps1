@@ -232,4 +232,46 @@ Describe "Adaptive Trailing Integration" {
             }
         }
     }
+
+    Context "Resolve-AdaptiveStopPersist (regressao SLX fase-3 congelada 2026-06-26)" {
+
+        It "LONG fase 3: ratchet do trailing persiste MESMO sem mudar de fase (o bug)" {
+            # SLX-like: ja na fase 3, peak novo -> calc sobe o stop (changed, mesma fase 3).
+            $r = Resolve-AdaptiveStopPersist -Side "LONG" -CurrentStop 0.34 -CurrentPhase 3 `
+                    -CalcChanged $true -CalcNewStop 0.425 -CalcNewPhase 3
+            ($r.update -eq $true)        | Should Be $true   # ANTES do fix: false (congelava)
+            ($r.stopImproved -eq $true)  | Should Be $true
+            ($r.newStop -eq 0.425)       | Should Be $true
+        }
+
+        It "LONG fase 3: NUNCA afrouxa (monotonico) se o calc daria stop menor" {
+            $r = Resolve-AdaptiveStopPersist -Side "LONG" -CurrentStop 0.3601 -CurrentPhase 3 `
+                    -CalcChanged $true -CalcNewStop 0.3444 -CalcNewPhase 3
+            ($r.stopImproved -eq $false) | Should Be $true
+            ($r.newStop -eq 0.3601)      | Should Be $true   # mantem o mais apertado
+            ($r.update -eq $false)       | Should Be $true   # nada a fazer (so afrouxaria)
+        }
+
+        It "LONG: mudanca de fase persiste mesmo sem melhora imediata do stop" {
+            $r = Resolve-AdaptiveStopPersist -Side "LONG" -CurrentStop 0.40 -CurrentPhase 2 `
+                    -CalcChanged $true -CalcNewStop 0.35 -CalcNewPhase 3
+            ($r.phaseChanged -eq $true) | Should Be $true
+            ($r.update -eq $true)       | Should Be $true
+            ($r.newStop -eq 0.40)       | Should Be $true   # fase muda mas stop nao afrouxa
+        }
+
+        It "SHORT fase 3: ratchet (stop DESCE) persiste sem mudar de fase" {
+            $r = Resolve-AdaptiveStopPersist -Side "SHORT" -CurrentStop 69000 -CurrentPhase 3 `
+                    -CalcChanged $true -CalcNewStop 66700 -CalcNewPhase 3
+            ($r.update -eq $true)       | Should Be $true
+            ($r.stopImproved -eq $true) | Should Be $true
+            ($r.newStop -eq 66700)      | Should Be $true
+        }
+
+        It "calc.changed=false -> nao faz nada" {
+            $r = Resolve-AdaptiveStopPersist -Side "LONG" -CurrentStop 0.34 -CurrentPhase 3 `
+                    -CalcChanged $false -CalcNewStop 0.50 -CalcNewPhase 3
+            ($r.update -eq $false) | Should Be $true
+        }
+    }
 }

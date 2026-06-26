@@ -221,6 +221,47 @@ function Get-TrailingNewStopAdaptive {
 }
 
 # -------------------------------------------------------------------------
+# Resolve-AdaptiveStopPersist -- decide persistencia (PURO, TDD)
+# -------------------------------------------------------------------------
+function Resolve-AdaptiveStopPersist {
+    <#
+    .SYNOPSIS
+    Decide se stopCurrent/phase devem ser persistidos apos o calc do trailing.
+
+    .DESCRIPTION
+    PURO (sem I/O). Guard monotonico: o stop NUNCA afrouxa (LONG so sobe / SHORT so desce).
+    Corrige a regressao 2026-06-26 (SLX +54% travado protegendo so +28%): antes a
+    persistencia gateava SO em mudanca de fase -> runner na fase 3 (terminal) congelava
+    o stop pra sempre, pois newPhase nunca diferia de phase. Agora persiste tambem quando
+    o trailing ratcheta o stop dentro da mesma fase.
+
+    .OUTPUTS
+    [PSCustomObject]@{ update, stopImproved, phaseChanged, newStop, newPhase }
+    #>
+    param(
+        [string]$Side,
+        [double]$CurrentStop,
+        [int]$CurrentPhase,
+        [bool]$CalcChanged,
+        [double]$CalcNewStop,
+        [int]$CalcNewPhase
+    )
+    $isShort = ("$Side".ToUpper() -eq "SHORT")
+    $stopImproved = if ($isShort) { ($CurrentStop -le 0) -or ($CalcNewStop -lt $CurrentStop) } `
+                    else         { $CalcNewStop -gt $CurrentStop }
+    $phaseChanged = ($CalcNewPhase -ne $CurrentPhase)
+    $shouldUpdate = $CalcChanged -and ($phaseChanged -or $stopImproved)
+    $newStop = if ($stopImproved) { $CalcNewStop } else { $CurrentStop }
+    return [PSCustomObject]@{
+        update       = [bool]$shouldUpdate
+        stopImproved = [bool]$stopImproved
+        phaseChanged = [bool]$phaseChanged
+        newStop      = [double]$newStop
+        newPhase     = [int]$CalcNewPhase
+    }
+}
+
+# -------------------------------------------------------------------------
 # Update-TrailingStopsAdaptive -- Wrapper que integra adaptive no ciclo master
 # -------------------------------------------------------------------------
 function Update-TrailingStopsAdaptive {
@@ -329,18 +370,27 @@ function Update-TrailingStopsAdaptive {
                 $updated = $true
             }
 
-            # Se fase mudou, atualiza e notifica
-            if ($calc.changed -and $calc.newPhase -ne [int]$pos.phase) {
+            # Atualiza stop quando muda de fase OU quando o trailing ratcheta na fase 3.
+            # 2026-06-26 FIX (regressao SLX +54% travado protegendo so +28%): antes so
+            # atualizava em phase change -> runner na fase 3 (terminal) congelava o
+            # stopCurrent pra sempre; o peak subia mas o stop nunca acompanhava.
+            # Guard monotonico: NUNCA afrouxa (LONG so sobe / SHORT so desce).
+            $persist = Resolve-AdaptiveStopPersist -Side "$($pos.side)" `
+                          -CurrentStop ([double]$pos.stopCurrent) -CurrentPhase ([int]$pos.phase) `
+                          -CalcChanged ([bool]$calc.changed) -CalcNewStop ([double]$calc.newStop) `
+                          -CalcNewPhase ([int]$calc.newPhase)
+            $stopImproved = $persist.stopImproved
+            if ($persist.update) {
                 $oldPhase = $pos.phase
                 $oldStop = $pos.stopCurrent
-                $pos.stopCurrent = $calc.newStop
-                $pos.phase = $calc.newPhase
+                if ($persist.stopImproved) { $pos.stopCurrent = $persist.newStop }
+                $pos.phase = $persist.newPhase
                 $pos.updatedAt = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
                 $updated = $true
 
                 # 2026-06-01: Calcular mudança percentual e filtrar pequenas mudanças
                 $changePct = if ($oldStop -gt 0) {
-                    [math]::Abs(($calc.newStop - $oldStop) / $oldStop * 100)
+                    [math]::Abs(([double]$pos.stopCurrent - $oldStop) / $oldStop * 100)
                 } else {
                     0
                 }
@@ -352,7 +402,7 @@ function Update-TrailingStopsAdaptive {
                 }
 
                 $phaseLabel = @("inicial", "breakeven", "lock+33%", "trailing")
-                $msg = "[PHASE] $($pos.market) $($pos.side) fase $oldPhase->$($pos.phase) ($($phaseLabel[$pos.phase])) stop $oldStop->$($calc.newStop) | regime=$regime"
+                $msg = "[PHASE] $($pos.market) $($pos.side) fase $oldPhase->$($pos.phase) ($($phaseLabel[$pos.phase])) stop $oldStop->$($pos.stopCurrent) | regime=$regime"
                 Write-Host "  [Adaptive Trailing] $msg" -ForegroundColor Green
                 
                 # 2026-06-01: Trailing é cobertura de trades vivos - SEMPRE enviar (TIER IMPORTANT)
@@ -367,9 +417,9 @@ function Update-TrailingStopsAdaptive {
                 # nao existem na assinatura real CoinEx-SetStopLoss($market,$price)
                 # -- PowerShell ignorava os nomeados sem dar erro, $price ficava
                 # $null e a chamada nunca movia nada (sempre silenciosamente noop).
-                if (Get-Command CoinEx-SetStopLoss -ErrorAction SilentlyContinue) {
+                if ($stopImproved -and (Get-Command CoinEx-SetStopLoss -ErrorAction SilentlyContinue)) {
                     try {
-                        CoinEx-SetStopLoss -market $pos.market -price $calc.newStop | Out-Null
+                        CoinEx-SetStopLoss -market $pos.market -price $pos.stopCurrent | Out-Null
                     } catch {
                         Write-Host "  [Adaptive Trailing] Aviso: não foi possível mover stop: $_" -ForegroundColor DarkYellow
                     }
