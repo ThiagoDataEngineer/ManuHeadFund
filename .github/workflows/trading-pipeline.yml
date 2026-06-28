@@ -927,6 +927,7 @@ jobs:
 
       - name: Run Layer 2 (every 30min)
         shell: pwsh
+        continue-on-error: true  # 2026-06-27: cron_guard SKIP sai exit 1 -> sem isso o job falha falso a cada 30min
         run: |
           try {
             # 2026-06-22: cron_guard 30min robusto a throttle (era $minute%30==0)
