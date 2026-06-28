@@ -1147,8 +1147,12 @@ function Invoke-GemExecute {
     # BUG-B: Add-TrailingPosition nunca era chamada — só Update-TrailingStop (ATR job),
     #        que é diferente: um registra a posição, o outro ajusta o stop depois.
     # Fix: registrar SEMPRE após EXEC, independente de SPOT vs FUTURES.
+    # 2026-06-28 CAUSA RAIZ: Add-TrailingPosition caia no default "public" (schema compartilhado
+    # com outro app). Congelamento desde 26/06 01:02 quando aquele app apagou a tabela.
+    # FIX: FORCAR STATE_STORE_SCHEMA=manuheadfund ANTES de qualquer persistencia.
     if (Get-Command Add-TrailingPosition -ErrorAction SilentlyContinue) {
         try {
+            $env:STATE_STORE_SCHEMA = "manuheadfund"  # FORCE schema correto (CRITICO!)
             $__orderId = if ($order -and $order.order_id) { [string]$order.order_id } else { "" }
             Add-TrailingPosition `
                 -Market  $mkt `

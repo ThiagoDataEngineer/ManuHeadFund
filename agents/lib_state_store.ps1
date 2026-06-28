@@ -81,7 +81,10 @@ function Get-StateStoreSchema {
     if ($env:STATE_STORE_SCHEMA) {
         return [string]$env:STATE_STORE_SCHEMA
     }
-    return "public"
+    # 2026-06-28 CRITICO: default era "public" (schema compartilhado) -> trailing_positions
+    # orfao la causou congelamento 26/06 quando o app de pagamentos alterou tabela.
+    # FIX: default AGORA = "manuheadfund" (schema isolado, multiplos-jobs-safe).
+    return "manuheadfund"
 }
 
 function Get-SupabaseRequestHeaders {
