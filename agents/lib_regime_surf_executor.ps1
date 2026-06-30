@@ -10,6 +10,7 @@
 #   - Stop SEMPRE da decisao (fail-closed): sem stop = sem ordem.
 
 . (Join-Path $PSScriptRoot "lib_regime_surf.ps1")
+. (Join-Path $PSScriptRoot "lib_market_type_detector.ps1")  # 2026-06-30: deteccao automatica FUTURES vs SPOT
 
 function Invoke-RegimeSurfShort {
     [CmdletBinding()]
@@ -37,11 +38,17 @@ function Invoke-RegimeSurfShort {
         return [pscustomobject]@{ executed=$false; dry_run=$false; market=$Market; reason="no_short:$($d.reason)"; decision=$d }
     }
 
-    # ── Gate: SHORT so em tier_a_live futures (BTC/ETH/TNSR conhecidos) ──
-    # 2026-06-30: SHORT em SPOT exige margin/borrow (mais risco). Restringir ate provar edge.
-    $shortWhitelist = @("BTCUSDT", "ETHUSDT", "TNSR", "TNSRUSDT")
-    if ($Market -notin $shortWhitelist) {
-        return [pscustomobject]@{ executed=$false; dry_run=$false; market=$Market; reason="not_in_short_whitelist"; decision=$d }
+    # ── Deteccao automatica: FUTURES ou SPOT? ──
+    # 2026-06-30: Detecta automaticamente se mercado tem contrato de futures.
+    # Se SIM → SHORT em futures (fail-closed, stop na corretora).
+    # Se NAO → pula SHORT (SPOT margin/borrow e mais risco, deixa pra provar edge depois).
+    $marketType = if (Get-Command Get-MarketType -ErrorAction SilentlyContinue) {
+        Get-MarketType -Market $Market
+    } else {
+        "SPOT"  # fallback conservador
+    }
+    if ($marketType -ne "FUTURES") {
+        return [pscustomobject]@{ executed=$false; dry_run=$false; market=$Market; reason="market_type_$marketType (nao futures)"; decision=$d }
     }
 
     # ── 2. Dedup: ja short nesse mercado? (best-effort) ──

@@ -55,15 +55,21 @@ Describe "Invoke-RegimeSurfShort -- nao shorta sem edge" {
     }
 }
 
-Describe "Invoke-RegimeSurfShort -- SHORT whitelist (so futures conhecidos)" {
-    It "SPOT (AIUSDT) bloqueado (nao em whitelist)" {
+Describe "Invoke-RegimeSurfShort -- Deteccao automatica FUTURES vs SPOT" {
+    # Simula cache de futures pra testes
+    BeforeAll {
+        $script:__futuresCacheAt = Get-Date
+        $script:__futuresCache = @("BTCUSDT", "ETHUSDT", "SOLUSDT")
+    }
+
+    It "SPOT (AIUSDT) pulado (nao tem futures contrato)" {
         $r = Invoke-RegimeSurfShort -Market "AIUSDT" -Price 100 -Scenario (New-BearScen) `
             -Momentum30dPct -20 -ShortConviction 70 -Capital 5000 -JournalDir $tmpJournal
         $r.executed | Should Be $false
-        ($r.reason -like "*not_in_short_whitelist*") | Should Be $true
+        ($r.reason -like "*market_type_SPOT*") | Should Be $true
     }
 
-    It "BTCUSDT (futures) permitido" {
+    It "BTCUSDT (detectado FUTURES) -> shadow logado" {
         $r = Invoke-RegimeSurfShort -Market "BTCUSDT" -Price 100 -Scenario (New-BearScen) `
             -Momentum30dPct -20 -ShortConviction 70 -Capital 5000 -JournalDir $tmpJournal
         $r.executed | Should Be $false
@@ -71,8 +77,15 @@ Describe "Invoke-RegimeSurfShort -- SHORT whitelist (so futures conhecidos)" {
         $r.reason | Should Be "shadow_logged"
     }
 
-    It "ETHUSDT (futures) permitido" {
+    It "ETHUSDT (detectado FUTURES) -> shadow logado" {
         $r = Invoke-RegimeSurfShort -Market "ETHUSDT" -Price 100 -Scenario (New-BearScen) `
+            -Momentum30dPct -20 -ShortConviction 70 -Capital 5000 -JournalDir $tmpJournal
+        $r.executed | Should Be $false
+        $r.dry_run | Should Be $true
+    }
+
+    It "SOLUSDT (detectado FUTURES) -> permitido" {
+        $r = Invoke-RegimeSurfShort -Market "SOLUSDT" -Price 100 -Scenario (New-BearScen) `
             -Momentum30dPct -20 -ShortConviction 70 -Capital 5000 -JournalDir $tmpJournal
         $r.executed | Should Be $false
         $r.dry_run | Should Be $true
