@@ -9,6 +9,14 @@
     { "market": "ETHUSDT", "note": "futures liquido; beta amplifica em bear" },
     { "market": "SOLUSDT", "note": "futures; high beta layer 1" },
     { "market": "INJUSDT", "note": "futures; beta 1.21" },
-    { "market": "XRPUSDT", "note": "futures; bidirectional historical" }
+    { "market": "XRPUSDT", "note": "futures; bidirectional historical" },
+    { "market": "PEARLUSDT", "note": "mid-cap; -16.81% 24h; bear structure" },
+    { "market": "ALEOUSDT", "note": "mid-cap; -13.68% 24h; ZK narrativa caixa" },
+    { "market": "MANTAUSDT", "note": "mid-cap; -16.57% 24h; liquidity layer falha" },
+    { "market": "GWEIUSDT", "note": "index; -42.37% 24h; correlacao BTC down" },
+    { "market": "NFPUSDT", "note": "small-cap; -21.80% 24h; hype esgotado" },
+    { "market": "REUSDT", "note": "small-cap; -10.79% 24h; momentum reversal" },
+    { "market": "BNBUSDT", "note": "blue-chip; -1.43% 24h; suporte testado 3x" },
+    { "market": "SOLUSDT", "note": "layer1; -1.43% 24h; derivados correlacao" }
   ]
 }
