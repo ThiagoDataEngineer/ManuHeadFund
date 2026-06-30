@@ -8,6 +8,7 @@
 . (Join-Path $PSScriptRoot "lib_gem_safety.ps1")
 . (Join-Path $PSScriptRoot "lib_btc_regime_gate.ps1")  # 2026-06-24: BTC-core gate (bloqueia LONG alt em bear)
 . (Join-Path $PSScriptRoot "lib_market_scenario.ps1")  # 2026-06-24: motor de cenario (capitulacao/bear/bull -> estrategia)
+. (Join-Path $PSScriptRoot "lib_regime_surf_executor.ps1")  # 2026-06-30: surf SHORT no bear (shadow-first)
 . (Join-Path $PSScriptRoot "lib_market_router.ps1")
 # 2026-06-08: Multi-TF alignment validation before execution
 . (Join-Path $PSScriptRoot "lib_multiframe_analysis.ps1")
@@ -561,6 +562,24 @@ function Invoke-GemExecute {
             $scen = Get-MarketScenario
             $blockLong  = ($dirForGate -eq "LONG")  -and (-not $scen.allow_long)
             $blockShort = ($dirForGate -eq "SHORT") -and (-not $scen.allow_short)
+            # 2026-06-30 SURF: em vez de so bloquear LONG no bear, SURFA o bear (SHORT).
+            # Shadow-first: sem journal/REGIME_SURF_SHORT_LIVE.flag -> so loga; com flag -> ordem real.
+            # Se executou SHORT real, retorna (nao bloqueia mais). allow_short ja confirma downtrend.
+            if ($blockLong -and $scen.allow_short -and (Get-Command Invoke-RegimeSurfShort -ErrorAction SilentlyContinue)) {
+                try {
+                    $shortConv = if ($Gem.PSObject.Properties['conviction'] -and $Gem.conviction) { [double]$Gem.conviction } else { [double]$Gem.score }
+                    $surf = Invoke-RegimeSurfShort -Market $mkt -Price $price -Scenario $scen `
+                        -Momentum30dPct -1 -ShortConviction $shortConv -Capital $capital
+                    if ($surf.executed) {
+                        Write-Host "  [SURF LIVE] ${mkt}: SHORT executado order=$($surf.order_id) entry=$($surf.decision.entry) stop=$($surf.decision.stop)" -ForegroundColor Green
+                        return [PSCustomObject]@{ blocked = $false; executed = $true; direction = "SHORT"; market = $mkt; order_id = $surf.order_id; decision = $surf.decision }
+                    } elseif ($surf.dry_run) {
+                        Write-Host "  [SURF SHADOW] ${mkt}: SHORT shadow logado ($($surf.decision.reason))" -ForegroundColor Magenta
+                    } else {
+                        Write-Host "  [SURF SKIP] ${mkt}: $($surf.reason)" -ForegroundColor DarkGray
+                    }
+                } catch { Write-Host "  [SURF] ${mkt}: tentativa SHORT falhou ($_)" -ForegroundColor Yellow }
+            }
             if ($blockLong -or $blockShort) {
                 Write-Host "  [CENARIO BLOCK] ${mkt}: cenario=$($scen.scenario) bloqueia $dirForGate ($($scen.reason))" -ForegroundColor Red
                 try { Send-TelegramAlert -Message "GEM bloqueado ${mkt}: cenario BTC=$($scen.scenario), estrategia=$($scen.strategy) -> $dirForGate sem edge" | Out-Null } catch {}
