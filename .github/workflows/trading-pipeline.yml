@@ -389,6 +389,88 @@ jobs:
           }
 
   # ============================================================================
+  # JOB 6b: EARLY WARNING SCAN (pre-pump/dump detection — OBSERVATORY)
+  # 2026-06-30: multi-signal (whale+tori+narrativa+vol+macro) ANTES do movimento.
+  # So loga em journal/early_warning_alerts.jsonl + TG. NAO executa trade.
+  # ============================================================================
+  early-warning-scan:
+    name: Early Warning Scan (Observatory)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
+          $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
+          $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          # Observatory: alimenta journal + learning. Roda em todo fire (scan barato).
+          Write-Host "=== EARLY WARNING SCAN ===" -ForegroundColor Cyan
+          try {
+            & ./scripts/early_warning_scan.ps1
+            Write-Host "OK" -ForegroundColor Green
+          } catch {
+            Write-Host "WARN: $_" -ForegroundColor Yellow
+          }
+
+  # ============================================================================
+  # JOB 6c: OPPORTUNISTIC SHORT SCAN (downtrends obvios -10%+ 24h — OBSERVATORY)
+  # 2026-06-30: momentum SHORT em BEAR, complementar ao vol_climax. So loga + TG.
+  # ============================================================================
+  opportunistic-short-scan:
+    name: Opportunistic Short Scan (Observatory)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
+          $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
+          $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          # Observatory: so loga downtrends obvios. NAO executa (sizing 0% ate validar).
+          $minute = (Get-Date).Minute
+          if ($minute -lt 5) {
+            Write-Host "=== OPPORTUNISTIC SHORT SCAN ===" -ForegroundColor Cyan
+            try {
+              & ./scripts/opportunistic_short_scanner.ps1
+              Write-Host "OK" -ForegroundColor Green
+            } catch {
+              Write-Host "WARN: $_" -ForegroundColor Yellow
+            }
+          } else {
+            Write-Host "Skipped (runs hourly)" -ForegroundColor Yellow
+          }
+
+  # ============================================================================
   # JOB 7: WHALE WATCHER (a cada 30min)
   # ============================================================================
   whale-watcher:
