@@ -37,6 +37,13 @@ function Invoke-RegimeSurfShort {
         return [pscustomobject]@{ executed=$false; dry_run=$false; market=$Market; reason="no_short:$($d.reason)"; decision=$d }
     }
 
+    # ── Gate: SHORT so em tier_a_live futures (BTC/ETH/TNSR conhecidos) ──
+    # 2026-06-30: SHORT em SPOT exige margin/borrow (mais risco). Restringir ate provar edge.
+    $shortWhitelist = @("BTCUSDT", "ETHUSDT", "TNSR", "TNSRUSDT")
+    if ($Market -notin $shortWhitelist) {
+        return [pscustomobject]@{ executed=$false; dry_run=$false; market=$Market; reason="not_in_short_whitelist"; decision=$d }
+    }
+
     # ── 2. Dedup: ja short nesse mercado? (best-effort) ──
     if (Get-Command Test-CoinExposureCap -ErrorAction SilentlyContinue) {
         try {

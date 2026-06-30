@@ -12,7 +12,7 @@ $tmpJournal = Join-Path $env:TEMP "regime_surf_test_$([guid]::NewGuid().ToString
 
 Describe "Invoke-RegimeSurfShort -- SHADOW por default (sem flag = nao executa)" {
     It "BEAR + downtrend -> SHADOW logado, executed=false, dry_run=true" {
-        $r = Invoke-RegimeSurfShort -Market "AIUSDT" -Price 100 -Scenario (New-BearScen) `
+        $r = Invoke-RegimeSurfShort -Market "BTCUSDT" -Price 100 -Scenario (New-BearScen) `
             -Momentum30dPct -20 -ShortConviction 70 -Capital 5000 -JournalDir $tmpJournal
         $r.executed | Should Be $false
         $r.dry_run | Should Be $true
@@ -20,13 +20,13 @@ Describe "Invoke-RegimeSurfShort -- SHADOW por default (sem flag = nao executa)"
     }
 
     It "SHADOW grava no journal regime_surf_shadow.jsonl" {
-        $r = Invoke-RegimeSurfShort -Market "AIUSDT" -Price 100 -Scenario (New-BearScen) `
+        $r = Invoke-RegimeSurfShort -Market "ETHUSDT" -Price 100 -Scenario (New-BearScen) `
             -Momentum30dPct -20 -ShortConviction 70 -Capital 5000 -JournalDir $tmpJournal
         (Test-Path (Join-Path $tmpJournal "regime_surf_shadow.jsonl")) | Should Be $true
     }
 
     It "Decisao SHORT carrega stop ACIMA da entrada (fail-closed)" {
-        $r = Invoke-RegimeSurfShort -Market "AIUSDT" -Price 100 -Scenario (New-BearScen) `
+        $r = Invoke-RegimeSurfShort -Market "TNSRUSDT" -Price 100 -Scenario (New-BearScen) `
             -Momentum30dPct -20 -ShortConviction 70 -Capital 5000 -StopPct 8 -JournalDir $tmpJournal
         ($r.decision.stop -gt $r.decision.entry) | Should Be $true
     }
@@ -48,8 +48,32 @@ Describe "Invoke-RegimeSurfShort -- nao shorta sem edge" {
     }
 
     It "ForceDryRun nunca executa mesmo com flag" {
-        $r = Invoke-RegimeSurfShort -Market "AIUSDT" -Price 100 -Scenario (New-BearScen) `
+        $r = Invoke-RegimeSurfShort -Market "BTCUSDT" -Price 100 -Scenario (New-BearScen) `
             -Momentum30dPct -20 -ShortConviction 70 -Capital 5000 -JournalDir $tmpJournal -ForceDryRun
+        $r.executed | Should Be $false
+        $r.dry_run | Should Be $true
+    }
+}
+
+Describe "Invoke-RegimeSurfShort -- SHORT whitelist (so futures conhecidos)" {
+    It "SPOT (AIUSDT) bloqueado (nao em whitelist)" {
+        $r = Invoke-RegimeSurfShort -Market "AIUSDT" -Price 100 -Scenario (New-BearScen) `
+            -Momentum30dPct -20 -ShortConviction 70 -Capital 5000 -JournalDir $tmpJournal
+        $r.executed | Should Be $false
+        ($r.reason -like "*not_in_short_whitelist*") | Should Be $true
+    }
+
+    It "BTCUSDT (futures) permitido" {
+        $r = Invoke-RegimeSurfShort -Market "BTCUSDT" -Price 100 -Scenario (New-BearScen) `
+            -Momentum30dPct -20 -ShortConviction 70 -Capital 5000 -JournalDir $tmpJournal
+        $r.executed | Should Be $false
+        $r.dry_run | Should Be $true
+        $r.reason | Should Be "shadow_logged"
+    }
+
+    It "ETHUSDT (futures) permitido" {
+        $r = Invoke-RegimeSurfShort -Market "ETHUSDT" -Price 100 -Scenario (New-BearScen) `
+            -Momentum30dPct -20 -ShortConviction 70 -Capital 5000 -JournalDir $tmpJournal
         $r.executed | Should Be $false
         $r.dry_run | Should Be $true
     }
