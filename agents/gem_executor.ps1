@@ -367,6 +367,27 @@ function Invoke-GemExecute {
         # B fix 2026-05-21: retornar PSCustomObject blocked com reason explicit pra caller
         return [PSCustomObject]@{ blocked = $true; blocked_by = @("score_below_min_$($Gem.score)_lt_$scoreMin"); market = $mkt }
     }
+
+    # ── 2026-06-30: PUMP SCALP EARLY DETECTION ────────────────────────────────────
+    # Executa LIVE se pump detectado (confidence >=70). Sem shadow, sempre live.
+    if (Get-Command Detect-EarlyPump -ErrorAction SilentlyContinue) {
+        if (Get-Command Invoke-PumpScalp -ErrorAction SilentlyContinue) {
+            try {
+                $pumpDetect = Detect-EarlyPump -Market $mkt -ChangePercent24h ($Gem.change_24h ?? 0) -VolumeRatio ($Gem.vol_data.volume_ratio ?? 1.0) -RSI ($Gem.rsi_14 ?? 50) -CurrentPrice ($Gem.current_price ?? 0)
+                if ($pumpDetect.is_pump -and $pumpDetect.confidence -ge 70) {
+                    Write-Host "🚀 PUMP SCALP [$mkt] $($pumpDetect.pump_stage) conf=$($pumpDetect.confidence)% | Entry: $($pumpDetect.entry_price) | Target: +5% @ $($pumpDetect.target_price) | Stop: -3% @ $($pumpDetect.stop_price)" -ForegroundColor Yellow
+                    $pumpRes = Invoke-PumpScalp -Market $mkt -EntryPrice $pumpDetect.entry_price -TargetPrice $pumpDetect.target_price -StopPrice $pumpDetect.stop_price -RiskUsd ([math]::Min(55, ($global:CAPITAL_TOTAL ?? 5500) * 0.01)) -TimeoutMinutes 120
+                    if ($pumpRes.executed) {
+                        Write-Host "  ✓ EXECUTADO: order $($pumpRes.order_id) @ size `$$($pumpRes.size_usd)" -ForegroundColor Green
+                    }
+                    return [PSCustomObject]@{ blocked = $false; pump_executed = $pumpRes.executed; pump_order_id = $pumpRes.order_id; market = $mkt }
+                }
+            } catch {
+                # Silent fail - continue to normal flow
+            }
+        }
+    }
+
     if (-not $sizing_pct -or $sizing_pct -le 0) {
         Write-Host "BLOQUEADO: sizing invalido (sizing_pct=$sizing_pct)" -ForegroundColor Red
         return [PSCustomObject]@{ blocked = $true; blocked_by = @("sizing_invalido"); market = $mkt }
