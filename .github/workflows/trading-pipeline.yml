@@ -76,7 +76,10 @@ jobs:
             Write-Host "=== INITIALIZE DATA (Supabase) ===" -ForegroundColor Cyan
             
             # Load state_store library
-            $stateStorePath = Join-Path $PSScriptRoot "agents" "lib_state_store.ps1"
+            # 2026-06-30 FIX: $PSScriptRoot e VAZIO em run-block inline (nao ha .ps1)
+            # -> path errado -> lib nao achada -> fallback -> Supabase nunca popula
+            # -> dashboard mostrava capital=0. Usa workspace root (cwd no Actions).
+            $stateStorePath = Join-Path $env:GITHUB_WORKSPACE "agents/lib_state_store.ps1"
             if (Test-Path $stateStorePath) {
               . $stateStorePath
             } else {
