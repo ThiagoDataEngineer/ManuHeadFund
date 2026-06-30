@@ -9,7 +9,7 @@ Describe "Detect-EngulfingPattern" {
             @{ open = 97; close = 102; high = 103; low = 96; timestamp = (Get-Date); volume = 1200 }
         )
 
-        $patterns = Detect-EngulfingPattern -Candles $candles
+        $patterns = @(Detect-EngulfingPattern -Candles $candles)
 
         $patterns.Count | Should Be 1
         $patterns[0].direction | Should Be "bullish"
@@ -21,7 +21,7 @@ Describe "Detect-EngulfingPattern" {
             @{ open = 103; close = 97; high = 104; low = 96; timestamp = (Get-Date); volume = 1200 }
         )
 
-        $patterns = Detect-EngulfingPattern -Candles $candles
+        $patterns = @(Detect-EngulfingPattern -Candles $candles)
 
         $patterns.Count | Should Be 1
         $patterns[0].direction | Should Be "bearish"
@@ -55,7 +55,7 @@ Describe "Detect-EngulfingPattern" {
             @{ open = 99; close = 102; high = 102.5; low = 98.5; timestamp = (Get-Date) }
         )
 
-        $patterns = Detect-EngulfingPattern -Candles $candles
+        $patterns = @(Detect-EngulfingPattern -Candles $candles)
 
         $patterns[0].confidence | Should Be 0.32
     }
@@ -66,7 +66,7 @@ Describe "Detect-EngulfingPattern" {
             @{ open = 99; close = 102; high = 102.5; low = 98.5; timestamp = (Get-Date); volume = 1500 }
         )
 
-        $patterns = Detect-EngulfingPattern -Candles $candles
+        $patterns = @(Detect-EngulfingPattern -Candles $candles)
 
         # Pattern detected, volume info stored
         $patterns[0].current_candle | Should Not BeNullOrEmpty

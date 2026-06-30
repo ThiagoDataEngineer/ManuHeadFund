@@ -47,7 +47,15 @@ function Detect-EngulfingPattern {
 function Validate-EngulfingStrength {
     param([hashtable] $EngulfingPattern, [double] $MinEnvelopmentPct = 50)
 
-    if (-not $EngulfingPattern -or -not $EngulfingPattern.current_candle) { return $false }
+    if (-not $EngulfingPattern) { return $false }
+
+    # Caminho 1: pattern ja traz envelopment_pct calculado
+    if ($null -ne $EngulfingPattern.envelopment_pct) {
+        return ([double]$EngulfingPattern.envelopment_pct -ge $MinEnvelopmentPct)
+    }
+
+    # Caminho 2: deriva envelopment dos corpos das velas (output do Detect)
+    if (-not $EngulfingPattern.current_candle) { return $false }
 
     $cb = [Math]::Abs($EngulfingPattern.current_candle.close - $EngulfingPattern.current_candle.open)
     $pb = [Math]::Abs($EngulfingPattern.previous_candle.close - $EngulfingPattern.previous_candle.open)
@@ -60,7 +68,8 @@ function Validate-EngulfingStrength {
 function Get-EngulfingContext {
     param([array] $Candles, [int] $CurrentIndex)
 
-    if ($CurrentIndex -lt 2) { return $null }
+    # index < 1: nao ha vela anterior p/ comparar (insuficiente)
+    if ($CurrentIndex -lt 1) { return $null }
 
     $greenCount = 0
     for ($i = [Math]::Max(0, $CurrentIndex - 3); $i -lt $CurrentIndex; $i++) {
