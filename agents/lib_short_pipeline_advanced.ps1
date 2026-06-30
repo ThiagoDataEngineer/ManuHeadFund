@@ -122,7 +122,7 @@ function Test-ShortApproval {
     # === Checklist ===
     $checks = @{
         regime_ok = $phase.phase -gt 0
-        conviction_ok = $MentorConviction -ge 70
+        conviction_ok = $MentorConviction -ge 67
         confluence_ok = $ConfluenceCount -ge 3
         size_ok = $ProposedSizeUsd -le $MaxPositionUsd
     }
@@ -130,7 +130,7 @@ function Test-ShortApproval {
     $approved = $checks.regime_ok -and $checks.conviction_ok -and $checks.confluence_ok -and $checks.size_ok
     $reason = @()
     if (-not $checks.regime_ok) { $reason += "Regime bloqueado (BEAR)" }
-    if (-not $checks.conviction_ok) { $reason += "Conviction $MentorConviction < 70" }
+    if (-not $checks.conviction_ok) { $reason += "Conviction $MentorConviction < 67" }
     if (-not $checks.confluence_ok) { $reason += "Confluence $ConfluenceCount < 3" }
     if (-not $checks.size_ok) { $reason += "Size $ProposedSizeUsd > limit $MaxPositionUsd" }
 
