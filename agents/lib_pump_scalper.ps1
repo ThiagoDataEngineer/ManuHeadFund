@@ -203,7 +203,12 @@ function Invoke-PumpScalp {
     # Telegram alert
     if (Get-Command Send-TelegramAlert -ErrorAction SilentlyContinue) {
         try {
-            Send-TelegramAlert -Message "🚀 PUMP SCALP LIVE [$Market] Entry: $EntryPrice | Target: +5% = $TargetPrice | Stop: -3% = $StopPrice | Size: $([math]::Round($notional,2)) USD | Order: $orderId" | Out-Null
+            $msg = if (Get-Command Format-TelegramTradeAlert -ErrorAction SilentlyContinue) {
+                Format-TelegramTradeAlert -Market $Market -Direction "LONG" -Entry $EntryPrice -Stop $StopPrice -Target $TargetPrice -SizeUsd $notional -RiskUsd $RiskUsd -OrderId $orderId -Type "pump"
+            } else {
+                "🚀 PUMP SCALP LIVE [$Market] Entry: $EntryPrice | Target: +5% = $TargetPrice | Stop: -3% = $StopPrice | Size: $([math]::Round($notional,2)) USD | Order: $orderId"
+            }
+            Send-TelegramAlert -Message $msg | Out-Null
         } catch {}
     }
 

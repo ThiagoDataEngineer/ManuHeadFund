@@ -272,7 +272,8 @@ function Send-TelegramAlert {
         ($msg -match "🛑.*CIRCUIT|CIRCUIT.*BREAKER|DAILY.*LOSS|perda.*limite") -or
         ($msg -match "❌.*ERROR|erro.*crítico|FALHA.*crítica|ERRO.*sistema") -or
         ($msg -match "📊.*REGIME|regime.*mudou|BULL.*BEAR|BEAR.*BULL") -or
-        ($msg -match "⚠️.*CRÍTICO|CRÍTICA.*ação")
+        ($msg -match "⚠️.*CRÍTICO|CRÍTICA.*ação") -or
+        ($msg -match "🚀.*PUMP.*SCALP|PUMP.*EXECUTADO|PUMP.*SCALP.*LIVE")
     )
 
     # BLACKLIST RADICAL: TUDO MAIS É RUÍDO
@@ -1418,4 +1419,77 @@ function Format-TgLiveSetupRisk {
     if ($MentorMsg) { $lines += "Mentor: $MentorMsg (confianca: $MentorConf%)" }
 
     return ($lines -join "`n")
+}
+
+function Format-TelegramTradeAlert {
+    <#
+    .SYNOPSIS
+    Formata alerts de trade com info ACIONÁVEL (entrada, stop, target, risco).
+    #>
+    param(
+        [string]$Market,
+        [string]$Direction,
+        [double]$Entry,
+        [double]$Stop,
+        [double]$Target,
+        [double]$SizeUsd,
+        [double]$RiskUsd = 0,
+        [string]$Source = "gem",
+        [string]$OrderId = "",
+        [string]$Type = "entry"
+    )
+
+    $icon = switch ($Type) {
+        "entry"  { "🎯" }
+        "close"  { "✓" }
+        "stop"   { "🛑" }
+        "pump"   { "🚀" }
+        default  { "📊" }
+    }
+
+    $dirLabel = if ($Direction -eq "SHORT") { "📉 SHORT" } else { "📈 LONG" }
+
+    $lines = @(
+        "$icon <b>$Market $dirLabel</b>",
+        ""
+    )
+
+    switch ($Type) {
+        "entry" {
+            $stopPct = [math]::Round([math]::Abs(($Stop - $Entry) / $Entry * 100), 1)
+            $targetPct = [math]::Round(($Target - $Entry) / $Entry * 100, 1)
+            $rr = if ($Stop -gt 0) { [math]::Round(($Target - $Entry) / ($Entry - $Stop), 2) } else { 0 }
+            $lines += "Entry: `$$('{0:F8}' -f $Entry)"
+            $lines += "Stop (-${stopPct}%): `$$('{0:F8}' -f $Stop)"
+            $lines += "Target (+${targetPct}%): `$$('{0:F8}' -f $Target)"
+            $lines += ""
+            $lines += "Size: `$${SizeUsd} | Risk: `$${RiskUsd} | R:R ${rr}"
+            if ($OrderId) { $lines += "Order: $OrderId" }
+        }
+        "close" {
+            $pnl = $Target - $Entry
+            $pnlPct = [math]::Round($pnl / $Entry * 100, 2)
+            $pnlIcon = if ($pnl -ge 0) { "✓" } else { "✗" }
+            $lines += "Entry:  `$${Entry}"
+            $lines += "Close:  `$${Target}"
+            $lines += ""
+            $lines += "$pnlIcon PnL: `$${pnl} (${pnlPct}%)"
+        }
+        "pump" {
+            $target5 = $Entry * 1.05
+            $stop3 = $Entry * 0.97
+            $lines += "🔥 PUMP LIVE"
+            $lines += ""
+            $lines += "Entry:  `$$('{0:F8}' -f $Entry)"
+            $lines += "Target: `$$('{0:F8}' -f $target5) [+5%]"
+            $lines += "Stop:   `$$('{0:F8}' -f $stop3) [-3%]"
+            $lines += ""
+            $lines += "Size: `$${SizeUsd} | Risk: `$${RiskUsd}"
+        }
+    }
+
+    $lines += ""
+    $lines += "Regime: $Source"
+
+    return ($lines -join [Environment]::NewLine)
 }

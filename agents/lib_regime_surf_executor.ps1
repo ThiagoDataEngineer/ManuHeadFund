@@ -79,7 +79,14 @@ function Invoke-RegimeSurfShort {
             $shadow | ConvertTo-Json -Compress | Add-Content (Join-Path $JournalDir "regime_surf_shadow.jsonl")
         } catch {}
         if (Get-Command Send-TelegramAlert -ErrorAction SilentlyContinue) {
-            try { Send-TelegramAlert -Message "SHADOW SHORT $Market @ $($d.entry) | stop $($d.stop) | alvo $($d.target) | risco `$$($d.risk_usd) | $($d.scenario)" | Out-Null } catch {}
+            try {
+                $msg = if (Get-Command Format-TelegramTradeAlert -ErrorAction SilentlyContinue) {
+                    Format-TelegramTradeAlert -Market $Market -Direction "SHORT" -Entry $d.entry -Stop $d.stop -Target $d.target -SizeUsd $d.size_usd -RiskUsd $d.risk_usd -Source "regime_surf_shadow" -Type "entry"
+                } else {
+                    "SHADOW SHORT $Market @ $($d.entry) | stop $($d.stop) | alvo $($d.target) | risco `$$($d.risk_usd)"
+                }
+                Send-TelegramAlert -Message $msg | Out-Null
+            } catch {}
         }
         return [pscustomobject]@{ executed=$false; dry_run=$true; market=$Market; reason="shadow_logged"; decision=$d; amount=$amount }
     }
@@ -99,7 +106,14 @@ function Invoke-RegimeSurfShort {
             } catch {}
         }
         if (Get-Command Send-TelegramAlert -ErrorAction SilentlyContinue) {
-            try { Send-TelegramAlert -Message "LIVE SHORT $Market @ $($d.entry) | stop $($d.stop) | alvo $($d.target) | risco `$$($d.risk_usd) | order $orderId" | Out-Null } catch {}
+            try {
+                $msg = if (Get-Command Format-TelegramTradeAlert -ErrorAction SilentlyContinue) {
+                    Format-TelegramTradeAlert -Market $Market -Direction "SHORT" -Entry $d.entry -Stop $d.stop -Target $d.target -SizeUsd $d.size_usd -RiskUsd $d.risk_usd -OrderId $orderId -Source "regime_surf_live" -Type "entry"
+                } else {
+                    "LIVE SHORT $Market @ $($d.entry) | stop $($d.stop) | alvo $($d.target) | risco `$$($d.risk_usd) | order $orderId"
+                }
+                Send-TelegramAlert -Message $msg | Out-Null
+            } catch {}
         }
         return [pscustomobject]@{ executed=$true; dry_run=$false; market=$Market; reason="short_placed"; order_id=$orderId; decision=$d; amount=$amount }
     } catch {
