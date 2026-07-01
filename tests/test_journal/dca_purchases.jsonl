@@ -1,3 +1,4 @@
 {"market":"BTCUSDT","halving_phase":"unknown","qty":0.002,"price":50000.0,"usd_amount":100.0,"timestamp":"2026-06-09T00:23:05.4376259-03:00"}
 {"qty":0.002,"usd_amount":100.0,"price":50000.0,"market":"BTCUSDT","halving_phase":"unknown","timestamp":"2026-06-09T00:24:14.5922685-03:00"}
 {"price":50000.0,"halving_phase":"unknown","timestamp":"2026-06-19T15:51:01.9812213-03:00","usd_amount":100.0,"qty":0.002,"market":"BTCUSDT"}
+{"price":50000.0,"halving_phase":"unknown","timestamp":"2026-06-30T10:20:38.2925534-03:00","market":"BTCUSDT","usd_amount":100.0,"qty":0.002}
