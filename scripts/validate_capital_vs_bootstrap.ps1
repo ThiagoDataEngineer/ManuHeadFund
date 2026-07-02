@@ -26,7 +26,7 @@ $bootstrap = @{
 }
 
 # Analysis
-$realTotal = $real.spot_usdt + ($null ?? 0)  # Add futures when known
+$realTotal = $real.spot_usdt + ($(if ($null -ne $null) { $null } else { 0 }))  # Add futures when known
 $bootstrapTotal = $bootstrap.total_capital
 $difference = $realTotal - $bootstrapTotal
 $diffPct = ($difference / $bootstrapTotal) * 100

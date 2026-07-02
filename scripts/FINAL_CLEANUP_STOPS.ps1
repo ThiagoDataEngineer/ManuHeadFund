@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 # FINAL_CLEANUP_STOPS.ps1
 # LIMPEZA FINAL + RECRIAÇÃO ÚNICO: Deleta TUDO, recria 2 únicos stops
 # MANUAL ONLY - NÃO DEVE RODAR AUTOMATICAMENTE

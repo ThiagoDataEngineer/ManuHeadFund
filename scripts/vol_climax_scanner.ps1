@@ -185,7 +185,7 @@ foreach ($mkt in $markets) {
             $spotResp = Invoke-RestMethod -Uri $spotUrl -Method GET -TimeoutSec 5 -ErrorAction Stop
             if ($spotResp.code -eq 0 -and $spotResp.data) {
                 foreach ($asset in $spotResp.data) {
-                    if ($asset.ccy -eq "USDT") { $spotBalance = [double]($asset.available ?? 0) }
+                    if ($asset.ccy -eq "USDT") { $spotBalance = [double]($(if ($null -ne $asset.available) { $asset.available } else { 0 })) }
                 }
             }
         } catch {}
@@ -196,7 +196,7 @@ foreach ($mkt in $markets) {
             $futResp = Invoke-RestMethod -Uri $futUrl -Method GET -TimeoutSec 5 -ErrorAction Stop
             if ($futResp.code -eq 0 -and $futResp.data) {
                 foreach ($asset in $futResp.data) {
-                    if ($asset.ccy -eq "USDT") { $futuresBalance = [double]($asset.available ?? 0) }
+                    if ($asset.ccy -eq "USDT") { $futuresBalance = [double]($(if ($null -ne $asset.available) { $asset.available } else { 0 })) }
                 }
             }
         } catch {}
@@ -209,8 +209,8 @@ foreach ($mkt in $markets) {
         $positionSize = Get-RegimePositionSize -Capital $capital -Regime $regime -BasePercentage 0.01
 
         # HYBRID: Calculate SPOT + FUTURES positions separately (50/50 allocation)
-        $spotCapital = $spotBalance -gt 0 ? $spotBalance : (1350.425)
-        $futuresCapital = $futuresBalance -gt 0 ? $futuresBalance : (1350.425)
+        $spotCapital = if ($spotBalance -gt 0) { $spotBalance } else { 1350.425 }
+        $futuresCapital = if ($futuresBalance -gt 0) { $futuresBalance } else { 1350.425 }
         $spotPositions = Get-HybridPositionSizes -Regime $regime
         $spotPos = $spotPositions.spot_usdt
         $futuresPos = $spotPositions.futures_usdt

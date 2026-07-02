@@ -1,4 +1,4 @@
-# lib_sizing_dynamics.ps1 -- Sizing dinamico (SPOT vs FUTURES, regime-aware)
+﻿# lib_sizing_dynamics.ps1 -- Sizing dinamico (SPOT vs FUTURES, regime-aware)
 # Capital total = Spot + Futures. Aloca % por regime. Calcula size por trade respeitando risco 1%
 
 function Get-DynamicCapitalAllocation {

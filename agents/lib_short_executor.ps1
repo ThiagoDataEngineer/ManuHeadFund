@@ -1,4 +1,4 @@
-# lib_short_executor.ps1 -- EXECUTOR SHORT (futures), DORMENTE por padrao.
+﻿# lib_short_executor.ps1 -- EXECUTOR SHORT (futures), DORMENTE por padrao.
 #
 # Estado (2026-06-22): preparado em TDD mas NAO ativado. Para sair do observatorio
 # e shortar de verdade, precisa de DUAS chaves explicitas do usuario:

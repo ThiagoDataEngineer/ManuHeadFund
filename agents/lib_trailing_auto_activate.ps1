@@ -1,4 +1,4 @@
-# lib_trailing_auto_activate.ps1 -- Ativa trailing automático em posições abertas
+﻿# lib_trailing_auto_activate.ps1 -- Ativa trailing automático em posições abertas
 
 function Update-TrailingIfNeeded {
     [CmdletBinding()]

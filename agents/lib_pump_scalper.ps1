@@ -1,4 +1,4 @@
-# lib_pump_scalper.ps1 — PUMP SCALP automático LIVE (sempre executa, não shadow).
+﻿# lib_pump_scalper.ps1 — PUMP SCALP automático LIVE (sempre executa, não shadow).
 # 2026-06-30: Detecta early pump (2-5% início) + sai em +5% = $275 por $5.5k
 # Target: 4 pumps/dia = $1100/dia
 

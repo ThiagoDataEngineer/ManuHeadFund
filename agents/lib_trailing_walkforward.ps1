@@ -1,4 +1,4 @@
-# lib_trailing_walkforward.ps1 -- Camada de VALIDACAO das politicas de saida.
+﻿# lib_trailing_walkforward.ps1 -- Camada de VALIDACAO das politicas de saida.
 #
 # Walk-forward multi-ativo + teste PAREADO: a MESMA entrada roda em todas as
 # politicas, entao o delta (candidate - baseline) isola o efeito da SAIDA,

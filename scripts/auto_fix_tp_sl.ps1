@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 # auto_fix_tp_sl.ps1
 # AUTOMÁTICO: Delete ordens SPOT erradas + Cria SL/TP corretos para BASED e MET
 # 2026-06-19 — CORRIGIDO para SPOT (não FUTURES)

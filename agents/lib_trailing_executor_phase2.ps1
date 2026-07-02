@@ -1,4 +1,4 @@
-# lib_trailing_executor_phase2.ps1 — Trailing Executor Phase 2
+﻿# lib_trailing_executor_phase2.ps1 — Trailing Executor Phase 2
 # Smart SL move baseado em order flow + Multiple stop levels
 # Detecta volume climax → aperta SL breakeven
 # Quando SL hit → move pra próximo nível automaticamente
@@ -48,11 +48,8 @@ function Test-OrderFlowIntensity {
     $volumeSpike = $window[-1].volume / ($avgVol + 0.001) * 100
     $intensity = [math]::Min(100, ($volumeSpike + $priceVelocity) / 2)
 
-    $signal = switch {
-        { $intensity -ge 70 } { "high" }
-        { $intensity -ge 40 } { "medium" }
-        default { "low" }
-    }
+    # 2026-07-02 FIX: 'switch' sem expressao e parse error (PS 5.1 e 7)
+    $signal = if ($intensity -ge 70) { "high" } elseif ($intensity -ge 40) { "medium" } else { "low" }
 
     @{ intensity = [math]::Round($intensity); signal = $signal }
 }
@@ -282,10 +279,14 @@ function Update-TrailingWithSmartSL {
 # EXPORT
 # ============================================================================
 
-Export-ModuleMember -Function @(
-    'Test-OrderFlowIntensity',
-    'Test-VolumePriceAgreement',
-    'New-StopLevelStructure',
-    'Update-StopLevel',
-    'Update-TrailingWithSmartSL'
-)
+# 2026-07-02 FIX: Export-ModuleMember so funciona em modulo (.psm1); em dot-source
+# lancava erro terminante e o loader marcava a lib como FALHA. Guard condicional.
+if ($MyInvocation.MyCommand.ScriptBlock.Module) {
+    Export-ModuleMember -Function @(
+        'Test-OrderFlowIntensity',
+        'Test-VolumePriceAgreement',
+        'New-StopLevelStructure',
+        'Update-StopLevel',
+        'Update-TrailingWithSmartSL'
+    )
+}

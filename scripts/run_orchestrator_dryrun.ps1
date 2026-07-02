@@ -124,7 +124,7 @@ if (-not (Test-Path $journalPath)) {
 
 # Timestamp para logs
 $timestamp = Get-Date -Format "yyyy-MM-dd_HH-mm-ss"
-$logFile = "$journalPath" "dryrun_$timestamp.log")
+$logFile = Join-Path $journalPath "dryrun_$timestamp.log"
 
 Write-Host "  [x] Log: $logFile" -ForegroundColor Green
 

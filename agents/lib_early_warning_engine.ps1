@@ -1,4 +1,4 @@
-# lib_early_warning_engine.ps1
+﻿# lib_early_warning_engine.ps1
 # EARLY WARNING ENGINE — Detecta ANTES do pump/dump usando TODOS os sinais
 # 2026-06-30: Integra whale + tori + vol + narrativa + macro + momentum
 #

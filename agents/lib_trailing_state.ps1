@@ -1,4 +1,4 @@
-# lib_trailing_state.ps1 -- Fase 2: trailing positions via state_store (local/Supabase)
+﻿# lib_trailing_state.ps1 -- Fase 2: trailing positions via state_store (local/Supabase)
 # Bridge pra "tudo online": a nuvem stateless (GitHub Actions) le/escreve as mesmas
 # posicoes que o local, escolhendo backend via Test-StateBackend (flag USE_SUPABASE_STATE).
 # Tabela: "trailing_positions"  PK: "market".

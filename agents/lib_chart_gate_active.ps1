@@ -1,4 +1,4 @@
-# lib_chart_gate_active.ps1
+﻿# lib_chart_gate_active.ps1
 # 2026-06-18: Chart patterns as ACTIVE BLOCKER (not just info)
 # Rejects entries with bearish chart patterns, pump signatures, fake breakouts
 

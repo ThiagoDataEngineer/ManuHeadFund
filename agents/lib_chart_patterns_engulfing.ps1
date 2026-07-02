@@ -76,8 +76,8 @@ function Get-EngulfingContext {
         if ([double]$Candles[$i].close -gt [double]$Candles[$i].open) { $greenCount++ }
     }
 
-    $currVol = [double]($Candles[$CurrentIndex].volume ?? 0)
-    $prevVol = [double]($Candles[$CurrentIndex - 1].volume ?? 0)
+    $currVol = [double]($(if ($null -ne $Candles[$CurrentIndex].volume) { $Candles[$CurrentIndex].volume } else { 0 }))
+    $prevVol = [double]($(if ($null -ne $Candles[$CurrentIndex - 1].volume) { $Candles[$CurrentIndex - 1].volume } else { 0 }))
 
     return @{
         trend_before = if ($greenCount -ge 2) { "uptrend" } else { "downtrend" }

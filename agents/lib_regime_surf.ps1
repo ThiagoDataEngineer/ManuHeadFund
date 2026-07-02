@@ -1,4 +1,4 @@
-# lib_regime_surf.ps1 -- CEREBRO PURO do "surf em qualquer regime" (LONG bull / SHORT bear).
+﻿# lib_regime_surf.ps1 -- CEREBRO PURO do "surf em qualquer regime" (LONG bull / SHORT bear).
 # 2026-06-30: Causa raiz de "nada trada em bear" -> sistema bloqueava LONG (faca caindo,
 # correto pela Regra #7) mas NUNCA virava SHORT. Este core decide o LADO alinhado ao
 # cenario e devolve entry/stop/target/sizing fail-closed. Wiring chama CoinEx-PlaceOrder

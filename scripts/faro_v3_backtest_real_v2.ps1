@@ -48,7 +48,7 @@ foreach ($file in $candleFiles) {
             $score = 0
 
             # Signal 1: Volume spike (> 2x média)
-            $currVol = [double]($curr.volume ?? 0)
+            $currVol = [double]($(if ($null -ne $curr.volume) { $curr.volume } else { 0 }))
             $avgVol = ($hist | ForEach-Object { [double]$_.volume } | Measure-Object -Average).Average
             if ($currVol -gt ($avgVol * 2.0)) { $signalCount++; $score += 20 }
 

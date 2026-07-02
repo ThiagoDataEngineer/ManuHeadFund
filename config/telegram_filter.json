@@ -1,0 +1,34 @@
+{
+  "enabled": true,
+  "rules": {
+    "suppress_heartbeat": true,
+    "suppress_trailing_micro_updates": true,
+    "suppress_gem_duplicates": true,
+    "max_gems_per_cycle": 3,
+    "consolidate_alerts": true
+  },
+  "allowed_message_types": [
+    "TRADE_EXECUTED",
+    "POSITION_OPENED",
+    "POSITION_CLOSED",
+    "STOP_HIT",
+    "ERROR_CRITICAL",
+    "GEM_DISCOVERY_BATCH",
+    "DAILY_SUMMARY"
+  ],
+  "blocked_patterns": [
+    "Monitorando",
+    "Verificando",
+    "trailing",
+    "Adaptive",
+    "fase",
+    "regime=",
+    "heartbeat",
+    "keepalive"
+  ],
+  "consolidation": {
+    "max_messages_per_minute": 2,
+    "batch_window_seconds": 60,
+    "merge_similar_alerts": true
+  }
+}

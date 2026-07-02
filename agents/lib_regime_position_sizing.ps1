@@ -45,8 +45,7 @@ function Test-RegimePositionValid {
 
     $capital = $Position.capital
     $size = $Position.size
-    $regime = $Position.regime ?? "BULL_STRONG"
-
+    $regime = if ($null -ne $Position.regime) { $Position.regime } else { "BULL_STRONG" }
     # Hard cap: never exceed 1% of capital
     $hardCap = $capital * $HardCapPercent
     if ($size -gt $hardCap) {
@@ -55,7 +54,7 @@ function Test-RegimePositionValid {
 
     # Regime-specific cap
     $multipliers = Get-RegimeMultipliers
-    $mult = $multipliers[$regime] ?? 1.0
+    $mult = if ($null -ne $multipliers[$regime]) { $multipliers[$regime] } else { 1.0 }
     $regimeCap = $capital * $HardCapPercent * $mult
 
     if ($size -gt $regimeCap) {
@@ -74,8 +73,7 @@ function Adjust-PositionForRegime {
 
     $capital = $Position.capital
     $currentSize = $Position.size
-    $currentRegime = $Position.regime ?? "BULL_STRONG"
-
+    $currentRegime = if ($null -ne $Position.regime) { $Position.regime } else { "BULL_STRONG" }
     if ($currentRegime -eq $NewRegime) {
         return @{
             size = $currentSize
@@ -88,7 +86,7 @@ function Adjust-PositionForRegime {
     # Calculate new size based on new regime multiplier
     $multipliers = Get-RegimeMultipliers
     $baseSize = $capital * $HardCapPercent
-    $newMultiplier = $multipliers[$NewRegime] ?? 1.0
+    $newMultiplier = if ($null -ne $multipliers[$NewRegime]) { $multipliers[$NewRegime] } else { 1.0 }
     $newSize = [Math]::Min($baseSize * $newMultiplier, $baseSize)
 
     return @{
@@ -114,7 +112,7 @@ function Get-RegimePositionLabel {
         "BEAR_STRONG" = "🔴 BEAR_STRONG (capitulation) — CAUTION: 50% reduced"
     }
 
-    $base = $labels[$Regime] ?? "UNKNOWN REGIME"
+    $base = if ($null -ne $labels[$Regime]) { $labels[$Regime] } else { "UNKNOWN REGIME" }
     $multStr = "$([Math]::Round($Multiplier, 1))x"
 
     return "$base [$multStr]"
@@ -168,6 +166,7 @@ function Get-RegimeContext {
         }
     }
 
-    return $contexts[$Regime] ?? $contexts["BULL_STRONG"]
+    if ($null -ne $contexts[$Regime]) { return $contexts[$Regime] }
+    return $contexts["BULL_STRONG"]
 }
 

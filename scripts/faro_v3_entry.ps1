@@ -135,7 +135,7 @@ foreach ($entry in $entries) {
                         signal_count = $entry.signal_count
                         reason = $entry.decision
                         status = "active"
-                        order_id = $result.order_id ?? "unknown"
+                        order_id = $(if ($null -ne $result.order_id) { $result.order_id } else { "unknown" })
                     }
                     Add-Content -Path $posFile -Value ($position | ConvertTo-Json -Compress) -ErrorAction SilentlyContinue
                     $entered += $position
@@ -144,13 +144,13 @@ foreach ($entry in $entries) {
                     Write-Warning "WARN: PlaceOrder failed for $market"
                 }
             } catch {
-                Write-Warning "WARN: Exception in $market: $_"
+                Write-Warning "WARN: Exception in ${market}: $_"
             }
         } else {
             Write-Host "✅ [DRY RUN] Would enter $market" -ForegroundColor Cyan
         }
     } catch {
-        Write-Warning "WARN: Error processing $market: $_"
+        Write-Warning "WARN: Error processing ${market}: $_"
     }
 }
 

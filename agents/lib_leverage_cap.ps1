@@ -1,4 +1,4 @@
-# lib_leverage_cap.ps1
+﻿# lib_leverage_cap.ps1
 # BLOCKER #3 FIX: Hard leverage cap enforcement
 # 2026-06-18: Found 50x BNB, 20x XMR - need universal cap
 

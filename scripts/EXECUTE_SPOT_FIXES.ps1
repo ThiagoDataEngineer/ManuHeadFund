@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 # EXECUTE_SPOT_FIXES.ps1 — Executa decisões de portfolio (SPLIT, SL, Trailing)
 # Data: 2026-06-22 | Análise: docs/SPOT_PORTFOLIO_ANALYSIS_2026_06_22.md
 

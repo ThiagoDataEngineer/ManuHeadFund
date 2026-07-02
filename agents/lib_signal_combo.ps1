@@ -87,7 +87,7 @@ function Evaluate-ComboSignalQuality {
         }
     }
 
-    $regime = $Signal.regime ?? "BULL_STRONG"
+    $regime = if ($null -ne $Signal.regime) { $Signal.regime } else { "BULL_STRONG" }
     $metrics = $regimeMetrics[$regime]
 
     if ($Signal.type -eq "combo") {
@@ -129,8 +129,7 @@ function Get-SignalWeight {
         "faro" = 0.75
     }
 
-    $baseWeight = $weights[$Signal.type] ?? 0.5
-
+    $baseWeight = if ($null -ne $weights[$Signal.type]) { $weights[$Signal.type] } else { 0.5 }
     # Optional: regime stress adjustment
     if ($ApplyRegimeAdjustment) {
         $regimeMultiplier = 1.0

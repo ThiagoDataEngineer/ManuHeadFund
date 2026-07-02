@@ -261,7 +261,7 @@ function Detect-PullbackRecoveryPattern {
     $max_price = $Candles | Measure-Object -Property close -Maximum | Select-Object -ExpandProperty Minimum
     $pullback_high = ($Candles | Where-Object { $_.close -le $support_level * 2 } | Measure-Object -Property close -Maximum | Select-Object -ExpandProperty Maximum)
 
-    $entry_zone = Get-EntryZone -Candles $Candles -PullbackHighPrice ($pullback_high ?? $support_level * 2)
+    $entry_zone = Get-EntryZone -Candles $Candles -PullbackHighPrice ($(if ($null -ne $pullback_high) { $pullback_high } else { $support_level * 2 }))
 
     # Step 6: Calculate risk
     $risk = Get-RiskParameters -SupportLevel $support_level -EntryPrice $entry_zone.entry_min

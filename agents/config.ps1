@@ -80,12 +80,11 @@ $RISCO_MAXIMO_PCT  = 0.01     # 1% do capital DO TIPO do trade — inviolavel
 $RR_MINIMO         = 3.0      # risco/retorno minimo (1:3) — paper trade calibration
 $RR_PREFERIDO      = 3.0      # risco/retorno preferido (1:3) — paper trade calibration
 
-# === PAPER TRADE CALIBRATION MODE (2026-05-26) ===
-# Reduzido de 65 para 55 temporariamente para gerar amostras (n>=30).
-# Sem dados suficientes (0 trades em 12 dias), impossível validar edges.
-# Flag: journal/PAPER_CALIBRATION_MODE.flag ativa scoring reduzido.
-# Alvo: 30 paper trades em 7 dias -> re-avaliar win_rate real vs teórico.
-$SCORE_MINIMO      = 55.0     # score ponderado minimo — REDUZIDO para calibração
+# === QUALITY GATE REFORÇADO (2026-07-02) ===
+# G4 bypass gerou trades fracos (score 55-65 com G8-MID/LATE).
+# Aumentado para 75 — exige confluence REAL (narrativa + estrutura + orgânico).
+# Bloqueado G8-MID/LATE (chase risk em pumps já em andamento).
+$SCORE_MINIMO      = 75.0     # score ponderado minimo — REFORÇADO para qualidade
 $MAX_TRADES_DIA    = 5        # maximo de trades por dia (aumentar para 10 durante calibração)
 $MAX_RISCO_ABERTO  = 0.03     # 3% do capital em risco simultaneamente
 $ALAVANCAGEM_MAX   = 5.0      # alavancagem maxima global

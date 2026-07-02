@@ -225,7 +225,7 @@ function Test-PairQuality {
         $pairTrades = $_.Group
         $wins = @($pairTrades | Where-Object { $_.pnl_usdt -gt 0 }).Count
         $total = $pairTrades.Count
-        $winRate = $total -gt 0 ? ($wins / $total) : 0
+        $winRate = if ($total -gt 0) { $wins / $total } else { 0 }
         $totalPnL = ($pairTrades | Measure-Object -Property pnl_usdt -Sum).Sum
 
         [PSCustomObject]@{

@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 # telegram_consolidate_positions.ps1 -- Enviar resumo consolidado de posições via TG (1x/10min)
 # Roda a cada 5 min (schedule ou cron), mas só envia se houver mudanças críticas
 

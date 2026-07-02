@@ -1,4 +1,4 @@
-# backtest_24h_movers.ps1 -- Quais LONGs/SHORTs o ensemble atual teria pego nas ult 24h.
+﻿# backtest_24h_movers.ps1 -- Quais LONGs/SHORTs o ensemble atual teria pego nas ult 24h.
 # Avalia a conviccao COMO ESTAVA ~24h atras (trunca candles) -> honesto "pegariamos antes?".
 # Read-only. Nao executa trade.
 

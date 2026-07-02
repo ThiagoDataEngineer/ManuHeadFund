@@ -144,7 +144,7 @@ foreach ($entry in $entries) {
                         signal_count = $entry.signal_count
                         reason = "URGENTE_6/7"
                         status = "active"
-                        order_id = $result.order_id ?? "unknown"
+                        order_id = $(if ($null -ne $result.order_id) { $result.order_id } else { "unknown" })
                         mode = "AGGRESSIVE"
                         margin_used = $UseMargin
                         margin_multiplier = 1.5

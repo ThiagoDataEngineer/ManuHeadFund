@@ -131,20 +131,19 @@ foreach ($gainer in $gainers) {
         }
 
         # Calculate 7 signals WITH REALISTIC EXPECTATIONS
-        $avgVol = ($candles1h | Measure-Object -Property vol -Average -ErrorAction SilentlyContinue).Average ?? 200000
-
+        $avgVol = if ($null -ne ($candles1h | Measure-Object -Property vol -Average -ErrorAction SilentlyContinue).Average) { ($candles1h | Measure-Object -Property vol -Average -ErrorAction SilentlyContinue).Average } else { 200000 }
         # Each signal with realistic ranges
-        $volScore = Get-VolumeSpikePro -Market $market -CurrentVol ($candles1h[-1].vol ?? 100000) -Avg3dVol $avgVol -BuySideVol (($candles1h[-1].vol ?? 100000) * 0.6) -SellSideVol (($candles1h[-1].vol ?? 100000) * 0.4)
+        $volScore = Get-VolumeSpikePro -Market $market -CurrentVol ($(if ($null -ne $candles1h[-1].vol) { $candles1h[-1].vol } else { 100000 })) -Avg3dVol $avgVol -BuySideVol (($(if ($null -ne $candles1h[-1].vol) { $candles1h[-1].vol } else { 100000 })) * 0.6) -SellSideVol (($(if ($null -ne $candles1h[-1].vol) { $candles1h[-1].vol } else { 100000 })) * 0.4)
         $patScore = Get-PatternPro -PatternType "rounding" -Strength ([Math]::Round((Get-Random -Minimum 0.3 -Maximum 0.9), 2))
         $sentScore = Get-SentimentScore -Market $market -TrendingRank (Get-Random -Minimum 50 -Maximum 500) -MentionsChange ([Math]::Round((Get-Random -Minimum 0.5 -Maximum 3.0), 1)) -TelegramMembers (Get-Random -Minimum 10000 -Maximum 100000) -TelegramVelocity (Get-Random -Minimum 30 -Maximum 100)
         $whaleScore = Get-WhaleOnChain -Market $market -TopHoldersSupplyPct (Get-Random -Minimum 30 -Maximum 60) -ExchangeOutflow (Get-Random -Minimum 50 -Maximum 200) -ExchangeInflow (Get-Random -Minimum 50 -Maximum 200)
 
-        $closes = $candles1h[-14..-1] | ForEach-Object { [double]($_.close ?? 100) }
+        $closes = $candles1h[-14..-1] | ForEach-Object { [double]($(if ($null -ne $_.close) { $_.close } else { 100 })) }
         $momScore = Get-Momentum -Closes $closes
-        $fpScore = Get-FingerprintMatch -Market $market -CurrentVol ($candles1h[-1].vol ?? 100000) -Avg3dVol $avgVol -HighWick (($candles1h[-1].high ?? 105) / ($candles1h[-1].open ?? 100)) -RSI (Get-Random -Minimum 20 -Maximum 80) -DaysConsolidation (Get-Random -Minimum 3 -Maximum 15)
+        $fpScore = Get-FingerprintMatch -Market $market -CurrentVol ($(if ($null -ne $candles1h[-1].vol) { $candles1h[-1].vol } else { 100000 })) -Avg3dVol $avgVol -HighWick (($(if ($null -ne $candles1h[-1].high) { $candles1h[-1].high } else { 105 })) / ($(if ($null -ne $candles1h[-1].open) { $candles1h[-1].open } else { 100 }))) -RSI (Get-Random -Minimum 20 -Maximum 80) -DaysConsolidation (Get-Random -Minimum 3 -Maximum 15)
 
-        $ma5 = ($candles1m[-5..-1] | Measure-Object -Property close -Average -ErrorAction SilentlyContinue).Average ?? 100
-        $timingScore = Get-EntryTiming -Candles1min ($candles1m[-5..-1] | ForEach-Object { @{high=[double]($_.high ?? 101);close=[double]($_.close ?? 100)} }) -MA5 $ma5
+        $ma5 = if ($null -ne ($candles1m[-5..-1] | Measure-Object -Property close -Average -ErrorAction SilentlyContinue).Average) { ($candles1m[-5..-1] | Measure-Object -Property close -Average -ErrorAction SilentlyContinue).Average } else { 100 }
+        $timingScore = Get-EntryTiming -Candles1min ($candles1m[-5..-1] | ForEach-Object { @{high=[double]($(if ($null -ne $_.high) { $_.high } else { 101 }));close=[double]($(if ($null -ne $_.close) { $_.close } else { 100 }))} }) -MA5 $ma5
 
         $score = Get-FaroScoreV3 -VolScore $volScore -PatternScore $patScore -SentimentScore $sentScore -WhaleScore $whaleScore -MomentumScore $momScore -FingerprintScore $fpScore -TimingScore $timingScore
 
@@ -154,10 +153,10 @@ foreach ($gainer in $gainers) {
             last = $gainer.last
             vol24h = $gainer.vol24h
             change = $gainer.change
-            score = $score.score ?? 0
-            decision = $score.decision ?? "SKIP"
-            signal_count = $score.signal_count ?? 0
-            confidence = $score.confidence ?? 0
+            score = $(if ($null -ne $score.score) { $score.score } else { 0 })
+            decision = $(if ($null -ne $score.decision) { $score.decision } else { "SKIP" })
+            signal_count = $(if ($null -ne $score.signal_count) { $score.signal_count } else { 0 })
+            confidence = $(if ($null -ne $score.confidence) { $score.confidence } else { 0 })
             breakdown = $score.breakdown
         }
         $candidates += $cand

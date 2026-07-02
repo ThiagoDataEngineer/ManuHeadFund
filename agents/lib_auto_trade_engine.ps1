@@ -33,7 +33,7 @@ function Get-CurrentCapitalOnchain {
         $resp = Invoke-RestMethod -Uri $spotUrl -Method GET -TimeoutSec 3
         if ($resp.code -eq 0 -and $resp.data) {
             foreach ($asset in $resp.data) {
-                if ($asset.ccy -eq "USDT") { $total += [double]($asset.available ?? 0) }
+                if ($asset.ccy -eq "USDT") { $total += [double]($(if ($null -ne $asset.available) { $asset.available } else { 0 })) }
             }
         }
     } catch { }
@@ -44,7 +44,7 @@ function Get-CurrentCapitalOnchain {
         $resp = Invoke-RestMethod -Uri $futUrl -Method GET -TimeoutSec 3
         if ($resp.code -eq 0 -and $resp.data) {
             foreach ($asset in $resp.data) {
-                if ($asset.ccy -eq "USDT") { $total += [double]($asset.available ?? 0) }
+                if ($asset.ccy -eq "USDT") { $total += [double]($(if ($null -ne $asset.available) { $asset.available } else { 0 })) }
             }
         }
     } catch { }
@@ -298,4 +298,7 @@ function New-TradeLog {
     }
 }
 
-Export-ModuleMember -Function New-AutoTrade, Update-PatternConfidence, Get-PatternStats, New-TradeLog
+# 2026-07-02 FIX: Export-ModuleMember so em modulo (.psm1); guard p/ dot-source
+if ($MyInvocation.MyCommand.ScriptBlock.Module) {
+    Export-ModuleMember -Function New-AutoTrade, Update-PatternConfidence, Get-PatternStats, New-TradeLog
+}

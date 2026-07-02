@@ -1,4 +1,4 @@
-# dashboard_phase2_websocket.ps1 — Live Dashboard com WebSocket + Control Buttons
+﻿# dashboard_phase2_websocket.ps1 — Live Dashboard com WebSocket + Control Buttons
 # Real-time updates via Supabase, trigger Telegram commands direto do dashboard
 # TDD-ready pure functions
 

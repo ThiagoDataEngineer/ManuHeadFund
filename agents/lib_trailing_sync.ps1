@@ -1,4 +1,4 @@
-# lib_trailing_sync.ps1 -- Empurra a SL do journal pra corretora (elo que faltava)
+﻿# lib_trailing_sync.ps1 -- Empurra a SL do journal pra corretora (elo que faltava)
 # O trailing REGISTRAVA (journal) mas nao EXECUTAVA. Aqui sincroniza journal->exchange.
 # SEGURANCA CRITICA: nunca empurra uma SL que ja dispararia (fecharia a mercado).
 #   LONG : so empurra se journalStop < precoAtual (nao dispara) E melhora (> exchangeStop)

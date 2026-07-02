@@ -37,8 +37,8 @@ foreach ($file in $candleFiles) {
             $totalProcessed++
 
             # Dados básicos
-            $currVol = [double]($curr.volume ?? 0)
-            $avgVol = ($hist | ForEach-Object { [double]($_.volume ?? 0) } | Measure-Object -Average).Average
+            $currVol = [double]($(if ($null -ne $curr.volume) { $curr.volume } else { 0 }))
+            $avgVol = ($hist | ForEach-Object { [double]($(if ($null -ne $_.volume) { $_.volume } else { 0 })) } | Measure-Object -Average).Average
             $curr_close = [double]$curr.close
             $curr_open = [double]$curr.open
             $prev_close = [double]$hist[-1].close

@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 # layer2_layer4_execute_now.ps1
 # AÇÃO COMBINADA A+C: Automático (TP) + Exit Intelligence Layer 2-4 (manual)
 # 2026-06-19 — Executa AGORA sem auto-aprendizado, apenas detecção de sinais

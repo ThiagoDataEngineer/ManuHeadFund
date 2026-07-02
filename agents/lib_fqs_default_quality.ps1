@@ -1,4 +1,4 @@
-# lib_fqs_default_quality.ps1
+﻿# lib_fqs_default_quality.ps1
 # BLOCKER #5 FIX: FQS missing handling
 # 2026-06-18: When FQS unavailable, use sensible defaults instead of rejecting
 

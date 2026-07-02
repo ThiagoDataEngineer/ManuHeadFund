@@ -1,4 +1,4 @@
-# lib_dashboard_crypto.ps1 - Criptografia dos dados do dashboard publico (2026-06-12)
+﻿# lib_dashboard_crypto.ps1 - Criptografia dos dados do dashboard publico (2026-06-12)
 # GitHub Pages nao tem auth; dados (capital/posicoes) vao cifrados e o browser
 # decifra com senha via WebCrypto. Parametros ESPELHADOS com dashboard/unlock.js:
 #   PBKDF2-SHA256 100000 iteracoes -> chave AES-256-GCM (nonce 12B, tag 16B)

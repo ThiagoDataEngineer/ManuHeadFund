@@ -1,4 +1,4 @@
-# lib_cron_guard.ps1 -- decisao PURA "este job deve rodar agora?"
+﻿# lib_cron_guard.ps1 -- decisao PURA "este job deve rodar agora?"
 #
 # Motivo (2026-06-22): GH Actions throttla o cron */5 p/ gaps de ~30-45min e atrasa
 # o minuto exato. Gates do tipo `if ($minute -eq 0)` quase nunca casam -> jobs

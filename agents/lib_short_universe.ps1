@@ -1,4 +1,4 @@
-# lib_short_universe.ps1 -- resolucao PURA do universo SHORT (observatorio).
+﻿# lib_short_universe.ps1 -- resolucao PURA do universo SHORT (observatorio).
 #
 # Motivo (2026-06-22): short_scanner lia SHORT tiers do per_asset_whitelist_*.json em
 # journal/ -- que e gitignored e NAO existe no checkout cloud -> universe=0 sempre ->

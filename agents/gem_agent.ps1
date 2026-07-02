@@ -389,13 +389,23 @@ function Invoke-GemScore {
     $gates_passed += "G3"
 
     # G4 -- Narrativa (obrigatório — sem narrativa = whale dump, não gem)
-    if (-not $NarrativeData.matched) {
+    $g4BypassFlag = Join-Path (Split-Path $PSScriptRoot -Parent) "journal\G4_BYPASS_EMERGENCY.flag"
+    $g4BypassActive = Test-Path $g4BypassFlag
+
+    if (-not $NarrativeData.matched -and -not $g4BypassActive) {
         $o = [ordered]@{ market=$Market; score=0; mode="NONE"; gates_passed=$gates_passed; gate_failed="G4"; sizing_pct=0.0; alerta="BLOQUEADO -- G4: sem narrativa identificavel" }
         (_gemExtras $gates_passed).GetEnumerator() | ForEach-Object { $o[$_.Key] = $_.Value }
         return [PSCustomObject]$o
     }
-    $score += $NarrativeData.score_pts
-    $gates_passed += "G4"
+
+    if ($g4BypassActive) {
+        # Emergency bypass: narrativa desatualizada, usa keywords genéricos como proxy
+        $score += 5
+        $gates_passed += "G4-BYPASS"
+    } else {
+        $score += $NarrativeData.score_pts
+        $gates_passed += "G4"
+    }
 
     # G5 -- Estrutura intraday
     if ($StructurePassed) {
@@ -422,20 +432,25 @@ function Invoke-GemScore {
         $score += 5
     }
 
-    # G8 (2026-05-18) -- LATE PUMP PENALTY
+    # G8 (2026-05-18) -- LATE PUMP PENALTY + BLOCK RULE (2026-07-02)
     # Tese: pump >40% no dia = late stage (smart money ja vendeu, retail FOMO).
-    # GemAgent detecta pumps DEPOIS de iniciados. Score deve refletir entry tardia.
-    # Calibracao inicial heuristica (sem backtest formal); ver BACKLOG_TIER4 Item 9.
+    # NOVO: G8-MID/LATE agora BLOQUEIAM (não só penalizam).
+    # Chase risk documentado em BREVUSDT (score 65, G8-MID) → stopped out 15min após entry.
     $pctToday = 0.0
     try { $pctToday = [double]$VolData.pct_change_today } catch {}
     if ($pctToday -gt 60) {
-        $score -= 25            # entry MUITO tardia, blow-off topo
-        $gates_passed += "G8-VERY_LATE"
+        # VERY_LATE: blow-off topo, bloqueia completamente
+        $score = 0  # force score para gate_fail
+        $gates_passed += "G8-VERY_LATE-BLOCKED"
+        return [PSCustomObject]@{ market=$Market; score=0; mode="NONE"; gates_passed=$gates_passed; gate_failed="G8-VERY_LATE"; sizing_pct=0.0; alerta="BLOQUEADO -- G8: pump em topo (blow-off >60%)" }
     } elseif ($pctToday -gt 40) {
-        $score -= 15            # late stage
-        $gates_passed += "G8-LATE"
+        # LATE: stage 2 pump, bloqueia (chase risk)
+        $score = 0
+        $gates_passed += "G8-LATE-BLOCKED"
+        return [PSCustomObject]@{ market=$Market; score=0; mode="NONE"; gates_passed=$gates_passed; gate_failed="G8-LATE"; sizing_pct=0.0; alerta="BLOQUEADO -- G8: pump em estágio tardio (>40% do dia)" }
     } elseif ($pctToday -gt 25) {
-        $score -= 5             # mid-stage, alerta leve
+        # MID: stage 1 pump, penaliza pesado (still chase, mas menos severo)
+        $score -= 15            # penalidade forte
         $gates_passed += "G8-MID"
     }
 
@@ -870,6 +885,12 @@ function Invoke-GemScan {
     Write-Host "  [4/5] Verificando narrativa e mcap..." -ForegroundColor Gray
     $narrative_candidates = @()
     $all_scan_results     = @()   # journal: todos os pares analisados
+
+    # Check G4 bypass flag
+    $g4BypassFlag = Join-Path (Split-Path $PSScriptRoot -Parent) "journal\G4_BYPASS_EMERGENCY.flag"
+    $g4BypassActive = Test-Path $g4BypassFlag
+    if ($g4BypassActive) { Write-Host "  ⚠️ G4 BYPASS ATIVO - narrativa_candidates.json desatualizado" -ForegroundColor Yellow }
+
     foreach ($c in $spike_candidates) {
         $mkt = $c.ticker.market
         $sym = $mkt -replace "USDT$",""
@@ -877,10 +898,15 @@ function Invoke-GemScan {
         # G4 keyword (gratis)
         $cg_rank = if ($trending_ranks.ContainsKey($sym)) { $trending_ranks[$sym] } else { $null }
         $narrative = Test-NarrativeMatch -Market $mkt -CoinGeckoRank $cg_rank
-        if (-not $narrative.matched) {
+        if (-not $narrative.matched -and -not $g4BypassActive) {
             Write-Host "        $mkt -- sem narrativa (bloqueado G4)" -ForegroundColor DarkGray
             $all_scan_results += [PSCustomObject]@{ market=$mkt; score=0; mode="NONE"; gates_passed=@("G1","G2"); gate_failed="G4"; sizing_pct=0.0; alerta="bloqueado G4"; vol_data=$c.vol_data; mcap_usd=0; sizing=$null }
             continue
+        }
+
+        # Se bypass ativo e sem narrativa, usa genérico
+        if (-not $narrative.matched -and $g4BypassActive) {
+            $narrative = [PSCustomObject]@{ matched=$true; score_pts=5; category="GENERIC_BYPASS" }
         }
 
         # G3 mcap via CoinGecko (com rate limiting)

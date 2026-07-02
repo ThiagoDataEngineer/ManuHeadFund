@@ -91,6 +91,7 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 . (Join-Path $agentsDir "lib_layer4_tori_timestop.ps1")  # Layer 4 TDD: Tori proximity + time-based stops
 . (Join-Path $agentsDir "lib_moon_bag.ps1")  # Layer 5 TDD: Moon Bag (50/50 harvest + upside)
 . (Join-Path $agentsDir "lib_position_register.ps1")  # Layer 5 wire: wrapper opt-in via MOON_BAG_ENABLED.flag
+. (Join-Path $agentsDir "lib_self_recovery.ps1")  # 2026-07-02 FIX: Self-healing engine (detecta SL/TP orphans, libs, daemons)
 . (Join-Path $agentsDir "lib_validation_logger.ps1")  # 2026-05-25: Validação Opção 2 (até 1ª pos fechar)
 . (Join-Path $agentsDir "lib_trade_logger.ps1")
 . (Join-Path $agentsDir "lib_trade_reason_archive.ps1")  # 2026-05-29: Arquivo de razoes completas
@@ -1391,6 +1392,9 @@ function Wait-WithCommands {
 }
 
 # ── GEM STRATEGIES INTEGRATION (2026-06-09) ────────────────────────────────────
+# 2026-07-02 FIX: libs carregadas UMA vez (fora do loop) + guard Get-Command
+# fail-safe. A causa raiz do loop infinito era lib_loader_auto (recursao),
+# nao esta funcao — funcionalidade preservada.
 
 function Invoke-GemStrategies {
     <#
@@ -1399,9 +1403,20 @@ function Invoke-GemStrategies {
     #>
     param([PSCustomObject] $Seasonal)
 
-    # Load GEM libraries
-    . (Join-Path (Split-Path $PSScriptRoot -Parent) "agents\lib_gem_discovery.ps1") 2>$null
-    . (Join-Path (Split-Path $PSScriptRoot -Parent) "agents\lib_gem_router.ps1") 2>$null
+    # Load GEM libraries (idempotente: so carrega se as funcoes ainda nao existem)
+    if (-not (Get-Command Start-GemDiscoveryScanner -ErrorAction SilentlyContinue)) {
+        . (Join-Path (Split-Path $PSScriptRoot -Parent) "agents\lib_gem_discovery.ps1") 2>$null
+    }
+    if (-not (Get-Command Invoke-GemRouter -ErrorAction SilentlyContinue)) {
+        . (Join-Path (Split-Path $PSScriptRoot -Parent) "agents\lib_gem_router.ps1") 2>$null
+    }
+
+    # Fail-safe: se ainda assim as funcoes nao existem, pula sem quebrar o ciclo
+    if (-not (Get-Command Start-GemDiscoveryScanner -ErrorAction SilentlyContinue) -or
+        -not (Get-Command Invoke-GemRouter -ErrorAction SilentlyContinue)) {
+        Write-MasterLog "GEM STRATEGIES: libs indisponiveis (Start-GemDiscoveryScanner/Invoke-GemRouter) -- skip" "WARN"
+        return
+    }
 
     # Discover patterns
     $discoveries = Start-GemDiscoveryScanner -MaxResults 5
@@ -1523,6 +1538,7 @@ do {
             Invoke-MasterCycle -Seasonal $seasonal
 
             # GEM STRATEGIES: PULL_BACK_RECOVERY + DISTRIBUTION_SHORT (2026-06-09)
+            # 2026-07-02: reativado — causa raiz do loop era lib_loader_auto (recursao), ja fixada
             try {
                 Invoke-GemStrategies -Seasonal $seasonal
             } catch {

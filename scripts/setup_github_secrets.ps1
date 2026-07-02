@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 # setup_github_secrets.ps1
 # Configura GitHub Secrets automaticamente (credenciais de config.local.ps1)
 # Requer: GitHub CLI (gh) instalado e autenticado

@@ -1,4 +1,4 @@
-# lib_exit_backtest.ps1 -- Harness PURO de replay de saidas (exit strategy backtest).
+﻿# lib_exit_backtest.ps1 -- Harness PURO de replay de saidas (exit strategy backtest).
 #
 # Por que: profissionalizar o trailing exige MEDIR antes de mudar. Este simulador
 # pega uma entrada + candles pos-entrada + uma funcao de POLITICA (scriptblock) e

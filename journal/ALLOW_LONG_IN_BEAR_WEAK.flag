@@ -1,0 +1,4 @@
+REASON=BEAR_WEAK allows 20% LONG hedges per backtest calibration
+ALLOCATION=LONG 20% | SHORT 80%
+DATE=2026-07-02
+NOTE=Remove this flag if LONG performance degrades below -0.5% weekly

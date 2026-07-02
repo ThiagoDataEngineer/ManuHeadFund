@@ -165,7 +165,7 @@ while ($true) {
             $pattern_name = $_.Key
             $markets_with_pattern = $_.Value.GetEnumerator() | Where-Object { $_.Value -gt 0 } | Sort-Object Value -Descending
 
-            Write-Host "   $pattern_name:"
+            Write-Host "   ${pattern_name}:"
             $markets_with_pattern | ForEach-Object {
                 Write-Host "      • $($_.Key): $($_.Value)x"
             }
@@ -180,7 +180,7 @@ while ($true) {
 
             $color = if ($pnl -gt 0) { "Green" } elseif ($pnl -lt -5) { "Red" } else { "Yellow" }
 
-            Write-Host "   $pair: $('{0:+0.00}%' -f $pnl)" -ForegroundColor $color -NoNewline
+            Write-Host "   ${pair}: $('{0:+0.00}%' -f $pnl)" -ForegroundColor $color -NoNewline
 
             if ($state.patterns.Count -gt 0) {
                 Write-Host " [$($state.patterns[0])]"

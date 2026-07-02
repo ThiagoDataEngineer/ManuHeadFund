@@ -1,4 +1,4 @@
-# lib_entry_quality_gate.ps1 -- Gate FAIL-CLOSED de qualidade de entrada.
+﻿# lib_entry_quality_gate.ps1 -- Gate FAIL-CLOSED de qualidade de entrada.
 #
 # Regra de Ouro #5: erro/ausencia = BLOCK, nunca passa por default. Hoje o executor
 # e fail-OPEN (conviction=0 passa, chart insufficient passa, LLM caido entra). Este

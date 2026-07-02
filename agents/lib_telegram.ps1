@@ -1,8 +1,33 @@
 ﻿# lib_telegram.ps1 - Telegram Bot Integration
-# Mensagens limpas e profissionais
+# Mensagens limpas e profissionais + DEDUP + Rate Limiting
 
 # ============================================================================
-# Telegram-SendMessage - Envia mensagem para Telegram
+# Telegram Message Deduplication Cache
+# ============================================================================
+$script:TelegramMessageCache = @{}
+$script:TelegramRateLimitWindow = 60  # segundos
+
+function Test-TelegramMessageDuplicate {
+    param([string]$Message)
+
+    $hash = [System.Security.Cryptography.HashAlgorithm]::Create("MD5").ComputeHash([System.Text.Encoding]::UTF8.GetBytes($Message)) | ForEach-Object { $_.ToString("x2") } | Join-String
+    $now = [datetime]::UtcNow
+
+    if ($script:TelegramMessageCache.ContainsKey($hash)) {
+        $lastTime = $script:TelegramMessageCache[$hash]
+        $elapsed = ($now - $lastTime).TotalSeconds
+
+        if ($elapsed -lt $script:TelegramRateLimitWindow) {
+            return $true  # Duplicada (suprime)
+        }
+    }
+
+    $script:TelegramMessageCache[$hash] = $now
+    return $false  # Primeira vez (envia)
+}
+
+# ============================================================================
+# Telegram-SendMessage - Envia mensagem para Telegram (com DEDUP)
 # ============================================================================
 
 function Telegram-SendMessage {
@@ -10,14 +35,26 @@ function Telegram-SendMessage {
     param(
         [Parameter(Mandatory=$true)]
         [string]$Message,
-        
+
         [Parameter(Mandatory=$false)]
         [string]$BotToken,
-        
+
         [Parameter(Mandatory=$false)]
-        [string]$ChatId
+        [string]$ChatId,
+
+        [Parameter(Mandatory=$false)]
+        [switch]$AllowDuplicate  # Força envio mesmo se duplicado
     )
-    
+
+    # ✂️ DEDUP CHECK: suprime mensagens idênticas em < 60s
+    if (-not $AllowDuplicate -and (Test-TelegramMessageDuplicate -Message $Message)) {
+        Write-Host "[TELEGRAM] Mensagem duplicada (suprimida). Hash=$(([System.Security.Cryptography.HashAlgorithm]::Create('MD5').ComputeHash([System.Text.Encoding]::UTF8.GetBytes($Message)) | ForEach-Object { $_.ToString('x2') } | Join-String).Substring(0,8))" -ForegroundColor Gray
+        return [PSCustomObject]@{
+            success = $false
+            error = "Duplicate suppressed"
+        }
+    }
+
     try {
         # 2026-06-03: SEMPRE usar env vars first (config.local.ps1)
         if (-not $BotToken) { $BotToken = $env:TELEGRAM_BOT_TOKEN }

@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 # fix_based_met_tp_now.ps1
 # FIX URGENTE: Deletar ordens erradas + criar TP corretos com Exit Intelligence
 # 2026-06-19

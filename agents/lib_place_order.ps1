@@ -189,14 +189,14 @@ function Wait-OrderFill {
             $resp = Invoke-RestMethod -Uri $endpoint -Method GET -TimeoutSec 5 -ErrorAction Stop
             if ($resp.code -eq 0 -and $resp.data) {
                 $order = $resp.data
-                $filled = [double]($order.filled_amount ?? 0)
+                $filled = [double]($(if ($null -ne $order.filled_amount) { $order.filled_amount } else { 0 }))
                 $status = $order.status
 
                 if ($status -eq "filled" -or $filled -ge ($order.quantity * $script:PlaceOrderConfig.min_fill_pct)) {
                     return @{
                         status = $status
                         filled_amount = $filled
-                        avg_price = [double]($order.avg_price ?? 0)
+                        avg_price = [double]($(if ($null -ne $order.avg_price) { $order.avg_price } else { 0 }))
                     }
                 }
             }

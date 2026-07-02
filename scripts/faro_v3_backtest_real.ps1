@@ -71,7 +71,7 @@ foreach ($file in $candleFiles) {
             $closes = @($historyCandles | ForEach-Object { [double]$_.close })
 
             # Volume real
-            $recentVol = [double]($currentCandle.volume ?? 100000)
+            $recentVol = [double]($(if ($null -ne $currentCandle.volume) { $currentCandle.volume } else { 100000 }))
             $avgVol = ($historyCandles | Measure-Object -Property volume -Average -ErrorAction SilentlyContinue).Average
             if ($null -eq $avgVol -or $avgVol -eq 0) { $avgVol = $recentVol }
             $volRatio = if ($avgVol -gt 0) { $recentVol / $avgVol } else { 1.0 }
@@ -185,8 +185,8 @@ if ($results -and $results.Count -gt 0) {
     $winRate = if ($results.Count -gt 0) { [Math]::Round(($wins / $results.Count) * 100, 1) } else { 0 }
     Write-Host "  Win rate (return_3d > 0): $($wins) / $($results.Count) = $($winRate)%" -ForegroundColor Yellow
 
-    $avgReturn3d = ($results | Measure-Object -Property return_3d -Average -ErrorAction SilentlyContinue).Average ?? 0
-    $avgReturn7d = ($results | Measure-Object -Property return_7d -Average -ErrorAction SilentlyContinue).Average ?? 0
+    $avgReturn3d = if ($null -ne ($results | Measure-Object -Property return_3d -Average -ErrorAction SilentlyContinue).Average) { ($results | Measure-Object -Property return_3d -Average -ErrorAction SilentlyContinue).Average } else { 0 }
+    $avgReturn7d = if ($null -ne ($results | Measure-Object -Property return_7d -Average -ErrorAction SilentlyContinue).Average) { ($results | Measure-Object -Property return_7d -Average -ErrorAction SilentlyContinue).Average } else { 0 }
     Write-Host "  Avg return 3d: $([Math]::Round($avgReturn3d, 2))%" -ForegroundColor Cyan
     Write-Host "  Avg return 7d: $([Math]::Round($avgReturn7d, 2))%" -ForegroundColor Cyan
 

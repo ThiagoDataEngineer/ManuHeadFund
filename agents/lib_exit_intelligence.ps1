@@ -1,4 +1,4 @@
-# lib_exit_intelligence.ps1
+﻿# lib_exit_intelligence.ps1
 # Exit Intelligence 4-Layer: sai de trades em lucro automaticamente
 # Roda a cada 5 min no trailing_stop_monitor
 # 2026-06-19: Implementado para $30k/mês roadmap
@@ -245,8 +245,7 @@ function Invoke-ExitIntelligence {
         if (-not $pos.active) { continue }
 
         $market = $pos.market
-        $current_price = $PriceCache[$market] ?? $pos.entry
-
+        $current_price = if ($null -ne $PriceCache[$market]) { $PriceCache[$market] } else { $pos.entry }
         if (-not $CandleCache[$market]) { continue }
 
         $signals = Get-ExitSignals `

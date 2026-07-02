@@ -235,13 +235,13 @@ Export-ModuleMember -Function "Get-EntryTiming"
 # lib_faro_v3_scoring.ps1 — 7-signal scoring (5/7 threshold)
 function Get-FaroScoreV3 {
     param([decimal] $VolScore = 0, [decimal] $PatternScore = 0, [decimal] $SentimentScore = 0, [decimal] $WhaleScore = 0, [decimal] $MomentumScore = 0, [decimal] $FingerprintScore = 0, [decimal] $TimingScore = 0)
-    $vol = [decimal]($VolScore ?? 0)
-    $pat = [decimal]($PatternScore ?? 0)
-    $sent = [decimal]($SentimentScore ?? 0)
-    $whale = [decimal]($WhaleScore ?? 0)
-    $mom = [decimal]($MomentumScore ?? 0)
-    $fp = [decimal]($FingerprintScore ?? 0)
-    $timing = [decimal]($TimingScore ?? 0)
+    $vol = [decimal]($(if ($null -ne $VolScore) { $VolScore } else { 0 }))
+    $pat = [decimal]($(if ($null -ne $PatternScore) { $PatternScore } else { 0 }))
+    $sent = [decimal]($(if ($null -ne $SentimentScore) { $SentimentScore } else { 0 }))
+    $whale = [decimal]($(if ($null -ne $WhaleScore) { $WhaleScore } else { 0 }))
+    $mom = [decimal]($(if ($null -ne $MomentumScore) { $MomentumScore } else { 0 }))
+    $fp = [decimal]($(if ($null -ne $FingerprintScore) { $FingerprintScore } else { 0 }))
+    $timing = [decimal]($(if ($null -ne $TimingScore) { $TimingScore } else { 0 }))
     $signalCount = 0
     if ($vol -gt 0) { $signalCount++ }
     if ($pat -gt 0) { $signalCount++ }

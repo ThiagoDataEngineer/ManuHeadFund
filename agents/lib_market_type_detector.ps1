@@ -1,4 +1,4 @@
-# lib_market_type_detector.ps1 — Deteccao AUTOMATICA de tipo de mercado (FUTURES vs SPOT).
+﻿# lib_market_type_detector.ps1 — Deteccao AUTOMATICA de tipo de mercado (FUTURES vs SPOT).
 # 2026-06-30: Remove hardcoded whitelist. Puxa da API CoinEx qual tipo suporta.
 
 function Get-AvailableFuturesMarkets {
@@ -20,7 +20,8 @@ function Get-AvailableFuturesMarkets {
     $markets = @()
     try {
         # GET /v2/futures/market retorna array de contratos disponiveis
-        $r = Invoke-RestMethod -Uri "$($env:COINEX_BASE_URL ?? 'https://api.coinex.com')/v2/futures/market" `
+        $baseUrl = if ($env:COINEX_BASE_URL) { $env:COINEX_BASE_URL } else { 'https://api.coinex.com' }
+        $r = Invoke-RestMethod -Uri "$baseUrl/v2/futures/market" `
             -Method GET -TimeoutSec 10 -ErrorAction Stop
 
         if ($r -and $r.data) {

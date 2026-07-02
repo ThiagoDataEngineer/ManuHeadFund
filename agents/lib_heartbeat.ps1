@@ -1,4 +1,4 @@
-# lib_heartbeat.ps1 -- nucleo PURO do heartbeat (sem I/O).
+﻿# lib_heartbeat.ps1 -- nucleo PURO do heartbeat (sem I/O).
 # Heartbeat le trade_outcomes do Supabase (cloud ground-truth). Estas funcoes
 # decidem staleness; o script heartbeat_alert.ps1 faz o I/O (query + Telegram).
 # PS 5.1 safe. ASCII-only.

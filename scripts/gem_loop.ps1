@@ -275,7 +275,7 @@ function Invoke-GemCycle-Once {
                     # Converter em gem compatível
                     $gem = @{
                         market = $sig.market
-                        score = [int]($sig.conviction ?? 50)
+                        score = [int]($(if ($null -ne $sig.conviction) { $sig.conviction } else { 50 }))
                         mode = "TRIGGER"
                         signal = $sig.signal
                         direction = $sig.direction

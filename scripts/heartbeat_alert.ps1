@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 # heartbeat_alert.ps1
 # Monitora se o sistema esta vivo (trades fechando). Le trade_outcomes do SUPABASE
 # (ground-truth cloud) com fallback para o JSONL local. Antes lia so o JSONL, que

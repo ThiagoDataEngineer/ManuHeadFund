@@ -1,4 +1,4 @@
-# lib_tori_simplified.ps1
+﻿# lib_tori_simplified.ps1
 # BLOCKER #4 FIX: Tori logic consistency
 # 2026-06-18: Remove CONVICTION_GATE.flag bypass, use mesa_score instead
 

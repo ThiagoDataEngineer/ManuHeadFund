@@ -34,7 +34,7 @@ function Get-LiveBalances {
         if ($spotResp.code -eq 0 -and $spotResp.data) {
             foreach ($asset in $spotResp.data) {
                 if ($asset.ccy -eq "USDT") {
-                    $balances.spot = [double]($asset.available ?? 0)
+                    $balances.spot = [double]($(if ($null -ne $asset.available) { $asset.available } else { 0 }))
                     break
                 }
             }
@@ -50,7 +50,7 @@ function Get-LiveBalances {
         if ($futResp.code -eq 0 -and $futResp.data) {
             foreach ($asset in $futResp.data) {
                 if ($asset.ccy -eq "USDT") {
-                    $balances.futures = [double]($asset.available ?? 0)
+                    $balances.futures = [double]($(if ($null -ne $asset.available) { $asset.available } else { 0 }))
                     break
                 }
             }

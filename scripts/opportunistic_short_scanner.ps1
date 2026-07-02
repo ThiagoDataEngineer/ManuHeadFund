@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 # opportunistic_short_scanner.ps1 — SHORT tracker para downtrends obvios em BEAR
 # 2026-06-30: Detecta mercados com -10%+ queda 24h em regime BEAR
 # Modo: OBSERVATORY + TG ALERT (sem trade auto). Sizing: 0.1% (micro).

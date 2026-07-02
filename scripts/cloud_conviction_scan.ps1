@@ -1,4 +1,4 @@
-# cloud_conviction_scan.ps1 -- Fase 3 (OBSERVE): signal + conviction na nuvem.
+﻿# cloud_conviction_scan.ps1 -- Fase 3 (OBSERVE): signal + conviction na nuvem.
 # Roda no GitHub Actions. Varre top movers, computa o ensemble de 7 eixos (LONG+SHORT)
 # e LOGA observacoes no state_store (cloud-persistente). NUNCA executa trade.
 # Objetivo: acumular ~1 semana de observacoes p/ validar edge ANTES de virar execucao.

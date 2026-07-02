@@ -1,4 +1,4 @@
-# lib_sizing_centralized.ps1
+﻿# lib_sizing_centralized.ps1
 # BLOCKER #2 FIX: Single source of truth for position sizing
 # 2026-06-18: Consolidate 0.01, 0.003, 0.002 into one function
 
@@ -86,9 +86,9 @@ function Get-SafePositionSizeFromGem {
         [Parameter(Mandatory=$true)] [double]$Capital
     )
 
-    $entry = [double]($Gem.entry_price ?? $Gem.entry ?? 0)
-    $stop = [double]($Gem.stop_loss ?? 0)
-    $conviction = [int]($Gem.conviction ?? 50)
+    $entry = [double]$(if ($null -ne $Gem.entry_price) { $Gem.entry_price } elseif ($null -ne $Gem.entry) { $Gem.entry } else { 0 })
+    $stop = [double]($(if ($null -ne $Gem.stop_loss) { $Gem.stop_loss } else { 0 }))
+    $conviction = [int]($(if ($null -ne $Gem.conviction) { $Gem.conviction } else { 50 }))
 
     if ($entry -le 0 -or $stop -le 0) {
         Write-Warning "Invalid entry/stop: entry=$entry stop=$stop"

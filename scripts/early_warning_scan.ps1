@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 # early_warning_scan.ps1 — Multi-signal early warning scanner
 # 2026-06-30: Detecta mercados em PREPARAÇÃO (antes do pump/dump de +60%, -60%)
 #

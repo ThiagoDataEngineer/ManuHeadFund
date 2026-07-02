@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 # sync_and_fix_tp.ps1
 # Sincroniza posições da CoinEx e adiciona TP onde falta
 
@@ -48,8 +48,10 @@ foreach ($market in $Markets) {
     $pos = $openOrders | Where-Object { $_.market -eq $market }
 
     if ($pos) {
-        $size = $pos.amount ?? $pos.quantity ?? $pos.size  # CoinEx returns 'amount' field
-        $entry = $pos.price ?? $pos.entry_price  # CoinEx returns 'price' field for SPOT
+        # CoinEx returns 'amount' field; fallback quantity/size
+        $size = if ($null -ne $pos.amount) { $pos.amount } elseif ($null -ne $pos.quantity) { $pos.quantity } else { $pos.size }
+        # CoinEx returns 'price' field for SPOT
+        $entry = if ($null -ne $pos.price) { $pos.price } else { $pos.entry_price }
         $hasSL = $pos.stop_loss_price -or $pos.sl_order_id
         $hasTP = $pos.take_profit_price -or $pos.tp_order_id
 

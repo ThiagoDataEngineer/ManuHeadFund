@@ -1,4 +1,4 @@
-# lib_exit_intelligence_auto.ps1
+﻿# lib_exit_intelligence_auto.ps1
 # EXIT INTELLIGENCE: Layer 2-4 TOTALMENTE AUTOMATICA (profit-taking)
 # Sem aprendizado, sem manual -- regras simples + execucao direta.
 # 2026-06-19 (original) | 2026-06-28 REESCRITA (causa raiz)

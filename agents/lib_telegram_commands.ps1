@@ -6,8 +6,8 @@
 # ════════════════════════════════════════════════════════════
 
 $script:TelegramConfig = @{
-    bot_token = $env:TELEGRAM_BOT_TOKEN ?? "YOUR_BOT_TOKEN_HERE"
-    chat_id = $env:TELEGRAM_CHAT_ID ?? "YOUR_CHAT_ID_HERE"
+    bot_token = $(if ($env:TELEGRAM_BOT_TOKEN) { $env:TELEGRAM_BOT_TOKEN } else { "YOUR_BOT_TOKEN_HERE" })
+    chat_id = $(if ($env:TELEGRAM_CHAT_ID) { $env:TELEGRAM_CHAT_ID } else { "YOUR_CHAT_ID_HERE" })
     scanner_enabled = $true
     last_summary = $null
 }
@@ -216,8 +216,7 @@ function Process-TelegramCommand {
     # Parse command
     $parts = $text.Split(@(' ', '@'), [System.StringSplitOptions]::RemoveEmptyEntries)
     $command = $parts[0].ToLower()
-    $argument = $parts[1] ?? ""
-
+    $argument = if ($null -ne $parts[1]) { $parts[1] } else { "" }
     Write-Host "📨 Telegram command: $command $argument" -ForegroundColor Cyan
 
     switch -Regex ($command) {

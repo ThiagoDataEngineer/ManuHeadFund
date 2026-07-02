@@ -1,4 +1,4 @@
-# lib_entry_conviction_ensemble.ps1 -- Ensemble de conviccao de entrada (0-100)
+﻿# lib_entry_conviction_ensemble.ps1 -- Ensemble de conviccao de entrada (0-100)
 # Combina eixos ORTOGONAIS num score unico. Trendline vira 1 voto, nao veto.
 # Pesos default; o calibrador (lib_feedback_calibrator) aprende os pesos com o tempo.
 #

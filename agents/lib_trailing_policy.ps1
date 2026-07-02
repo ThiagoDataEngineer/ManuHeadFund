@@ -1,4 +1,4 @@
-# lib_trailing_policy.ps1 -- Politica de saida PURA por tipo de operacao + motor
+﻿# lib_trailing_policy.ps1 -- Politica de saida PURA por tipo de operacao + motor
 # de reversao-vs-manter. Sem LLM (barato), deterministico, 100% TDD-able.
 #
 # Combo (opcoes 1+2):

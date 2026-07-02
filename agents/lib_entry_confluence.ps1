@@ -1,4 +1,4 @@
-# lib_entry_confluence.ps1 -- Detecta confluência de sinais ANTECIPADAMENTE
+﻿# lib_entry_confluence.ps1 -- Detecta confluência de sinais ANTECIPADAMENTE
 # Objetivo: entrada rápida no INÍCIO do pump (não no meio)
 #
 # Fluxo:
@@ -88,7 +88,7 @@ function Resolve-ConfluenceScore {
     )
 
     $raw_score = ($VolumeScore.score + $MomentumScore.score + $StructureScore.score)
-    $confidence_avg = (($VolumeScore.confidence ?? 0) + ($MomentumScore.confidence ?? 0) + ($StructureScore.confidence ?? 0)) / 3
+    $confidence_avg = (($(if ($null -ne $VolumeScore.confidence) { $VolumeScore.confidence } else { 0 })) + ($(if ($null -ne $MomentumScore.confidence) { $MomentumScore.confidence } else { 0 })) + ($(if ($null -ne $StructureScore.confidence) { $StructureScore.confidence } else { 0 }))) / 3
 
     # Score 0-100 + confidence 0-100
     # raw_score é 0-120 (40+30+30 max), então não precisa multiplicar por 0.33

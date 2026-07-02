@@ -2,6 +2,9 @@
 # Padrao: FUTURES (isolated margin). Fallback: SPOT quando par nao tem futuros.
 # Dot-source: . (Join-Path $PSScriptRoot "gem_executor.ps1")
 
+# 2026-07-02 FIX: Auto-loader para NÃO perder libs novamente
+. (Join-Path $PSScriptRoot "lib_loader_auto.ps1")
+
 . (Join-Path $PSScriptRoot "lib_coinex.ps1")
 . (Join-Path $PSScriptRoot "lib_journal.ps1")
 . (Join-Path $PSScriptRoot "lib_telegram.ps1")
@@ -17,6 +20,7 @@
 . (Join-Path $PSScriptRoot "lib_entry_quality_gate.ps1")
 # 2026-06-09: Direction learning (counterfactual: learn from rejections)
 . (Join-Path $PSScriptRoot "lib_direction_learning.ps1")
+. (Join-Path $PSScriptRoot "lib_position_protection.ps1")  # 2026-07-02 FIX: SL+TP placement CRÍTICO
 # 2026-06-17: Triagem agent (aplica aprendizado a conviction scores)
 . (Join-Path $PSScriptRoot "triagem_agent.ps1")
 # 2026-05-21: B9 cache TTL (Add-GemRejection + Test-GemRecentlyRejected).
@@ -373,10 +377,17 @@ function Invoke-GemExecute {
     if (Get-Command Detect-EarlyPump -ErrorAction SilentlyContinue) {
         if (Get-Command Invoke-PumpScalp -ErrorAction SilentlyContinue) {
             try {
-                $pumpDetect = Detect-EarlyPump -Market $mkt -ChangePercent24h ($Gem.change_24h ?? 0) -VolumeRatio ($Gem.vol_data.volume_ratio ?? 1.0) -RSI ($Gem.rsi_14 ?? 50) -CurrentPrice ($Gem.current_price ?? 0)
+                # 2026-07-02 FIX: operador ?? e PS7-only; em PS 5.1 quebra o PARSE do
+                # arquivo INTEIRO -> Invoke-GemExecute nunca existia -> nada entrava.
+                $pdChange = if ($null -ne $Gem.change_24h) { $Gem.change_24h } else { 0 }
+                $pdVolR   = if ($null -ne $Gem.vol_data.volume_ratio) { $Gem.vol_data.volume_ratio } else { 1.0 }
+                $pdRsi    = if ($null -ne $Gem.rsi_14) { $Gem.rsi_14 } else { 50 }
+                $pdPrice  = if ($null -ne $Gem.current_price) { $Gem.current_price } else { 0 }
+                $pumpDetect = Detect-EarlyPump -Market $mkt -ChangePercent24h $pdChange -VolumeRatio $pdVolR -RSI $pdRsi -CurrentPrice $pdPrice
                 if ($pumpDetect.is_pump -and $pumpDetect.confidence -ge 70) {
                     Write-Host "🚀 PUMP SCALP [$mkt] $($pumpDetect.pump_stage) conf=$($pumpDetect.confidence)% | Entry: $($pumpDetect.entry_price) | Target: +5% @ $($pumpDetect.target_price) | Stop: -3% @ $($pumpDetect.stop_price)" -ForegroundColor Yellow
-                    $pumpRes = Invoke-PumpScalp -Market $mkt -EntryPrice $pumpDetect.entry_price -TargetPrice $pumpDetect.target_price -StopPrice $pumpDetect.stop_price -RiskUsd ([math]::Min(55, ($global:CAPITAL_TOTAL ?? 5500) * 0.01)) -TimeoutMinutes 120
+                    $pdCapital = if ($null -ne $global:CAPITAL_TOTAL) { $global:CAPITAL_TOTAL } else { 5500 }
+                    $pumpRes = Invoke-PumpScalp -Market $mkt -EntryPrice $pumpDetect.entry_price -TargetPrice $pumpDetect.target_price -StopPrice $pumpDetect.stop_price -RiskUsd ([math]::Min(55, $pdCapital * 0.01)) -TimeoutMinutes 120
                     if ($pumpRes.executed) {
                         Write-Host "  ✓ EXECUTADO: order $($pumpRes.order_id) @ size `$$($pumpRes.size_usd)" -ForegroundColor Green
                     }
@@ -456,7 +467,7 @@ function Invoke-GemExecute {
 
     try {
         if (Get-Command Get-DynamicCapitalAllocation -ErrorAction SilentlyContinue) {
-            $regime = $global:MARKET_REGIME ?? "BEAR_WEAK"
+            $regime = if ($null -ne $global:MARKET_REGIME) { $global:MARKET_REGIME } else { "BEAR_WEAK" }
             $spotCap = CoinEx-GetSpotCapitalUSDT
             $futuresCap = CoinEx-GetFuturesCapitalUSDT
             $alloc = Get-DynamicCapitalAllocation -SpotUsdt $spotCap -FuturesUsdt $futuresCap -Regime $regime
@@ -480,7 +491,7 @@ function Invoke-GemExecute {
         if (Get-Command Get-ExecutorSize -ErrorAction SilentlyContinue) {
             $szResolved = Get-ExecutorSize -Market $mkt -Mode "GEM" -Capital $capital -BasePct $sizing_pct
             $usd_size = [double]$szResolved.size_usd
-            $sizingMethod = $szResolved.method ?? "kelly_adaptive"
+            $sizingMethod = if ($null -ne $szResolved.method) { $szResolved.method } else { "kelly_adaptive" }
             if ($szResolved.method -eq "kelly_adaptive") {
                 Write-Host "  [SIZING] Kelly adaptive: f_used=$($szResolved.f_used) win_prob=$($szResolved.win_prob) (n=$($szResolved.n_trades))" -ForegroundColor DarkCyan
             }
@@ -601,9 +612,15 @@ function Invoke-GemExecute {
                     }
                 } catch { Write-Host "  [SURF] ${mkt}: tentativa SHORT falhou ($_)" -ForegroundColor Yellow }
             }
-            if ($blockLong -or $blockShort) {
-                Write-Host "  [CENARIO BLOCK] ${mkt}: cenario=$($scen.scenario) bloqueia $dirForGate ($($scen.reason))" -ForegroundColor Red
-                try { Send-TelegramAlert -Message "GEM bloqueado ${mkt}: cenario BTC=$($scen.scenario), estrategia=$($scen.strategy) -> $dirForGate sem edge" | Out-Null } catch {}
+            # 2026-07-02: Allow 20% LONG allocation in BEAR_WEAK (per backtest calibration)
+            $allowLongInBearFlag = Join-Path $global:JOURNAL_DIR "ALLOW_LONG_IN_BEAR_WEAK.flag"
+            $allowLongInBear = Test-Path $allowLongInBearFlag
+            $effectiveBlockLong = $blockLong -and -not ($allowLongInBear -and $scen.scenario -eq "BEAR_WEAK" -and $dirForGate -eq "LONG")
+
+            if ($effectiveBlockLong -or $blockShort) {
+                $reason = if ($effectiveBlockLong -and $blockShort) { "ambas" } elseif ($effectiveBlockLong) { "LONG" } else { "SHORT" }
+                Write-Host "  [CENARIO BLOCK] ${mkt}: cenario=$($scen.scenario) bloqueia $reason ($($scen.reason))" -ForegroundColor Red
+                try { Send-TelegramAlert -Message "GEM bloqueado ${mkt}: cenario BTC=$($scen.scenario), estrategia=$($scen.strategy) -> $reason sem edge" | Out-Null } catch {}
                 if (Get-Command Add-GemRejection -ErrorAction SilentlyContinue) {
                     try { Add-GemRejection -Path (Join-Path $global:JOURNAL_DIR "gem_recent_decisions.json") -Market $mkt -Reason "cenario:$($scen.scenario)" } catch {}
                 }
@@ -1103,18 +1120,23 @@ function Invoke-GemExecute {
     try { Add-OpenGemPosition -Market $mkt -SizeUsdt $usd_size -StateFilePath $safetyStatePath } catch {}
 
     # ── PROTECAO OBRIGATORIA: SL + TP REAIS na corretora (2026-05-29) ───────────
-    # CAUSA RAIZ CORRIGIDA: SL/TP embutido em ordem MARKET (CoinEx-PlaceOrder) NAO
-    # aplica de forma confiavel na CoinEx V2 (posicao ainda nao existe no submit).
-    # Resultado anterior: posicao INJUSDT ficou com TP/SL="--" (sem protecao, corria
-    # ate liquidacao). Agora: aplica SL+TP via set-position-* APOS fill, valida na
-    # corretora e faz retry. Se falhar, alerta Telegram (acao manual).
-    if ($hasFutures -and (Get-Command Set-PositionProtection -ErrorAction SilentlyContinue)) {
-        Start-Sleep -Seconds 2  # aguarda posicao materializar na API
-        $protect = Set-PositionProtection -Market $mkt -StopLoss $stop_price -TakeProfit $tgt_price -MaxRetries 3 -AlertOnFailure $true
-        if ($protect.success) {
-            Write-Host "  [PROTECAO OK] $mkt SL=$($protect.sl_price) TP=$($protect.tp_price) (validado na corretora)" -ForegroundColor Green
+    # CRITICO: 2026-07-02 — BUG REPETITIVO: lib_position_protection.ps1 nao carregada!
+    # Resultado: SL/TP NUNCA eram colocados → posicoes abertas sem protecao
+    # Fix: dot-source carregado no topo; agora SEMPRE tenta proteger.
+    if ($hasFutures) {
+        if (Get-Command Set-PositionProtection -ErrorAction SilentlyContinue) {
+            Start-Sleep -Seconds 2  # aguarda posicao materializar na API
+            $protect = Set-PositionProtection -Market $mkt -StopLoss $stop_price -TakeProfit $tgt_price -MaxRetries 3 -AlertOnFailure $true
+            if ($protect.success) {
+                Write-Host "  [PROTECAO OK] $mkt SL=$($protect.sl_price) TP=$($protect.tp_price) (validado na corretora)" -ForegroundColor Green
+                try { Send-TelegramAlert -Message "✅ PROTEÇÃO ATIVA: $mkt SL=$($protect.sl_price) TP=$($protect.tp_price)" | Out-Null } catch {}
+            } else {
+                Write-Host "  [PROTECAO FALHOU] $mkt sl_set=$($protect.sl_set) tp_set=$($protect.tp_set) -- ALERTA ENVIADO" -ForegroundColor Red
+                try { Send-TelegramAlert -Message "🚨 CRÍTICO: SL/TP FALHOU em $mkt — COLOQUE MANUALMENTE! Entry=$avg_price Stop=$stop_price Target=$tgt_price" | Out-Null } catch {}
+            }
         } else {
-            Write-Host "  [PROTECAO FALHOU] $mkt sl_set=$($protect.sl_set) tp_set=$($protect.tp_set) -- ALERTA ENVIADO" -ForegroundColor Red
+            Write-Host "  [CRITICO] Set-PositionProtection NAO CARREGADA! Posição SEM proteção!" -ForegroundColor Red
+            try { Send-TelegramAlert -Message "🚨 CRÍTICO: $mkt ABERTO SEM SL/TP! Lib_position_protection não carregada. COLOQUE MANUALMENTE AGORA!" | Out-Null } catch {}
         }
     }
 

@@ -1,4 +1,4 @@
-# lib_prediction_engine.ps1 — Predictive Learning Engine
+﻿# lib_prediction_engine.ps1 — Predictive Learning Engine
 # Forecast errors ANTES de acontecer, ajusta proativamente
 # Temporal analysis + regime transition forecast
 # Pure functions, TDD-driven

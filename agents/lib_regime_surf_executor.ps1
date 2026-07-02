@@ -1,4 +1,4 @@
-# lib_regime_surf_executor.ps1 -- wiring do surf SHORT (decisao -> ordem futures real).
+﻿# lib_regime_surf_executor.ps1 -- wiring do surf SHORT (decisao -> ordem futures real).
 # 2026-06-30: liga o cerebro PURO (Resolve-RegimeSurfDecision) a execucao real.
 #
 # SEGURANCA (shadow-first, padrao do projeto tipo CLOUD_DRY_RUN):

@@ -1,4 +1,4 @@
-# lib_feedback_calibrator.ps1 -- Feedback loop: coleta outcomes, calibra parametros
+﻿# lib_feedback_calibrator.ps1 -- Feedback loop: coleta outcomes, calibra parametros
 
 function Get-OutcomesStats {
     [CmdletBinding()]
@@ -61,7 +61,8 @@ function Get-CalibratedParams {
 
     # 1) Threshold entrada (score minimo pra sinal)
     $wr = $Stats.win_rate
-    $currentThreshold = $CurrentParams['THRESHOLD_ENTRADA'] ?? 70
+    # 2026-07-02 FIX: ?? e PS7-only; quebrava o parse do arquivo inteiro em PS 5.1
+    $currentThreshold = if ($null -ne $CurrentParams['THRESHOLD_ENTRADA']) { $CurrentParams['THRESHOLD_ENTRADA'] } else { 70 }
     $newThreshold = $currentThreshold
 
     if ($wr -lt 0.35) {
@@ -76,7 +77,7 @@ function Get-CalibratedParams {
 
     # 2) Stop loss width (apertar se avg loss > stop width atual)
     $avgLoss = [math]::Abs($Stats.avg_loss_pct)
-    $currentStop = $CurrentParams['STOP_LOSS_PCT'] ?? 2.0
+    $currentStop = if ($null -ne $CurrentParams['STOP_LOSS_PCT']) { $CurrentParams['STOP_LOSS_PCT'] } else { 2.0 }
     $newStop = $currentStop
 
     if ($avgLoss -gt $currentStop) {
@@ -92,7 +93,7 @@ function Get-CalibratedParams {
 
     # 4) Regime allocation (SHORT vs LONG)
     $pnl = $Stats.pnl_total_usd
-    $shortRatio = $CurrentParams['SHORT_RATIO'] ?? 0.5
+    $shortRatio = if ($null -ne $CurrentParams['SHORT_RATIO']) { $CurrentParams['SHORT_RATIO'] } else { 0.5 }
 
     if ($pnl -gt 20 -and $Stats.wins -gt $Stats.losses) {
         # Win rate positivo, mantém allocation

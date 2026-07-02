@@ -1,4 +1,4 @@
-# lib_learning_engine.ps1 — Learning Engine: Auto-Improve Conviction Thresholds
+﻿# lib_learning_engine.ps1 — Learning Engine: Auto-Improve Conviction Thresholds
 # Captura mistakes do cloud, analisa padrões, auto-calibra conviction + DSR
 # Pure functions, 100% testable
 # TDD-driven, zero side effects

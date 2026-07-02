@@ -1,4 +1,4 @@
-# lib_telegram_consolidator.ps1 -- Resumo inteligente de posições para Telegram
+﻿# lib_telegram_consolidator.ps1 -- Resumo inteligente de posições para Telegram
 # Problema: position_watcher gera 10-20 logs/min, Telegram fica travado
 # Solução: consolidar PnL, só enviar quando há MUDANÇA de status (GANHO→PERDA ou vice-versa)
 

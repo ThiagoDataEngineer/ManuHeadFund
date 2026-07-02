@@ -62,7 +62,7 @@ function Get-DynamicCapital {
         if ($spotResp.code -eq 0 -and $spotResp.data) {
             foreach ($asset in $spotResp.data) {
                 if ($asset.ccy -eq "USDT") {
-                    $spotUSDT = [double]($asset.available ?? 0)
+                    $spotUSDT = [double]($(if ($null -ne $asset.available) { $asset.available } else { 0 }))
                     if ($Verbose) { Write-Host "  ✅ SPOT: `$$([Math]::Round($spotUSDT, 2))" -ForegroundColor Green }
                     break
                 }
@@ -79,7 +79,7 @@ function Get-DynamicCapital {
         if ($futResp.code -eq 0 -and $futResp.data) {
             foreach ($asset in $futResp.data) {
                 if ($asset.ccy -eq "USDT") {
-                    $futuresUSDT = [double]($asset.available ?? 0)
+                    $futuresUSDT = [double]($(if ($null -ne $asset.available) { $asset.available } else { 0 }))
                     if ($Verbose) { Write-Host "  ✅ FUTURES: `$$([Math]::Round($futuresUSDT, 2))" -ForegroundColor Green }
                     break
                 }
@@ -105,8 +105,10 @@ function Get-DynamicCapital {
     return $script:HybridConfig
 }
 
-# Auto-fetch on first load
-Get-DynamicCapital -Verbose
+# 2026-07-02 FIX: auto-fetch no load REMOVIDO — fazia 2 chamadas API a cada
+# dot-source (spam "SPOT fetch failed" quando loader carrega todas as libs).
+# Sem perda de funcionalidade: Get-PositionSize ja re-fetcha a cada chamada
+# (linha ~124) e Get-DynamicCapital tem fallback interno.
 
 # ════════════════════════════════════════════════════════
 # CALCULATE POSITION SIZE (1% cap per market)
@@ -216,9 +218,9 @@ function Execute-SpotTrade {
         [double] $PositionSize
     )
 
-    $entry = $Signal.entry_price ?? 100
-    $sl = $entry * (1 - ($Signal.stop_loss_pct ?? 0.01))
-    $risk = $PositionSize * ($Signal.stop_loss_pct ?? 0.01)
+    $entry = if ($null -ne $Signal.entry_price) { $Signal.entry_price } else { 100 }
+    $sl = $entry * (1 - ($(if ($null -ne $Signal.stop_loss_pct) { $Signal.stop_loss_pct } else { 0.01 })))
+    $risk = $PositionSize * ($(if ($null -ne $Signal.stop_loss_pct) { $Signal.stop_loss_pct } else { 0.01 }))
 
     return @{
         market = "SPOT"
@@ -241,9 +243,9 @@ function Execute-FuturesTrade {
         [double] $PositionSize
     )
 
-    $entry = $Signal.entry_price ?? 100
-    $sl = $entry * (1 - ($Signal.stop_loss_pct ?? 0.01))
-    $risk = $PositionSize * ($Signal.stop_loss_pct ?? 0.01)
+    $entry = if ($null -ne $Signal.entry_price) { $Signal.entry_price } else { 100 }
+    $sl = $entry * (1 - ($(if ($null -ne $Signal.stop_loss_pct) { $Signal.stop_loss_pct } else { 0.01 })))
+    $risk = $PositionSize * ($(if ($null -ne $Signal.stop_loss_pct) { $Signal.stop_loss_pct } else { 0.01 }))
 
     return @{
         market = "FUTURES"

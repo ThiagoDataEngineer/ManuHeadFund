@@ -1,4 +1,4 @@
-# run_feedback_loop_test.ps1 -- Teste integrado do feedback loop
+﻿# run_feedback_loop_test.ps1 -- Teste integrado do feedback loop
 # Roda: stats → calibra → ativa trailing → sizing → relatorio
 
 $ErrorActionPreference = "Continue"

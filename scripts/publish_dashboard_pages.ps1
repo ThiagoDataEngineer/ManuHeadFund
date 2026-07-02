@@ -1,4 +1,4 @@
-# publish_dashboard_pages.ps1 - Publica dashboard/ na branch gh-pages (2026-06-12)
+﻿# publish_dashboard_pages.ps1 - Publica dashboard/ na branch gh-pages (2026-06-12)
 # GitHub Pages serve a branch -> https://thiagodataengineer.github.io/ManuHeadFund/
 #
 # SEGURANCA (repo publico): dados (capital/posicoes) NUNCA sobem em claro.

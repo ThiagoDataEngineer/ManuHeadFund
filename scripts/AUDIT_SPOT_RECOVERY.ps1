@@ -1,4 +1,4 @@
-# AUDIT_SPOT_RECOVERY.ps1 — Remediação de posições SPOT órfãs
+﻿# AUDIT_SPOT_RECOVERY.ps1 — Remediação de posições SPOT órfãs
 # Detecta posições abertas no CoinEx que não estão em gem_trades.csv
 # Opções: registrar com SL padrão, vender, ou deixar com trailing
 

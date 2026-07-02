@@ -1,4 +1,4 @@
-# lib_btc_relative_strength.ps1 -- Eixo 2 do ensemble de conviccao
+﻿# lib_btc_relative_strength.ps1 -- Eixo 2 do ensemble de conviccao
 # Mede se a altcoin sobe no PROPRIO combustivel (decoupling do BTC) = assinatura pre-pump.
 # Puro (sem API/LLM): caller passa as series de close. Rapido e barato.
 #

@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 # daily_autocalibration.ps1
 # 2026-06-18: Hourly self-learning calibration (CLOUD-ONLY)
 # Runs via GitHub Actions every hour
@@ -44,8 +44,8 @@ if ($SupabaseUrl -and $SupabaseKey) {
         if ($response -and $response.Count -gt 0) {
             $gates = @{
                 gates = @{
-                    conviction_threshold = $response[0].conviction_threshold ?? 50
-                    mesa_score_strong = $response[0].mesa_score_strong ?? 60
+                    conviction_threshold = $(if ($null -ne $response[0].conviction_threshold) { $response[0].conviction_threshold } else { 50 })
+                    mesa_score_strong = $(if ($null -ne $response[0].mesa_score_strong) { $response[0].mesa_score_strong } else { 60 })
                 }
             }
             Write-Host "  [SUPABASE] Loaded gates from cloud" -ForegroundColor Green

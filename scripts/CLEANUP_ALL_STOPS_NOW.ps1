@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 # CLEANUP_ALL_STOPS_NOW.ps1
 # Reconcilia os stops SPOT ao estado CORRETO, reusando a propria aplicacao.
 # 2026-06-20 (original: hardcoded) | 2026-06-28 REESCRITO p/ usar o money-path real.

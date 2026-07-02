@@ -1,4 +1,4 @@
-# lib_trailing_baseline.ps1 -- Baseline runner: carrega dados reais,
+﻿# lib_trailing_baseline.ps1 -- Baseline runner: carrega dados reais,
 # simula entrada repetidas vezes, roda ATUAL vs NOVAS, compara stats.
 
 function Get-CurrentTrailingPolicy {

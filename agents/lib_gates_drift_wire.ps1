@@ -1,4 +1,4 @@
-# lib_gates_drift_wire.ps1
+﻿# lib_gates_drift_wire.ps1
 # Wire gates_drift.json to gem_executor — dynamic gate application
 # 2026-06-18: Solução rápida pra gates não estarem sendo lidas
 

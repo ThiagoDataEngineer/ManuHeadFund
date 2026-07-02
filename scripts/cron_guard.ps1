@@ -1,4 +1,4 @@
-# cron_guard.ps1 -- gate de execucao robusto a throttle do GH Actions.
+﻿# cron_guard.ps1 -- gate de execucao robusto a throttle do GH Actions.
 # Uso no workflow:
 #   $due = (& ./scripts/cron_guard.ps1 -JobId kelly -Schedule "daily:5"); if ($LASTEXITCODE -eq 0) { ... }
 # Exit 0 = DEVE rodar (e persiste last-run); exit 1 = pular.

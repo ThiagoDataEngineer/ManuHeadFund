@@ -1,4 +1,4 @@
-# lib_trailing_policy_live.ps1 -- Wire LIVE ATIVO do motor de politicas de saida.
+﻿# lib_trailing_policy_live.ps1 -- Wire LIVE ATIVO do motor de politicas de saida.
 #
 # Liga Resolve-ExitPolicyGated + Get-ExitDecision ao trailing REAL: a cada ciclo
 # computa a politica gated por tendencia/regime e APLICA o trailing stop na
