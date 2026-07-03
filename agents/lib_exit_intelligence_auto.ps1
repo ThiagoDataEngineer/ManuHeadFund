@@ -53,7 +53,9 @@ function Resolve-ExitAutoDecision {
         [double]  $Entry,             # entry do registro (compra). <=0 => SKIP
         [double]  $Sl = 0,            # stop atual conhecido. <=0 => Layer 4 inativa
         [double]  $RealQty = 0,       # saldo REAL disponivel na corretora (base)
-        [double]  $MinNotionalUsd = 5.0
+        [double]  $MinNotionalUsd = 5.0,
+        [double]  $DayOpen = 0,       # open do DIA atual. <=0 => Layer 5 (climax) inativa
+        [double]  $ClimaxThresholdPct = 25.0  # pump do dia que dispara o harvest de climax
     )
 
     $mk = { param($a,$p,$q,$r) [pscustomobject]@{
@@ -103,8 +105,19 @@ function Resolve-ExitAutoDecision {
         return $o
     }
 
-    # Prioridade: L4 (critico, 100%) -> L3 (reversal, 70%) -> L2 (RSI, 25%).
+    # Prioridade: L5 (climax, 100%) -> L4 (critico, 100%) -> L3 (reversal, 70%) -> L2 (RSI, 25%).
     # Toda layer exige ganho (> 0): so realiza lucro, nunca vende no prejuizo aqui.
+    #
+    # L5 CLIMAX (2026-07-03, knowledge/UNIVERSE_PHYSICS.md Lei 1+2):
+    # bag que pumpou >= threshold no DIA -> vender no climax. Dado (n=6212, OOS 4
+    # regimes): segurar apos pump >=25% custa mediana -4.6% (D+1) a -10.4% (D+7),
+    # pior 5% -44%; vender no climax ganha em 63% dos casos.
+    if ($DayOpen -gt 0) {
+        $dayChg = (($Current - $DayOpen) / $DayOpen) * 100
+        if (($dayChg -ge $ClimaxThresholdPct) -and ($gain -gt 0)) {
+            return (& $decide 'SELL' 5 100 0.997 'climax_dissipacao')
+        }
+    }
     if (($distToSL -le 2.5) -and ($gain -gt 0)) {
         return (& $decide 'SELL' 4 100 0.997 'perto_SL_com_ganho')
     }
@@ -185,7 +198,14 @@ function Invoke-ExitIntelligenceAuto {
             if (-not $candles) { continue }
             $closes = @($candles | ForEach-Object { [double]$_.close })
 
-            $d = Resolve-ExitAutoDecision -Closes $closes -Current $current -Entry $entry -Sl $sl -RealQty $realQty -MinNotionalUsd $MinNotionalUsd
+            # open do DIA p/ Layer 5 (climax). Falha -> 0 (layer inativa, fail-safe).
+            $dayOpen = 0.0
+            try {
+                $dayResp = CoinEx-Get "/v2/spot/kline?market=$market&period=1day&limit=1"
+                if ($dayResp -and $dayResp.data) { $dayOpen = [double](@($dayResp.data)[-1].open) }
+            } catch {}
+
+            $d = Resolve-ExitAutoDecision -Closes $closes -Current $current -Entry $entry -Sl $sl -RealQty $realQty -MinNotionalUsd $MinNotionalUsd -DayOpen $dayOpen
 
             Write-Host ("[{0}] {1} | preco={2} ganho={3}% RSI={4} distSL={5}% rev={6} -> {7} {8}" -f `
                 $ccy, $d.action, $current, $d.gain, $d.rsi, $d.distToSL, $d.reversal, $d.action, $d.reason) -ForegroundColor Gray

@@ -95,4 +95,44 @@ Describe "Resolve-ExitAutoDecision (Exit Intelligence Auto - nucleo puro)" {
             $d.action | Should Be 'HOLD'
         }
     }
+
+    # Layer 5 CLIMAX (2026-07-03) — base empirica knowledge/UNIVERSE_PHYSICS.md:
+    # bag que pumpou >=25% no DIA -> vender no climax (D+1 mediana -4.6%, D+7 -10.4%,
+    # pior 5% -44%; vender ganha em 63% dos casos; n=6212, OOS 4 regimes).
+    Context "Layer 5 - CLIMAX do dia (pump >=25%) -> vende 100%" {
+        It "dispara SELL 100% layer 5 quando dia >= +25% e ganho > 0" {
+            # dayOpen 1.00 -> current 1.30 = +30% no dia; entry 0.90 -> ganho total
+            $d = Resolve-ExitAutoDecision -Closes $closesUp -Current 1.30 -Entry 0.90 -Sl 0.50 -RealQty 1000 -DayOpen 1.00
+            $d.action | Should Be 'SELL'
+            $d.layer  | Should Be 5
+            $d.pct    | Should Be 100
+            $d.reason | Should Be 'climax_dissipacao'
+        }
+        It "NAO dispara com dia < threshold (+10% apenas)" {
+            $d = Resolve-ExitAutoDecision -Closes $closesUp -Current 1.10 -Entry 0.90 -Sl 0.50 -RealQty 1000 -DayOpen 1.00
+            $d.layer | Should Not Be 5
+        }
+        It "NAO dispara sem ganho total (principio: nunca vende no prejuizo)" {
+            # dia +30% mas entry 2.00 >> current -> prejuizo total
+            $d = Resolve-ExitAutoDecision -Closes $closesUp -Current 1.30 -Entry 2.00 -Sl 0.50 -RealQty 1000 -DayOpen 1.00
+            $d.action | Should Not Be 'SELL'
+        }
+        It "DayOpen desconhecido (0) -> layer inativa, avalia as demais (fail-safe)" {
+            $d = Resolve-ExitAutoDecision -Closes $closesUp -Current 1.05 -Entry 0.80 -Sl 0.50 -RealQty 1000 -DayOpen 0
+            $d.layer | Should Not Be 5
+        }
+        It "L5 tem prioridade sobre L4 (climax vence perto-do-SL)" {
+            # dia +30% E perto do SL -> escolhe L5 (mesma acao 100%, razao correta p/ auditoria)
+            $d = Resolve-ExitAutoDecision -Closes $closesUp -Current 1.30 -Entry 0.90 -Sl 1.28 -RealQty 1000 -DayOpen 1.00
+            $d.layer | Should Be 5
+        }
+        It "threshold configuravel (ClimaxThresholdPct 15 -> +20% dispara)" {
+            $d = Resolve-ExitAutoDecision -Closes $closesUp -Current 1.20 -Entry 0.90 -Sl 0.50 -RealQty 1000 -DayOpen 1.00 -ClimaxThresholdPct 15
+            $d.layer | Should Be 5
+        }
+        It "sellQty usa haircut 0.997 como o L4" {
+            $d = Resolve-ExitAutoDecision -Closes $closesUp -Current 1.30 -Entry 0.90 -Sl 0.50 -RealQty 1000 -DayOpen 1.00
+            $d.sellQty | Should Be ([math]::Floor(1000 * 0.997 * 1e6) / 1e6)
+        }
+    }
 }
