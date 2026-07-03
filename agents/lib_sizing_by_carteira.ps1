@@ -16,35 +16,21 @@ function Get-AvailableCapitalByCarteira {
         reason = ""
     }
 
-    # SPOT balance
+    # 2026-07-03 v2: delega as funcoes ASSINADAS de lib_coinex (a v1 chamava
+    # CoinEx-GetBalance com assinatura inexistente -> sempre 0).
     try {
-        $spotBal = CoinEx-GetBalance -Config $CoinExConfig -AccountType "spot" -ErrorAction Stop
-        if ($spotBal) {
-            $spotUsdt = ($spotBal | Where-Object { $_.currency -eq "USDT" } | Select-Object -First 1)
-            if ($spotUsdt) {
-                $result.spot_usdt = [double]$spotUsdt.available
-                $result.spot_available = $result.spot_usdt
-            }
+        if (Get-Command CoinEx-GetSpotCapitalUSDT -ErrorAction SilentlyContinue) {
+            $result.spot_usdt = [double](CoinEx-GetSpotCapitalUSDT)
+            $result.spot_available = $result.spot_usdt
         }
-    }
-    catch {
-        # Silent fail — carteira pode não estar disponível agora
-    }
+    } catch { }
 
-    # FUTURES balance
     try {
-        $futuresBal = CoinEx-GetBalance -Config $CoinExConfig -AccountType "futures" -ErrorAction Stop
-        if ($futuresBal) {
-            $futuresUsdt = ($futuresBal | Where-Object { $_.currency -eq "USDT" } | Select-Object -First 1)
-            if ($futuresUsdt) {
-                $result.futures_usdt = [double]$futuresUsdt.available
-                $result.futures_available = $result.futures_usdt
-            }
+        if (Get-Command CoinEx-GetFuturesCapitalUSDT -ErrorAction SilentlyContinue) {
+            $result.futures_usdt = [double](CoinEx-GetFuturesCapitalUSDT)
+            $result.futures_available = $result.futures_usdt
         }
-    }
-    catch {
-        # Silent fail
-    }
+    } catch { }
 
     # Determina qual carteira usar
     if ($result.spot_available -gt $result.futures_available -and $result.spot_available -gt 0) {

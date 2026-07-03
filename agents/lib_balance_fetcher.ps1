@@ -1,110 +1,60 @@
-# lib_balance_fetcher.ps1 — Fetch real SPOT + FUTURES balance from CoinEx API
-# 2026-07-03: Salva em journal/balance_snapshot.json a cada ciclo
+# lib_balance_fetcher.ps1 — Snapshot de saldo real SPOT + FUTURES por ciclo
+# 2026-07-03 v2: delega a CoinEx-GetSpotCapitalUSDT / CoinEx-GetFuturesCapitalUSDT
+# (lib_coinex.ps1 — chamadas ASSINADAS, com fallback fresco). A v1 usava
+# Invoke-RestMethod sem HMAC e retornava sempre 0.
+# Salva em journal/balance_snapshot.json — lido por show_balance.ps1 e sizing.
 
 function Get-RealBalance {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)] [hashtable] $CoinExConfig
+        [hashtable] $CoinExConfig  # aceito por compat; lib_coinex usa globals
     )
 
-    $result = @{
+    $spotUsdt = 0.0
+    $futuresUsdt = 0.0
+
+    if (Get-Command CoinEx-GetSpotCapitalUSDT -ErrorAction SilentlyContinue) {
+        try { $spotUsdt = [double](CoinEx-GetSpotCapitalUSDT) } catch { $spotUsdt = 0.0 }
+    }
+    if (Get-Command CoinEx-GetFuturesCapitalUSDT -ErrorAction SilentlyContinue) {
+        try { $futuresUsdt = [double](CoinEx-GetFuturesCapitalUSDT) } catch { $futuresUsdt = 0.0 }
+    }
+
+    $primary = "NONE"
+    if ($spotUsdt -gt $futuresUsdt -and $spotUsdt -gt 0) { $primary = "SPOT" }
+    elseif ($futuresUsdt -gt 0) { $primary = "FUTURES" }
+
+    return [PSCustomObject]@{
         timestamp = [datetime]::UtcNow.ToString("O")
-        spot = @{ usdt = 0; total_pairs = 0 }
-        futures = @{ usdt = 0; total_pairs = 0 }
-        primary_carteira = "UNKNOWN"
+        spot = [PSCustomObject]@{ usdt = [math]::Round($spotUsdt, 2) }
+        futures = [PSCustomObject]@{ usdt = [math]::Round($futuresUsdt, 2) }
+        primary_carteira = $primary
     }
-
-    # SPOT
-    try {
-        $spotResp = Invoke-RestMethod `
-            -Uri "https://api.coinex.com/v2/spot/balance" `
-            -Method GET `
-            -Headers @{
-                "X-COINEX-KEY" = $CoinExConfig.api_key
-                "User-Agent" = "ManuHeadFund/2026"
-            } `
-            -TimeoutSec 10 -ErrorAction Stop
-
-        if ($spotResp.data -and $spotResp.data.balances) {
-            $usdtSpot = $spotResp.data.balances | Where-Object { $_.ccy -eq "USDT" }
-            if ($usdtSpot) {
-                $result.spot.usdt = [double]$usdtSpot.available
-                $result.spot.total_pairs = ($spotResp.data.balances | Measure-Object).Count
-            }
-        }
-    }
-    catch {
-        # Silent — API pode estar lento
-        $result.spot.usdt = 0
-    }
-
-    # FUTURES
-    try {
-        $futuresResp = Invoke-RestMethod `
-            -Uri "https://api.coinex.com/v2/futures/balance" `
-            -Method GET `
-            -Headers @{
-                "X-COINEX-KEY" = $CoinExConfig.api_key
-                "User-Agent" = "ManuHeadFund/2026"
-            } `
-            -TimeoutSec 10 -ErrorAction Stop
-
-        if ($futuresResp.data -and $futuresResp.data.balances) {
-            $usdtFutures = $futuresResp.data.balances | Where-Object { $_.ccy -eq "USDT" }
-            if ($usdtFutures) {
-                $result.futures.usdt = [double]$usdtFutures.available
-                $result.futures.total_pairs = ($futuresResp.data.balances | Measure-Object).Count
-            }
-        }
-    }
-    catch {
-        # Silent
-        $result.futures.usdt = 0
-    }
-
-    # Determina primary
-    if ($result.spot.usdt -gt $result.futures.usdt) {
-        $result.primary_carteira = "SPOT"
-    }
-    elseif ($result.futures.usdt -gt 0) {
-        $result.primary_carteira = "FUTURES"
-    }
-
-    return $result
 }
 
 function Save-BalanceSnapshot {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)] [PSCustomObject] $Balance,
-        [string] $Path = "journal/balance_snapshot.json"
+        [string] $Path = ""
     )
-
-    try {
-        $json = $Balance | ConvertTo-Json -Depth 10
-        $json | Out-File -FilePath $Path -Encoding UTF8 -NoNewline -Force
-        return $true
+    if (-not $Path) {
+        $journalDir = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { "journal" }
+        $Path = Join-Path $journalDir "balance_snapshot.json"
     }
-    catch {
+    try {
+        ($Balance | ConvertTo-Json -Depth 5) | Out-File -FilePath $Path -Encoding UTF8 -Force
+        return $true
+    } catch {
         return $false
     }
 }
 
 function Read-LatestBalance {
     [CmdletBinding()]
-    param(
-        [string] $Path = "journal/balance_snapshot.json"
-    )
-
+    param([string] $Path = "journal/balance_snapshot.json")
     if (Test-Path $Path) {
-        try {
-            return Get-Content $Path | ConvertFrom-Json
-        }
-        catch {
-            return $null
-        }
+        try { return Get-Content $Path -Raw | ConvertFrom-Json } catch { return $null }
     }
     return $null
 }
-
-# Export by dot-source
