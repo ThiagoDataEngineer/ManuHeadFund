@@ -478,17 +478,27 @@ function Invoke-GemCycle {
             foreach ($g in $gems) {
                 # 2026-06-08: PRE-CHECK TORI ANTES DE PEDIR APROVACAO
                 # Se Tori vai bloquear de qualquer forma, não pede aprovação (evita confusão user)
+                # 2026-07-03 WIRE FIX: CONVICTION_GATE.flag (design 2026-06-17: override Tori
+                # via Entry Conviction Ensemble >=75) estava wired SO no cache de rejeicoes,
+                # nao aqui — ZKPUSDT(65) morreu em Tori SKIP e subiu +30%. Com a flag ativa,
+                # Tori SKIP/WAIT vira OBSERVACAO (nao veto): o gem segue pro fluxo normal
+                # onde conviction ensemble + guards do executor decidem (fail-closed mantido).
                 $toriPreCheck = $null
                 $toriBlocksThis = $false
+                $convictionGateOn = Test-Path (Join-Path $global:JOURNAL_DIR "CONVICTION_GATE.flag")
                 if (Get-Command Get-ToriTrendlineSignal -ErrorAction SilentlyContinue) {
                     try {
                         $toriPre = Get-ToriTrendlineSignal -Market $g.market
                         $toriConviction = if ($toriPre.PSObject.Properties['conviction']) { [int]$toriPre.conviction } else { 0 }
                         $toriSig = if ($toriConviction -eq 0) { "SKIP" } elseif ($toriConviction -le 40) { "WAIT" } else { "ENTER" }
                         if ($toriSig -in @("SKIP","WAIT")) {
-                            $toriBlocksThis = $true
-                            $toriPreCheck = $toriSig
-                            Write-MasterLog "GEM pre-check BLOCKED: $($g.market) -- Tori $toriSig ($($toriPre.reason))" "GEM"
+                            if ($convictionGateOn) {
+                                Write-MasterLog "GEM pre-check: $($g.market) Tori $toriSig OVERRIDE (CONVICTION_GATE on -> ensemble decide) ($($toriPre.reason))" "GEM"
+                            } else {
+                                $toriBlocksThis = $true
+                                $toriPreCheck = $toriSig
+                                Write-MasterLog "GEM pre-check BLOCKED: $($g.market) -- Tori $toriSig ($($toriPre.reason))" "GEM"
+                            }
                         }
                     } catch { }  # Falha silenciosa, continua normal
                 }
