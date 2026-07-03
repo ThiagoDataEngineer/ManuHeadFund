@@ -142,3 +142,5 @@ locks/*.lock
 
 # Daemon singleton locks (runtime state)
 journal/daemon_locks/
+
+backtest/data/

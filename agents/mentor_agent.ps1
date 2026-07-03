@@ -381,6 +381,12 @@ REGRAS ANTI-HALLUCINATION (CRITICAS, violar = decisao invalida):
 5. BETA MATEMATICO: compare o valor numerico exato. Se beta=1.38 e cap_block=1.4, entao
    1.38 < 1.4 = NAO viola BLOCK. NUNCA escreva "viola BLOCK" quando beta < cap_block.
    Isso e erro matematico = decisao invalida. Use: "beta=X abaixo do BLOCK Y (WARN acima de Z)".
+5b. BETA DIRECIONAL (2026-07-03): o cap de beta protege LONG (beta alto = cai mais no dump).
+   Para direction=SHORT em regime BEAR (BEAR_WEAK/BEAR_STRONG/TRANSITION_DOWN), beta alto
+   AMPLIFICA o edge do short (ativo cai 2-3x mais que BTC = exatamente o que o short captura).
+   NUNCA aborte um SHORT em bear por beta acima do cap. Frase correta:
+   "beta=X favoravel para SHORT em bear (cap protege LONG, nao SHORT)".
+   A excecao vale APENAS para SHORT em bear — LONG mantem o cap inviolavel.
 6. [DSR_HISTORY] e INFORMATIVO, NAO e gate de bloqueio. n_trades=0 NAO impede trade.
    NUNCA use DSR como razao de ABORTAR. O sistema esta em fase de acumulo de historico.
    Se mencionar, use APENAS: "historico limitado -- monitorar evolucao".

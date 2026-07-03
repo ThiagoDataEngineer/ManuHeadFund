@@ -186,9 +186,30 @@ function Test-BetaWithinCap {
         [Parameter(Mandatory)] [double] $Beta,
         [Parameter(ParameterSetName='Regime')][string] $Regime = "",
         [Parameter(ParameterSetName='Phase')][string] $Phase = "",
+        [string] $Direction = "",
         [switch] $Strict
     )
     $cap = if ($Regime) { Get-BetaCapForPhase -Regime $Regime } else { Get-BetaCapForPhase -Phase $Phase }
+
+    # 2026-07-03 DIRECTIONAL EXCEPTION (learning counterfactual: beta|SHORT|BEAR_WEAK
+    # custando oportunidade). O cap de beta protege LONG (beta alto = cai mais no dump).
+    # Para SHORT em fase bear a física inverte: beta alto AMPLIFICA o edge (universe
+    # physics lei 2/3 — o ativo cai 2-3x mais que BTC, exatamente o que o short captura).
+    # Fail-safe: exceção SÓ com Direction=SHORT explícito E fase bear.
+    $isBearPhase = ($cap.phase -match '_p3_bear$') -or ($Regime -match 'BEAR')
+    if ($Direction -eq "SHORT" -and $isBearPhase) {
+        return [PSCustomObject]@{
+            level = "OK"
+            beta = $Beta
+            cap_warn = $cap.warn
+            cap_block = $cap.block
+            phase = $cap.phase
+            source = $cap.source
+            rationale = "SHORT em bear: beta alto amplifica edge (excecao direcional 2026-07-03)"
+            reason = "beta=$Beta favoravel para SHORT em $($cap.phase) (cap $($cap.block) protege LONG, nao SHORT)"
+        }
+    }
+
     $level = "OK"
     if ($Beta -gt $cap.block) { $level = "BLOCK" }
     elseif ($Beta -gt $cap.warn) { $level = "WARN" }

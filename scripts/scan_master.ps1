@@ -145,6 +145,10 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 . (Join-Path $agentsDir "lib_orchestrator_parallel.ps1")
 . (Join-Path $agentsDir "lib_llm_quota_optimizer.ps1")  # 2026-05-26: Rate limiting + quota tracking
 . (Join-Path $agentsDir "lib_short_execution.ps1")      # 2026-05-28: SHORT Block 2 -- wiring scanner -> orchestrator
+. (Join-Path $agentsDir "lib_pump_fade_detector.ps1")   # 2026-07-03: SHORT v2.5 pump-fade pattern
+. (Join-Path $agentsDir "lib_sizing_by_carteira.ps1")   # 2026-07-03: Aloca 1% de SPOT ou FUTURES (qualquer um disponível)
+. (Join-Path $agentsDir "lib_balance_fetcher.ps1")      # 2026-07-03: Fetch REAL SPOT+FUTURES balance from CoinEx API
+. (Join-Path $agentsDir "lib_trade_alerts_detailed.ps1") # 2026-07-03: Telegram alerts entry/exit (auto-execute + visibility)
 # NOTE: lib_trailing_adaptive.ps1 and lib_layer4_tori_timestop.ps1 already loaded above (line 77-78)
 # Removing duplicate loads to prevent function shadowing issues
 
@@ -989,6 +993,53 @@ function Invoke-MasterCycle {
             }
         }
 
+        # ── SHORT Block 3 (2026-07-03): PUMP-FADE pattern detector ──
+        # Pattern: pump gigantesco H-1 (>= 15%) + dump D0 (>= -10%) = SHORT opportunity
+        # Dados: historical validados (60% dos dumps têm pump antes)
+        # Sizing: 1.0% de SPOT ou FUTURES (auto-deteta qual tem capital)
+        if (-not $SkipOrchestrator -and (Get-Command Find-PumpFadeOpportunity -ErrorAction SilentlyContinue)) {
+            try {
+                # Detecta qual carteira tem capital disponível
+                $carteirInfo = Get-AvailableCapitalByCarteira -CoinExConfig $global:CoinExConfig
+                $pumpFadeSizingPercent = 1.0  # 1% da carteira disponível
+
+                if ($carteirInfo.primary_carteira -ne "NONE") {
+                    $pumpFadeCandidates = @()
+                    # Scan top 100 moedas por volume (evita 1000+ requests)
+                    $scanTopN = if ($global:SCANNER_INDEX.Count -gt 100) { ($global:SCANNER_INDEX.Values | Sort-Object -Property volume -Descending | Select-Object -First 100).market } else { $global:SCANNER_INDEX.Keys }
+
+                    foreach ($mkt in $scanTopN) {
+                        $pf = Find-PumpFadeOpportunity -Market $mkt -CoinExConfig $global:CoinExConfig -MinPumpPercent 15
+                        if ($pf.detected) {
+                            $pumpFadeCandidates += [PSCustomObject]@{
+                                market = $mkt
+                                direction = "SHORT"
+                                entry_price = $pf.entry_setup.entry_price
+                                stop_pct = 0.01
+                                target_pct = 0.05
+                                sizing = $pumpFadeSizingPercent / 100  # 1.0% capital
+                                carteira = $carteirInfo.primary_carteira  # SPOT ou FUTURES
+                                confidence = $pf.confidence
+                                reason = "pump_fade_v2.5"
+                            }
+                        }
+                    }
+
+                    if ($pumpFadeCandidates.Count -gt 0) {
+                        # Merge com candidatos existentes (deduplica por market)
+                        $existingMarkets = @($topCandidates.market)
+                        $pumpFadeFiltered = $pumpFadeCandidates | Where-Object { $_.market -notin $existingMarkets }
+                        if ($pumpFadeFiltered.Count -gt 0) {
+                            $topCandidates = @($topCandidates) + @($pumpFadeFiltered)
+                            Write-MasterLog "PUMP-FADE: $($pumpFadeFiltered.Count) candidate(s) SHORT detectado(s) [$($carteirInfo.primary_carteira)] -- $($pumpFadeFiltered.market -join ',')" "INFO"
+                        }
+                    }
+                }
+            } catch {
+                Write-MasterLog "SHORT Block3 (PUMP-FADE) falhou (nao critico): $_" "WARN"
+            }
+        }
+
         if ($topCandidates.Count -eq 0) {
             Write-MasterLog "Nenhum par passou o pre-screen - Orchestrator pulado" "WARN"
         } else {
@@ -1545,6 +1596,20 @@ do {
 
     if (-not $global:MASTER_PAUSED) {
         try {
+            # 2026-07-03: Fetch REAL balance at start of cycle
+            # Saves to journal/balance_snapshot.json (readable by UI/bot)
+            try {
+                $realBalance = Get-RealBalance -CoinExConfig $global:CoinExConfig
+                if ($realBalance) {
+                    $saved = Save-BalanceSnapshot -Balance $realBalance
+                    if ($saved) {
+                        Write-MasterLog "Balance snapshot: SPOT=$($realBalance.spot.usdt) FUTURES=$($realBalance.futures.usdt) primary=$($realBalance.primary_carteira)" "INFO"
+                    }
+                }
+            } catch {
+                Write-MasterLog "Balance fetch falhou (nao critico): $_" "WARN"
+            }
+
             Invoke-MasterCycle -Seasonal $seasonal
 
             # GEM STRATEGIES: PULL_BACK_RECOVERY + DISTRIBUTION_SHORT (2026-06-09)
