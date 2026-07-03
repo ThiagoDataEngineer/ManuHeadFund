@@ -419,7 +419,7 @@ function Invoke-GeminiJson {
 }
 
 # -----------------------------------------------------------------------------
-# Invoke-MesaDroneCascade — Mesa drone com fallback Gemini -> Groq -> Haiku
+# Invoke-MesaDroneCascade — Mesa drone: Groq -> Mistral -> Haiku (Gemini removido 05-29)
 # Mesa precisa 21 calls/cycle (3 drones x top-7). Groq sozinho estoura 30 RPM
 # free tier (429s); Gemini 15 RPM mas estavel; Haiku $0.005/call como ultimo
 # recurso. Mesa CAOS sistemico do 2026-05-16 era Groq 429/400 sem fallback.
@@ -459,7 +459,7 @@ function Invoke-MesaDroneCascade {
             return Invoke-Groq -SystemPrompt $SystemPrompt -UserContent $UserContent `
                 -Model $GroqModel -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
-            Write-Host "  [$Agent] Groq falhou, fallback Gemini: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+            Write-Host "  [$Agent] Groq falhou, fallback Mistral: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
 
@@ -548,7 +548,7 @@ function Invoke-MentorCascade {
                 -Model "llama-3.3-70b-versatile" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
             if ($r) { $script:LAST_CASCADE_PROVIDER = "groq_llama70b"; return $r }
         } catch {
-            Write-Host "  [$Agent] Groq falhou, fallback Gemini: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+            Write-Host "  [$Agent] Groq falhou, fallback Mistral: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
     # 3. Mistral (fallback 2 -- ~1B tok/mes, sem RPD fixo, 2026-05-29)
@@ -590,7 +590,7 @@ function Invoke-TriagemCascade {
             return Invoke-Groq -SystemPrompt $SystemPrompt -UserContent $UserContent `
                 -Model "llama-3.3-70b-versatile" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
-            Write-Host "  [$Agent] Groq falhou, fallback Gemini: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+            Write-Host "  [$Agent] Groq falhou, fallback Mistral: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
     # 2. Mistral (fallback 2 -- ~1B tok/mes, sem RPD fixo, 2026-05-29)

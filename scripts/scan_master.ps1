@@ -1005,8 +1005,14 @@ function Invoke-MasterCycle {
 
                 if ($carteirInfo.primary_carteira -ne "NONE") {
                     $pumpFadeCandidates = @()
-                    # Scan top 100 moedas por volume (evita 1000+ requests)
-                    $scanTopN = if ($global:SCANNER_INDEX.Count -gt 100) { ($global:SCANNER_INDEX.Values | Sort-Object -Property volume -Descending | Select-Object -First 100).market } else { $global:SCANNER_INDEX.Keys }
+                    # 2026-07-03 v2 escopo: pre-filtra por DUMP hoje (change <= -10% no
+                    # ticker, zero API calls) em TODO o scanner index — nao top-100 por
+                    # volume (dimensao errada: pump-fade acontece em movers/microcaps).
+                    # So os dumpers vao a busca de candles (max 30, piores primeiro).
+                    $scanTopN = @($global:SCANNER_INDEX.Values |
+                        Where-Object { $_.change -ne $null -and [double]$_.change -le -10 } |
+                        Sort-Object { [double]$_.change } |
+                        Select-Object -First 30).market
 
                     foreach ($mkt in $scanTopN) {
                         $pf = Find-PumpFadeOpportunity -Market $mkt -MinPumpPercent 15
