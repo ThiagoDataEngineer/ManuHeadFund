@@ -1,4 +1,4 @@
-# lib_trade_alerts_detailed.ps1 — Detailed Telegram alerts for entry/exit
+﻿# lib_trade_alerts_detailed.ps1 — Detailed Telegram alerts for entry/exit
 # 2026-07-03: User gets full visibility (auto-execute + alerts)
 
 function Send-TradeEntryAlert {

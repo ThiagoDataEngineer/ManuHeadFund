@@ -1,4 +1,4 @@
-# lib_sizing_by_carteira.ps1 — Aloca sizing automático baseado em carteira disponível
+﻿# lib_sizing_by_carteira.ps1 — Aloca sizing automático baseado em carteira disponível
 # 2026-07-03: SHORT v2.5 usa 1% de SPOT ou FUTURES (qualquer um que tenha capital)
 
 function Get-AvailableCapitalByCarteira {

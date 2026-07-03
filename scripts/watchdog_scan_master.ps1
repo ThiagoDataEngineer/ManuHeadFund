@@ -1,4 +1,4 @@
-# watchdog_scan_master.ps1 — Watchdog RESTRITO: vigia apenas o scan_master local.
+﻿# watchdog_scan_master.ps1 — Watchdog RESTRITO: vigia apenas o scan_master local.
 # 2026-07-03: criado apos incidente do daemon zumbi (processo vivo, loop nunca iniciado).
 # NAO sobe tg_listener/position_watcher (nuvem cobre; local causaria 409 no Telegram).
 #

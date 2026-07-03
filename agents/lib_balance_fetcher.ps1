@@ -1,4 +1,4 @@
-# lib_balance_fetcher.ps1 — Snapshot de saldo real SPOT + FUTURES por ciclo
+﻿# lib_balance_fetcher.ps1 — Snapshot de saldo real SPOT + FUTURES por ciclo
 # 2026-07-03 v2: delega a CoinEx-GetSpotCapitalUSDT / CoinEx-GetFuturesCapitalUSDT
 # (lib_coinex.ps1 — chamadas ASSINADAS, com fallback fresco). A v1 usava
 # Invoke-RestMethod sem HMAC e retornava sempre 0.

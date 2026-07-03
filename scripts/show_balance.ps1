@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 # show_balance.ps1 — Mostra saldo SPOT + FUTURES em tempo real
 # Usage: .\show_balance.ps1
 

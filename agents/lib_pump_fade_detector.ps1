@@ -1,4 +1,4 @@
-# lib_pump_fade_detector.ps1 — Detecta pump-fade pattern para SHORT v2.5
+﻿# lib_pump_fade_detector.ps1 — Detecta pump-fade pattern para SHORT v2.5
 # 2026-07-03: Pattern = pump H-1 seguido de dump D0 = oportunidade SHORT
 # Dados: histórico diário (simples, robusto)
 
