@@ -579,8 +579,21 @@ function Invoke-GemCycle {
                             }
                         } catch { Write-MasterLog "auto-approve fail: $_" "WARN" }
                     }
+                    # 2026-07-03 GEM_FULL_AUTO: aprovacao humana via TG e estruturalmente
+                    # quebrada (tg_listener na nuvem -Once a cada 30min; callback chega
+                    # DEPOIS do timeout de 300s -> "aprovei e nada aconteceu"). Com a flag,
+                    # gems que chegaram ate aqui (pre-checks + Tori/override + direction)
+                    # executam direto com guardrails: sizing forcado <=0.5% + guards
+                    # pos-aprovacao intactos (gem_safety, live_guards, stop obrigatorio).
+                    # TG vira ALERT (visibilidade), nao gate. Opt-out: deletar a flag.
+                    $fullAutoFlag = Join-Path $scriptDir "..\journal\GEM_FULL_AUTO.flag"
                     $tgResult = if ($autoApprove) {
                         [PSCustomObject]@{ decision = 'approve'; source = 'auto' }
+                    } elseif (Test-Path $fullAutoFlag) {
+                        try { $g | Add-Member -MemberType NoteProperty -Name sizing_pct -Value 0.5 -Force } catch { }
+                        Write-MasterLog "GEM FULL-AUTO: $($g.market) score=$($g.score) executa sem aprovacao TG (sizing cap 0.5%)" "GEM"
+                        try { Send-TelegramAlert -Message "⚡ GEM FULL-AUTO: $($g.market) score=$($g.score) dir=$($g.direction) — executando (sizing<=0.5%, guards ativos)" | Out-Null } catch {}
+                        [PSCustomObject]@{ decision = 'approve'; source = 'full_auto' }
                     } else {
                         Wait-TgCallbackApproval -Gem $g -GemId $g.market -TimeoutSeconds 300
                     }
