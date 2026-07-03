@@ -1,0 +1,338 @@
+✅ lib_correlation_rolling loaded
+✅ lib_cycle_memory_decision loaded
+✅ lib_funding_exhaustion_gate loaded
+[Supabase Integration] Module loaded
+[lib_whale_detection] Loaded - TDD implementation
+[LIBS] Carregadas: 264 / 264 | Falhas: 0
+
+=====================================================
+  SCAN MASTER -- Loop Mestre
+  GemScan + Orchestrator + Trailing + Comandos TG
+=====================================================
+[16:14:34] [GEM] LEARNING: snaps=2050 outs=20 joined=2 keys=2 reliable=0
+[16:23:01] [WARN] LEARNING counterfactual: 5 gate(s) custando oportunidade -- self_consistency|SHORT|BEAR_WEAK, mesa_consensus_forte|LONG|TRANSITION_UP, rr|SHORT|BEAR_WEAK, fqs|SHORT|BEAR_WEAK, fqs|SHORT|CAPITULATION
+[16:23:02] [INFO] Balance snapshot: SPOT=2425.33 FUTURES=2741.54 primary=FUTURES
+
+-------------------------------------------------
+  MASTER CYCLE  16:23 03/07  PRIME  momento=88/100
+-------------------------------------------------
+
+[TRAIL] Atualizando posicoes abertas (modo adaptativo)...
+  [Sync Trailing] XRPUSDT: stop 1,22852856 -> 1,1162, target 1,4808150000000002 -> 1,4808150000000002
+  [Sync Trailing] SPCXXUSDT: stop 176,4 -> 158,22, target 214,77750000000003 -> 214,77750000000003
+  [Sync Trailing] Posições sincronizadas com sucesso.
+  [Adaptive Trailing] Verificando 4 posição(ões) com regime=SIDEWAYS...
+  [Trailing] FAIUSDT LONG | fase=3 (trailing) | stop=0,00275586 | peak=0,00316266 | desde=2026-07-02 15:24:59
+  [Trailing] AINUSDT LONG | fase=0 (inicial) | stop=0,079285 | peak=0,090932 | desde=2026-07-02 15:24:59
+  [Trailing] XRPUSDT LONG | fase=0 (inicial) | stop=1,1162 | peak=1,4103 | desde=2026-07-03 15:48:46
+  [Trailing] SPCXXUSDT LONG | fase=0 (inicial) | stop=158,22 | peak=204,55 | desde=2026-07-03 15:48:46
+  [Mentor] Revisando 4 posição(ões)...
+
+[GEM] Iniciando GemScan (TopN=5)...
+
+------------------------------------------------------------
+  GemAgent Scan -- 2026-07-03 16:23
+------------------------------------------------------------
+  [0/5] Buscando trending CoinGecko...
+        15 coins trending hoje
+  [1/5] Buscando todos os tickers USDT (vol MinVol24h -- MaxVol24h)...
+        [tickers] CoinEx OK: 1441 recebidos, 333 no range [5.000-5.000.000] USDT
+        333 pares no universo micro-cap
+        (reordenado: movers primeiro p/ vol spike real)
+  [2/5] Pre-filtro: range > 15%...
+        57 pares com range suficiente
+  [3/5] Calculando vol spike (4 candles diarios por par)...
+        7 pares com vol spike >= 2x
+  [4/5] Verificando narrativa e mcap...
+        ARPAUSDT -- sem narrativa (bloqueado G4)
+        MPLXUSDT -- sem narrativa (bloqueado G4)
+        HMSTRUSDT -- sem narrativa (bloqueado G4)
+        LKYUSDT -- sem narrativa (bloqueado G4)
+        FARTCOINUSDT -- sem narrativa (bloqueado G4)
+        THEUSDT -- sem narrativa (bloqueado G4)
+        1 pares com narrativa confirmada
+  [5/5] Analisando estrutura e volume intraday...
+  Journal: 7 entradas salvas em gem_signals.csv  [scan 20260703_1623]
+[TELEGRAM] Mensagem enviada com sucesso
+
+------------------------------------------------------------
+  TOP 5 GEMS -- 2026-07-03
+------------------------------------------------------------
+
+  ZKPUSDT  [DISCOVERY]  score=45
+  Gates: G1, G2, G3, G4, G8-MID
+  Vol spike: 2.8488x
+  Sizing: USD 13.71 | Stop: -50% | Target: +200% | Max: 30d
+  --> ALERTA: DISCOVERY score=45 gates=G1,G2,G3,G4,G8-MID
+------------------------------------------------------------
+[16:23:40] [GEM] GemScan: 1 gem(s) -- ZKPUSDT(45)
+  [TechAgent] Coletando dados: ZKPUSDT...
+  [TechAgent] Consultando cascade Groq->Gemini->Haiku...
+  [tech] Groq key rotacionada (429 na key atual)
+  [tech] Groq key rotacionada (429 na key atual)
+  [tech] Groq falhou: Groq API error (429): O servidor remoto retornou um erro: (429) Too Many Request
+  [ToriLayer] SKIP — trendline invalida, qualidade_setup rebaixada para C
+  [TechAgent] NEUTRO | Forca=30 | Setup=C | Tori=SKIP
+[16:23:51] [GEM] GEM pre-check: ZKPUSDT Tori SKIP OVERRIDE (CONVICTION_GATE on -> ensemble decide) (Sem trendline válida identificável nos swing points 4H (máximo 2 toques fracos, distância insuficiente entre pontos).)
+[16:23:51] [GEM] GEM direction auto-select: ZKPUSDT → SHORT (regime=BEAR_WEAK favors SHORT)
+[16:23:51] [GEM] GEM FULL-AUTO: ZKPUSDT score=45 executa sem aprovacao TG (sizing cap 0.5%)
+
+=== GEM EXECUTOR -- ZKPUSDT ===
+  [Route] ZKPUSDT -> spot (spot=True fut=False)
+  Mercado    : ZKPUSDT [DISCOVERY] score=45 tipo=SPOT
+  Capital    : 5166.87 USDT (SPOT real)
+  Sizing     : 50% = 103.34 USDT
+  Preco      : 0.060749  Qtd: 1701.09796
+  Vol spike  : 2.8488x BULLISH (+30.96%)
+  Max dias   : d
+  [CENARIO BLOCK] ZKPUSDT: cenario=NEUTRO bloqueia LONG (chop sem direcao)
+[16:23:56] [GEM] GEM bloqueada por guards: ZKPUSDT -- cenario:NEUTRO
+
+[SCANNER] Varrendo universo CoinEx (spot + futures)...
+  [Scanner] 239 futuros + 1441 spot (39 passaram vol >= 500.000 USDT) -> top 20
+[16:24:03] [INFO] [UNIVERSE] pairs=1680 ts=16:24:03
+[16:24:03] [INFO] [GATE-QUALITY] mcap<$1M:0 idade<7d:0 vol<$500k:1628 spread>5%:0
+[16:24:04] [INFO] [HIT-RATE LONG] 0/10 caught | missed: mplxusdt theusdt zkpusdt arpausdt hmstrusdt akeusdt nomusdt snekusdt ironusdt usausdt
+[16:24:04] [INFO] [HIT-RATE SHORT] 0/10 caught | missed: lkyusdt agtusdt ikausdt tacusdt shadowusdt birbusdt kroakusdt reusdt slxusdt gensynusdt
+  Top 20 pares por momentum x volume:
+    [FUT]  ADAUSDT      change=+  14,53% vol=   4,2M score=52,57
+    [FUT]  XPLUSDT      change=+  13,03% vol=   0,8M score=37,66
+    [FUT]  PIPPINUSDT   change=+  10,45% vol=   1,5M score=33,25
+    [FUT]  WLDUSDT      change=+   9,72% vol=   2,5M score=33,06
+    [FUT]  BREVUSDT     change= -10,66% vol=   0,9M score=31,54
+    [FUT]  FARTCOINUSDT change=+  10,05% vol=   0,9M score=29,51
+    [FUT]  SPXUSDT      change=+  10,05% vol=   0,5M score=27,29
+    [FUT]  PEPEUSDT     change=+   7,39% vol=   1,9M score=24,23
+    [FUT]  ZECUSDT      change=+   5,65% vol=  10,5M score=22,71
+    [FUT]  HYPEUSDT     change=+   6,17% vol=   2,6M score=21,1
+    [FUT]  KITEUSDT     change=+   7,12% vol=   0,6M score=19,69
+    [FUT]  XRPUSDT      change=+   5,06% vol=   4,6M score=18,55
+    [FUT]  LITUSDT      change=+   5,13% vol=   1,2M score=15,7
+    [FUT]  XLMUSDT      change=+   4,42% vol=   3,3M score=15,57
+    [FUT]  DOGEUSDT     change=+   4,16% vol=   2,8M score=14,36
+  20 pares com futuros vao ao pre-screen (spot monitorado mas nao operado pelo orchestrator)
+
+[SCAN] Pre-filtrando 20 pares...
+  + ADAUSDT (adx=23.9 rsi=87.3 vol=1.69x mom=14.53% comp=5.1545 passes=3/4)
+  + XPLUSDT (adx=27 rsi=62 vol=0.29x mom=13.03% comp=4.16 passes=3/4)
+  + PIPPINUSDT (adx=69.6 rsi=53.9 vol=0.33x mom=10.45% comp=3.567 passes=3/4)
+  + WLDUSDT (adx=60.2 rsi=64 vol=0.18x mom=9.72% comp=3.288 passes=3/4)
+  + BREVUSDT (adx=49.1 rsi=44.9 vol=0.24x mom=10.66% comp=3.5395 passes=3/4)
+  + FARTCOINUSDT (adx=62.2 rsi=55.6 vol=0.05x mom=10.05% comp=3.335 passes=3/4)
+  + SPXUSDT (adx=30.2 rsi=60.1 vol=0.06x mom=10.05% comp=3.19 passes=3/4)
+  + PEPEUSDT (adx=33.7 rsi=77.6 vol=1x mom=7.39% comp=2.7855 passes=3/4)
+  - ZECUSDT bloqueado (2/4 passes)
+  - HYPEUSDT bloqueado (2/4 passes)
+  + KITEUSDT (adx=75.5 rsi=58 vol=0.05x mom=7.12% comp=2.456 passes=3/4)
+  - XRPUSDT bloqueado (2/4 passes)
+  + LITUSDT (adx=68.9 rsi=60.8 vol=0.08x mom=5.13% comp=1.871 passes=3/4)
+  - XLMUSDT bloqueado (2/4 passes)
+  + DOGEUSDT (adx=46.3 rsi=74.2 vol=3.09x mom=4.16% comp=2.7155 passes=4/4)
+  + SUIUSDT (adx=35.9 rsi=74.9 vol=0.46x mom=4.52% comp=1.7195 passes=3/4)
+  + ETHUSDT (adx=12 rsi=68.3 vol=0.71x mom=2.97% comp=1.235 passes=3/4)
+  + BCHUSDT (adx=36 rsi=66.4 vol=0.27x mom=4.47% comp=1.629 passes=3/4)
+  - NEARUSDT bloqueado (2/4 passes)
+  - DASHUSDT bloqueado (2/4 passes)
+[16:24:46] [INFO] PUMP-FADE: 0 match em 1 pares varridos [carteira=FUTURES]
+
+[ORCH] 10 candidatos para analise completa...
+  [PARALLEL] Pre-fetching 10 candidatos via RunspacePool (concurrency=2)...
+✅ lib_correlation_rolling loaded
+✅ lib_correlation_rolling loaded
+✅ lib_cycle_memory_decision loaded
+✅ lib_cycle_memory_decision loaded
+✅ lib_funding_exhaustion_gate loaded
+✅ lib_funding_exhaustion_gate loaded
+[Supabase Integration] Module loaded
+[Supabase Integration] Module loaded
+[lib_whale_detection] Loaded - TDD implementation
+[lib_whale_detection] Loaded - TDD implementation
+[LIBS] Carregadas: 264 / 264 | Falhas: 0
+[LIBS] Carregadas: 264 / 264 | Falhas: 0
+
+
+=== ORCHESTRATOR V6 (Esquadrao) === XPLUSDT 16:24
+=== ORCHESTRATOR V6 (Esquadrao) === ADAUSDT 16:24
+  [triagem] Groq key rotacionada (429 na key atual)
+  [triagem] Groq key rotacionada (429 na key atual)
+  [triagem] Groq falhou, fallback Mistral: Groq API error (429): O servidor remoto retornou um erro: (429) Too Many Request
+  [V6] Decisao: ABORTAR | exec=not_execute | 5.4s
+
+=== ORCHESTRATOR V6 (Esquadrao) === PIPPINUSDT 16:25
+  [triagem] Groq key rotacionada (429 na key atual)
+  [triagem] Groq key rotacionada (429 na key atual)
+  [triagem] Groq falhou, fallback Mistral: Groq API error (429): O servidor remoto retornou um erro: (429) Too Many Request
+  [V6] Decisao: ABORTAR | exec=not_execute | 5.4s
+
+=== ORCHESTRATOR V6 (Esquadrao) === BREVUSDT 16:25
+  [mesa_termal] Groq key rotacionada (429 na key atual)
+  [mesa_termal] Groq key rotacionada (429 na key atual)
+  [mesa_termal] Groq falhou, fallback Mistral: Groq API error (429): O servidor remoto retornou um erro: (429) Too Many Request
+  [MESA-RAW] mesa_termal raw_len=305 preview='{"sinal":"LONG","forca":85,"justificativa":"ADX forte + EMA9>EMA21 + preço acima EMA9 + tendência clara","confluencias":'
+  [MESA-RAW] mesa_radar raw_len=439 preview='{"sinal":"LONG","forca":85,"justificativa":"Mercado em uptrend, fase Weinstein em FASE2-UPTREND, EMA 9 acima de EMA 21 e'
+  [MESA-RAW] mesa_lidar raw_len=1273 preview='```json {   "sinal": "LONG",   "forca": 78,   "justificativa": "RR=5 (excelente) + vol_ratio=0.29 (ALERTA liquidez abaix'
+  [triagem] Groq key rotacionada (429 na key atual)
+  [triagem] Groq key rotacionada (429 na key atual)
+  [triagem] Groq falhou, fallback Mistral: Groq API error (429): O servidor remoto retornou um erro: (429) Too Many Request
+AVISO: [state_store] Supabase GET fqs_registry failed: O servidor remoto retornou um erro: (404) Não Localizado.
+AVISO: [state_store] Supabase GET beta_history failed: O servidor remoto retornou um erro: (404) Não Localizado.
+AVISO: [state_store] Supabase GET dsr_global failed: O servidor remoto retornou um erro: (404) Não Localizado.
+AVISO: [state_store] Supabase GET regime_state failed: O servidor remoto retornou um erro: (404) Não Localizado.
+AVISO: [state_store] Supabase GET drawdown_history failed: O servidor remoto retornou um erro: (404) Não Localizado.
+AVISO: [state_store] Supabase GET tori_proximity failed: O servidor remoto retornou um erro: (404) Não Localizado.
+  [MentorDebate] VETAR conf=78 [anthropic_sonnet] | TIER_B_PAPER exige Mesa consensus FORTE (T+R+L) — L:LONG/78 está no limite mas o conjunto de ausências críticas (FQS sem entry, DSR ABSENT, TORI ABSENT, ALPHA_CORR ABSENT, DRAWDOWN ABSENT) impede validação de qualidade mínima para LONG em ativo desconhecido; beta=1.38 abaixo do BLOCK 1.4 mas acima do WARN 1.1 em fase bear, adicionando pressão de risco não compensada. Livermore: em terreno desconhecido sem mapa, o mercado cobra o preço da ignorância — aguardar enrich do registry antes de comprometer capital.
+  [V6] Decisao: ABORTAR | exec=not_execute | 27.8s
+
+=== ORCHESTRATOR V6 (Esquadrao) === FARTCOINUSDT 16:25
+  [mesa_termal] Groq key rotacionada (429 na key atual)
+  [mesa_termal] Groq key rotacionada (429 na key atual)
+  [mesa_termal] Groq falhou, fallback Mistral: Groq API error (429): O servidor remoto retornou um erro: (429) Too Many Request
+  [MESA-RAW] mesa_termal raw_len=196 preview='{"sinal":"NEUTRO","forca":45,"justificativa":"ADX < 20 + range Wyckoff + volume fraco","confluencias":["ADX 19.2 (range)'
+  [MESA-RAW] mesa_radar raw_len=699 preview='{"sinal":"NEUTRO","forca":40,"justificativa":"Sinais mistos, tendência técnica é downtrend, mas alguns indicadores mostr'
+  [MESA-RAW] mesa_lidar raw_len=1252 preview='```json {   "sinal": "LONG",   "forca": 72,   "justificativa": "RR=5 (excelente) + vol_ratio=0.24 (ABAIXO limiar 0.37, a'
+AVISO: [state_store] Supabase GET fqs_registry failed: O servidor remoto retornou um erro: (404) Não Localizado.
+AVISO: [state_store] Supabase GET beta_history failed: O servidor remoto retornou um erro: (404) Não Localizado.
+AVISO: [state_store] Supabase GET dsr_global failed: O servidor remoto retornou um erro: (404) Não Localizado.
+AVISO: [state_store] Supabase GET regime_state failed: O servidor remoto retornou um erro: (404) Não Localizado.
+AVISO: [state_store] Supabase GET drawdown_history failed: O servidor remoto retornou um erro: (404) Não Localizado.
+AVISO: [state_store] Supabase GET tori_proximity failed: O servidor remoto retornou um erro: (404) Não Localizado.
+  [triagem] Groq key rotacionada (429 na key atual)
+  [triagem] Groq key rotacionada (429 na key atual)
+  [triagem] Groq falhou, fallback Mistral: Groq API error (429): O servidor remoto retornou um erro: (429) Too Many Request
+  [V6] Decisao: ABORTAR | exec=not_execute | 5.4s
+
+=== ORCHESTRATOR V6 (Esquadrao) === WLDUSDT 16:25
+  [MentorDebate] VETAR conf=78 [anthropic_sonnet] | TIER_B_PAPER exige Mesa consensus FORTE (T+R+L) — aqui temos MEDIO_2 com L=LONG/72 ativamente oposto ao SHORT e confluencias mistas (BULLISH presente, ADX 19.2 em range sem momentum direcional claro). FQS indisponivel (sem entry no registry) é neutro em SHORT mas não compensa ausência de consensus; Livermore: nunca force o mercado quando a fita não confirma unanimidade.
+  [V6] Decisao: ABORTAR | exec=not_execute | 24.2s
+
+=== ORCHESTRATOR V6 (Esquadrao) === SPXUSDT 16:25
+  [triagem] Groq key rotacionada (429 na key atual)
+  [triagem] Groq key rotacionada (429 na key atual)
+  [triagem] Groq falhou, fallback Mistral: Groq API error (429): O servidor remoto retornou um erro: (429) Too Many Request
+  [triagem] Groq key rotacionada (429 na key atual)
+  [triagem] Groq key rotacionada (429 na key atual)
+  [triagem] Groq falhou, fallback Mistral: Groq API error (429): O servidor remoto retornou um erro: (429) Too Many Request
+  [mesa_termal] Groq key rotacionada (429 na key atual)
+  [mesa_termal] Groq key rotacionada (429 na key atual)
+  [mesa_termal] Groq falhou, fallback Mistral: Groq API error (429): O servidor remoto retornou um erro: (429) Too Many Request
+  [MESA-RAW] mesa_termal raw_len=285 preview='{"sinal":"LONG","forca":90,"justificativa":"ADX forte + EMA9 acima EMA21 + preço acima EMA9 + tendência clara", "conflue'
+  [MESA-RAW] mesa_radar raw_len=390 preview='{"sinal":"LONG","forca":80,"justificativa":"Mercado em uptrend, Fase Weinstein em Fase 2, EMA 9 e 21 em alta, Ichimoku a'
+  [MESA-RAW] mesa_lidar raw_len=1264 preview='```json {   "sinal": "LONG",   "forca": 72,   "justificativa": "RR=5 (excelente) + vol_ratio=0.19 (ABAIXO limite 0.37, a'
+AVISO: [Enhanced SHORT] Validação falhou (passa adiante): Não é possível associar o argumento ao parâmetro 
+'TriagemTier' porque ele é uma cadeia de caracteres vazia.
+AVISO: [state_store] Supabase GET fqs_registry failed: O servidor remoto retornou um erro: (404) Não Localizado.
+AVISO: [state_store] Supabase GET beta_history failed: O servidor remoto retornou um erro: (404) Não Localizado.
+AVISO: [state_store] Supabase GET dsr_global failed: O servidor remoto retornou um erro: (404) Não Localizado.
+AVISO: [state_store] Supabase GET regime_state failed: O servidor remoto retornou um erro: (404) Não Localizado.
+AVISO: [state_store] Supabase GET drawdown_history failed: O servidor remoto retornou um erro: (404) Não Localizado.
+AVISO: [state_store] Supabase GET tori_proximity failed: O servidor remoto retornou um erro: (404) Não Localizado.
+  [mesa_termal] Groq key rotacionada (429 na key atual)
+  [mesa_termal] Groq key rotacionada (429 na key atual)
+  [mesa_termal] Groq falhou, fallback Mistral: Groq API error (429): O servidor remoto retornou um erro: (429) Too Many Request
+  [MESA-RAW] mesa_termal raw_len=314 preview='{"sinal":"LONG","forca":90,"justificativa":"ADX forte + EMA9>EMA21 + preço acima EMA9 + tendência clara", "confluencias"'
+  [MESA-RAW] mesa_radar raw_len=486 preview='{"sinal":"LONG","forca":85,"justificativa":"Estrutura de mercado UPTREND, Fase Weinstein FASE2-UPTREND, EMA 9 > EMA 21, '
+  [MESA-RAW] mesa_lidar raw_len=1199 preview='```json {   "sinal": "LONG",   "forca": 78,   "justificativa": "RR=5 (excelente) + vol_ratio=0.37 (limite mínimo aceitáv'
+AVISO: [state_store] Supabase GET fqs_registry failed: O servidor remoto retornou um erro: (404) Não Localizado.
+AVISO: [state_store] Supabase GET beta_history failed: O servidor remoto retornou um erro: (404) Não Localizado.
+AVISO: [state_store] Supabase GET dsr_global failed: O servidor remoto retornou um erro: (404) Não Localizado.
+AVISO: [state_store] Supabase GET regime_state failed: O servidor remoto retornou um erro: (404) Não Localizado.
+AVISO: [state_store] Supabase GET drawdown_history failed: O servidor remoto retornou um erro: (404) Não Localizado.
+AVISO: [state_store] Supabase GET tori_proximity failed: O servidor remoto retornou um erro: (404) Não Localizado.
+  [MentorDebate] VETAR conf=91 [anthropic_sonnet] | BETA=1.504 viola BLOCK=1.4 em phase=h24_p3_bear (hard rule inviolável): ativo cai 2-3x mais que BTC em bear — exatamente o risco que o cap protege. FQS=3/7 SPECULATIVE + regime BEAR_WEAK + TIER_B exige Mesa consensus FORTE mas LONG em bear sem catalisador de reversão confirmada = continuation downtrend, não capitulação verdadeira. Livermore: nunca compre fraqueza em bear sem prova de fundo — o mercado sempre vai mais longe do que você imagina.
+  [MentorDebate] Critical tier 'HARD_VETO' - chamando 2nd opinion
+  [MentorDebate] VETAR conf=94 [anthropic_sonnet] | BETA=1.9423 viola BLOCK=1.4 phase-aware (h24_p3_bear) por margem de 38% — hard rule inviolável, LONG em ativo de beta extremo em fase bear é assimetria invertida. FQS ausente (sem entry no registry) + TIER_B exige Mesa consensus FORTE (ok) mas sem FQS, sem TORI, sem ALPHA_CORR e sem DRAWDOWN = 5 gates ABSENT simultâneos; Livermore: quando o mercado não te dá informação suficiente, ele está te dizendo para ficar de fora.
+  [MentorDebate] Critical tier 'HARD_VETO' - chamando 2nd opinion
+  [MentorDebate] HARD_VETO -> WLDUSDT blacklisted 24h
+  [V6] Decisao: ABORTAR | exec=not_execute | 30.5s
+
+=== ORCHESTRATOR V6 (Esquadrao) === PEPEUSDT 16:26
+  [MentorDebate] HARD_VETO -> SPXUSDT blacklisted 24h
+  [V6] Decisao: ABORTAR | exec=not_execute | 31.1s
+
+=== ORCHESTRATOR V6 (Esquadrao) === DOGEUSDT 16:26
+  [triagem] Groq key rotacionada (429 na key atual)
+  [triagem] Groq key rotacionada (429 na key atual)
+  [triagem] Groq falhou, fallback Mistral: Groq API error (429): O servidor remoto retornou um erro: (429) Too Many Request
+  [triagem] Groq key rotacionada (429 na key atual)
+  [triagem] Groq key rotacionada (429 na key atual)
+  [triagem] Groq falhou, fallback Mistral: Groq API error (429): O servidor remoto retornou um erro: (429) Too Many Request
+  [V6] Decisao: ABORTAR | exec=not_execute | 5.2s
+
+=== ORCHESTRATOR V6 (Esquadrao) === KITEUSDT 16:26
+  [triagem] Groq key rotacionada (429 na key atual)
+  [triagem] Groq key rotacionada (429 na key atual)
+  [triagem] Groq falhou, fallback Mistral: Groq API error (429): O servidor remoto retornou um erro: (429) Too Many Request
+  [V6] Decisao: ABORTAR | exec=not_execute | 5.1s
+  [mesa_termal] Groq key rotacionada (429 na key atual)
+  [mesa_termal] Groq key rotacionada (429 na key atual)
+  [mesa_termal] Groq falhou, fallback Mistral: Groq API error (429): O servidor remoto retornou um erro: (429) Too Many Request
+  [MESA-RAW] mesa_termal raw_len=351 preview='{"sinal":"LONG","forca":90,"justificativa":"ADX extremamente forte + tendência clara de alta + RSI overbought mas sem re'
+  [MESA-RAW] mesa_radar raw_len=543 preview='{"sinal":"LONG","forca":80,"justificativa":"Mercado em uptrend, Fase Weinstein em Fase 2-UPTREND, EMA 200 e SuperTrend i'
+  [MESA-RAW] mesa_lidar raw_len=1286 preview='```json {   "sinal": "NEUTRO",   "forca": 25,   "justificativa": "Setup PEPEUSDT rejeitado: ATR=0 (dados incompletos/cor'
+AVISO: [state_store] Supabase GET fqs_registry failed: O servidor remoto retornou um erro: (404) Não Localizado.
+AVISO: [state_store] Supabase GET beta_history failed: O servidor remoto retornou um erro: (404) Não Localizado.
+AVISO: [state_store] Supabase GET dsr_global failed: O servidor remoto retornou um erro: (404) Não Localizado.
+AVISO: [state_store] Supabase GET regime_state failed: O servidor remoto retornou um erro: (404) Não Localizado.
+AVISO: [state_store] Supabase GET drawdown_history failed: O servidor remoto retornou um erro: (404) Não Localizado.
+AVISO: [state_store] Supabase GET tori_proximity failed: O servidor remoto retornou um erro: (404) Não Localizado.
+AVISO: [orchestrator_v6] PAYLOAD INVARIANT VIOLATION: tier=C mode=STANDARD 
+reason=qualidade_insuficiente_tier_C_para_STANDARD; SKIP mentor (poupanca LLM)
+  [V6] Decisao: ABORTAR | exec=not_execute | 18.9s
+[16:26:22] [INFO] Parallel orchestrator: 10/10 resultados em 95,8s
+
+  === ADAUSDT ===
+[16:26:22] [TRADE] ADAUSDT: ABORTAR regime=TRANSITION_UP direction=- scanner_score=52.57 score_predicted=72 tier=B consensus=- razao=whitelist:skip:TRANSITION_UP+LONG [TRANSITION_UP LONG fora de Monday BRT (DoW=5) -- live exige DoW=1]
+
+  === XPLUSDT ===
+[16:26:22] [TRADE] XPLUSDT: ABORTAR regime=BULL_STRONG direction=LONG scanner_score=37.66 score_predicted=25 tier=B consensus=FORTE_3 razao=TIER_B_PAPER exige Mesa consensus FORTE (T+R+L) — L:LONG/78 está no limite mas o conjunto de ausências críticas (FQS sem entry, DSR ABSENT, TORI ABSENT, ALPHA_CORR ABSENT, DRAWDOWN ABSENT) impede v...
+
+  === PIPPINUSDT ===
+[16:26:22] [TRADE] PIPPINUSDT: ABORTAR regime=TRANSITION_UP direction=- scanner_score=33.25 score_predicted=22 tier=B consensus=- razao=whitelist:skip:TRANSITION_UP+LONG [TRANSITION_UP LONG fora de Monday BRT (DoW=5) -- live exige DoW=1]
+
+  === BREVUSDT ===
+[16:26:22] [TRADE] BREVUSDT: ABORTAR regime=BEAR_STRONG direction=NEUTRO scanner_score=31.54 score_predicted=18 tier=B consensus=MEDIO_2 razao=TIER_B_PAPER exige Mesa consensus FORTE (T+R+L) — aqui temos MEDIO_2 com L=LONG/72 ativamente oposto ao SHORT e confluencias mistas (BULLISH presente, ADX 19.2 em range sem momentum direcional clar...
+
+  === FARTCOINUSDT ===
+[16:26:22] [TRADE] FARTCOINUSDT: ABORTAR regime=TRANSITION_UP direction=- scanner_score=29.51 score_predicted=15 tier=B consensus=- razao=whitelist:skip:TRANSITION_UP+LONG [TRANSITION_UP LONG fora de Monday BRT (DoW=5) -- live exige DoW=1]
+
+  === WLDUSDT ===
+[16:26:22] [TRADE] WLDUSDT: ABORTAR regime=BEAR_WEAK direction=LONG scanner_score=33.06 score_predicted=35 tier=B consensus=FORTE_3 razao=BETA=1.504 viola BLOCK=1.4 em phase=h24_p3_bear (hard rule inviolável): ativo cai 2-3x mais que BTC em bear — exatamente o risco que o cap protege. FQS=3/7 SPECULATIVE + regime BEAR_WEAK + TIER_B e...
+
+  === SPXUSDT ===
+[16:26:22] [TRADE] SPXUSDT: ABORTAR regime=BULL_STRONG direction=LONG scanner_score=27.29 score_predicted=78 tier=B consensus=FORTE_3 razao=BETA=1.9423 viola BLOCK=1.4 phase-aware (h24_p3_bear) por margem de 38% — hard rule inviolável, LONG em ativo de beta extremo em fase bear é assimetria invertida. FQS ausente (sem entry no registry...
+
+  === PEPEUSDT ===
+[16:26:22] [TRADE] PEPEUSDT: ABORTAR regime=BULL_STRONG direction=LONG scanner_score=24.23 score_predicted=12 tier=C consensus=MEDIO_2 razao=INVARIANT_VIOLATION: qualidade_insuficiente_tier_C_para_STANDARD
+
+  === DOGEUSDT ===
+[16:26:22] [TRADE] DOGEUSDT: ABORTAR regime=TRANSITION_UP direction=- scanner_score=14.36 score_predicted=12 tier=D consensus=- razao=ScannerScore baixo (14) + macro bearish + altcoin em bear territory + seasonal momentum não compensa risco estrutural
+
+  === KITEUSDT ===
+[16:26:22] [TRADE] KITEUSDT: ABORTAR regime=TRANSITION_UP direction=- scanner_score=19.69 score_predicted=15 tier=C consensus=- razao=whitelist:skip:TRANSITION_UP+LONG [TRANSITION_UP LONG fora de Monday BRT (DoW=5) -- live exige DoW=1]
+[16:26:22] [INFO] Ciclo concluido em 200.2s | gems=1 candidates=14 top=10
+
+🔍 GEM DISCOVERY SCANNER — 2026-07-03 16:26:22
+⚠️ Error scanning BTCUSDT : Não é possível localizar um parâmetro que coincida com o nome de parâmetro 'Timeframe'.
+⚠️ Error scanning ETHUSDT : Não é possível localizar um parâmetro que coincida com o nome de parâmetro 'Timeframe'.
+⚠️ Error scanning XRPUSDT : Não é possível localizar um parâmetro que coincida com o nome de parâmetro 'Timeframe'.
+⚠️ Error scanning SOLUSDT : Não é possível localizar um parâmetro que coincida com o nome de parâmetro 'Timeframe'.
+⚠️ Error scanning ADAUSDT : Não é possível localizar um parâmetro que coincida com o nome de parâmetro 'Timeframe'.
+⚠️ Error scanning LINKUSDT : Não é possível localizar um parâmetro que coincida com o nome de parâmetro 'Timeframe'.
+⚠️ Error scanning DOGEUSDT : Não é possível localizar um parâmetro que coincida com o nome de parâmetro 'Timeframe'.
+⚠️ Error scanning MATICUSDT : Não é possível localizar um parâmetro que coincida com o nome de parâmetro 'Timeframe'.
+⚠️ Error scanning LITUSDT : Não é possível localizar um parâmetro que coincida com o nome de parâmetro 'Timeframe'.
+⚠️ Error scanning AVAXUSDT : Não é possível localizar um parâmetro que coincida com o nome de parâmetro 'Timeframe'.
+⚠️ Error scanning PEPOUSDT : Não é possível localizar um parâmetro que coincida com o nome de parâmetro 'Timeframe'.
+⚠️ Error scanning BONKUSDT : Não é possível localizar um parâmetro que coincida com o nome de parâmetro 'Timeframe'.
+⚠️ Error scanning SHIUSDT : Não é possível localizar um parâmetro que coincida com o nome de parâmetro 'Timeframe'.
+⚠️ Error scanning FLOKIUSDT : Não é possível localizar um parâmetro que coincida com o nome de parâmetro 'Timeframe'.
+⚠️ Error scanning DOGMAUSDT : Não é possível localizar um parâmetro que coincida com o nome de parâmetro 'Timeframe'.
+
+⭕ No high-confidence patterns detected this cycle
+
+
+⭕ GEM STRATEGIES: Nenhum padrão detectado neste ciclo
+
+  Proximo ciclo em 15min (16:41) janela=PRIME
+[16:26:22] [INFO] Dormindo 15min janela=PRIME proximo=16:41
+[16:31:18] [INFO] Aguardando... 10min restantes janela=PRIME

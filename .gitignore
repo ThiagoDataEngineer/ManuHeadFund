@@ -144,3 +144,4 @@ locks/*.lock
 journal/daemon_locks/
 
 backtest/data/
+journal/klines_1h_*.jsonl
