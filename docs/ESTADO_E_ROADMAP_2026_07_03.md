@@ -51,8 +51,8 @@ produtores de evento por mercado nunca concluídos.
 
 | # | Evolução | Fundamento | Esforço | Status |
 |---|---|---|---|---|
-| 1 | **Regra de SAÍDA spot no clímax** (bag pumpou ≥20-30% → harvest; mediana -8% amanhã) | Lei 1+2; monetiza SEM futures; zero risco novo | baixo | aguarda GO |
-| 2 | **Backtest c/ custos dos 45 shortáveis reais** (fees+funding+slippage+gaps) | auditoria exige antes de short live | médio | aguarda GO |
+| 1 | **Regra de SAÍDA spot no clímax** → **Layer 5 CLIMAX** em Resolve-ExitAutoDecision | backtest B: vender ganha 63%, salva -4.6/-10.4% mediana, tail -44% (n=6212) | baixo | ✅ **IMPLEMENTADO TDD 21/21** (5c5a211); ativa na nuvem no próximo JOB |
+| 2 | Backtest short c/ custos: **v1 REPROVADO** (wick estopa 55%, PnL -4%); **v2 (reversão intraday)** win 52-58%, mediana +2.5%, média ~0, cauda -27% | Lei 1 (momentum <4h mata entrada ingênua) | médio | 🔬 P&D: próx. iteração = stop na entry + coleta 1h contínua; **NÃO vai a capital** |
 | 3 | Precision/recall da assinatura H-1 (viabilidade do LONG intraday) | sem isso, long não tem gatilho | médio | aguarda GO |
 | 4 | W(t) como indicador live (regime-amplificador no journal) | Lei 3; leitura diária barata | baixo | aguarda GO |
 | 5 | Time-stop para LONGs de microcap | Lei 4 (drift -41%/ano) | baixo | aguarda GO |
