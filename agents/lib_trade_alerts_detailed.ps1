@@ -59,13 +59,15 @@ function Send-TradeExitAlert {
 
     $emoji = if ($PnlPercent -ge 0) { "✅" } else { "❌" }
     $gainLoss = if ($PnlPercent -ge 0) { "GAIN" } else { "LOSS" }
+    # PS 5.1: format com sinal via -f (sintaxe ${var:spec} nao existe em PowerShell)
+    $pnlFmt = "{0:+0.0;-0.0;+0.0}" -f $PnlPercent
 
     $message = @"
 $emoji <b>$Direction CLOSED</b> <b>$Market</b>
 
 📊 <b>Entry</b>: $EntryPrice
 📍 <b>Exit</b>: $ExitPrice
-📈 <b>P&L</b>: <b>${PnlPercent:+0.0}%</b> ($gainLoss)
+📈 <b>P&L</b>: <b>$pnlFmt%</b> ($gainLoss)
 💰 <b>Size</b>: $$SizeUsd
 📌 <b>Reason</b>: $ExitReason
 
@@ -91,13 +93,15 @@ function Send-PortfolioSnapshot {
 
     $emoji = if ($TotalOpenPnL -ge 0) { "📈" } else { "📉" }
     $todayEmoji = if ($TodayPnL -ge 0) { "✅" } else { "⚠️" }
+    $openFmt = "{0:+0.00;-0.00;+0.00}" -f $TotalOpenPnL
+    $todayFmt = "{0:+0.00;-0.00;+0.00}" -f $TodayPnL
 
     $message = @"
 $emoji <b>PORTFOLIO SNAPSHOT</b>
 
 📊 <b>Open Trades</b>: $OpenTrades
-💼 <b>Open P&L</b>: ${TotalOpenPnL:+0.2}%
-📅 <b>Today P&L</b>: $todayEmoji ${TodayPnL:+0.2}%
+💼 <b>Open P&L</b>: $openFmt%
+📅 <b>Today P&L</b>: $todayEmoji $todayFmt%
 🔄 <b>Regime</b>: $Regime
 
 🤖 <i>Auto-trading active</i>
