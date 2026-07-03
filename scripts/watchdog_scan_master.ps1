@@ -13,19 +13,25 @@ $scanScript = Join-Path $root "scripts\scan_master.ps1"
 $logDir = Join-Path $root "logs"
 $wdLog = Join-Path $root "journal\watchdog_scan_master.log"
 
-# 2026-07-03 v2: Get-Process NAO expoe CommandLine em PS 5.1 (so PS7) -> usar CIM.
-# Regex exclui 'watchdog' para nao casar consigo mesmo.
+# 2026-07-03 v3: Get-Process NAO expoe CommandLine em PS 5.1 -> usar CIM.
+# So conta invocacao REAL de daemon: '-File ...scan_master.ps1'. Shells de
+# ferramenta/editor carregam o texto via -Command e contaminam regex frouxo.
 function Get-ScanMasterProcess {
     Get-CimInstance Win32_Process -Filter "Name='powershell.exe' OR Name='pwsh.exe'" -ErrorAction SilentlyContinue |
-        Where-Object { $_.CommandLine -match 'scan_master\.ps1' -and $_.CommandLine -notmatch 'watchdog' -and $_.ProcessId -ne $PID } |
+        Where-Object { $_.CommandLine -match '-File\s+.*scan_master\.ps1' -and $_.CommandLine -notmatch 'watchdog' -and $_.ProcessId -ne $PID } |
         Select-Object -First 1
 }
 
-# Singleton
+# Singleton via lock file (regex em CommandLine e contaminavel por shells -Command)
 $me = $PID
-$others = Get-CimInstance Win32_Process -Filter "Name='powershell.exe' OR Name='pwsh.exe'" -ErrorAction SilentlyContinue |
-    Where-Object { $_.CommandLine -match 'watchdog_scan_master' -and $_.ProcessId -ne $me }
-if ($others) { Write-Host "Watchdog ja rodando (PID=$($others[0].ProcessId)). Saindo."; exit 0 }
+$lockFile = Join-Path $root "journal\watchdog_scan_master.pid"
+if (Test-Path $lockFile) {
+    $oldPid = [int](Get-Content $lockFile -ErrorAction SilentlyContinue | Select-Object -First 1)
+    if ($oldPid -and $oldPid -ne $me -and (Get-Process -Id $oldPid -ErrorAction SilentlyContinue)) {
+        Write-Host "Watchdog ja rodando (PID=$oldPid). Saindo."; exit 0
+    }
+}
+Set-Content -Path $lockFile -Value $me -Encoding ascii
 
 # Telegram (best-effort)
 try { . (Join-Path $root "agents\lib_telegram.ps1") } catch { }
