@@ -4,7 +4,7 @@
 function Get-AvailableCapitalByCarteira {
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory)] [hashtable] $CoinExConfig
+        [hashtable] $CoinExConfig = $null  # compat; lib_coinex usa globals/$env
     )
 
     $result = [PSCustomObject]@{

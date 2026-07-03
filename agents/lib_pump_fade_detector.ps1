@@ -1,45 +1,43 @@
 ﻿# lib_pump_fade_detector.ps1 — Detecta pump-fade pattern para SHORT v2.5
-# 2026-07-03: Pattern = pump H-1 seguido de dump D0 = oportunidade SHORT
-# Dados: histórico diário (simples, robusto)
-
-# Returna: [PSCustomObject]@{
-#   detected = $true/$false
-#   market = "PAIR"
-#   pump_ret = +15.0  (yesterday pump %)
-#   confidence = 0.6  (quanto confiamos neste padrão)
-# }
+# 2026-07-03: Pattern = pump H-1 (>= 15%) seguido de dump D0 (<= -10%) = oportunidade SHORT
+# 2026-07-03 v2: usa Get-CoinExCandles (lib_candle_fetcher — funcao REAL, endpoint publico).
+#   v1 chamava CoinEx-GetKlines (inexistente) com $global:CoinExConfig (inexistente)
+#   -> SHORT Block 3 falhava todo ciclo com "argumento nulo".
+# Campos do fetcher: open/high/low/close/volume/ts (ordem: mais antiga -> mais recente)
 
 function Find-PumpFadeOpportunity {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)] [string] $Market,
-        [Parameter(Mandatory)] [hashtable] $CoinExConfig,
+        [hashtable] $CoinExConfig = $null,  # compat com call sites antigos; kline e publico
         [int] $MinPumpPercent = 15
     )
 
-    # Pega últimas 3 velas diárias (hoje, ontem, anteontem)
+    if (-not (Get-Command Get-CoinExCandles -ErrorAction SilentlyContinue)) {
+        return [PSCustomObject]@{ detected = $false; market = $Market; reason = "candle_fetcher_missing" }
+    }
+
     try {
-        $klines = CoinEx-GetKlines -Market $Market -Interval "1d" -Limit 3 -Config $CoinExConfig
-        if (-not $klines -or $klines.Count -lt 2) {
+        $klines = @(Get-CoinExCandles -Market $Market -Period "1day" -Limit 3)
+        if ($klines.Count -lt 2) {
             return [PSCustomObject]@{ detected = $false; market = $Market; reason = "insufficient_data" }
         }
 
-        # Order: [0]=oldest, [1]=H-1, [2]=today
-        $yesterday = $klines[1]
-        $today = $klines[2]
+        # Indexa do fim: [-1]=hoje, [-2]=ontem (robusto se vier so 2 velas)
+        $yesterday = $klines[-2]
+        $today = $klines[-1]
 
-        # Calcula retornos
-        $yesterdayRet = if ($yesterday.o -gt 0) {
-            [math]::Round(($yesterday.c - $yesterday.o) / $yesterday.o * 100, 1)
+        $yesterdayRet = if ($yesterday.open -gt 0) {
+            [math]::Round(($yesterday.close - $yesterday.open) / $yesterday.open * 100, 1)
         } else { 0 }
 
-        $todayRet = if ($today.o -gt 0) {
-            [math]::Round(($today.c - $today.o) / $today.o * 100, 1)
+        $todayRet = if ($today.open -gt 0) {
+            [math]::Round(($today.close - $today.open) / $today.open * 100, 1)
         } else { 0 }
 
-        # === PATTERN: pump yesterday + dump today ===
+        # === PATTERN: pump ontem + dump hoje ===
         $isPump = $yesterdayRet -ge $MinPumpPercent
-        $isDump = $todayRet -le -10  # dump mínimo -10%
+        $isDump = $todayRet -le -10
 
         if (-not $isPump) {
             return [PSCustomObject]@{
@@ -60,13 +58,11 @@ function Find-PumpFadeOpportunity {
             }
         }
 
-        # Calcula confidence (quanto mais extremo = mais confiável)
-        $pumpConfidence = [math]::Min([math]::Abs($yesterdayRet) / 30, 1.0)  # max 30% pump = 1.0 confidence
-        $dumpConfidence = [math]::Min([math]::Abs($todayRet) / 30, 1.0)      # max -30% dump = 1.0
-
+        # Confidence: quanto mais extremo, mais confiavel (30% = 1.0)
+        $pumpConfidence = [math]::Min([math]::Abs($yesterdayRet) / 30, 1.0)
+        $dumpConfidence = [math]::Min([math]::Abs($todayRet) / 30, 1.0)
         $confidence = ($pumpConfidence + $dumpConfidence) / 2
 
-        # Retorna opportunity
         return [PSCustomObject]@{
             detected = $true
             market = $Market
@@ -74,9 +70,9 @@ function Find-PumpFadeOpportunity {
             dump_ret = $todayRet
             confidence = [math]::Round($confidence, 2)
             entry_setup = [PSCustomObject]@{
-                entry_price = [math]::Round($today.c, 6)  # Close hoje (possível open amanhã)
-                stop_pct = 1.0                             # 1% tight stop
-                target_pct = 5.0                           # 5% profit target
+                entry_price = [math]::Round([double]$today.close, 6)
+                stop_pct = 1.0     # 1% tight stop
+                target_pct = 5.0   # 5% profit target
             }
         }
     }
@@ -90,4 +86,4 @@ function Find-PumpFadeOpportunity {
     }
 }
 
-# Função exportada por dot-source (não em módulo)
+# Funcao exportada por dot-source (nao em modulo)

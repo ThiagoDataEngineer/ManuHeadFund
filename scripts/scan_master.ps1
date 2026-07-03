@@ -999,8 +999,8 @@ function Invoke-MasterCycle {
         # Sizing: 1.0% de SPOT ou FUTURES (auto-deteta qual tem capital)
         if (-not $SkipOrchestrator -and (Get-Command Find-PumpFadeOpportunity -ErrorAction SilentlyContinue)) {
             try {
-                # Detecta qual carteira tem capital disponível
-                $carteirInfo = Get-AvailableCapitalByCarteira -CoinExConfig $global:CoinExConfig
+                # Detecta qual carteira tem capital disponível (lib_coinex usa $env globals)
+                $carteirInfo = Get-AvailableCapitalByCarteira
                 $pumpFadeSizingPercent = 1.0  # 1% da carteira disponível
 
                 if ($carteirInfo.primary_carteira -ne "NONE") {
@@ -1009,7 +1009,7 @@ function Invoke-MasterCycle {
                     $scanTopN = if ($global:SCANNER_INDEX.Count -gt 100) { ($global:SCANNER_INDEX.Values | Sort-Object -Property volume -Descending | Select-Object -First 100).market } else { $global:SCANNER_INDEX.Keys }
 
                     foreach ($mkt in $scanTopN) {
-                        $pf = Find-PumpFadeOpportunity -Market $mkt -CoinExConfig $global:CoinExConfig -MinPumpPercent 15
+                        $pf = Find-PumpFadeOpportunity -Market $mkt -MinPumpPercent 15
                         if ($pf.detected) {
                             $pumpFadeCandidates += [PSCustomObject]@{
                                 market = $mkt
