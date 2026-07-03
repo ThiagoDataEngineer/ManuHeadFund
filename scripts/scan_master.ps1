@@ -1033,6 +1033,9 @@ function Invoke-MasterCycle {
                             $topCandidates = @($topCandidates) + @($pumpFadeFiltered)
                             Write-MasterLog "PUMP-FADE: $($pumpFadeFiltered.Count) candidate(s) SHORT detectado(s) [$($carteirInfo.primary_carteira)] -- $($pumpFadeFiltered.market -join ',')" "INFO"
                         }
+                    } else {
+                        # 2026-07-03: log sempre — distingue "sem match" de "nao rodou"
+                        Write-MasterLog "PUMP-FADE: 0 match em $(@($scanTopN).Count) pares varridos [carteira=$($carteirInfo.primary_carteira)]" "INFO"
                     }
                 }
             } catch {
