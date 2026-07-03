@@ -527,6 +527,32 @@ function Invoke-GemCycle {
                 # Atualiza gem com direção sugerida ANTES de pedir aprovação
                 $g | Add-Member -MemberType NoteProperty -Name direction -Value $suggestedDirection -Force
 
+                # 2026-07-03 rr|SHORT bug fix: o setup do gem foi construido como LONG
+                # (target ACIMA do entry). Flip pra SHORT sem recalcular fazia o mentor
+                # vetar por "R:R invertido" (counterfactual: 100% dos rr|SHORT eram isso).
+                # Espelha stop/target em volta do entry preservando as distancias (R:R igual).
+                if ($suggestedDirection -eq "SHORT") {
+                    try {
+                        $ep = 0.0
+                        foreach ($epField in @('entry_price','entry','price')) {
+                            if ($g.PSObject.Properties[$epField] -and [double]$g.$epField -gt 0) { $ep = [double]$g.$epField; break }
+                        }
+                        if ($ep -gt 0) {
+                            foreach ($tf in @('target','target_price','take_profit')) {
+                                if ($g.PSObject.Properties[$tf] -and [double]$g.$tf -gt $ep) {
+                                    $g.$tf = [math]::Round([math]::Max($ep - ([double]$g.$tf - $ep), $ep * 0.01), 8)
+                                }
+                            }
+                            foreach ($sf in @('stop_loss','stop','stop_price')) {
+                                if ($g.PSObject.Properties[$sf] -and [double]$g.$sf -gt 0 -and [double]$g.$sf -lt $ep) {
+                                    $g.$sf = [math]::Round($ep + ($ep - [double]$g.$sf), 8)
+                                }
+                            }
+                            Write-MasterLog "GEM setup espelhado p/ SHORT: $($g.market) (stop/target invertidos em volta do entry)" "GEM"
+                        }
+                    } catch { }
+                }
+
                 $approvalMsg = Format-TgGemApproval -Gem $g -DryRun:$DryRun
                 if ($DryRun) {
                     Send-TelegramAlert -Message $approvalMsg | Out-Null

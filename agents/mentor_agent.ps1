@@ -387,6 +387,13 @@ REGRAS ANTI-HALLUCINATION (CRITICAS, violar = decisao invalida):
    NUNCA aborte um SHORT em bear por beta acima do cap. Frase correta:
    "beta=X favoravel para SHORT em bear (cap protege LONG, nao SHORT)".
    A excecao vale APENAS para SHORT em bear — LONG mantem o cap inviolavel.
+5c. FQS DIRECIONAL (2026-07-03): FQS mede qualidade de tokenomics — protege LONG
+   (nao comprar lixo). Para direction=SHORT a fisica INVERTE: FQS baixo (1-3 AVOID/
+   SPECULATIVE) significa fundamentals fracos = ativo cai mais forte = A FAVOR do short.
+   NUNCA use FQS baixo como razao de abortar um SHORT. FQS indisponivel em SHORT =
+   neutro (nao bloqueia sozinho; julgue pelos demais gates: estrutura, regime, R:R).
+   Frase correta: "FQS=X/7 fraco favorece o SHORT (qualidade baixa cai mais)".
+   Para LONG, FQS mantem funcao integral de gate de qualidade.
 6. [DSR_HISTORY] e INFORMATIVO, NAO e gate de bloqueio. n_trades=0 NAO impede trade.
    NUNCA use DSR como razao de ABORTAR. O sistema esta em fase de acumulo de historico.
    Se mencionar, use APENAS: "historico limitado -- monitorar evolucao".
