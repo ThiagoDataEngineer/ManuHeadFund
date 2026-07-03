@@ -10,7 +10,8 @@ $script:TelegramRateLimitWindow = 60  # segundos
 function Test-TelegramMessageDuplicate {
     param([string]$Message)
 
-    $hash = [System.Security.Cryptography.HashAlgorithm]::Create("MD5").ComputeHash([System.Text.Encoding]::UTF8.GetBytes($Message)) | ForEach-Object { $_.ToString("x2") } | Join-String
+    # 2026-07-03 FIX: Join-String e PS7-only; -join e compativel PS 5.1
+    $hash = ([System.Security.Cryptography.HashAlgorithm]::Create("MD5").ComputeHash([System.Text.Encoding]::UTF8.GetBytes($Message)) | ForEach-Object { $_.ToString("x2") }) -join ""
     $now = [datetime]::UtcNow
 
     if ($script:TelegramMessageCache.ContainsKey($hash)) {
@@ -48,7 +49,8 @@ function Telegram-SendMessage {
 
     # ✂️ DEDUP CHECK: suprime mensagens idênticas em < 60s
     if (-not $AllowDuplicate -and (Test-TelegramMessageDuplicate -Message $Message)) {
-        Write-Host "[TELEGRAM] Mensagem duplicada (suprimida). Hash=$(([System.Security.Cryptography.HashAlgorithm]::Create('MD5').ComputeHash([System.Text.Encoding]::UTF8.GetBytes($Message)) | ForEach-Object { $_.ToString('x2') } | Join-String).Substring(0,8))" -ForegroundColor Gray
+        $__dupHash = (([System.Security.Cryptography.HashAlgorithm]::Create('MD5').ComputeHash([System.Text.Encoding]::UTF8.GetBytes($Message)) | ForEach-Object { $_.ToString('x2') }) -join "").Substring(0,8)
+        Write-Host "[TELEGRAM] Mensagem duplicada (suprimida). Hash=$__dupHash" -ForegroundColor Gray
         return [PSCustomObject]@{
             success = $false
             error = "Duplicate suppressed"
