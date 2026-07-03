@@ -145,3 +145,7 @@ journal/daemon_locks/
 
 backtest/data/
 journal/klines_1h_*.jsonl
+journal/scan_master_stdout.txt
+journal/scan_master_stderr.txt
+journal/collect_1h.log
+journal/*.pid
