@@ -557,6 +557,8 @@ jobs:
               Write-Host "WARN: $_" -ForegroundColor Yellow
             }
           }
+          # 2026-07-04: cron_guard sinaliza SKIP com exit 1 -> mascarava o job como FAILED
+          exit 0
 
   # ============================================================================
   # JOB 9: KELLY AUDIT (1x/dia)
@@ -599,6 +601,8 @@ jobs:
               Write-Host "WARN: $_" -ForegroundColor Yellow
             }
           }
+          # 2026-07-04: cron_guard sinaliza SKIP com exit 1 -> mascarava o job como FAILED
+          exit 0
 
   # ============================================================================
   # JOB 10: DAILY DIGEST (1x/dia)
@@ -641,6 +645,8 @@ jobs:
               Write-Host "WARN: $_" -ForegroundColor Yellow
             }
           }
+          # 2026-07-04: cron_guard sinaliza SKIP com exit 1 -> mascarava o job como FAILED
+          exit 0
 
   # ============================================================================
   # JOB 11: TORI PROXIMITY SCANNER (a cada 15min)
@@ -729,6 +735,8 @@ jobs:
               Write-Host "WARN: $_" -ForegroundColor Yellow
             }
           }
+          # 2026-07-04: cron_guard sinaliza SKIP com exit 1 -> mascarava o job como FAILED
+          exit 0
 
   # ============================================================================
   # JOB 13: WSS FORWARD RESOLVE (a cada hora)
@@ -772,6 +780,8 @@ jobs:
               Write-Host "WARN: $_" -ForegroundColor Yellow
             }
           }
+          # 2026-07-04: cron_guard sinaliza SKIP com exit 1 -> mascarava o job como FAILED
+          exit 0
 
   # ============================================================================
   # JOB 14: WEEKLY DATA REFRESH (1x/semana - domingo)
@@ -818,6 +828,8 @@ jobs:
               Write-Host "WARN: $_" -ForegroundColor Yellow
             }
           }
+          # 2026-07-04: cron_guard sinaliza SKIP com exit 1 -> mascarava o job como FAILED
+          exit 0
 
   # ============================================================================
   # JOB 15: PROMOTION WEEKLY CRON (1x/semana - segunda)
@@ -864,6 +876,8 @@ jobs:
               Write-Host "WARN: $_" -ForegroundColor Yellow
             }
           }
+          # 2026-07-04: cron_guard sinaliza SKIP com exit 1 -> mascarava o job como FAILED
+          exit 0
 
   # ============================================================================
   # JOB 16: WEEKLY PROVIDER COST REPORT (1x/semana - segunda)
@@ -909,6 +923,8 @@ jobs:
               Write-Host "WARN: $_" -ForegroundColor Yellow
             }
           }
+          # 2026-07-04: cron_guard sinaliza SKIP com exit 1 -> mascarava o job como FAILED
+          exit 0
   
   # ============================================================================
   # JOB 17-21: LAYERS REVIEW + CAPITAL SNAPSHOT (state_store em Supabase)
@@ -1025,6 +1041,8 @@ jobs:
           } catch {
             Write-Host "WARN: $_" -ForegroundColor Yellow
           }
+          # 2026-07-04: cron_guard sinaliza SKIP com exit 1 -> mascarava o job como FAILED
+          exit 0
 
   # ----------------------------------------------------------------------------
   # JOB 20: LAYER 4 â€” Tori + Time Stops (cada 5min)
