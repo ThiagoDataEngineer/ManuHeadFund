@@ -854,11 +854,17 @@ function Invoke-MasterCycle {
                     if ($global:GEM_SAFETY -and $global:GEM_SAFETY.MaxGemsPerDay) {
                         $usN = [int]$global:GEM_SAFETY.MaxGemsPerDay
                     }
-                    # Reconcilia circuit-breaker do gem_safety se existir
-                    if (Get-Command Test-GemSafety -ErrorAction SilentlyContinue) {
+                    # Reconcilia circuit-breaker do gem_safety
+                    # 2026-07-04 CONTRATO: Test-GemSafety NUNCA existiu (guard silenciava)
+                    # -> circuit-breaker jamais reconciliado aqui. Real: Get-GemSafetyState;
+                    # pausa = 3+ stops consecutivos (Regra de Ouro: 3 perdas = parar).
+                    if (Get-Command Get-GemSafetyState -ErrorAction SilentlyContinue) {
                         try {
-                            $safetyState = Test-GemSafety
-                            if ($safetyState -and $safetyState.paused) { $usPaused = $true }
+                            $safetyState = Get-GemSafetyState
+                            if ($safetyState -and [int]$safetyState.consecutive_stops -ge 3) {
+                                $usPaused = $true
+                                Write-MasterLog "GEM SAFETY: pausado ($($safetyState.consecutive_stops) stops consecutivos)" "WARN"
+                            }
                         } catch {}
                     }
                     if ($usPaused) { $usN = 0 }

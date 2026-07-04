@@ -93,11 +93,17 @@ try {
     # TDD Sprint 1 (2026-05-23): Regime-specific thresholds
     # Detect current regime for adaptive thresholds
     $currentRegime = "BEAR_WEAK"  # Default fallback
-    if (Get-Command Get-CurrentRegime -ErrorAction SilentlyContinue) {
+    # 2026-07-04 CONTRATO: Get-CurrentRegime NUNCA existiu -> scanner rodava
+    # regime-cego (sempre no fallback) desde a criacao. Fonte real:
+    # $global:CURRENT_REGIME ou journal/regime_state.json (refresh_regime_state).
+    if ($global:CURRENT_REGIME) {
+        $currentRegime = [string]$global:CURRENT_REGIME
+    } else {
         try {
-            $regimeResult = Get-CurrentRegime
-            if ($regimeResult -and $regimeResult.regime) {
-                $currentRegime = $regimeResult.regime
+            $rsPath = Join-Path (Split-Path $PSScriptRoot -Parent) "journal\regime_state.json"
+            if (Test-Path $rsPath) {
+                $rs = Get-Content $rsPath -Raw | ConvertFrom-Json
+                if ($rs.regime) { $currentRegime = [string]$rs.regime }
             }
         } catch {}
     }
