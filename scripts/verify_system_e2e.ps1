@@ -95,8 +95,9 @@ Check "DAEMON" "scan_master processo vivo" ([bool]$sm) "pid=$($sm.ProcessId)"
 $logToday = "$root\logs\master_$(Get-Date -Format 'yyyyMMdd').log"
 $logFresh = (Test-Path $logToday) -and (((Get-Date) - (Get-Item $logToday).LastWriteTime).TotalMinutes -lt 90)
 Check "DAEMON" "log master andou nos ultimos 90min (nao-zumbi)" $logFresh
-$wdPid = 0; try { $wdPid = [int](Get-Content "$root\journal\watchdog_scan_master.pid" -ErrorAction SilentlyContinue | Select-Object -First 1) } catch {}
-Check "DAEMON" "watchdog vivo" ($wdPid -gt 0 -and [bool](Get-Process -Id $wdPid -ErrorAction SilentlyContinue)) "pid=$wdPid"
+# 2026-07-04: watchdog v3 aposentado -> self_heal_guardian assumiu (escopo total)
+$gdPid = 0; try { $gdPid = [int](Get-Content "$root\journal\self_heal_guardian.pid" -ErrorAction SilentlyContinue | Select-Object -First 1) } catch {}
+Check "DAEMON" "guardian (auto-cura) vivo" ($gdPid -gt 0 -and [bool](Get-Process -Id $gdPid -ErrorAction SilentlyContinue)) "pid=$gdPid"
 $colPid = 0; try { $colPid = [int](Get-Content "$root\journal\collect_1h.pid" -ErrorAction SilentlyContinue | Select-Object -First 1) } catch {}
 Check "DAEMON" "coletor 1h vivo" ($colPid -gt 0 -and [bool](Get-Process -Id $colPid -ErrorAction SilentlyContinue)) "pid=$colPid"
 $klFile = Get-ChildItem "$root\journal\klines_1h_*.jsonl" -ErrorAction SilentlyContinue | Select-Object -First 1
