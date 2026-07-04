@@ -1050,17 +1050,25 @@ function Invoke-MasterCycle {
 
                 if ($carteirInfo.primary_carteira -ne "NONE") {
                     $pumpFadeCandidates = @()
-                    # 2026-07-03 v2 escopo: pre-filtra por DUMP hoje (change <= -10% no
-                    # ticker, zero API calls) em TODO o scanner index — nao top-100 por
-                    # volume (dimensao errada: pump-fade acontece em movers/microcaps).
-                    # So os dumpers vao a busca de candles (max 30, piores primeiro).
+                    # 2026-07-04: thresholds via EVOLUTION ENGINE (auto-tunados por
+                    # evidencia, bounds duplos — clamp aqui e no engine).
+                    $pfMinPump = 15; $pfDump = -10
+                    if (Get-Command Get-EvolutionParams -ErrorAction SilentlyContinue) {
+                        try {
+                            $evp = Get-EvolutionParams
+                            $pfMinPump = [int][math]::Max(8, [math]::Min(25, [double]$evp.pumpfade_min_pump_pct))
+                            $pfDump = [math]::Max(-20, [math]::Min(-5, [double]$evp.pumpfade_dump_pct))
+                        } catch { }
+                    }
+                    # 2026-07-03 v2 escopo: pre-filtra por DUMP hoje (ticker, zero API
+                    # calls) em TODO o scanner index. Max 30 dumpers, piores primeiro.
                     $scanTopN = @($global:SCANNER_INDEX.Values |
-                        Where-Object { $_.change -ne $null -and [double]$_.change -le -10 } |
+                        Where-Object { $_.change -ne $null -and [double]$_.change -le $pfDump } |
                         Sort-Object { [double]$_.change } |
                         Select-Object -First 30).market
 
                     foreach ($mkt in $scanTopN) {
-                        $pf = Find-PumpFadeOpportunity -Market $mkt -MinPumpPercent 15
+                        $pf = Find-PumpFadeOpportunity -Market $mkt -MinPumpPercent $pfMinPump
                         if ($pf.detected) {
                             $pumpFadeCandidates += [PSCustomObject]@{
                                 market = $mkt

@@ -35,17 +35,26 @@ if (Test-Path $lockFile) {
 }
 Set-Content -Path $lockFile -Value $PID -Encoding ascii
 
-# Bus (producer)
+# Bus (producer) + Evolution Engine (thresholds auto-tunados)
 $global:JOURNAL_DIR = $journalDir
 . (Join-Path $root "agents\lib_signal_trigger_bus.ps1")
+. (Join-Path $root "agents\lib_evolution_engine.ps1")
 
-Write-SentLog "Sentinela iniciado (PID=$PID). Poll 3min | MOVE>=2.5%/3min | IGNICAO cruza 12%/24h."
+Write-SentLog "Sentinela iniciado (PID=$PID). Poll 3min | thresholds via evolution engine (defaults 2.5%/12%)."
 
 $prev = @{}   # market -> @{ last; chg24 }
 $pollSec = 180
 
 while ($true) {
     try {
+        # Thresholds do evolution engine (overlay; CLAMP no consumidor = bound 2 de 2)
+        $movePct = 2.5; $ignPct = 12.0
+        try {
+            $ep = Get-EvolutionParams -JournalDir $journalDir
+            $movePct = [math]::Max(1.5, [math]::Min(5.0, [double]$ep.sentinel_move_pct))
+            $ignPct  = [math]::Max(8.0, [math]::Min(20.0, [double]$ep.sentinel_ignition_pct))
+        } catch { }
+
         $r = Invoke-RestMethod -Uri "https://api.coinex.com/v2/spot/ticker" -Method GET -TimeoutSec 30
         if ($r.code -eq 0 -and $r.data) {
             $fired = 0; $seen = 0
@@ -59,18 +68,18 @@ while ($true) {
 
                 $p = $prev[$t.market]
                 if ($p) {
-                    # A) MOVE 3min
+                    # A) MOVE 3min (threshold auto-tunado pelo evolution engine)
                     $d3m = ($last - $p.last) / $p.last * 100
-                    if ([math]::Abs($d3m) -ge 2.5 -and $vol -ge 30000) {
+                    if ([math]::Abs($d3m) -ge $movePct -and $vol -ge 30000) {
                         $conv = [math]::Min(95, [int](70 + [math]::Abs($d3m) * 3))
-                        $res = Add-SignalTrigger -Market $t.market -Signal "sentinel_move" -Conviction $conv -Direction "auto" -Mode "scan" -Notes ("d3m={0:+0.0}% vol24h={1:0}k" -f $d3m, ($vol/1000))
+                        $res = Add-SignalTrigger -Market $t.market -Signal "sentinel_move" -Conviction $conv -Direction "auto" -Mode "scan" -Notes ("d3m={0:+0.0}% vol24h={1:0}k thr={2}" -f $d3m, ($vol/1000), $movePct)
                         if ($res.enqueued) {
                             $fired++
-                            Write-SentLog ("TRIGGER move: {0} d3m={1:+0.0}% conv={2}" -f $t.market, $d3m, $conv)
+                            Write-SentLog ("TRIGGER move: {0} d3m={1:+0.0}% conv={2} (thr={3})" -f $t.market, $d3m, $conv, $movePct)
                         }
                     }
-                    # B) IGNICAO 24h (cruzou 12% desde o poll anterior)
-                    if ([math]::Abs($chg24) -ge 12 -and [math]::Abs($p.chg24) -lt 12 -and $vol -ge 30000) {
+                    # B) IGNICAO 24h (cruzou o threshold auto-tunado desde o poll anterior)
+                    if ([math]::Abs($chg24) -ge $ignPct -and [math]::Abs($p.chg24) -lt $ignPct -and $vol -ge 30000) {
                         $res = Add-SignalTrigger -Market $t.market -Signal "sentinel_ignition" -Conviction 72 -Direction "auto" -Mode "scan" -Notes ("chg24 cruzou: {0:+0.0}%" -f $chg24)
                         if ($res.enqueued) {
                             $fired++

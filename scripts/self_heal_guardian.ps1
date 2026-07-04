@@ -175,6 +175,21 @@ while ($true) {
                 $grLine = ($gr | Select-String "gradeadas agora|placar" | ForEach-Object { $_.ToString() }) -join " | "
                 Write-GLog "GRADING: $grLine"
             } catch { Write-GLog "GRADING falhou: $_" }
+            # EVOLUTION ENGINE: auto-tuning de parametros de deteccao por evidencia
+            # (bounds duros, anti-oscilacao, risk nunca-auto). L2 do auto-aprendizado.
+            try {
+                . (Join-Path $root "agents\lib_evolution_engine.ps1")
+                $evo = Invoke-EvolutionCycle -JournalDir $journalDir -LogsDir (Join-Path $root "logs")
+                $evoMsg = "applied=$(@($evo.applied).Count) frozen=$(@($evo.frozen).Count) owner_pending=$(@($evo.owner_pending).Count)"
+                Write-GLog "EVOLUTION: $evoMsg"
+                foreach ($a in @($evo.applied)) {
+                    Write-GLog "EVOLUTION aplicou: $($a.param) $($a.before)->$($a.after) ($($a.reason))"
+                    Send-GAlert "🧬 <b>EVOLUTION</b> $($a.param): $($a.before) → $($a.after)`n<i>$($a.reason)</i>"
+                }
+                foreach ($o in @($evo.owner_pending)) {
+                    Send-GAlert "🔐 <b>EVOLUTION (aguarda dono)</b> $($o.param): $($o.before) → $($o.after)`n<i>$($o.reason)</i>`nParametro de RISCO nunca muda sozinho."
+                }
+            } catch { Write-GLog "EVOLUTION falhou: $_" }
             Write-GLog "AUDITORIA DIARIA: rodando suite E2E + contrato..."
             $e2e = powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root "scripts\verify_system_e2e.ps1") 2>&1
             $resLine = ($e2e | Select-String "RESULTADO" | Select-Object -Last 1).ToString()
