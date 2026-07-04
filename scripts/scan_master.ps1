@@ -1102,6 +1102,42 @@ function Invoke-MasterCycle {
             }
         }
 
+        # ── SHORT Block 4 (2026-07-04): CROWDED-LONGS -> candidatos SHORT ──
+        # Gap achado: GRAMUSDT (funding +0.245%, crowded) entrou 5x como LONG e
+        # abortou; o lado SHORT (evidencia n=5133: 56% win, -0.73% mediana 24h)
+        # NUNCA era proposto. Watchlist do api_research (4x/dia) vira candidato
+        # SHORT — passa pelo funil INTEIRO (triagem/mesa/mentor/guards decidem).
+        if (-not $SkipOrchestrator) {
+            try {
+                $cwPath = Join-Path $scriptDir "..\journal\crowding_watchlist.json"
+                if (Test-Path $cwPath) {
+                    $cw = Get-Content $cwPath -Raw -Encoding UTF8 | ConvertFrom-Json
+                    $cwAge = ((Get-Date).ToUniversalTime() - [datetime]::Parse([string]$cw.ts).ToUniversalTime()).TotalHours
+                    if ($cwAge -lt 7 -and @($cw.crowded_longs).Count -gt 0) {
+                        $existingMkts = @($topCandidates.market)
+                        $crowdCands = @()
+                        foreach ($cl in (@($cw.crowded_longs) | Select-Object -First 5)) {
+                            if ($cl.market -in $existingMkts) { continue }
+                            $crowdCands += [PSCustomObject]@{
+                                market = [string]$cl.market
+                                direction = "SHORT"
+                                stop_pct = 0.02
+                                target_pct = 0.06
+                                sizing = 0.005   # 0.5% learn-mode (novo sinal)
+                                reason = "crowding_funding_$($cl.funding_pct)pct"
+                            }
+                        }
+                        if ($crowdCands.Count -gt 0) {
+                            $topCandidates = @($topCandidates) + @($crowdCands)
+                            Write-MasterLog "CROWDING: $($crowdCands.Count) candidato(s) SHORT injetado(s) (funding extremo) -- $($crowdCands.market -join ',')" "INFO"
+                        }
+                    }
+                }
+            } catch {
+                Write-MasterLog "SHORT Block4 (CROWDING) falhou (nao critico): $_" "WARN"
+            }
+        }
+
         if ($topCandidates.Count -eq 0) {
             Write-MasterLog "Nenhum par passou o pre-screen - Orchestrator pulado" "WARN"
         } else {
