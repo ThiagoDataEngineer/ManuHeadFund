@@ -853,6 +853,15 @@ function Invoke-MentorDebate {
         } catch {}
     }
 
+    # 2026-07-04 API RESEARCH: sinal de crowding (funding) com evidencia n=5133.
+    # Informativo/confluencia — nunca standalone. Fail-soft.
+    if (Get-Command Get-CrowdingBlock -ErrorAction SilentlyContinue) {
+        try {
+            $crBlock = Get-CrowdingBlock -Market $Market
+            if ($crBlock) { $ctxBlock = $ctxBlock + $crBlock + "`n" }
+        } catch {}
+    }
+
     # 2026-05-20 PM refino (TIPO B hallucination): skip header KNOWLEDGE: quando vazio.
     # Antes prompt tinha "KNOWLEDGE:\n\n" -> LLM defaultava "ausencia de knowledge" como veto.
     $knowledgeBlock = if ($KnowledgeContext -and $KnowledgeContext.Trim().Length -gt 0) {

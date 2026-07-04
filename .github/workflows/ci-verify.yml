@@ -59,7 +59,7 @@ jobs:
       - name: 5. Suites Pester criticas
         shell: powershell
         run: |
-          $suites = "tests\lib_pump_fade_detector.Tests.ps1","tests\beta_hallucination_fix.Tests.ps1","tests\lib_beta_cap_regime_aware.Tests.ps1","tests\lib_evolution_engine.Tests.ps1"
+          $suites = "tests\lib_pump_fade_detector.Tests.ps1","tests\beta_hallucination_fix.Tests.ps1","tests\lib_beta_cap_regime_aware.Tests.ps1","tests\lib_evolution_engine.Tests.ps1","tests\lib_crowding_signal.Tests.ps1"
           $failed = 0
           foreach ($s in $suites) {
             if (Test-Path $s) {

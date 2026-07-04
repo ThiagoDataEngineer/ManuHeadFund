@@ -96,7 +96,8 @@ function Test-LogFresh { param([string]$Path, [int]$MaxAgeMin)
     return (((Get-Date) - (Get-Item $Path).LastWriteTime).TotalMinutes -lt $MaxAgeMin)
 }
 
-Write-GLog "Guardian iniciado (PID=$PID). Check 10min; auditoria E2E diaria ~06h."
+Write-GLog "Guardian iniciado (PID=$PID). Check 10min; auditoria E2E diaria ~06h; API research 4x/dia."
+$lastResearch = [datetime]::MinValue
 Send-GAlert "🛡️ <b>GUARDIAN LIVE</b> — auto-cura + auto-aprendizado ativos (frota + infra + escalacao de recorrentes)"
 
 $lastDailyAudit = [datetime]::MinValue
@@ -161,6 +162,19 @@ while ($true) {
                 $n = Add-Incident -Signature "infra:error_storm_master" -Action "alert" -Outcome "observed"
                 Send-GAlert "⚠️ <b>GUARDIAN</b> tempestade de ERRORs no scan_master ($errCount/100 linhas) — verificar log"
             }
+        }
+
+        # ── 2b. API RESEARCH 4x/dia (pedido do dono 2026-07-04) ──
+        # Varre funding de TODOS os futures -> watchlist de crowded markets
+        # (evidencia n=5133: funding>=+0.10% -> SHORT 56%, -0.73% mediana 24h).
+        if (((Get-Date) - $lastResearch).TotalHours -ge 6) {
+            $lastResearch = Get-Date
+            try {
+                Write-GLog "API RESEARCH: ciclo de pesquisa (funding/crowding)..."
+                $res = powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root "scripts\api_research_cycle.ps1") 2>&1
+                $resLine = ($res | Select-String "scanned=" | Select-Object -Last 1)
+                Write-GLog "API RESEARCH: $resLine"
+            } catch { Write-GLog "API RESEARCH falhou: $_" }
         }
 
         # ── 3. AUDITORIA DIARIA (E2E + contrato) ~06:00 ──
