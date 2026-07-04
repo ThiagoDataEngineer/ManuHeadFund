@@ -633,9 +633,16 @@ function Invoke-GemExecute {
                 } catch { Write-Host "  [SURF] ${mkt}: tentativa SHORT falhou ($_)" -ForegroundColor Yellow }
             }
             # 2026-07-02: Allow 20% LONG allocation in BEAR_WEAK (per backtest calibration)
+            # 2026-07-03 FIX: a condicao antiga comparava o CENARIO com o nome do REGIME —
+            # cenario so vale UNKNOWN/CAPITULACAO/BEAR/BULL/NEUTRO, entao era IMPOSSIVEL
+            # e a flag nasceu morta (LONG 100% bloqueado em BEAR/NEUTRO desde a criacao).
+            # O certo: BEAR_WEAK e regime (global:CURRENT_REGIME), nao cenario.
             $allowLongInBearFlag = Join-Path $global:JOURNAL_DIR "ALLOW_LONG_IN_BEAR_WEAK.flag"
             $allowLongInBear = Test-Path $allowLongInBearFlag
-            $effectiveBlockLong = $blockLong -and -not ($allowLongInBear -and $scen.scenario -eq "BEAR_WEAK" -and $dirForGate -eq "LONG")
+            $effectiveBlockLong = $blockLong -and -not ($allowLongInBear -and ("$($global:CURRENT_REGIME)" -eq "BEAR_WEAK") -and $dirForGate -eq "LONG")
+            if ($blockLong -and -not $effectiveBlockLong) {
+                Write-Host "  [CENARIO LONG-EXCECAO] ${mkt}: flag ALLOW_LONG_IN_BEAR_WEAK + regime=BEAR_WEAK libera LONG (cenario=$($scen.scenario))" -ForegroundColor DarkYellow
+            }
 
             if ($effectiveBlockLong -or $blockShort) {
                 $reason = if ($effectiveBlockLong -and $blockShort) { "ambas" } elseif ($effectiveBlockLong) { "LONG" } else { "SHORT" }
