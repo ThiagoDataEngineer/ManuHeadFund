@@ -81,8 +81,8 @@ function Get-DaemonProc { param([string]$Pattern)
 function Restart-Daemon {
     param([string]$Name, [string]$ScriptRel, [object]$Proc, [string]$Reason, [string[]]$ExtraArgs = @())
     if ($Proc) { Stop-Process -Id $Proc.ProcessId -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 3 }
-    $args = @("-NoProfile","-ExecutionPolicy","Bypass","-File", (Join-Path $root $ScriptRel)) + $ExtraArgs
-    Start-Process powershell -ArgumentList $args -WindowStyle Hidden
+    $procArgs = @("-NoProfile","-ExecutionPolicy","Bypass","-File", (Join-Path $root $ScriptRel)) + $ExtraArgs
+    Start-Process powershell -ArgumentList $procArgs -WindowStyle Hidden
     Start-Sleep -Seconds 5
     $new = Get-DaemonProc -Pattern ([System.IO.Path]::GetFileName($ScriptRel))
     $outcome = if ($new) { "restarted_pid_$($new.ProcessId)" } else { "restart_FAILED" }
@@ -167,6 +167,14 @@ while ($true) {
         $now = Get-Date
         if ($now.Hour -eq 6 -and ($now - $lastDailyAudit).TotalHours -gt 20) {
             $lastDailyAudit = $now
+            # AUTO-APRENDIZADO LLM: grada as decisoes de 48h+ contra o mercado
+            # e atualiza o placar que o mentor le no prompt ([CALIBRACAO]).
+            Write-GLog "GRADING DIARIO: gradeando decisoes LLM vs mercado..."
+            try {
+                $gr = powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root "scripts\grade_llm_decisions.ps1") 2>&1
+                $grLine = ($gr | Select-String "gradeadas agora|placar" | ForEach-Object { $_.ToString() }) -join " | "
+                Write-GLog "GRADING: $grLine"
+            } catch { Write-GLog "GRADING falhou: $_" }
             Write-GLog "AUDITORIA DIARIA: rodando suite E2E + contrato..."
             $e2e = powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $root "scripts\verify_system_e2e.ps1") 2>&1
             $resLine = ($e2e | Select-String "RESULTADO" | Select-Object -Last 1).ToString()

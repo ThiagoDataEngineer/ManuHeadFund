@@ -840,6 +840,19 @@ function Invoke-MentorDebate {
     }
     $ctxBlock = $ctxBlock + $priorBlock
 
+    # 2026-07-04 AUTO-APRENDIZADO: placar de acerto gradeado (grade_llm_decisions)
+    # injetado por bolso direction|regime. Fail-soft (mesmo padrao do reflection).
+    if (Get-Command Get-LlmCalibrationBlock -ErrorAction SilentlyContinue) {
+        try {
+            $calDir = if ($FullContext -and $FullContext.PSObject.Properties['direction'] -and $FullContext.direction) { [string]$FullContext.direction } else { "LONG" }
+            $calReg = if ($FullContext -and $FullContext.PSObject.Properties['regime'] -and $FullContext.regime) { [string]$FullContext.regime } elseif ($global:CURRENT_REGIME) { [string]$global:CURRENT_REGIME } else { "" }
+            if ($calReg) {
+                $calBlock = Get-LlmCalibrationBlock -Direction $calDir -Regime $calReg
+                if ($calBlock) { $ctxBlock = $ctxBlock + $calBlock + "`n" }
+            }
+        } catch {}
+    }
+
     # 2026-05-20 PM refino (TIPO B hallucination): skip header KNOWLEDGE: quando vazio.
     # Antes prompt tinha "KNOWLEDGE:\n\n" -> LLM defaultava "ausencia de knowledge" como veto.
     $knowledgeBlock = if ($KnowledgeContext -and $KnowledgeContext.Trim().Length -gt 0) {
