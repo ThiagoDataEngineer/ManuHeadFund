@@ -107,6 +107,20 @@ foreach ($fl in "GEM_AUTO_APPROVE","GEM_FULL_AUTO","REGIME_SURF_SHORT_LIVE","ALL
     Check "FLAGS" $fl (Test-Path "$root\journal\$fl.flag")
 }
 
+# ── 6b. SUPABASE state store (12 tabelas, visao do codigo) ──
+$sbOk = 0; $sbMiss = @()
+if ($env:SUPABASE_URL -and $env:SUPABASE_SERVICE_KEY) {
+    $sbHeaders = @{ apikey = $env:SUPABASE_SERVICE_KEY; Authorization = "Bearer $($env:SUPABASE_SERVICE_KEY)" }
+    foreach ($tb in "regime_state","tori_proximity","fqs_registry","dsr_global","drawdown_history","capital_context","beta_history","trailing_positions","trade_rejections","trade_outcomes","alpha_history","conviction_observations") {
+        try { $null = Invoke-RestMethod -Uri "$($env:SUPABASE_URL)/rest/v1/$tb`?limit=1" -Headers $sbHeaders -TimeoutSec 10; $sbOk++ } catch { $sbMiss += $tb }
+    }
+}
+Check "SUPABASE" "state store 12/12 tabelas acessiveis" ($sbOk -eq 12) $(if ($sbMiss) { "faltam: $($sbMiss -join ',')" } else { "" })
+
+# ── 6c. SENTINELA (produtor event-driven) ──
+$sentPid = 0; try { $sentPid = [int](Get-Content "$root\journal\sentinel.pid" -ErrorAction SilentlyContinue | Select-Object -First 1) } catch {}
+Check "DAEMON" "sentinela vivo" ($sentPid -gt 0 -and [bool](Get-Process -Id $sentPid -ErrorAction SilentlyContinue)) "pid=$sentPid"
+
 # ── 7. TELEGRAM (mensagem real de teste) ──
 try {
     . "$root\agents\lib_telegram.ps1" 2>$null
