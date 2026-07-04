@@ -589,11 +589,31 @@ function Invoke-GemExecute {
     # CAPITULACAO -> libera LONG (compra fundo) | BEAR -> bloqueia LONG, libera SHORT
     # BULL -> libera LONG | NEUTRO -> espera. Substitui o gate simples.
     if (Get-Command Get-MarketScenario -ErrorAction SilentlyContinue) {
-        $dirForGate = if ($direction) { "$direction".ToUpper() } else { "LONG" }
+        # 2026-07-03 FIX: $direction so e resolvido MUITO depois (secao 3) -> aqui era
+        # sempre null -> default LONG -> gems SHORT avaliadas como LONG neste gate
+        # (ZKPUSDT SHORT bloqueado 4x como "bloqueia LONG"). Le direto do $Gem.
+        $dirForGate = "LONG"
+        if ($Gem.PSObject.Properties['direction'] -and ("$($Gem.direction)".ToUpper() -in @("LONG","SHORT"))) {
+            $dirForGate = "$($Gem.direction)".ToUpper()
+        } elseif ($direction) {
+            $dirForGate = "$direction".ToUpper()
+        }
         try {
             $scen = Get-MarketScenario
             $blockLong  = ($dirForGate -eq "LONG")  -and (-not $scen.allow_long)
             $blockShort = ($dirForGate -eq "SHORT") -and (-not $scen.allow_short)
+
+            # 2026-07-03 DIVERGENCIA REGIME x CENARIO: cenario mede SO o BTC (EMA20/50 +
+            # momentum 30d). NEUTRO = BTC em chop -> bloqueava AMBAS as direcoes. Mas o
+            # regime detector mede o mercado todo; em BEAR_WEAK/BEAR_STRONG com BTC em
+            # chop = "moagem" — exatamente o bolso onde o counterfactual mostrou SHORT
+            # de alt funcionando (56% win, mediana +4.9%, docs/ESTUDO_GATES_SHORT).
+            # Fisica: microcap deriva -41%/ano independente do chop do BTC (lei 4).
+            # Regra: NEUTRO + regime global BEAR -> libera SHORT (LONG continua bloqueado).
+            if ($blockShort -and $scen.scenario -eq "NEUTRO" -and ("$($global:CURRENT_REGIME)" -match "BEAR")) {
+                $blockShort = $false
+                Write-Host "  [CENARIO NEUTRO->SHORT OK] ${mkt}: BTC chop mas regime=$($global:CURRENT_REGIME) (moagem favorece short de alt)" -ForegroundColor DarkYellow
+            }
             # 2026-06-30 SURF: em vez de so bloquear LONG no bear, SURFA o bear (SHORT).
             # Shadow-first: sem journal/REGIME_SURF_SHORT_LIVE.flag -> so loga; com flag -> ordem real.
             # Se executou SHORT real, retorna (nao bloqueia mais). allow_short ja confirma downtrend.
