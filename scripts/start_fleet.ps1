@@ -31,5 +31,6 @@ Start-DaemonIfDead -ScriptName "scan_master.ps1" -StdoutFile "scan_master_stdout
 Start-DaemonIfDead -ScriptName "sentinel_movers.ps1"
 Start-DaemonIfDead -ScriptName "collect_1h_klines.ps1"
 Start-DaemonIfDead -ScriptName "self_heal_guardian.ps1"
+Start-DaemonIfDead -ScriptName "phase_manager.ps1" -StdoutFile "phase_manager_stdout.txt"
 
-Add-Content -Path (Join-Path $journal "fleet_boot.log") -Value "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] start_fleet executado" -Encoding utf8
+Add-Content -Path (Join-Path $journal "fleet_boot.log") -Value "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] start_fleet executado (phases 2-4 active)" -Encoding utf8
