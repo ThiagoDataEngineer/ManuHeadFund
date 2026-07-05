@@ -1,0 +1,48 @@
+{
+  "alerting": {
+    "enabled": true,
+    "email": {
+      "to": "thiagoyoshiaki@gmail.com",
+      "enabled": false,
+      "from": "thiagoyoshiaki@gmail.com",
+      "smtp": "smtp.gmail.com",
+      "port": 587
+    },
+    "telegram": {
+      "parseMode": "HTML",
+      "enabled": true,
+      "botToken": "8266812293:AAGv7J8G7_OXNm3Wh7JIk4G4YGohE0fljOo",
+      "chatId": "5592104053"
+    }
+  },
+  "trading": {
+    "enableAutoExit": false,
+    "riskPerTrade": 0.01,
+    "minConfluence": 3,
+    "enableAutoEntry": false
+  },
+  "thresholds": {
+    "score": {
+      "critical": 85,
+      "high": 75
+    },
+    "volume": {
+      "min": 100000
+    },
+    "volatility": {
+      "spike": 10,
+      "extreme": 15
+    },
+    "rsi": {
+      "oversold": 30,
+      "overbought": 70
+    }
+  },
+  "signals": {
+    "high_conviction": true,
+    "oversold": true,
+    "regime_change": true,
+    "volatility_spike": true,
+    "overbought": true
+  }
+}

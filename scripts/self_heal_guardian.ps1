@@ -82,9 +82,34 @@ function Restart-Daemon {
     param([string]$Name, [string]$ScriptRel, [object]$Proc, [string]$Reason, [string[]]$ExtraArgs = @())
     if ($Proc) { Stop-Process -Id $Proc.ProcessId -Force -ErrorAction SilentlyContinue; Start-Sleep -Seconds 3 }
     $procArgs = @("-NoProfile","-ExecutionPolicy","Bypass","-File", (Join-Path $root $ScriptRel)) + $ExtraArgs
-    Start-Process powershell -ArgumentList $procArgs -WindowStyle Hidden
-    Start-Sleep -Seconds 5
-    $new = Get-DaemonProc -Pattern ([System.IO.Path]::GetFileName($ScriptRel))
+    $psi = New-Object System.Diagnostics.ProcessStartInfo
+    $psi.FileName = "powershell"
+    $psi.Arguments = [string]::Join(" ", $procArgs)
+    $psi.WindowStyle = "Hidden"
+    $newProc = [System.Diagnostics.Process]::Start($psi)
+    $newPid = $newProc.Id
+    Start-Sleep -Seconds 2
+
+    # Retry detection com backoff exponencial (total 15 seg max)
+    $new = $null
+    $attempts = 0
+    while (-not $new -and $attempts -lt 5) {
+        $new = Get-DaemonProc -Pattern ([System.IO.Path]::GetFileName($ScriptRel))
+        if (-not $new) {
+            Start-Sleep -Seconds (2 * [math]::Pow(1.5, $attempts))
+            $attempts++
+        }
+    }
+
+    # Fallback: se CIM nao achou mas PID vivo, e sucesso
+    if (-not $new) {
+        try {
+            if (Get-Process -Id $newPid -ErrorAction SilentlyContinue) {
+                $new = @{ ProcessId = $newPid }
+            }
+        } catch { }
+    }
+
     $outcome = if ($new) { "restarted_pid_$($new.ProcessId)" } else { "restart_FAILED" }
     Write-GLog "HEAL $Name : $Reason -> $outcome"
     $n = Add-Incident -Signature "daemon:${Name}:${Reason}" -Action "restart" -Outcome $outcome

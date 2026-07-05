@@ -1717,6 +1717,16 @@ do {
             } catch {
                 Write-MasterLog "Erro em GEM STRATEGIES: $_" "WARN"
             }
+
+            # 2026-07-05 FIX #2: Populate trade_history_extended.json (dashboard data pipeline)
+            # Executa a cada ciclo para manter dados fresco no dashboard TAB 3
+            if (Get-Command -Name ".$($root)/scripts/populate_trade_history.ps1" -ErrorAction SilentlyContinue) {
+                try {
+                    & (Join-Path $root "scripts\populate_trade_history.ps1") | Out-Null
+                } catch {
+                    Write-MasterLog "populate_trade_history falhou (nao critico): $_" "WARN"
+                }
+            }
         } catch {
             Write-MasterLog "Erro no ciclo $iteration`: $_" "ERROR"
             Send-TelegramAlert -Message "<b>ERRO</b> ScanMaster ciclo $iteration`n<i>$_</i>" | Out-Null
@@ -1735,6 +1745,23 @@ do {
     Write-Host ""
     Write-Host "  Proximo ciclo em ${intervalMin}min ($nextRunStr) janela=$($seasonal.window)" -ForegroundColor DarkGray
     Write-MasterLog "Dormindo ${intervalMin}min janela=$($seasonal.window) proximo=$nextRunStr"
+
+    # 2026-07-05 FIX: Atualizar dashboard com últimas trades reais
+    # Executa populate_trade_history.ps1 a cada ciclo (4x/hora normalmente)
+    # Dashboard TAB 3 sempre mostra histórico fresco com stats corretas
+    $populateScript = Join-Path $PSScriptRoot "populate_trade_history.ps1"
+    if (Test-Path $populateScript) {
+        try {
+            & $populateScript -OutcomesFile "journal/trade_outcomes.jsonl" | Out-Null
+            Write-Host "  ✅ Dashboard trade history atualizado" -ForegroundColor Green
+            Write-MasterLog "Dashboard trade history atualizado (populate_trade_history.ps1)"
+        } catch {
+            Write-Host "  ⚠️  Falha ao atualizar dashboard: $_" -ForegroundColor Yellow
+            Write-MasterLog "WARN: populate_trade_history falhou: $_"
+        }
+    } else {
+        Write-Host "  ⚠️  populate_trade_history.ps1 não encontrado em $PSScriptRoot" -ForegroundColor Yellow
+    }
 
     $action = Wait-WithCommands -TotalMinutes $intervalMin -Seasonal $seasonal
 

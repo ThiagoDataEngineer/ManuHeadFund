@@ -1,23 +1,197 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
-    <title>Coinex Dashboard</title>
-    <style>
-        body { font-family: Arial, sans-serif; margin: 20px; }
-        .status { padding: 10px; background: #f0f0f0; border-radius: 5px; }
-        .ok { color: green; }
-        .warning { color: orange; }
-        .error { color: red; }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>ManuHeadFund — Dashboard Hub</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #0f1419 0%, #1a1f2e 100%);
+      color: #e5e7eb;
+      padding: 40px 20px;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+    h1 {
+      font-size: 36px;
+      margin-bottom: 12px;
+      letter-spacing: -1px;
+    }
+    .subtitle {
+      font-size: 14px;
+      color: #9ca3af;
+      margin-bottom: 40px;
+    }
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+    .dashboard-card {
+      background: rgba(26, 31, 46, 0.7);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      padding: 24px;
+      transition: all 0.3s;
+      cursor: pointer;
+      text-decoration: none;
+      color: inherit;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    .dashboard-card:hover {
+      border-color: rgba(16, 185, 129, 0.3);
+      box-shadow: 0 8px 24px rgba(16, 185, 129, 0.1);
+      transform: translateY(-4px);
+    }
+    .dashboard-icon {
+      font-size: 32px;
+    }
+    .dashboard-name {
+      font-size: 18px;
+      font-weight: 700;
+      color: #34d399;
+    }
+    .dashboard-desc {
+      font-size: 13px;
+      color: #9ca3af;
+      line-height: 1.6;
+    }
+    .dashboard-features {
+      font-size: 11px;
+      color: #6b7280;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    .feature-tag {
+      background: rgba(16, 185, 129, 0.1);
+      padding: 3px 8px;
+      border-radius: 3px;
+      border-left: 2px solid #10b981;
+    }
+    .info-box {
+      background: rgba(16, 185, 129, 0.1);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 30px;
+    }
+    .info-title {
+      font-size: 14px;
+      font-weight: 700;
+      color: #34d399;
+      margin-bottom: 10px;
+    }
+    .info-text {
+      font-size: 13px;
+      line-height: 1.8;
+    }
+    .code-block {
+      background: rgba(0,0,0,0.3);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 4px;
+      padding: 12px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      margin: 8px 0;
+      overflow-x: auto;
+    }
+  </style>
 </head>
 <body>
-    <h1>Coinex Trading Dashboard</h1>
-    <div class="status">
-        <p><strong>Last Updated:</strong> 2026-06-30 10:18:31</p>
-        <p><strong>Positions:</strong> <span class="ok">0</span></p>
-        <p><strong>Total PNL:</strong> <span class="ok">$0</span></p>
-        <p><strong>Total Margin:</strong> <span class="ok">$0</span></p>
-        <p><strong>Status:</strong> <span class="ok">✅ Operational</span></p>
+  <div class="container">
+    <h1>🌍 ManuHeadFund Dashboard Hub</h1>
+    <div class="subtitle">Acesso centralizado a todos os painéis de monitoramento</div>
+
+    <div class="info-box">
+      <div class="info-title">🚀 Como Acessar?</div>
+      <div class="info-text">
+        <strong>Local (seu PC):</strong>
+        <div class="code-block">file:///C:/Users/thiag/Coinex_AI_USER_API/dashboard/index.html</div>
+        <strong>Browser:</strong> Copie e cole a URL acima
+      </div>
     </div>
+
+    <div class="dashboard-grid">
+      <!-- Dashboard 1: Universe Full -->
+      <a href="coinex_universe_full.html" class="dashboard-card">
+        <div class="dashboard-icon">🌍</div>
+        <div class="dashboard-name">Universe Full</div>
+        <div class="dashboard-desc">50 pares + multi-timeframe com sparklines interativas</div>
+        <div class="dashboard-features">
+          <div class="feature-tag">50 pares</div>
+          <div class="feature-tag">4 timeframes</div>
+          <div class="feature-tag">Sparklines</div>
+          <div class="feature-tag">Filtros</div>
+        </div>
+      </a>
+
+      <!-- Dashboard 2: Live Dashboard -->
+      <a href="coinex_live_dashboard.html" class="dashboard-card">
+        <div class="dashboard-icon">⚡</div>
+        <div class="dashboard-name">Live Dashboard</div>
+        <div class="dashboard-desc">Gráficos interativos + zoom + scroll + tooltip</div>
+        <div class="dashboard-features">
+          <div class="feature-tag">Charts interativos</div>
+          <div class="feature-tag">Canvas 100 candles</div>
+          <div class="feature-tag">Multi-TF</div>
+          <div class="feature-tag">Auto-refresh</div>
+        </div>
+      </a>
+
+      <!-- Dashboard 3: MEGA Final -->
+      <a href="coinex_mega_dashboard_final.html" class="dashboard-card">
+        <div class="dashboard-icon">🔥</div>
+        <div class="dashboard-name">MEGA Dashboard</div>
+        <div class="dashboard-desc">4 tabs: Dashboard + Config + Trades + Webhooks</div>
+        <div class="dashboard-features">
+          <div class="feature-tag">4 tabs</div>
+          <div class="feature-tag">Config live</div>
+          <div class="feature-tag">Trade history</div>
+          <div class="feature-tag">Webhooks</div>
+        </div>
+      </a>
+    </div>
+
+    <div class="info-box">
+      <div class="info-title">💡 Qual Usar?</div>
+      <div class="info-text">
+        <strong>📊 Universe Full:</strong> Ver todos os 50 pares rapidinho, sparklines lindas<br>
+        <strong>⚡ Live Dashboard:</strong> Análise profunda com gráficos Canvas interativos<br>
+        <strong>🔥 MEGA Dashboard:</strong> Gerenciar tudo — config + trades + webhooks integrado
+      </div>
+    </div>
+
+    <div class="info-box">
+      <div class="info-title">⚙️ Dados que Alimentam os Dashboards</div>
+      <div class="info-text">
+        Os dashboards carregam dados desses JSONs automático:
+        <div class="code-block">journal/universe_dashboard_live.json
+journal/universe_data_complete.json
+journal/trade_history_extended.json
+config/alerts_config.json</div>
+        Se um dashboard não carregar dados, verifique se esses JSONs existem.
+      </div>
+    </div>
+
+    <div class="info-box" style="background: rgba(245, 158, 11, 0.1); border-color: rgba(245, 158, 11, 0.3);">
+      <div class="info-title" style="color: #fbbf24;">🔧 Próximo Passo</div>
+      <div class="info-text">
+        1. Clique em um dos dashboards acima<br>
+        2. Se não carregar dados: Execute em PowerShell:
+        <div class="code-block">powershell -NoProfile -ExecutionPolicy Bypass -File scripts/populate_trade_history.ps1</div>
+        3. Recarregue a página (F5)<br>
+        4. Configure Telegram no MEGA Dashboard (Tab ⚙️)
+      </div>
+    </div>
+  </div>
 </body>
 </html>
