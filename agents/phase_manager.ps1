@@ -12,9 +12,10 @@ $ErrorActionPreference = "Continue"
 . (Join-Path $PSScriptRoot "lib_telegram.ps1")
 
 $daemon_name = "phase_manager"
-$log_file = "$(Get-JournalDir)\phase_manager.log"
-$active_discoveries_file = "$(Get-JournalDir)\active_discoveries.jsonl"
-$phase_transitions_file = "$(Get-JournalDir)\phase_transitions.jsonl"
+$journal_dir = if (Get-Command Get-JournalDir -ErrorAction SilentlyContinue) { Get-JournalDir } else { "journal" }
+$log_file = "$journal_dir\phase_manager.log"
+$active_discoveries_file = "$journal_dir\active_discoveries.jsonl"
+$phase_transitions_file = "$journal_dir\phase_transitions.jsonl"
 
 Write-Host "[phase_manager] Iniciado" -ForegroundColor Green
 $start_time = Get-Date
