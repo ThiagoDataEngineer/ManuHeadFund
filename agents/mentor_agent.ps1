@@ -297,9 +297,15 @@ Responda em JSON:
     Write-Host "  [MentorAgent] Consultando Mentor (Anthropic->Groq->Gemini)..." -ForegroundColor Magenta
     # Cascade Mentor 2026-05-16: Anthropic primary -> Groq -> Gemini.
     # Mentor é decisão final, qualidade matters, mas com 2 fallbacks gratuitos.
+
+    # 2026-07-05: Injetar consensus_gate dinâmico (Evolution Engine pode ter mudado)
+    $mentorSystemPromptDynamic = Get-MentorSystemPromptDynamic
+    $gateVal = if ($global:consensus_gate) { $global:consensus_gate } else { "MEDIO_2" }
+    Write-Host "  [MentorGate] TIER_B_PAPER exige consensus: $gateVal (via config.local)" -ForegroundColor Cyan
+
     $result = $null
     if (Get-Command Invoke-MentorCascade -ErrorAction SilentlyContinue) {
-        $raw = Invoke-MentorCascade -SystemPrompt $MENTOR_SYSTEM_PROMPT -UserContent $question -Temperature 0.3 -MaxTokens 1500 -Agent "mentor"
+        $raw = Invoke-MentorCascade -SystemPrompt $mentorSystemPromptDynamic -UserContent $question -Temperature 0.3 -MaxTokens 1500 -Agent "mentor"
         if ($raw) {
             try {
                 $cleaned = $raw -replace '```json\s*','' -replace '```\s*','' -replace '^\s+','' -replace '\s+$',''
@@ -307,7 +313,7 @@ Responda em JSON:
             } catch { $result = $null }
         }
     } else {
-        $result = Invoke-ClaudeJson -SystemPrompt $MENTOR_SYSTEM_PROMPT -UserContent $question -Temperature 0.3 -MaxTokens 1500 -Agent "mentor"
+        $result = Invoke-ClaudeJson -SystemPrompt $mentorSystemPromptDynamic -UserContent $question -Temperature 0.3 -MaxTokens 1500 -Agent "mentor"
     }
 
     if (-not $result) {
@@ -363,7 +369,7 @@ REGRAS INVIOLAVEIS: stop antes entrada; risco 1%; R:R min 3; confluencia 3+;
 DECISAO MODE-AWARE (4 modes ortogonais Triagem.tier × Whitelist.tier):
 - TIER_A_LIVE  (triagem=A + wl=live):    FQS>=4 + DSR>=0.9 + n_trades>=30 + flag_streak<3 + beta<=cap_da_phase (NUNCA hardcode 1.2) = APROVAR (Mesa skip BY DESIGN)
 - TIER_A_PAPER (triagem=A + wl=observe): mesmas regras do A_LIVE MAS regime atual limita pra paper. Mesa skip OK. APROVAR vira paperOnly automatico.
-- TIER_B_PAPER (triagem=B + wl=observe): exige Mesa consensus FORTE (T+R+L)
+- TIER_B_PAPER (triagem=B + wl=observe): consensus auto-ajustavel (atual $global:consensus_gate). Se FORTE_3=APROVADO; se MEDIO_2=exige estrutura++; MEDIO_1=veto. Adaptativo por regime.
 - GEM:         FQS>=2 + sizing<=0.5% + funding neutro = APROVAR (track record N/A by design)
 
 NUNCA tratar TIER_A_PAPER como conflito -- eh estado legitimo (Tier A quality + regime defensivo).
@@ -685,6 +691,25 @@ function Build-MentorFullContext {
 }
 
 
+function Get-MentorSystemPromptDynamic {
+    <#
+    .SYNOPSIS
+    Retorna o MENTOR_SYSTEM_PROMPT com consensus_gate injetado dinamicamente
+    2026-07-05: Fix para Evolution Engine que muda consensus_gate em config.local
+    #>
+    $gate = if ($global:consensus_gate) { $global:consensus_gate } else { "MEDIO_2" }
+    return $MENTOR_SYSTEM_PROMPT -replace 'TIER_B_PAPER \(triagem=B \+ wl=observe\): consensus auto-ajustavel.*', "TIER_B_PAPER (triagem=B + wl=observe): exige Mesa consensus $gate (auto-ajustado no ciclo anterior)"
+}
+
+function Get-MentorDebateSystemDynamic {
+    <#
+    .SYNOPSIS
+    Retorna o MENTOR_DEBATE_SYSTEM com consensus_gate injetado dinamicamente
+    #>
+    $gate = if ($global:consensus_gate) { $global:consensus_gate } else { "MEDIO_2" }
+    return $MENTOR_DEBATE_SYSTEM -replace 'TIER_B_PAPER \(triagem=B \+ wl=observe\): consensus auto-ajustavel.*', "TIER_B_PAPER (triagem=B + wl=observe): exige Mesa consensus $gate (auto-ajustado)"
+}
+
 function Invoke-MentorDebate {
     param(
         [string]$Market,
@@ -907,9 +932,12 @@ JSON: { "decision":"APROVAR"|"VETAR", "confianca":0-100, "mentor_mensagem":"2-3 
 "@
 
     # Cascade Mentor 2026-05-16: Anthropic primary -> Groq -> Gemini.
+    # 2026-07-05: Injetar consensus_gate dinâmico via função
+    $mentorDebateSystemDynamic = Get-MentorDebateSystemDynamic
+
     $result = $null
     if (Get-Command Invoke-MentorCascade -ErrorAction SilentlyContinue) {
-        $raw = Invoke-MentorCascade -SystemPrompt $MENTOR_DEBATE_SYSTEM -UserContent $userPrompt -Temperature 0.3 -MaxTokens 1200 -Agent "mentor"
+        $raw = Invoke-MentorCascade -SystemPrompt $mentorDebateSystemDynamic -UserContent $userPrompt -Temperature 0.3 -MaxTokens 1200 -Agent "mentor"
         if ($raw) {
             try {
                 $cleaned = $raw -replace '```json\s*','' -replace '```\s*','' -replace '^\s+','' -replace '\s+$',''
@@ -917,7 +945,7 @@ JSON: { "decision":"APROVAR"|"VETAR", "confianca":0-100, "mentor_mensagem":"2-3 
             } catch { $result = $null }
         }
     } else {
-        $result = Invoke-ClaudeJson -SystemPrompt $MENTOR_DEBATE_SYSTEM -UserContent $userPrompt `
+        $result = Invoke-ClaudeJson -SystemPrompt $mentorDebateSystemDynamic -UserContent $userPrompt `
             -Temperature 0.3 -MaxTokens 1200 -Agent "mentor"
     }
 
@@ -1005,7 +1033,7 @@ JSON: { "decision":"APROVAR"|"VETAR", "confianca":0-100, "mentor_mensagem":"2-3 
             Write-Host "  [MentorDebate] Critical tier '$($result.veredicto_5tier)' - chamando 2nd opinion" -ForegroundColor Magenta
             $raw2 = $null
             if (Get-Command Invoke-MentorCascade -ErrorAction SilentlyContinue) {
-                $raw2 = Invoke-MentorCascade -SystemPrompt $MENTOR_DEBATE_SYSTEM -UserContent $userPrompt -Temperature 0.4 -MaxTokens 1200 -Agent "mentor"
+                $raw2 = Invoke-MentorCascade -SystemPrompt $mentorDebateSystemDynamic -UserContent $userPrompt -Temperature 0.4 -MaxTokens 1200 -Agent "mentor"
             }
             if ($raw2) {
                 $cleaned2 = $raw2 -replace '```json\s*','' -replace '```\s*','' -replace '^\s+','' -replace '\s+$',''

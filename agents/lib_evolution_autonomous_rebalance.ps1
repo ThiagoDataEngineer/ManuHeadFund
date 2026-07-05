@@ -173,9 +173,9 @@ function Invoke-EvolutionAutoRebalance {
         # Ler config
         $content = Get-Content $configPath -Raw -Encoding UTF8
 
-        # Aplicar mudanças
-        $newContent = $content -replace 'conviction_threshold\s*=\s*\d+', "conviction_threshold = $consensusConviction"
-        $newContent = $newContent -replace 'consensus_gate\s*=\s*"[^"]*"', "consensus_gate = `"$consensusGateNew`""
+        # Aplicar mudanças (usa $global: prefix como em config.local.ps1)
+        $newContent = $content -replace '\$global:conviction_threshold\s*=\s*\d+', "`$global:conviction_threshold = $consensusConviction"
+        $newContent = $newContent -replace '\$global:consensus_gate\s*=\s*"[^"]*"', "`$global:consensus_gate = `"$consensusGateNew`""
 
         Set-Content $configPath -Value $newContent -Encoding UTF8
 
