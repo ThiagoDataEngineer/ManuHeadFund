@@ -53,8 +53,10 @@ function Invoke-EvolutionAutoRebalance {
 
     Write-Host "✅ Métricas 48h:" -ForegroundColor Green
     Write-Host "   Total: $totalTrades trades"
-    Write-Host "   Wins: $wins ($([math]::Round($winRate))%)"
-    Write-Host "   PnL: $$totalPnL (avg: $$([math]::Round($avgTrade, 2)))"
+    $winRateRounded = [math]::Round($winRate)
+    Write-Host "   Wins: $wins ($winRateRounded%)"
+    $avgRounded = [math]::Round($avgTrade, 2)
+    Write-Host "   PnL: $totalPnL USD (avg: $avgRounded USD)"
 
     # ========================================================================
     # 2. DETECTAR PROBLEMA
@@ -213,16 +215,18 @@ function Invoke-EvolutionAutoRebalance {
         # Telegram alert
         $msg = "🧬 EVOLUTION — Auto-Rebalance Executado`n"
         $msg += "Problema: $problem`n"
-        $msg += "Conviction: $conviction → $consensusConviction`n"
-        $msg += "Consensus: $consensusGate → $consensusGateNew`n"
-        $msg += "Confiança: $([math]::Round($avgConfidence))%"
+        $msg += "Conviction: $conviction arrow $consensusConviction`n"
+        $msg += "Consensus: $consensusGate arrow $consensusGateNew`n"
+        $confRounded = [math]::Round($avgConfidence)
+        $msg += "Confiança: $confRounded %"
         # TODO: Send-TelegramAlert -Message $msg
 
         return $true
 
     } else {
-        Write-Host "`n⚠️  Rebalanceamento VETADO (confiança <75%)" -ForegroundColor Yellow
-        Write-Host "   Confiança atual: $([math]::Round($avgConfidence))%" -ForegroundColor Yellow
+        $confRounded2 = [math]::Round($avgConfidence)
+        Write-Host "`n⚠️  Rebalanceamento VETADO (confiança insuficiente)" -ForegroundColor Yellow
+        Write-Host "   Confiança atual: $confRounded2 %" -ForegroundColor Yellow
         return $false
     }
 }

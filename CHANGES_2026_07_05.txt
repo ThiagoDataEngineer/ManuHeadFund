@@ -1,0 +1,142 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                   AUDIT TRAIL — Changes Made 2026-07-05                   ║
+║                 Fix: Consensus Gate Dinâmico (Zero Trades)                ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+SUMMARY:
+--------
+• Problem: Mentor_Agent com gate HARDCODED bloqueava 100% de TIER_B_PAPER trades
+• Root Cause: Evolution Engine mudou consensus FORTE→MEDIO_2, mas Mentor não sabia
+• Solution: 4 fixes para fazer gate dinâmico (lê de config.local em tempo real)
+• Impact: Zero Trades → 3-4 trades/ciclo esperado (60-70% aprovação)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+FILE MODIFICATIONS (4 files):
+═════════════════════════════
+
+1. ✅ agents/config.local.ps1
+   ─────────────────────────
+   LINES ADDED: ~68-71
+   
+   $global:conviction_threshold = 38       # TIER_B_PAPER / GEM: score minimo para entrada
+   $global:consensus_gate = "MEDIO_2"      # TIER_B_PAPER: Mesa consensus necessario (FORTE_3 / MEDIO_2 / MEDIO_1)
+   
+   WHY: Evolution Engine pode atualizar esses valores via regex sem quebra de parsing
+
+
+2. ✅ agents/mentor_agent.ps1
+   ─────────────────────────
+   CHANGE A: Lines ~366 (updated rule description)
+   ─────────
+   FROM: TIER_B_PAPER (triagem=B + wl=observe): exige Mesa consensus FORTE (T+R+L)
+   TO:   TIER_B_PAPER (triagem=B + wl=observe): consensus auto-ajustavel (atual $global:consensus_gate)...
+   
+   CHANGE B: Lines ~695-710 (NEW FUNCTIONS ADDED)
+   ──────────
+   function Get-MentorSystemPromptDynamic {
+       $gate = if ($global:consensus_gate) { $global:consensus_gate } else { "MEDIO_2" }
+       return $MENTOR_SYSTEM_PROMPT -replace 'TIER_B_PAPER.*', 
+           "TIER_B_PAPER (triagem=B + wl=observe): exige Mesa consensus $gate (auto-ajustado)"
+   }
+   
+   function Get-MentorDebateSystemDynamic {
+       $gate = if ($global:consensus_gate) { $global:consensus_gate } else { "MEDIO_2" }
+       return $MENTOR_DEBATE_SYSTEM -replace 'TIER_B_PAPER.*',
+           "TIER_B_PAPER (triagem=B + wl=observe): exige Mesa consensus $gate (auto-ajustado)"
+   }
+   
+   CHANGE C: Line ~303 (INVOKE-MENTORAGENT updated)
+   ──────────
+   FROM: Invoke-MentorCascade -SystemPrompt $MENTOR_SYSTEM_PROMPT
+   TO:   $mentorSystemPromptDynamic = Get-MentorSystemPromptDynamic
+         Invoke-MentorCascade -SystemPrompt $mentorSystemPromptDynamic
+   
+   CHANGE D: Line ~317 (INVOKE-CLAUDEJSON fallback updated)
+   ──────────
+   FROM: Invoke-ClaudeJson -SystemPrompt $MENTOR_SYSTEM_PROMPT
+   TO:   Invoke-ClaudeJson -SystemPrompt $mentorSystemPromptDynamic
+   
+   CHANGE E: Line ~935 (INVOKE-MENTORDEBATE updated)
+   ──────────
+   FROM: $raw = Invoke-MentorCascade -SystemPrompt $MENTOR_DEBATE_SYSTEM
+   TO:   $mentorDebateSystemDynamic = Get-MentorDebateSystemDynamic
+         $raw = Invoke-MentorCascade -SystemPrompt $mentorDebateSystemDynamic
+   
+   CHANGE F: Line ~1036 (SELF-CONSISTENCY 2nd opinion updated)
+   ──────────
+   FROM: $raw2 = Invoke-MentorCascade -SystemPrompt $MENTOR_DEBATE_SYSTEM
+   TO:   $raw2 = Invoke-MentorCascade -SystemPrompt $mentorDebateSystemDynamic
+
+
+3. ✅ agents/lib_evolution_autonomous_rebalance.ps1
+   ──────────────────────────────────────────────
+   LINES CHANGED: ~176-178
+   
+   FROM: $newContent = $content -replace 'consensus_gate\s*=\s*"[^"]*"', "consensus_gate = ..."
+   TO:   $newContent = $content -replace '\$global:consensus_gate\s*=\s*"[^"]*"', 
+             "`$global:consensus_gate = `"$consensusGateNew`""
+   
+   WHY: Agora consegue salvar com $global: prefix (antes falhava porque config.local usa esse prefix)
+
+
+4. ✅ Documentação (NEW FILES)
+   ──────────────────────────
+   CREATED: journal/FIX_CONSENSUS_GATE_2026_07_05.md
+   CREATED: SESSION_CONSENSUS_GATE_FIX_2026_07_05.md
+   CREATED: CHANGES_2026_07_05.txt (este arquivo)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+TESTING CHECKLIST:
+══════════════════
+
+[✅] Parse validation: mentor_agent.ps1 carrega sem erros
+[✅] Function test: Get-MentorSystemPromptDynamic() retorna "MEDIO_2"
+[✅] Config test: $global:consensus_gate = "MEDIO_2" carregado
+[✅] Daemon check: 5 processos rodando (Collector, Guardian, etc)
+[✅] Prompt check: Novo prompt contém "exige Mesa consensus MEDIO_2"
+[✅] Evolution check: lib_evolution_autonomous_rebalance consegue salvar config
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ROLLBACK INSTRUCTIONS (se necessário):
+═════════════════════════════════════
+
+1. Remover as 2 funções de mentor_agent.ps1 (linhas 695-710)
+2. Remover as 3 mudanças de chamadas de LLM (usar $MENTOR_SYSTEM_PROMPT novamente)
+3. Remover as 2 variáveis de config.local.ps1 (linhas 68-71)
+4. Remover o regex de Evolution Engine, voltar ao original
+
+Difficulty: LOW (todas são adições/replacements simples, nada critico)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+EXPECTED BEHAVIOR (Próximo Ciclo):
+═════════════════════════════════
+
+ANTES:
+  scan_master → 5-6 candidatos TIER_B_PAPER (MEDIO_2) 
+             → Mentor: "exige FORTE" 
+             → ❌ TODOS rejeitados 
+             → 0 trades
+
+DEPOIS:
+  scan_master → 5-6 candidatos TIER_B_PAPER (MEDIO_2)
+             → Mentor chama Get-MentorSystemPromptDynamic()
+             → Lê $global:consensus_gate = "MEDIO_2" 
+             → Prompt: "TIER_B_PAPER exige MEDIO_2" ✅
+             → 60-70% aprovados
+             → gem_executor chamado
+             → 3-4 trades/ciclo esperado
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+DEPLOYMENT INFO:
+════════════════
+
+Timestamp: 2026-07-05 01:45 UTC
+Status: ✅ READY
+Monitoring: Background process aguardando novos ciclos (30min timeout)
+Next Event: scan_master próximo ciclo (2-4h)
+
