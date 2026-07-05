@@ -29,7 +29,7 @@ if ($DryRun) {
         $procs = Get-Process | Where-Object { $_.ProcessName -like "*$name*" -or $_.CommandLine -like "*$name*" }
         if ($procs) {
             Write-Host "   → Parando $name..." -ForegroundColor Gray
-            $procs | Stop-Process -NoNewWindow -ErrorAction SilentlyContinue -WarningAction SilentlyContinue
+            $procs | Stop-Process -ErrorAction SilentlyContinue -WarningAction SilentlyContinue
         }
     }
     Start-Sleep -Seconds 2
@@ -113,7 +113,7 @@ if ($DryRun) {
     Write-Host "      (DRY RUN: sem start)" -ForegroundColor Yellow
     Write-Host "`n→ Para executar de verdade, rode sem -DryRun" -ForegroundColor Yellow
 } else {
-    $start_script = "c:\Users\thiag\Coinex_AI_USER_API\agents\start_fleet.ps1"
+    $start_script = "c:\Users\thiag\Coinex_AI_USER_API\scripts\start_fleet.ps1"
     if (Test-Path $start_script) {
         Write-Host "   → Executando start_fleet.ps1..." -ForegroundColor Gray
         & $start_script
