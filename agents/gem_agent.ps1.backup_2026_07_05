@@ -70,41 +70,6 @@ $GEM_KEYWORDS_T3 = @(
 )
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Get-PumpPhase (2026-07-05)
-# Classifica estágio do pump para distinção LONG/MOMENTUM vs SHORT reversal
-# ─────────────────────────────────────────────────────────────────────────────
-function Get-PumpPhase {
-    param(
-        [double] $PumpPctToday = 0,
-        [int] $HoursSincePumpStart = 0,
-        [double] $CurrentRetraction = 0
-    )
-
-    if ($PumpPctToday -le 0) { return "NEUTRAL" }
-
-    if ($HoursSincePumpStart -le 2) {
-        if ($PumpPctToday -lt 15) { return "DISCOVERY_EARLY" }
-        if ($PumpPctToday -le 30) { return "DISCOVERY" }
-        return "DISCOVERY_LATE"
-    }
-
-    if ($HoursSincePumpStart -le 4) {
-        if ($PumpPctToday -le 45) { return "MOMENTUM_EARLY" }
-        if ($PumpPctToday -le 60) { return "MOMENTUM" }
-        return "MOMENTUM_LATE"
-    }
-
-    if ($CurrentRetraction -lt 0) {
-        if ($CurrentRetraction -gt -0.10) { return "REVERSAL_EARLY" }
-        if ($CurrentRetraction -gt -0.25) { return "REVERSAL_ACTIVE" }
-        if ($CurrentRetraction -gt -0.40) { return "REVERSAL_STRONG" }
-        return "REVERSAL_COMPLETE"
-    }
-
-    return "TOPO_ABSOLUTO"
-}
-
-# ─────────────────────────────────────────────────────────────────────────────
 # Get-CoinExVolSpike
 # Calcula vol_hoje / avg_3d a partir de candles diários (mais recente é o último)
 # ─────────────────────────────────────────────────────────────────────────────
@@ -469,21 +434,20 @@ function Invoke-GemScore {
 
     # G8 (2026-05-18) -- LATE PUMP PENALTY + BLOCK RULE (2026-07-02)
     # Tese: pump >40% no dia = late stage (smart money ja vendeu, retail FOMO).
-    # EVOLUCAO 2026-07-05: >60% = VERY_LATE bloqueia LONG. 40-60% = permite SHORT reversal.
+    # NOVO: G8-MID/LATE agora BLOQUEIAM (não só penalizam).
     # Chase risk documentado em BREVUSDT (score 65, G8-MID) → stopped out 15min após entry.
     $pctToday = 0.0
     try { $pctToday = [double]$VolData.pct_change_today } catch {}
     if ($pctToday -gt 60) {
-        # VERY_LATE: blow-off topo, bloqueia completamente (ainda muito riscado)
+        # VERY_LATE: blow-off topo, bloqueia completamente
         $score = 0  # force score para gate_fail
         $gates_passed += "G8-VERY_LATE-BLOCKED"
         return [PSCustomObject]@{ market=$Market; score=0; mode="NONE"; gates_passed=$gates_passed; gate_failed="G8-VERY_LATE"; sizing_pct=0.0; alerta="BLOQUEADO -- G8: pump em topo (blow-off >60%)" }
     } elseif ($pctToday -gt 40) {
-        # LATE: stage 2 pump (2026-07-05: permite SHORT reversal watch)
-        # Não bloqueia LONG apenas, marca para SHORT watch pós-retração
-        mode = "REVERSAL_WATCH"
-        $gates_passed += "G8-LATE-REVERSAL-WATCH"
-        # Continua scoring para SHORT (não zera score)
+        # LATE: stage 2 pump, bloqueia (chase risk)
+        $score = 0
+        $gates_passed += "G8-LATE-BLOCKED"
+        return [PSCustomObject]@{ market=$Market; score=0; mode="NONE"; gates_passed=$gates_passed; gate_failed="G8-LATE"; sizing_pct=0.0; alerta="BLOQUEADO -- G8: pump em estágio tardio (>40% do dia)" }
     } elseif ($pctToday -gt 25) {
         # MID: stage 1 pump, penaliza pesado (still chase, mas menos severo)
         $score -= 15            # penalidade forte
@@ -524,21 +488,15 @@ function Invoke-GemScore {
     $score = [math]::Max(0, [math]::Min(100, $score))
 
     # Modo e gate_failed
-    # 2026-07-05: Se G8-LATE-REVERSAL-WATCH, modo = REVERSAL_WATCH (não DISCOVERY/MOMENTUM)
-    if ($mode -eq "REVERSAL_WATCH") {
-        $threshold = 0  # reversal_watch não tem threshold de score
-        $gate_fail = $null
-        $sizing = 1.0  # SHORT reversal usa 1% capital
-    } else {
-        $mode       = if ($McapUsd -le $global:GEM_MCAP_DISCOVERY) { "DISCOVERY" } else { "MOMENTUM" }
-        $threshold  = if ($mode -eq "DISCOVERY") { $global:GEM_SCORE_MIN_DISC } else { $global:GEM_SCORE_MIN_MOM }
-        $gate_fail  = if ($score -lt $threshold) {
-            if (-not $NarrativeData.matched) { "G4" }
-            elseif (-not $OrganicData.passed) { "G6" }
-            else { "SCORE" }
-        } else { $null }
-        $sizing = if ($mode -eq "DISCOVERY") { $global:GEM_CAPITAL_DISCOVERY } else { $global:GEM_CAPITAL_MOMENTUM }
-    }
+    $mode       = if ($McapUsd -le $global:GEM_MCAP_DISCOVERY) { "DISCOVERY" } else { "MOMENTUM" }
+    $threshold  = if ($mode -eq "DISCOVERY") { $global:GEM_SCORE_MIN_DISC } else { $global:GEM_SCORE_MIN_MOM }
+    $gate_fail  = if ($score -lt $threshold) {
+        if (-not $NarrativeData.matched) { "G4" }
+        elseif (-not $OrganicData.passed) { "G6" }
+        else { "SCORE" }
+    } else { $null }
+
+    $sizing = if ($mode -eq "DISCOVERY") { $global:GEM_CAPITAL_DISCOVERY } else { $global:GEM_CAPITAL_MOMENTUM }
 
     $out = [ordered]@{
         market          = $Market
@@ -546,10 +504,9 @@ function Invoke-GemScore {
         mode            = $mode
         gates_passed    = $gates_passed
         gate_failed     = $gate_fail
-        sizing_pct      = if ($mode -eq "REVERSAL_WATCH") { $sizing } elseif ($score -ge $threshold) { $sizing } else { 0.0 }
+        sizing_pct      = if ($score -ge $threshold) { $sizing } else { 0.0 }
         chase_risk_high = [bool]$chaseRiskHigh   # C 2026-05-22: Mentor le como flag
-        alerta          = if ($mode -eq "REVERSAL_WATCH") { "SHORT reversal watch: pump em late stage, aguardando retração" } elseif ($score -ge $threshold) { "$mode score=$score gates=$($gates_passed -join ',')" } else { "score $score abaixo do threshold $threshold" }
-        pump_peak_pct   = if ($mode -eq "REVERSAL_WATCH") { $pctToday } else { $null }  # 2026-07-05: pico do pump p/ reversal monitor
+        alerta          = if ($score -ge $threshold) { "$mode score=$score gates=$($gates_passed -join ',')" } else { "score $score abaixo do threshold $threshold" }
     }
     (_gemExtras $gates_passed).GetEnumerator() | ForEach-Object { $out[$_.Key] = $_.Value }
     [PSCustomObject]$out
