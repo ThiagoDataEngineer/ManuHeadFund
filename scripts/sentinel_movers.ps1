@@ -21,7 +21,12 @@ $lockFile = Join-Path $journalDir "sentinel.pid"
 function Write-SentLog {
     param([string]$Msg)
     $line = "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] $Msg"
-    Add-Content -Path $logFile -Value $line -Encoding utf8
+    try {
+        Add-Content -Path $logFile -Value $line -Encoding utf8 -ErrorAction Stop
+    } catch {
+        # Fallback: stderr se arquivo preso
+        Write-Error "SENTINEL LOG FAULT: $_" -ErrorAction Continue
+    }
     Write-Host $line
 }
 
@@ -44,8 +49,11 @@ Write-SentLog "Sentinela iniciado (PID=$PID). Poll 3min | thresholds via evoluti
 
 $prev = @{}   # market -> @{ last; chg24 }
 $pollSec = 180
+$cycleNum = 0
+$lastLogTime = Get-Date
 
 while ($true) {
+    $cycleNum++
     try {
         # Thresholds do evolution engine (overlay; CLAMP no consumidor = bound 2 de 2)
         $movePct = 2.5; $ignPct = 12.0
@@ -91,7 +99,12 @@ while ($true) {
             }
             if ($fired -gt 0) {
                 Write-SentLog "poll: $seen pares | $fired trigger(s) publicados"
+            } elseif ($cycleNum % 3 -eq 0) {
+                # Heartbeat a cada 9min (3 ciclos x 3min): prova liveness
+                $logAge = (Get-Date) - $lastLogTime
+                Write-SentLog "poll: $seen pares | 0 triggers (heartbeat cycle=$cycleNum age={0:0.0}s)" -f $logAge.TotalSeconds
             }
+            $lastLogTime = Get-Date
         } else {
             Write-SentLog "ticker vazio/erro (code=$($r.code))"
         }

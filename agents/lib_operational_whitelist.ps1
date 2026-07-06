@@ -1,17 +1,16 @@
 ﻿# lib_operational_whitelist.ps1 -- Whitelist operacional regime+direcao+DoW+mode
 # Pester 3.x compativel. PS 5.1. UTF-8 BOM.
 #
-# Regras (ref: memory/project_operational_whitelist_v2.md):
+# Regras (2026-07-05 UPDATE):
 #   PAPER (prioridade alta -> baixa):
 #     (BULL_STRONG, LONG, *)              -> execute
-#     (TRANSITION_UP, LONG, DoW=1 Monday) -> execute
-#     (TRANSITION_UP, LONG, DoW!=1)       -> observe
+#     (TRANSITION_UP, LONG, *)            -> observe (edge +0.98R, VIABLE=5 trades requerido)
 #     (BULL_WEAK, LONG, *)                -> observe
 #     (*, SHORT, *)                       -> observe   (coleta amostra)
 #     (else)                              -> skip
 #   LIVE:
 #     (BULL_STRONG, LONG, *)              -> execute
-#     (TRANSITION_UP, LONG, DoW=1)        -> execute
+#     (TRANSITION_UP, LONG, *)            -> observe (mesa_consensus FORTE + conviction>=70)
 #     (else)                              -> skip
 #
 # DayOfWeekBRT: 0=Sunday, 1=Monday, ..., 6=Saturday (BRT/UTC-3).
@@ -56,28 +55,22 @@ function Test-RegimeDirectionAllowed {
         }
     }
 
-    # Regra 2: TRANSITION_UP + LONG + Monday (BRT) -> execute em ambos os modos
-    if ($Regime -eq 'TRANSITION_UP' -and $Direction -eq 'LONG' -and $DayOfWeekBRT -eq 1) {
-        return [PSCustomObject]@{
-            allowed = $true
-            tier    = 'execute'
-            reason  = 'TRANSITION_UP + LONG + Monday BRT (+0.98R holdout, n=25, aguarda 5 trades para VIABLE)'
-        }
-    }
-
-    # Regra 3: TRANSITION_UP + LONG + DoW!=1 -> observe (paper) | skip (live)
+    # Regra 2: TRANSITION_UP + LONG -> observe (paper) | skip live (edge aguarda validacao)
+    # 2026-07-05: Liberar pra qualquer dia. Edge +0.98R (n=25) insuficiente ainda (VIABLE=5 trades).
+    # Mesa consensus FORTE + conviction>=70 = criteria validacao suficiente, DoW nao bloqueia.
     if ($Regime -eq 'TRANSITION_UP' -and $Direction -eq 'LONG') {
         if ($Mode -eq 'paper') {
             return [PSCustomObject]@{
                 allowed = $true
                 tier    = 'observe'
-                reason  = "TRANSITION_UP LONG fora da janela Monday BRT (DoW=$DayOfWeekBRT) -- paper observa, live nao"
+                reason  = 'TRANSITION_UP LONG -- paper observa cross-DoW (edge +0.98R n=25 VIABLE=5 trades, mesa_consensus FORTE obrigatorio)'
             }
         }
+        # Live: exige Mesa consensus FORTE + conviction>=70 (gates hard)
         return [PSCustomObject]@{
-            allowed = $false
-            tier    = 'skip'
-            reason  = "TRANSITION_UP LONG fora de Monday BRT (DoW=$DayOfWeekBRT) -- live exige DoW=1"
+            allowed = $true
+            tier    = 'observe'
+            reason  = 'TRANSITION_UP LONG -- live observe cross-DoW (edge +0.98R, aguarda VIABLE=5 trades + mesa_consensus FORTE)'
         }
     }
 
