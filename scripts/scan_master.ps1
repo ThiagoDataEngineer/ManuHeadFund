@@ -1540,10 +1540,12 @@ function Wait-WithCommands {
             } catch {}
         }
 
-        # Log de keepalive a cada 10 min para confirmar que o loop esta vivo
-        $sinceStart = [int](($endTime - (Get-Date)).TotalSeconds)
-        if ($sinceStart % 600 -lt $chunkSec) {
-            Write-MasterLog "Aguardando... $([int](($endTime - (Get-Date)).TotalMinutes))min restantes janela=$($Seasonal.window)"
+        # 2026-07-06: Heartbeat a cada 3min para eliminar falsos "zumbi" do Guardian
+        # (Guardian vê 3min+ sem log = assume travado, mata e reinicia)
+        # Agora heartbeat prova que está dormindo, não travado.
+        $secondsRemaining = [int](($endTime - (Get-Date)).TotalSeconds)
+        if ($secondsRemaining % 180 -lt $chunkSec) {
+            Write-MasterLog "HEARTBEAT: aguardando $([int](($endTime - (Get-Date)).TotalMinutes))min restantes janela=$($Seasonal.window)"
         }
     }
 
@@ -1709,6 +1711,10 @@ do {
             }
 
             Invoke-MasterCycle -Seasonal $seasonal
+
+            # 2026-07-06 HEARTBEAT: Prove liveness após ciclo completo
+            # Guardian vê 3min+ sem log = zumbi. Heartbeat elimina falsos positivos.
+            Write-MasterLog "HEARTBEAT: ciclo=$iteration completion=ok" "INFO"
 
             # GEM STRATEGIES: PULL_BACK_RECOVERY + DISTRIBUTION_SHORT (2026-06-09)
             # 2026-07-02: reativado — causa raiz do loop era lib_loader_auto (recursao), ja fixada
