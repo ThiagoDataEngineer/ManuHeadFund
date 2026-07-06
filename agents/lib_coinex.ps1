@@ -118,7 +118,7 @@ function CoinEx-Headers($method, $path, $body, $accessId, $secretKey) {
 
 function CoinEx-GetCandles($market, $period, $limit=100) {
     $type = if ($market -match "USDT$" -and $market -notmatch "SPOT") { "futures" } else { "spot" }
-    $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/$type/kline?market=$market&period=$period&limit=$limit" -Method GET -ErrorAction Stop
+    $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/$type/kline?market=$market&period=$period&limit=$limit" -Method GET -TimeoutSec 15 -ErrorAction Stop
     if ($r.code -ne 0) { throw "CoinEx candles error: $($r.message)" }
     return $r.data | ForEach-Object {
         [PSCustomObject]@{
@@ -133,7 +133,7 @@ function CoinEx-GetCandles($market, $period, $limit=100) {
 }
 
 function CoinEx-GetFuturesCandles($market, $period, $limit=100) {
-    $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/futures/kline?market=$market&period=$period&limit=$limit" -Method GET -ErrorAction Stop
+    $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/futures/kline?market=$market&period=$period&limit=$limit" -Method GET -TimeoutSec 15 -ErrorAction Stop
     if ($r.code -ne 0) { throw "CoinEx futures candles error: $($r.message)" }
     return $r.data | ForEach-Object {
         [PSCustomObject]@{
@@ -150,9 +150,9 @@ function CoinEx-GetTicker($market) {
     # 2026-06-11: fallback SPOT quando o market nao existe em futures. Micro-caps
     # GEM (BASED, AIN, COAI...) so existem em spot — trailing/phantom quebravam
     # com "market not found" e as posicoes spot ficavam sem update de preco.
-    $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/futures/ticker?market=$market" -Method GET -ErrorAction Stop
+    $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/futures/ticker?market=$market" -Method GET -TimeoutSec 15 -ErrorAction Stop
     if ($r.code -eq 0) { return $r.data[0] }
-    $rs = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/spot/ticker?market=$market" -Method GET -ErrorAction Stop
+    $rs = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/spot/ticker?market=$market" -Method GET -TimeoutSec 15 -ErrorAction Stop
     if ($rs.code -eq 0) { return $rs.data[0] }
     throw "Ticker error: $($r.message)"
 }
@@ -173,25 +173,25 @@ function CoinEx-GetTickerFresh($market) {
 }
 
 function CoinEx-GetAllFuturesTickers() {
-    $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/futures/ticker" -Method GET -ErrorAction Stop
+    $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/futures/ticker" -Method GET -TimeoutSec 15 -ErrorAction Stop
     if ($r.code -ne 0) { throw "All tickers error: $($r.message)" }
     return $r.data
 }
 
 function CoinEx-GetAllSpotTickers() {
-    $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/spot/ticker" -Method GET -ErrorAction Stop
+    $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/spot/ticker" -Method GET -TimeoutSec 15 -ErrorAction Stop
     if ($r.code -ne 0) { throw "All spot tickers error: $($r.message)" }
     return $r.data
 }
 
 function CoinEx-GetDepth($market, $limit=20) {
-    $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/futures/depth?market=$market&limit=$limit&interval=0" -Method GET -ErrorAction Stop
+    $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/futures/depth?market=$market&limit=$limit&interval=0" -Method GET -TimeoutSec 15 -ErrorAction Stop
     if ($r.code -ne 0) { throw "Depth error: $($r.message)" }
     return $r.data
 }
 
 function CoinEx-GetFuturesMarkets() {
-    $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/futures/market" -Method GET -ErrorAction Stop
+    $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/futures/market" -Method GET -TimeoutSec 15 -ErrorAction Stop
     return $r.data
 }
 
@@ -232,7 +232,7 @@ function Get-MarketPrecision {
     # Cache miss: fetch
     $endpoint = if ($MarketType -eq "futures") { "/v2/futures/market" } else { "/v2/spot/market" }
     try {
-        $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL${endpoint}?market=$Market" -Method GET -ErrorAction Stop
+        $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL${endpoint}?market=$Market" -Method GET -TimeoutSec 15 -ErrorAction Stop
     } catch {
         return $null
     }
@@ -298,14 +298,14 @@ function CoinEx-Get($path) {
             # B19 fix 2026-05-20 PM6+420min: retry transient errors em GET (idempotente, safe).
             if (Get-Command Invoke-CoinExWithRetry -ErrorAction SilentlyContinue) {
                 return Invoke-CoinExWithRetry -Action {
-                    Invoke-RestMethod -Uri ($COINEX_BASE_URL + $path) -Method GET -Headers $h -ErrorAction Stop
+                    Invoke-RestMethod -Uri ($COINEX_BASE_URL + $path) -Method GET -Headers $h -TimeoutSec 15 -ErrorAction Stop
                 }
             }
             else {
-                return Invoke-RestMethod -Uri ($COINEX_BASE_URL + $path) -Method GET -Headers $h -ErrorAction Stop
+                return Invoke-RestMethod -Uri ($COINEX_BASE_URL + $path) -Method GET -Headers $h -TimeoutSec 15 -ErrorAction Stop
             }
         } -MaxWaitMs 10000
-        
+
         if ($result.success) {
             return $result.result
         }
@@ -313,14 +313,14 @@ function CoinEx-Get($path) {
             throw "Rate limit error: $($result.error)"
         }
     }
-    
+
     # Fallback: sem rate limiter (backward compatibility)
     if (Get-Command Invoke-WithRetry -ErrorAction SilentlyContinue) {
         return Invoke-WithRetry -ScriptBlock {
-            Invoke-RestMethod -Uri ($COINEX_BASE_URL + $path) -Method GET -Headers $h -ErrorAction Stop
+            Invoke-RestMethod -Uri ($COINEX_BASE_URL + $path) -Method GET -Headers $h -TimeoutSec 15 -ErrorAction Stop
         } -MaxAttempts 3 -BaseDelayMs 500
     }
-    return Invoke-RestMethod -Uri ($COINEX_BASE_URL + $path) -Method GET -Headers $h -ErrorAction Stop
+    return Invoke-RestMethod -Uri ($COINEX_BASE_URL + $path) -Method GET -Headers $h -TimeoutSec 15 -ErrorAction Stop
 }
 
 function CoinEx-Post($path, $bodyObj) {
@@ -355,14 +355,14 @@ function CoinEx-Post($path, $bodyObj) {
             # Retry automatico se disponivel e safe
             if ($retrySafe -and (Get-Command Invoke-CoinExWithRetry -ErrorAction SilentlyContinue)) {
                 return Invoke-CoinExWithRetry -Action {
-                    Invoke-RestMethod -Uri ($COINEX_BASE_URL + $path) -Method POST -Headers $h -Body ([System.Text.Encoding]::UTF8.GetBytes($json)) -ErrorAction Stop
+                    Invoke-RestMethod -Uri ($COINEX_BASE_URL + $path) -Method POST -Headers $h -Body ([System.Text.Encoding]::UTF8.GetBytes($json)) -TimeoutSec 15 -ErrorAction Stop
                 }
             }
             else {
-                return Invoke-RestMethod -Uri ($COINEX_BASE_URL + $path) -Method POST -Headers $h -Body ([System.Text.Encoding]::UTF8.GetBytes($json)) -ErrorAction Stop
+                return Invoke-RestMethod -Uri ($COINEX_BASE_URL + $path) -Method POST -Headers $h -Body ([System.Text.Encoding]::UTF8.GetBytes($json)) -TimeoutSec 15 -ErrorAction Stop
             }
         } -MaxWaitMs 10000
-        
+
         if ($result.success) {
             return $result.result
         }
@@ -370,14 +370,14 @@ function CoinEx-Post($path, $bodyObj) {
             throw "Rate limit error: $($result.error)"
         }
     }
-    
+
     # Fallback: sem rate limiter (backward compatibility)
     if ($retrySafe -and (Get-Command Invoke-WithRetry -ErrorAction SilentlyContinue)) {
         return Invoke-WithRetry -ScriptBlock {
-            Invoke-RestMethod -Uri ($COINEX_BASE_URL + $path) -Method POST -Headers $h -Body ([System.Text.Encoding]::UTF8.GetBytes($json)) -ErrorAction Stop
+            Invoke-RestMethod -Uri ($COINEX_BASE_URL + $path) -Method POST -Headers $h -Body ([System.Text.Encoding]::UTF8.GetBytes($json)) -TimeoutSec 15 -ErrorAction Stop
         } -MaxAttempts 3 -BaseDelayMs 500
     }
-    return Invoke-RestMethod -Uri ($COINEX_BASE_URL + $path) -Method POST -Headers $h -Body ([System.Text.Encoding]::UTF8.GetBytes($json)) -ErrorAction Stop
+    return Invoke-RestMethod -Uri ($COINEX_BASE_URL + $path) -Method POST -Headers $h -Body ([System.Text.Encoding]::UTF8.GetBytes($json)) -TimeoutSec 15 -ErrorAction Stop
 }
 
 function CoinEx-GetBalance() {
@@ -867,7 +867,7 @@ function CoinEx-ClosePosition($market) {
 # Usa /v2/futures/market?market=X - indispensavel antes de entrar em qualquer trade
 function CoinEx-GetMarketInfo($market) {
     try {
-        $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/futures/market?market=$market" -Method GET -ErrorAction Stop
+        $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/futures/market?market=$market" -Method GET -TimeoutSec 15 -ErrorAction Stop
         if ($r.code -ne 0 -or -not $r.data -or $r.data.Count -eq 0) { return $null }
         $d = $r.data[0]
 
@@ -914,7 +914,7 @@ function CoinEx-GetMarketInfo($market) {
 
 function CoinEx-GetFundingRate($market) {
     try {
-        $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/futures/funding-rate?market=$market" -Method GET -ErrorAction Stop
+        $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/futures/funding-rate?market=$market" -Method GET -TimeoutSec 15 -ErrorAction Stop
         if ($r.code -eq 0 -and $r.data -and $r.data.Count -gt 0) {
             return [double]$r.data[0].latest_funding_rate
         }
