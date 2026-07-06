@@ -56,6 +56,21 @@ $script:REGIME_FACTOR = @{
     "CAPITULATION"     = 0.0
 }
 
+# 2026-07-06: direction-aware. Tabela original e LONG-framed; SHORT em bear e
+# pro-tendencia (whitelist Rule 5: SHORT bearish = execute, DYDX +38.98% validou).
+# Sem 0.0: whitelist e a autoridade de allow/skip por regime+direcao; MCE apenas
+# modula tier/size. CAPITULATION 1.1 (nao 1.4): squeeze risk com shorts crowded.
+$script:REGIME_FACTOR_SHORT = @{
+    "BULL_STRONG"      = 0.3
+    "BULL_WEAK"        = 0.5
+    "TRANSITION_UP"    = 0.7
+    "SIDEWAYS"         = 0.9
+    "TRANSITION_DOWN"  = 1.3
+    "BEAR_WEAK"        = 1.3
+    "BEAR_STRONG"      = 1.4
+    "CAPITULATION"     = 1.1
+}
+
 
 # ── Factor functions ─────────────────────────────────────────────────────────
 
@@ -164,10 +179,14 @@ function Get-MacroEventFactor {
 
 function Get-RegimeFactor {
     [CmdletBinding()]
-    param([string] $Regime)
+    param(
+        [string] $Regime,
+        [string] $Direction = "LONG"
+    )
     if (-not $Regime) { return 0.5 }   # default conservador
-    if ($script:REGIME_FACTOR.ContainsKey($Regime)) {
-        return [double]$script:REGIME_FACTOR[$Regime]
+    $table = if ($Direction -eq "SHORT") { $script:REGIME_FACTOR_SHORT } else { $script:REGIME_FACTOR }
+    if ($table.ContainsKey($Regime)) {
+        return [double]$table[$Regime]
     }
     return 0.5
 }
@@ -179,14 +198,17 @@ function Get-ContextScore {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)] [datetime] $DateBrt,
-        [Parameter(Mandatory)] [string] $Regime
+        [Parameter(Mandatory)] [string] $Regime,
+        [string] $Direction = "LONG"
     )
     $dow = Get-DowFactor -DateBrt $DateBrt
     $season = Get-SeasonalFactor -DateBrt $DateBrt
-    $halving = Get-HalvingFactor -DateBrt $DateBrt
+    # 2026-07-06: halving cycle e LONG-framed (bull/bear do BTC). Para SHORT nao ha
+    # evidencia per-direction -> neutro 1.0 ate counterfactual telemetry calibrar.
+    $halving = if ($Direction -eq "SHORT") { 1.0 } else { Get-HalvingFactor -DateBrt $DateBrt }
     $session = Get-SessionFactor -DateBrt $DateBrt
     $macro = Get-MacroEventFactor -DateBrt $DateBrt
-    $regime = Get-RegimeFactor -Regime $Regime
+    $regime = Get-RegimeFactor -Regime $Regime -Direction $Direction
     $score = $dow * $season * $halving * $session * $macro * $regime
     return [PSCustomObject]@{
         score    = [Math]::Round($score, 4)
@@ -196,6 +218,7 @@ function Get-ContextScore {
         session  = $session
         macro    = $macro
         regime   = $regime
+        direction = $Direction
         date_brt = $DateBrt
     }
 }
@@ -206,9 +229,10 @@ function Test-ContextAllowsTrade {
     param(
         [Parameter(Mandatory)] [datetime] $DateBrt,
         [Parameter(Mandatory)] [string] $Regime,
-        [Parameter(Mandatory=$false)] [PSCustomObject] $DynamicData = $null
+        [Parameter(Mandatory=$false)] [PSCustomObject] $DynamicData = $null,
+        [string] $Direction = "LONG"
     )
-    $ctx = Get-ContextScore -DateBrt $DateBrt -Regime $Regime
+    $ctx = Get-ContextScore -DateBrt $DateBrt -Regime $Regime -Direction $Direction
     $s = [double]$ctx.score
 
     # Fatores dinamicos (opcionais — fail-open se ausentes)
@@ -219,7 +243,8 @@ function Test-ContextAllowsTrade {
             -FearGreed        $DynamicData.fear_greed_score `
             -FundingRate      $DynamicData.funding_rate `
             -EtfFlowMillions  $DynamicData.etf_flow_millions `
-            -DxyTrend         $DynamicData.dxy_trend
+            -DxyTrend         $DynamicData.dxy_trend `
+            -Direction        $Direction
         $dynScore = $dynResult.dynamic_score
     }
 
@@ -237,6 +262,7 @@ function Test-ContextAllowsTrade {
         score           = $finalScore
         static_score    = $s
         dynamic_score   = $dynScore
+        direction       = $Direction
         context         = $ctx
         dynamic_context = $dynResult
     }
@@ -264,11 +290,24 @@ function Format-ContextSummary {
 # Extreme Greed = risco de topo
 function Get-FearGreedFactor {
     [CmdletBinding()]
-    param([Parameter(Mandatory=$false)] $Score)
+    param(
+        [Parameter(Mandatory=$false)] $Score,
+        [string] $Direction = "LONG"
+    )
 
     if ($null -eq $Score) { return 1.0 }
     $n = [int]$Score
     if ($n -lt 0 -or $n -gt 100) { return 1.0 }
+
+    if ($Direction -eq "SHORT") {
+        # 2026-07-06: leitura invertida. Extreme Fear = capitulacao, shorts crowded,
+        # squeeze risk. Extreme Greed = topo eufórico = melhor contexto pra SHORT.
+        if ($n -le 25) { return 0.6 }   # Extreme Fear  — squeeze risk
+        if ($n -le 45) { return 0.8 }   # Fear          — cautela
+        if ($n -le 55) { return 1.0 }   # Neutral       — sem ajuste
+        if ($n -le 75) { return 1.2 }   # Greed         — favoravel
+        return 1.4                       # Extreme Greed — topo eufórico
+    }
 
     if ($n -le 25) { return 1.4 }   # Extreme Fear  — oportunidade historica
     if ($n -le 45) { return 1.2 }   # Fear          — favoravel para entrar
@@ -284,10 +323,22 @@ function Get-FearGreedFactor {
 # Funding muito positivo = excesso de longs = risco de liquidacao = bearish
 function Get-FundingRateFactor {
     [CmdletBinding()]
-    param([Parameter(Mandatory=$false)] $Rate)
+    param(
+        [Parameter(Mandatory=$false)] $Rate,
+        [string] $Direction = "LONG"
+    )
 
     if ($null -eq $Rate) { return 1.0 }
     $r = [double]$Rate
+
+    if ($Direction -eq "SHORT") {
+        # 2026-07-06: invertido. Funding muito negativo = shorts crowded = squeeze
+        # contra a posicao. Funding positivo = longs excessivos = combustivel de dump.
+        if ($r -le -0.05)  { return 0.6 }   # Shorts crowded — squeeze risk
+        if ($r -le  0.05)  { return 1.0 }   # Neutro
+        if ($r -le  0.10)  { return 1.2 }   # Longs excessivos — favoravel
+        return 1.3                           # Longs muito excessivos — cascata de liq
+    }
 
     if ($r -le -0.05)  { return 1.3 }   # Muito negativo — short squeeze iminente
     if ($r -le  0.05)  { return 1.0 }   # Neutro         — mercado equilibrado
@@ -302,10 +353,21 @@ function Get-FundingRateFactor {
 # ETF outflow = saida institucional = pressao vendedora
 function Get-EtfFlowFactor {
     [CmdletBinding()]
-    param([Parameter(Mandatory=$false)] $FlowMillions)
+    param(
+        [Parameter(Mandatory=$false)] $FlowMillions,
+        [string] $Direction = "LONG"
+    )
 
     if ($null -eq $FlowMillions) { return 1.0 }
     $f = [double]$FlowMillions
+
+    if ($Direction -eq "SHORT") {
+        # 2026-07-06: invertido. Outflow institucional = pressao vendedora = favoravel SHORT.
+        if ($f -ge  200) { return 0.6 }   # Inflow forte    — demanda contra o SHORT
+        if ($f -ge    0) { return 0.9 }   # Inflow moderado — leve contra
+        if ($f -ge -200) { return 1.2 }   # Outflow moderado — favoravel
+        return 1.3                         # Outflow forte   — saida institucional
+    }
 
     if ($f -ge  200) { return 1.3 }   # Inflow forte    — demanda institucional real
     if ($f -ge    0) { return 1.1 }   # Inflow moderado — neutro positivo
@@ -320,9 +382,23 @@ function Get-EtfFlowFactor {
 # DXY forte = capital volta para dolar = pressao em crypto
 function Get-DxyFactor {
     [CmdletBinding()]
-    param([Parameter(Mandatory=$false)] [string] $Trend)
+    param(
+        [Parameter(Mandatory=$false)] [string] $Trend,
+        [string] $Direction = "LONG"
+    )
 
     if (-not $Trend) { return 1.0 }
+
+    if ($Direction -eq "SHORT") {
+        # 2026-07-06: invertido. Dolar forte = pressao em crypto = favoravel SHORT.
+        switch ($Trend) {
+            "DOWN"      { return 0.8 }   # Dolar fraco — bullish crypto, contra SHORT
+            "FLAT"      { return 1.0 }
+            "UP"        { return 1.2 }   # Dolar forte — favoravel SHORT
+            "UP_STRONG" { return 1.3 }   # Dolar muito forte — ambiente pro-SHORT
+            default     { return 1.0 }
+        }
+    }
 
     switch ($Trend) {
         "DOWN"      { return 1.2 }   # Dolar fraco — bullish crypto
@@ -342,13 +418,14 @@ function Get-DynamicContextScore {
         [Parameter(Mandatory=$false)] $FearGreed,
         [Parameter(Mandatory=$false)] $FundingRate,
         [Parameter(Mandatory=$false)] $EtfFlowMillions,
-        [Parameter(Mandatory=$false)] [string] $DxyTrend
+        [Parameter(Mandatory=$false)] [string] $DxyTrend,
+        [string] $Direction = "LONG"
     )
 
-    $fg  = Get-FearGreedFactor   -Score        $FearGreed
-    $fr  = Get-FundingRateFactor -Rate         $FundingRate
-    $etf = Get-EtfFlowFactor     -FlowMillions $EtfFlowMillions
-    $dxy = Get-DxyFactor         -Trend        $DxyTrend
+    $fg  = Get-FearGreedFactor   -Score        $FearGreed       -Direction $Direction
+    $fr  = Get-FundingRateFactor -Rate         $FundingRate     -Direction $Direction
+    $etf = Get-EtfFlowFactor     -FlowMillions $EtfFlowMillions -Direction $Direction
+    $dxy = Get-DxyFactor         -Trend        $DxyTrend        -Direction $Direction
 
     $raw = $fg * $fr * $etf * $dxy
     $capped = [Math]::Round([Math]::Min(2.0, $raw), 4)

@@ -415,31 +415,17 @@ function Invoke-V6Cascade {
     $decisao = if ($mentor.decision -eq "APROVAR") { "EXECUTAR" } else { "ABORTAR" }
     $motivo  = if ($mentor.decision -eq "VETAR") { $mentor.mentor_mensagem } else { "" }
 
-    # 2026-06-08: SIGNAL SNAPSHOT -- captura decisao (APROVAR/VETAR) + sinais p/ aprendizado.
-    # Fecha o loop: depois Join-SignalOutcomes(snapshots, trade_outcomes) -> Get-DirectionStats.
-    # entry_price habilita counterfactual (medir forward return das nao-entradas).
-    if (Get-Command New-SignalSnapshot -ErrorAction SilentlyContinue) {
-        try {
-            $snapEntry = if ($setupForMentor -and $setupForMentor.entry -gt 0) { [double]$setupForMentor.entry } elseif ($Setup -and $Setup.entry -gt 0) { [double]$Setup.entry } else { 0 }
-            $snapDir   = if ($triagem -and $triagem.direction) { [string]$triagem.direction } elseif ($mesa -and $mesa.sinal_consenso -in @("LONG","SHORT")) { [string]$mesa.sinal_consenso } else { "LONG" }
-            $snapSrc   = if ($triagem -and $triagem.PSObject.Properties['direction_source'] -and $triagem.direction_source) { [string]$triagem.direction_source } elseif ($mesa -and $mesa.PSObject.Properties['reversal_vs_regime'] -and $mesa.reversal_vs_regime) { [string]$mesa.reversal_type } else { "regime" }
-            $snapReg   = if ($triagem -and $triagem.regime) { [string]$triagem.regime } else { "UNKNOWN" }
-            $snapGate  = if ($mentor.decision -eq "VETAR") { $mentor.mentor_mensagem } else { "" }
-            $snap = New-SignalSnapshot -Market $Market -Direction $snapDir -Source $snapSrc `
-                -Regime $snapReg -Decision $mentor.decision -EntryPrice $snapEntry `
-                -MesaConsensus $(if ($mesa) { [string]$mesa.consensus } else { "" }) `
-                -ReversalVsRegime $(if ($mesa -and $mesa.PSObject.Properties['reversal_vs_regime']) { [bool]$mesa.reversal_vs_regime } else { $false }) `
-                -SignalsLong  $(if ($triagem -and $triagem.PSObject.Properties['signals_long'])  { [int]$triagem.signals_long }  else { 0 }) `
-                -SignalsShort $(if ($triagem -and $triagem.PSObject.Properties['signals_short']) { [int]$triagem.signals_short } else { 0 }) `
-                -Conviction   $(if ($triagem -and $triagem.PSObject.Properties['conviction'])   { [int]$triagem.conviction }   else { 0 }) `
-                -Gate ([string]$snapGate)
-            Write-SignalSnapshot -Entry $snap | Out-Null
-        } catch { }  # snapshot e best-effort; nunca bloqueia decisao
-    }
+    # 2026-07-06: direcao + entry resolvidos ANTES do MCE e do snapshot (MCE agora e
+    # direction-aware e o snapshot precisa refletir o gate MCE, nao so o Mentor).
+    $snapEntry = if ($setupForMentor -and $setupForMentor.entry -gt 0) { [double]$setupForMentor.entry } elseif ($Setup -and $Setup.entry -gt 0) { [double]$Setup.entry } else { 0 }
+    $snapDir   = if ($triagem -and $triagem.direction) { [string]$triagem.direction } elseif ($mesa -and $mesa.sinal_consenso -in @("LONG","SHORT")) { [string]$mesa.sinal_consenso } else { "LONG" }
+    $snapReg   = if ($triagem -and $triagem.regime) { [string]$triagem.regime } else { "UNKNOWN" }
 
-    # === MCE gate (Market Context Engine 2026-05-19) ===
-    # Aplica filtro contextual APOS Mentor: se contexto BLOCK, sobrepoe APROVAR.
-    # Se contexto LIVE_REDUCED, propaga size_multiplier pro sizing downstream.
+    # === MCE gate (Market Context Engine 2026-05-19; direction-aware 2026-07-06) ===
+    # Calculado ANTES do snapshot pra fechar o loop de aprendizado corretamente.
+    # 2026-07-06: BLOCK nao aborta mais setups Mentor-aprovados -> forca PAPER_ONLY.
+    # Whitelist e a autoridade de allow/skip por regime+direcao; MCE modula tier/size.
+    # Blocked-to-paper gera o n que falta pro Kelly em vez de zero aprendizado.
     # Refs: knowledge/MARKET_TIMING_BRT.md
     $mceResult = $null
     $sizeMultiplier = 1.0
@@ -467,24 +453,66 @@ function Invoke-V6Cascade {
                 } catch { $dynData = $null }
             }
 
-            $mceResult = Test-ContextAllowsTrade -DateBrt (Get-Date) -Regime $regimeForMce -DynamicData $dynData
-            if ($mceResult.action -eq "BLOCK") {
-                $decisao = "ABORTAR"
-                $motivo = "MCE_BLOCK score=$($mceResult.score) static=$($mceResult.static_score) dynamic=$($mceResult.dynamic_score) (contexto desfavoravel)"
-                $mentor.decision = "VETAR_MCE"
-            } elseif ($mceResult.action -eq "PAPER_ONLY") {
+            $mceResult = Test-ContextAllowsTrade -DateBrt (Get-Date) -Regime $regimeForMce -DynamicData $dynData -Direction $snapDir
+            if ($mceResult.action -in @("BLOCK","PAPER_ONLY")) {
+                # 2026-07-06: BLOCK -> PAPER_ONLY (antes abortava). Setup Mentor-aprovado
+                # flui pra paper: valida gates + acumula amostra sem risco de capital.
                 $paperOnly = $true
                 $sizeMultiplier = 0.0
-                $motivo = "MCE_PAPER score=$($mceResult.score)"
+                $motivo = "MCE_$($mceResult.action)->PAPER dir=$snapDir score=$($mceResult.score) static=$($mceResult.static_score) dynamic=$($mceResult.dynamic_score)"
             } elseif ($mceResult.action -eq "LIVE_REDUCED") {
                 $sizeMultiplier = [double]$mceResult.size_multiplier
             } else {
                 # LIVE_FULL
                 $sizeMultiplier = [Math]::Min(2.0, [double]$mceResult.size_multiplier)
             }
+
+            # 2026-07-06: counterfactual telemetry — toda decisao MCE degradante vira
+            # entrada auditavel com entry_price; scripts/mce_counterfactual_report.ps1
+            # mede forward return 24h/72h pra recalibrar thresholds com evidencia.
+            if ($mceResult.action -in @("BLOCK","PAPER_ONLY")) {
+                try {
+                    $cfEntry = [PSCustomObject]@{
+                        ts            = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+                        market        = $Market
+                        direction     = $snapDir
+                        regime        = $regimeForMce
+                        entry_price   = $snapEntry
+                        mce_action    = $mceResult.action
+                        score         = $mceResult.score
+                        static_score  = $mceResult.static_score
+                        dynamic_score = $mceResult.dynamic_score
+                        fwd_return_24h = $null
+                        fwd_return_72h = $null
+                    }
+                    $cfPath = Join-Path $global:JOURNAL_DIR "mce_counterfactual.jsonl"
+                    Add-Content -Path $cfPath -Value ($cfEntry | ConvertTo-Json -Compress) -Encoding UTF8
+                } catch { }  # telemetria best-effort
+            }
         } catch {
             Write-Warning "MCE check falhou (passa adiante): $_"
         }
+    }
+
+    # 2026-06-08: SIGNAL SNAPSHOT -- captura decisao (APROVAR/VETAR) + sinais p/ aprendizado.
+    # Fecha o loop: depois Join-SignalOutcomes(snapshots, trade_outcomes) -> Get-DirectionStats.
+    # entry_price habilita counterfactual (medir forward return das nao-entradas).
+    # 2026-07-06: movido pra DEPOIS do MCE — snapshot agora registra o gate MCE no campo
+    # Gate (antes gravava APROVAR pra trades que o MCE vetava, poluindo o learning loop).
+    if (Get-Command New-SignalSnapshot -ErrorAction SilentlyContinue) {
+        try {
+            $snapSrc   = if ($triagem -and $triagem.PSObject.Properties['direction_source'] -and $triagem.direction_source) { [string]$triagem.direction_source } elseif ($mesa -and $mesa.PSObject.Properties['reversal_vs_regime'] -and $mesa.reversal_vs_regime) { [string]$mesa.reversal_type } else { "regime" }
+            $snapGate  = if ($mentor.decision -eq "VETAR") { $mentor.mentor_mensagem } elseif ($mceResult -and $mceResult.action -in @("BLOCK","PAPER_ONLY")) { "MCE_$($mceResult.action) score=$($mceResult.score)" } else { "" }
+            $snap = New-SignalSnapshot -Market $Market -Direction $snapDir -Source $snapSrc `
+                -Regime $snapReg -Decision $mentor.decision -EntryPrice $snapEntry `
+                -MesaConsensus $(if ($mesa) { [string]$mesa.consensus } else { "" }) `
+                -ReversalVsRegime $(if ($mesa -and $mesa.PSObject.Properties['reversal_vs_regime']) { [bool]$mesa.reversal_vs_regime } else { $false }) `
+                -SignalsLong  $(if ($triagem -and $triagem.PSObject.Properties['signals_long'])  { [int]$triagem.signals_long }  else { 0 }) `
+                -SignalsShort $(if ($triagem -and $triagem.PSObject.Properties['signals_short']) { [int]$triagem.signals_short } else { 0 }) `
+                -Conviction   $(if ($triagem -and $triagem.PSObject.Properties['conviction'])   { [int]$triagem.conviction }   else { 0 }) `
+                -Gate ([string]$snapGate)
+            Write-SignalSnapshot -Entry $snap | Out-Null
+        } catch { }  # snapshot e best-effort; nunca bloqueia decisao
     }
 
     # 2026-05-19 PM: Entry score boost via trend_persistence cache.
