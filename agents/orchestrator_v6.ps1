@@ -668,10 +668,21 @@ function Invoke-V6PostMentorExecution {
     if (-not (Test-Path $liveFlag)) { $result.reason = "no_live_mode_flag"; return $result }
     if (-not (Test-Path $v6Flag))   { $result.reason = "no_v6_live_flag";   return $result }
 
-    # Aprovacao manual via Telegram (timeout 5min)
+    # Aprovacao Telegram. 2026-07-06: alinhar V6 ao GEM path (scan_master 2026-07-03).
+    # Causa raiz "21 EXECUTAR, 0 trades": este gate SEMPRE chamava Wait-TgCallbackApproval
+    # com timeout 300s. Aprovacao humana via TG e estruturalmente quebrada (tg_listener
+    # -Once a cada 30min -> callback chega DEPOIS do timeout) e contradiz o modo full-auto
+    # do usuario (TG=alerta, nao gate). Com GEM_FULL_AUTO.flag (mesma flag do GEM path),
+    # V6 EXECUTAR flui direto com guardrails intactos (stop obrigatorio, live_guards, sizing).
     $approvalMsg = "V6 EXEC $Market $Side $Amount entry=$($Setup.entry) stop=$($Setup.stop) target=$($Setup.target) mentor=$($Mentor.confianca)"
+    $fullAutoFlag = Join-Path $JournalDir "GEM_FULL_AUTO.flag"
     $approved = $false
-    if (Get-Command Wait-TgCallbackApproval -ErrorAction SilentlyContinue) {
+    if (Test-Path $fullAutoFlag) {
+        $approved = $true
+        if (Get-Command Send-TelegramAlert -ErrorAction SilentlyContinue) {
+            try { Send-TelegramAlert -Message "⚡ V6 FULL-AUTO: $Market $Side entry=$($Setup.entry) — executando (guards ativos)" | Out-Null } catch {}
+        }
+    } elseif (Get-Command Wait-TgCallbackApproval -ErrorAction SilentlyContinue) {
         try {
             $tgResult = Wait-TgCallbackApproval -GemMarket $Market -TimeoutSeconds 300
             $approved = ($tgResult.decision -eq "approve")
@@ -874,9 +885,19 @@ function Invoke-OrchestratorV6 {
     $execResult = $null
     try {
         # Sizing simples: 1% capital / preco (placeholder; sizing_engine wired futuro)
+        # 2026-07-06: fallback de preco. Setups sem entry (comum em markets sem FQS)
+        # davam amountForExec=0 -> invalid_amount -> EXECUTAR sem ordem. Usa ticker
+        # como referencia de preco quando o setup nao trouxe entry.
+        $priceForSize = if ($finalSetup -and $finalSetup.entry -gt 0) { [double]$finalSetup.entry } else { 0 }
+        if ($priceForSize -le 0 -and (Get-Command CoinEx-GetTicker -ErrorAction SilentlyContinue)) {
+            try {
+                $tk = CoinEx-GetTicker $Market
+                if ($tk -and $tk.last) { $priceForSize = [double]$tk.last }
+            } catch {}
+        }
         $amountForExec = 0
-        if ($capitalReal -gt 0 -and $finalSetup -and $finalSetup.entry -gt 0) {
-            $amountForExec = [math]::Round(($capitalReal * 0.01) / $finalSetup.entry, 6)
+        if ($capitalReal -gt 0 -and $priceForSize -gt 0) {
+            $amountForExec = [math]::Round(($capitalReal * 0.01) / $priceForSize, 6)
         }
         $sideForExec = if ($cascade.mesa -and $cascade.mesa.sinal_consenso -eq "SHORT") { "sell" } else { "buy" }
         $execResult = Invoke-V6PostMentorExecution `

@@ -1263,6 +1263,13 @@ function Invoke-MasterCycle {
                     }
                     
                     $orchResults += $result
+                    # 2026-07-06: logar execReason quando EXECUTAR nao vira ordem real.
+                    # Torna visivel o gap "decisao=EXECUTAR mas ordemId=null" (ex: approval
+                    # timeout, invalid_amount, no_live_flag) que antes ficava mudo no log.
+                    if ($result.decisao -eq "EXECUTAR" -and -not $result.ordemId) {
+                        $er = if ($result.PSObject.Properties['execReason']) { $result.execReason } else { "unknown" }
+                        Write-MasterLog "EXECUTAR sem ordem: $($c.market) execReason=$er" "WARN"
+                    }
                     if ($result.decisao -eq "EXECUTAR" -and $result.ordemId) {
                         # Layer 5 wire (opt-in via journal/MOON_BAG_ENABLED.flag)
                         # Orchestrator nao retorna sizing_usd direto - inferimos
