@@ -1,0 +1,1 @@
+O argumento 'C:\Users\thiag\Coinex_AI_USER_API\scripts\phase_manager.ps1' para o parƒmetro -File nÆo existe. Forne‡a o caminho para um arquivo '.ps1' existente como um argumento para o parƒmetro -File.
