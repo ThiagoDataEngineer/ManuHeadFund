@@ -56,7 +56,13 @@ function Get-PositionExitDecision {
     param(
         [Parameter(Mandatory)] [object] $Position,   # {market,side,entry,stop,stopCurrent,peak,openedAt}
         [Parameter(Mandatory)] [object[]] $Candles,
-        [string] $Regime = ""
+        [string] $Regime = "",
+        # 2026-07-07 multi-TF (opt-in): {t1D;t4H;t1H} p/ este market. Quando fornecido,
+        # trend_up passa a vir da CONFLUENCIA 1D/4H/1H (Get-MultiTimeframeConviction),
+        # direcao-aware, em vez do binario single-TF (lastClose>sma). $null => comportamento
+        # identico ao anterior (backward-compat). Nunca afrouxa stop (ratchet-only preservado).
+        [object] $HtfTrend = $null,
+        [int] $HtfConvictionThreshold = 40
     )
     $side  = if ($Position.side) { [string]$Position.side } else { "LONG" }
     $entry = [double]$Position.entry
@@ -79,7 +85,22 @@ function Get-PositionExitDecision {
         }
     } catch { }
 
-    $pol = Resolve-ExitPolicyGated -TrendUp ([bool]$m.trend_up) -Regime $Regime -Direction $side
+    # trend_up: default = single-TF (lastClose>sma). Se HtfTrend fornecido, usa
+    # confluencia 1D/4H/1H DIRECAO-AWARE (SHORT nao inverte pq passa -Direction $side).
+    # Alinhado (conviccao >= threshold) => trend_up TRUE (mais espaco); contra => FALSE
+    # (politica mais apertada -> ratchet sobe mais rapido). Como o apply e ratchet-only,
+    # nunca afrouxa um stop existente independentemente do sinal.
+    $trendUp = [bool]$m.trend_up
+    $htfConviction = $null
+    if ($null -ne $HtfTrend -and (Get-Command Get-MultiTimeframeConviction -ErrorAction SilentlyContinue)) {
+        $t1D = if ($HtfTrend.t1D) { [string]$HtfTrend.t1D } else { "NEUTRAL" }
+        $t4H = if ($HtfTrend.t4H) { [string]$HtfTrend.t4H } else { "NEUTRAL" }
+        $t1H = if ($HtfTrend.t1H) { [string]$HtfTrend.t1H } else { "NEUTRAL" }
+        $htfConviction = Get-MultiTimeframeConviction -Trend1D $t1D -Trend4H $t4H -Trend1H $t1H -Direction $side
+        $trendUp = ($htfConviction -ge $HtfConvictionThreshold)
+    }
+
+    $pol = Resolve-ExitPolicyGated -TrendUp ([bool]$trendUp) -Regime $Regime -Direction $side
     $ctx = @{
         side = $side; entry = $entry; risk = $risk; r_now = $rNow
         peak = $peak; current_stop = $curStop; remaining_size = 1.0
@@ -97,7 +118,9 @@ function Get-PositionExitDecision {
         market        = [string]$Position.market
         side          = $side
         regime        = $Regime
-        trend_up      = [bool]$m.trend_up
+        trend_up      = [bool]$trendUp
+        trend_up_stf  = [bool]$m.trend_up
+        htf_conviction = $htfConviction
         selected      = $pol.selected
         gate_reason   = $pol.gate_reason
         action        = $dec.action
@@ -122,7 +145,9 @@ function Invoke-TrailingPolicyLive {
     param(
         [Parameter(Mandatory)] [object[]] $Positions,
         [Parameter(Mandatory)] [hashtable] $CandleMap,   # market -> candles
-        [string] $Regime = ""
+        [string] $Regime = "",
+        # 2026-07-07 opt-in multi-TF: market -> {t1D;t4H;t1H}. $null => single-TF (comportamento anterior).
+        [hashtable] $HtfTrendMap = $null
     )
     $changes = New-Object System.Collections.ArrayList
     foreach ($pos in $Positions) {
@@ -130,7 +155,8 @@ function Invoke-TrailingPolicyLive {
         $candles = $CandleMap[$mk]
         if (-not $candles -or @($candles).Count -lt 2) { continue }
 
-        $dec = Get-PositionExitDecision -Position $pos -Candles @($candles) -Regime $Regime
+        $htf = if ($null -ne $HtfTrendMap -and $HtfTrendMap.ContainsKey($mk)) { $HtfTrendMap[$mk] } else { $null }
+        $dec = Get-PositionExitDecision -Position $pos -Candles @($candles) -Regime $Regime -HtfTrend $htf
         if ($null -eq $dec) { continue }
 
         # so aplica STOP, ratchet-only (would_move ja garante direcao). Parciais/saidas: outro dono.

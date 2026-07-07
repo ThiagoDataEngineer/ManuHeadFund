@@ -226,6 +226,29 @@ Describe "Register-OrphanPosition - Auto-registro de posições órfãs" {
         $local.side | Should Be "SHORT"
     }
     
+    It "SHORT com stop_loss_price STRING '0' (API real) calcula stop protetivo, nao registra 0" {
+        # Regressao WLDUSDT (2026-07-07): a API devolve stop_loss_price="0" (string
+        # truthy no PS) -> o guard antigo registrava stop=0, deixando um SHORT
+        # alavancado SEM protecao. Deve cair no calculo direcional (entry*1.05).
+        $orphan = [PSCustomObject]@{
+            market          = "WLDUSDT"
+            side            = "short"
+            avg_entry_price = 0.389701
+            amount          = 100
+            stop_loss_price = "0"   # STRING, como a API devolve
+            take_profit_price = "0"
+        }
+
+        $result = Register-OrphanPosition -Position $orphan
+
+        $result.success | Should Be $true
+        $result.stop_calculated | Should Be $true
+        $local = Get-TrailingPositions | Where-Object { $_.market -eq "WLDUSDT" -and $_.active }
+        # SHORT sem stop -> stop ACIMA da entrada (0.389701 * 1.05).
+        ($local.stopCurrent -gt $local.entry) | Should Be $true
+        ($local.stopCurrent -gt 0) | Should Be $true
+    }
+
     It "NÃO registra duplicata se posição já existe localmente" {
         # Arrange: registrar primeiro
         Add-TrailingPosition -Market "BTCUSDT" -Side "LONG" -Entry 76000 -Stop 72000 -Target 80000

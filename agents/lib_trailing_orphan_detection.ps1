@@ -149,9 +149,16 @@ function Register-OrphanPosition {
         $stopLoss = $null
         $stopCalculated = $false
         
+        # 2026-07-07: a API devolve stop_loss_price="0" (STRING) quando NAO ha stop —
+        # e string nao-vazia e TRUTHY no PS, entao o guard antigo registrava stop=0
+        # (caso WLDUSDT short sl=0). Coage p/ double e exige > 0.
+        $exchSl = 0.0
         if ($Position.PSObject.Properties['stop_loss_price'] -and $Position.stop_loss_price) {
+            try { $exchSl = [double]$Position.stop_loss_price } catch { $exchSl = 0.0 }
+        }
+        if ($exchSl -gt 0) {
             # Stop configurado na exchange
-            $stopLoss = [double]$Position.stop_loss_price
+            $stopLoss = $exchSl
         }
         else {
             # Calcular stop conservador: 5% abaixo (LONG) ou acima (SHORT)
@@ -167,8 +174,12 @@ function Register-OrphanPosition {
         # 4. Extrair ou calcular take profit
         $takeProfit = $null
         
+        $exchTp = 0.0
         if ($Position.PSObject.Properties['take_profit_price'] -and $Position.take_profit_price) {
-            $takeProfit = [double]$Position.take_profit_price
+            try { $exchTp = [double]$Position.take_profit_price } catch { $exchTp = 0.0 }
+        }
+        if ($exchTp -gt 0) {
+            $takeProfit = $exchTp
         }
         else {
             # Calcular TP razoÃ¡vel: 15% acima (LONG) ou abaixo (SHORT)
@@ -368,6 +379,20 @@ function Reconcile-PhantomPositions {
                     $tick = CoinEx-GetTicker $p.market
                     if ($tick -and $tick.last) { $exitPrice = [double]$tick.last }
                 } catch {}
+
+                # Anti-silencio (2026-07-07): sem exitPrice>0 o Close-TrailingPosition NAO
+                # dispara Add-TradeOutcome (guard ExitPrice>0 em lib_trailing) -> o trade
+                # some do journal SEM registro. Fallback pro ultimo preco conhecido da
+                # posicao (peak/entry/stopCurrent) antes de desistir; se ainda 0, WARN
+                # explicito em vez de fechar em silencio.
+                if ($exitPrice -le 0) {
+                    foreach ($fld in @('peak','entry','stopCurrent')) {
+                        if ($p.PSObject.Properties[$fld] -and [double]$p.$fld -gt 0) { $exitPrice = [double]$p.$fld; break }
+                    }
+                    if ($exitPrice -le 0) {
+                        Write-Warning "[Reconcile-Phantom] outcome skipped: no exit price for $($p.market) (ticker falhou e sem preco na posicao)"
+                    }
+                }
 
                 Close-TrailingPosition -Market $p.market -Reason "phantom_reconciliation" -ExitPrice $exitPrice
 

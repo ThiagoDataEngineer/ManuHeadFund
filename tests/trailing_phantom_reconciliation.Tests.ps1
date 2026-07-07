@@ -16,6 +16,9 @@ $tmpDir = Join-Path $env:TEMP "phantom_tests_$(Get-Random)"
 New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null
 
 $global:TRAILING_FILE = "$tmpDir\trailing_positions.json"
+# Isola do state store (Supabase): sem isto, config.local.ps1 em runs locais faz
+# o trailing gravar na nuvem e os testes bleedam linhas entre si (2026-07-07).
+$global:TRAILING_USE_STATE_STORE = $false
 
 . "$PSScriptRoot\..\agents\config.ps1"
 . "$PSScriptRoot\..\agents\lib_coinex.ps1"
@@ -122,6 +125,30 @@ Describe "Reconcile-PhantomPositions" {
         $result.PSObject.Properties['phantoms_detected'] | Should Not BeNullOrEmpty
         $result.PSObject.Properties['closed'] | Should Not BeNullOrEmpty
         $result.PSObject.Properties['errors'] | Should Not BeNullOrEmpty
+    }
+}
+
+Describe "Reconcile-PhantomPositions anti-silencio (exitPrice=0)" {
+
+    BeforeEach { Reset-TrailingFile; Set-MockExchange @() }
+
+    AfterEach {
+        # restaura o ticker mock padrao (last=100) pros demais testes
+        Set-Item function:CoinEx-GetTicker -Value { param($market) return [PSCustomObject]@{ last = 100.0 } }
+    }
+
+    It "usa fallback pro preco da posicao (entry/peak) quando o ticker falha" {
+        # ticker lanca -> exitPrice do ticker = 0 -> deve cair pro preco da posicao
+        Set-Item function:CoinEx-GetTicker -Value { param($market) throw "ticker indisponivel" }
+        Add-TrailingPosition -Market "UNIUSDT" -Side "LONG" -Entry 3.5 -Stop 3.3 -Target 3.7
+        Set-MockExchange @()
+
+        $result = Reconcile-PhantomPositions
+        $result.closed | Should Be 1
+        $positions = Get-TrailingPositions | Where-Object { $_.market -eq "UNIUSDT" }
+        # fallback: peak (=entry no registro novo) = 3.5, nunca 0
+        $positions[0].exitPrice | Should Be 3.5
+        ($positions[0].exitPrice -gt 0) | Should Be $true
     }
 }
 

@@ -214,17 +214,38 @@ try {
             $tpRegime = Get-RegimeFromState
             $tpPos = @(Get-TrailingPositions | Where-Object { $_.active })
             if ($tpPos.Count -gt 0) {
-                $tpMap = @{}
+                $tpMap = @{}       # market -> candles 1D (ATR/SMA do Get-TrailingCandleMetrics)
+                $tpHtf = @{}       # market -> {t1D;t4H;t1H} (confluencia multi-TF)
+                $useCandleFn = (Get-Command Get-CoinExCandles -ErrorAction SilentlyContinue) -and (Get-Command Get-TrendDirection -ErrorAction SilentlyContinue)
                 foreach ($pp in $tpPos) {
                     $mk = [string]$pp.market
-                    try {
-                        $kr = Invoke-RestMethod "https://api.coinex.com/v2/spot/kline?market=$mk&period=1day&limit=60" -TimeoutSec 10 -EA Stop
-                        if ($kr.data) {
-                            $tpMap[$mk] = @($kr.data | ForEach-Object { [PSCustomObject]@{ open=[double]$_.open; high=[double]$_.high; low=[double]$_.low; close=[double]$_.close; volume=[double]$_.volume } })
-                        }
-                    } catch { }
+                    # 2026-07-07: candle FUTURES (nao spot). Get-CoinExCandles exige -IsFutures
+                    # explicito pq futures da CoinEx terminam em USDT e o auto-detect falha.
+                    if ($useCandleFn) {
+                        try {
+                            $c1D = @(Get-CoinExCandles -Market $mk -Period "1day"  -Limit 60 -IsFutures $true)
+                            $c4H = @(Get-CoinExCandles -Market $mk -Period "4hour" -Limit 60 -IsFutures $true)
+                            $c1H = @(Get-CoinExCandles -Market $mk -Period "1hour" -Limit 60 -IsFutures $true)
+                            if ($c1D.Count -ge 2) { $tpMap[$mk] = $c1D }
+                            if ($c1D.Count -ge 20 -and $c4H.Count -ge 20 -and $c1H.Count -ge 20) {
+                                $tpHtf[$mk] = @{
+                                    t1D = (Get-TrendDirection -Candles $c1D -Timeframe "1D")
+                                    t4H = (Get-TrendDirection -Candles $c4H -Timeframe "4H")
+                                    t1H = (Get-TrendDirection -Candles $c1H -Timeframe "1H")
+                                }
+                            }
+                        } catch { }
+                    } else {
+                        # Fallback legado (sem lib de candles): 1D spot kline direto.
+                        try {
+                            $kr = Invoke-RestMethod "https://api.coinex.com/v2/futures/kline?market=$mk&period=1day&limit=60" -TimeoutSec 10 -EA Stop
+                            if ($kr.data) {
+                                $tpMap[$mk] = @($kr.data | ForEach-Object { [PSCustomObject]@{ open=[double]$_.open; high=[double]$_.high; low=[double]$_.low; close=[double]$_.close; volume=[double]$_.volume } })
+                            }
+                        } catch { }
+                    }
                 }
-                $tpRes = Invoke-TrailingPolicyLive -Positions $tpPos -CandleMap $tpMap -Regime $tpRegime
+                $tpRes = Invoke-TrailingPolicyLive -Positions $tpPos -CandleMap $tpMap -Regime $tpRegime -HtfTrendMap $tpHtf
                 if (@($tpRes.changes).Count -gt 0) {
                     Save-TrailingPositions -Positions $tpRes.positions | Out-Null
                     Write-TrailingPolicyAudit -Changes $tpRes.changes | Out-Null

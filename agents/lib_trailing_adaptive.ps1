@@ -557,43 +557,74 @@ function Sync-TrailingPositionsWithExchange {
                     }
                 }
             } else {
-                # 2026-06-11 guard: só auto-registra posição GERENCIADA (com SL ou TP
-                # real na corretora). Holdings passivos (PAXG, CET, BTC parking...)
-                # não têm stop orders — registrá-los no trailing poderia auto-vendê-los.
-                $isManaged = ($null -ne $order.stop_price) -or ($null -ne $order.take_profit_price)
-                if (-not $isManaged) {
-                    if ($Verbose) { Write-Host "  [Sync Trailing] $market sem SL/TP na exchange — holding passivo, skip" -ForegroundColor DarkGray }
+                # 2026-06-11 guard: holdings passivos SPOT (PAXG, CET, BTC parking...)
+                # nao tem stop orders — registra-los no trailing poderia auto-vende-los.
+                # 2026-07-07 fix: o guard so vale pra SPOT. Uma posicao FUTURES (alavancada)
+                # SEM stop e o caso mais perigoso de deixar solta (ex.: WLDUSDT short sl=0
+                # ficava fora do trailing). FUTURES e SEMPRE adotada; se vier sem stop,
+                # calcula-se um stop protetivo DIRECIONAL e o Sync-TrailingToExchange do
+                # ciclo empurra pra corretora.
+                $posType = "$($order.position_type)".ToUpper()
+                $hasExchStop = ($null -ne $order.stop_price)
+                $isManaged = $hasExchStop -or ($null -ne $order.take_profit_price)
+                if (($posType -ne "FUTURES") -and (-not $isManaged)) {
+                    if ($Verbose) { Write-Host "  [Sync Trailing] $market sem SL/TP na exchange — holding passivo SPOT, skip" -ForegroundColor DarkGray }
                     continue
                 }
 
+                # Direcao normalizada (buy->LONG, sell->SHORT).
+                $newSide = if ($order.side -eq "buy") { "LONG" } else { "SHORT" }
+                $entryPx = [double]$order.price
+
+                # Stop protetivo DIRECIONAL quando a corretora nao tem stop:
+                #  LONG  -> 5% ABAIXO da entrada; SHORT -> 5% ACIMA da entrada.
+                # (o fallback antigo price*0.95 colocava o stop do lado ERRADO num short).
+                $stopCalculated = $false
+                if ($hasExchStop) {
+                    $protStop = [double]$order.stop_price
+                } else {
+                    $protStop = if ($newSide -eq "SHORT") { [math]::Round($entryPx * 1.05, 8) } else { [math]::Round($entryPx * 0.95, 8) }
+                    $stopCalculated = $true
+                }
+                # Target direcional: LONG acima, SHORT abaixo.
+                $protTarget = if ($null -ne $order.take_profit_price) {
+                    [double]$order.take_profit_price
+                } elseif ($newSide -eq "SHORT") {
+                    [math]::Round($entryPx * 0.85, 8)
+                } else {
+                    [math]::Round($entryPx * 1.15, 8)
+                }
+
                 # Posição nova na exchange - criar entrada
-                Write-Host "  [Sync Trailing] Nova posição detectada: $market" -ForegroundColor Yellow
-                # 2026-06-11 fix: `[double](if ...)` nao eh sintaxe valida — precisa
-                # subexpressao `$(if ...)`. Bug latente: nunca executou porque
-                # CoinEx-GetOpenOrders nao existia e a funcao sempre dava skip.
+                $adoptNote = if ($stopCalculated) { "$market (FUTURES sem stop -> stop protetivo $protStop calculado)" } else { $market }
+                Write-Host "  [Sync Trailing] Nova posição detectada: $adoptNote" -ForegroundColor Yellow
                 $newPos = [PSCustomObject]@{
                     market = $market
-                    side = if ($order.side -eq "buy") { "LONG" } else { "SHORT" }
-                    entry = [double]$order.price
-                    stop = [double]$(if ($order.stop_price) { $order.stop_price } else { $order.price * 0.95 })
-                    target = [double]$(if ($order.take_profit_price) { $order.take_profit_price } else { $order.price * 1.05 })
+                    side = $newSide
+                    entry = $entryPx
+                    stop = $protStop
+                    target = $protTarget
                     orderId = $orderId
                     source = "exchange_sync"
                     mode = "STANDARD"
                     max_days = 0
                     dd_threshold_pct = 30
                     phase = 0
-                    peak = [double]$order.price
-                    stopCurrent = [double]$(if ($order.stop_price) { $order.stop_price } else { $order.price * 0.95 })
+                    peak = $entryPx
+                    stopCurrent = $protStop
                     active = $true
                     openedAt = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
                     updatedAt = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
                 }
                 $positions += $newPos
                 $updated = $true
-                
-                # Notificar via Telegram
-                $msg = "✅ SYNC: Nova posição $market detectada na exchange"
+
+                # Notificar via Telegram (destaca quando um stop protetivo foi injetado).
+                $msg = if ($stopCalculated) {
+                    "⚠️ SYNC: $market ($newSide) adotada SEM stop na corretora — stop protetivo $protStop será empurrado"
+                } else {
+                    "✅ SYNC: Nova posição $market detectada na exchange"
+                }
                 if (Get-Command Send-TelegramAlertFiltered -ErrorAction SilentlyContinue) {
                     try { Send-TelegramAlertFiltered -Message $msg -Tier "IMPORTANT" | Out-Null } catch { }
                 }
