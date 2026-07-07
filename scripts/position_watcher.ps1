@@ -39,6 +39,18 @@ try {
     exit 1
 }
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# 2026-07-07 WIRED: LOAD SUPABASE INTEGRATION LIBS
+# ═══════════════════════════════════════════════════════════════════════════════
+try {
+    . (Join-Path $agentsDir "lib_state_store.ps1") -ErrorAction SilentlyContinue
+    . (Join-Path $agentsDir "lib_position_sync_live.ps1") -ErrorAction SilentlyContinue
+    . (Join-Path $agentsDir "lib_trade_journal_supabase.ps1") -ErrorAction SilentlyContinue
+    Write-WatchLog "INFO" "Supabase integration libs loaded"
+} catch {
+    Write-WatchLog "WARN" "Supabase integration libs load failed: $_"
+}
+
 # Anti-duplicata: position_watcher tambem e singleton (estava duplicando).
 if (Get-Command Enter-DaemonSingleton -ErrorAction SilentlyContinue) {
     $__lockDir = Join-Path $journalDir "daemon_locks"
@@ -84,6 +96,18 @@ function Get-OpenSpotPositions {
 
 while ($true) {
     try {
+        # ═════════════════════════════════════════════════════════════════
+        # 2026-07-07 WIRED: SYNC POSITIONS PERIODICALLY
+        # ═════════════════════════════════════════════════════════════════
+        if (Get-Command "Sync-PositionsPeriodic" -EA SilentlyContinue) {
+            try {
+                $syncResult = Sync-PositionsPeriodic
+                Write-WatchLog "DEBUG" "Position sync periodic: Futures=$($syncResult.futures_synced) Spot=$($syncResult.spot_synced) Orphans=$($syncResult.orphans_count)"
+            } catch {
+                Write-WatchLog "WARN" "Periodic sync failed: $_"
+            }
+        }
+
         # 1a. Posições FUTURES
         $positions = CoinEx-GetPendingPositions -ErrorAction SilentlyContinue
 

@@ -189,6 +189,18 @@ try {
     exit 1
 }
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# 2026-07-07 WIRED: LOAD SUPABASE INTEGRATION LIBS
+# ═══════════════════════════════════════════════════════════════════════════════
+try {
+    . (Join-Path $agentsDir "lib_state_store.ps1") -ErrorAction SilentlyContinue
+    . (Join-Path $agentsDir "lib_position_sync_live.ps1") -ErrorAction SilentlyContinue
+    . (Join-Path $agentsDir "lib_trade_journal_supabase.ps1") -ErrorAction SilentlyContinue
+    Write-GemLog "INFO" "Supabase integration libs loaded (state_store, position_sync, trade_journal)"
+} catch {
+    Write-GemLog "WARN" "Supabase integration libs load failed (non-critical): $($_.Exception.Message)"
+}
+
 # Validar que Invoke-GemScan está disponível
 if (-not (Get-Command "Invoke-GemScan" -ErrorAction SilentlyContinue)) {
     Write-GemLog "ERROR" "Invoke-GemScan nao esta disponivel apos sourcing"
@@ -397,6 +409,22 @@ if ($Once) {
 }
 
 while ($true) {
+    # ═══════════════════════════════════════════════════════════════════
+    # 2026-07-07 WIRED: SYNC POSITIONS DO APP ANTES DE CADA CICLO
+    # ═══════════════════════════════════════════════════════════════════
+    if (Get-Command "Sync-ExchangePositionsLive" -EA SilentlyContinue) {
+        Write-GemLog "INFO" "Sync-ExchangePositionsLive iniciando (Futures + Spot)..."
+        try {
+            $syncFut = Sync-ExchangePositionsLive -IsFutures $true
+            Write-GemLog "DEBUG" "Futures sync: $($syncFut.Count) positions synced"
+
+            $syncSpot = Sync-ExchangePositionsLive -IsFutures $false
+            Write-GemLog "DEBUG" "Spot sync: $($syncSpot.Count) positions synced"
+        } catch {
+            Write-GemLog "WARN" "Position sync failed (continue anyway): $_"
+        }
+    }
+
     Invoke-GemCycle-Once -DryRun (-not $isLive)
     $sleepSec = $CheckInterval * 60
     Write-GemLog "INFO" "Dormindo ${CheckInterval}min ate proximo cycle"

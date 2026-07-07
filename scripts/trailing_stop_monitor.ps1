@@ -75,6 +75,13 @@ try {
     . (Join-Path $agentsDir "lib_trailing_policy.ps1")
     . (Join-Path $agentsDir "lib_trailing_policy_live.ps1")
 
+    # ═══════════════════════════════════════════════════════════════════════════════
+    # 2026-07-07 WIRED: LOAD SUPABASE INTEGRATION LIBS
+    # ═══════════════════════════════════════════════════════════════════════════════
+    . (Join-Path $agentsDir "lib_state_store.ps1") -ErrorAction SilentlyContinue
+    . (Join-Path $agentsDir "lib_position_sync_live.ps1") -ErrorAction SilentlyContinue
+    . (Join-Path $agentsDir "lib_trade_journal_supabase.ps1") -ErrorAction SilentlyContinue
+
     Write-CrossPlatformLog "Libraries loaded successfully" -LogFile "trailing_stop_monitor.log"
 } catch {
     Write-CrossPlatformLog "ERROR loading libraries: $_" -Level ERROR -LogFile "trailing_stop_monitor.log"
@@ -332,6 +339,18 @@ try {
                 Write-CrossPlatformLog "EXIT AUTO: $($autoExecResults.Count) positions executed" -LogFile "trailing_stop_monitor.log"
                 foreach ($exec in $autoExecResults) {
                     Write-CrossPlatformLog "  [Layer $($exec.layer)] $($exec.market): SOLD $($exec.pct)% ($($exec.qty)) - $($exec.reason)" -Level INFO -LogFile "trailing_stop_monitor.log"
+                }
+
+                # ═════════════════════════════════════════════════════════════════
+                # 2026-07-07 WIRED: RECONCILE CLOSED POSITIONS (quando fecha)
+                # ═════════════════════════════════════════════════════════════════
+                if (Get-Command "Reconcile-AppToJournal" -EA SilentlyContinue) {
+                    try {
+                        $reconResults = Reconcile-AppToJournal -Limit 10
+                        Write-CrossPlatformLog "  RECONCILE-OK: $($reconResults.Count) closed positions registered in Supabase" -Level INFO -LogFile "trailing_stop_monitor.log"
+                    } catch {
+                        Write-CrossPlatformLog "  RECONCILE-WARN: $_" -Level WARN -LogFile "trailing_stop_monitor.log"
+                    }
                 }
             } else {
                 Write-CrossPlatformLog "EXIT AUTO: No layers triggered" -LogFile "trailing_stop_monitor.log"
