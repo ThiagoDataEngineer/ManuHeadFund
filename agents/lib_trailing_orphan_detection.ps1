@@ -133,16 +133,34 @@ function Register-OrphanPosition {
         }
         
         # 2. Verificar se jÃ¡ estÃ¡ registrada (prevenir duplicata)
-        $existing = Get-TrailingPositions | Where-Object { 
-            $_.market -eq $market -and $_.active 
+        $existing = Get-TrailingPositions | Where-Object {
+            $_.market -eq $market -and $_.active
         }
-        
+
         if ($existing) {
             return [PSCustomObject]@{
                 success = $true
                 registered = $false
                 reason = "Position already registered locally"
             }
+        }
+
+        # FIX B (2026-07-07): Confirmar que posição ainda está ABERTA na corretora
+        # antes de registrar. Evita registrar "sombras" de phantom_reconciliation.
+        try {
+            $allPending = @(CoinEx-GetPendingPositions)
+            $stillOpen = $allPending | Where-Object { $_.market -eq $market }
+            if (-not $stillOpen) {
+                # Posição foi fechada na corretora entretanto (SL/TP/manual)
+                # Não registrar como órfã
+                return [PSCustomObject]@{
+                    success = $true
+                    registered = $false
+                    reason = "Position closed on exchange since detection"
+                }
+            }
+        } catch {
+            # API falha: proceed com caution (não bloqueia registro)
         }
         
         # 3. Extrair ou calcular stop loss
@@ -228,11 +246,14 @@ function Sync-OrphanPositions {
     <#
     .SYNOPSIS
         Detecta e registra todas as posiÃ§Ãµes Ã³rfÃ£s em batch
-    
+
     .DESCRIPTION
         FunÃ§Ã£o principal para sincronizaÃ§Ã£o automÃ¡tica. Detecta Ã³rfÃ£s e
         registra todas em batch, continuando mesmo se houver erros individuais.
-    
+
+        2026-07-07 FIX A: Verifica se phantom_reconciliation rodou nos últimos 2min.
+        Se sim, retorna early (evita re-entrada involuntária).
+
     .OUTPUTS
         PSCustomObject com estatÃ­sticas:
         - success: $true/$false
@@ -242,16 +263,41 @@ function Sync-OrphanPositions {
         - skipped: Ã³rfÃ£s jÃ¡ registradas (duplicatas)
         - errors: Ã³rfÃ£s com erro ao registrar
         - details: array com resultado de cada Ã³rfÃ£
-    
+
     .EXAMPLE
         $result = Sync-OrphanPositions
-        Write-Host "Ã“rfÃ£s registradas: $($result.registered)"
-        Write-Host "Erros: $($result.errors)"
+        Write-Host “Ã”rfÃ£s registradas: $($result.registered)”
+        Write-Host “Erros: $($result.errors)”
     #>
     [CmdletBinding()]
     param()
-    
+
     try {
+        # FIX A (2026-07-07): Skip se phantom_reconciliation rodou nos últimos 2min
+        # Evita re-entrada involuntária (phantom fecha, sync reabre)
+        $journalDir = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { (Join-Path (Split-Path $PSScriptRoot) “journal”) }
+        $phantomFlagFile = Join-Path $journalDir “phantom_reconciliation_just_ran.flag”
+
+        if (Test-Path $phantomFlagFile) {
+            try {
+                $flagTime = [datetime](Get-Content $phantomFlagFile -Raw)
+                $elapsed = (Get-Date) - $flagTime
+                if ($elapsed.TotalSeconds -lt 120) {
+                    # Phantom rodou há menos de 2min, skip Sync
+                    return [PSCustomObject]@{
+                        success = $true
+                        total_exchange = 0
+                        orphans_detected = 0
+                        registered = 0
+                        skipped = 0
+                        errors = 0
+                        details = @()
+                        skip_reason = “phantom_reconciliation_cooldown”
+                    }
+                }
+            } catch {}
+        }
+
         # 1. Detectar Ã³rfÃ£s
         $orphans = @(Detect-OrphanPositions)
         
@@ -409,6 +455,18 @@ function Reconcile-PhantomPositions {
                 $details += [PSCustomObject]@{ market = $p.market; closed = $false; error = $_.Exception.Message }
             }
         }
+
+        # FIX A (2026-07-07): Escrever flag de cooldown pra Sync-OrphanPositions
+        # Previne que sync reabre automaticamente posições que phantom acabou de fechar
+        if ($closed -gt 0) {
+            try {
+                $journalDir = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { (Join-Path (Split-Path $PSScriptRoot) "journal") }
+                $phantomFlagFile = Join-Path $journalDir "phantom_reconciliation_just_ran.flag"
+                if (-not (Test-Path $journalDir)) { New-Item -ItemType Directory -Path $journalDir -Force | Out-Null }
+                (Get-Date).ToString("o") | Set-Content -Path $phantomFlagFile -Encoding UTF8 -Force
+            } catch {}
+        }
+
         return [PSCustomObject]@{
             phantoms_detected = $phantoms.Count
             closed = $closed
