@@ -103,6 +103,8 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 . (Join-Path $agentsDir "lib_self_recovery.ps1")  # 2026-06-08: auto-healing (diagnostica log + auto-corrige)
 . (Join-Path $agentsDir "lib_bidirectional_direction.ps1")  # 2026-06-08: direcao bidirecional (bear/bull trap)
 . (Join-Path $agentsDir "lib_direction_learning.ps1")  # 2026-06-08: motor aprendizado + signal snapshot
+. (Join-Path $agentsDir "lib_learning_engine.ps1")  # 2026-07-07 ATIVAÇÃO: Learning Engine — analisa logs de erro, calibra conviction
+. (Join-Path $agentsDir "lib_evolution_engine.ps1")  # 2026-07-07 ATIVAÇÃO: Evolution Engine — auto-tuning parametros de deteccao
 . (Join-Path $agentsDir "lib_mentor_invariants.ps1")  # B4 prevention
 . (Join-Path $agentsDir "lib_gem_safety.ps1")
 . (Join-Path $agentsDir "lib_gem_auto_approve.ps1")

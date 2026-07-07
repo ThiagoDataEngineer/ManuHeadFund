@@ -88,6 +88,12 @@ foreach ($__convDep in @("lib_btc_relative_strength.ps1","lib_entry_conviction_e
     if (Test-Path $__convPath) { . $__convPath }
 }
 
+# 2026-07-07 ATIVAÇÃO: Learning + Evolution Motors
+foreach ($__learnDep in @("lib_learning_engine.ps1","lib_evolution_engine.ps1","lib_direction_learning.ps1")) {
+    $__learnPath = Join-Path $PSScriptRoot $__learnDep
+    if (Test-Path $__learnPath) { . $__learnPath }
+}
+
 # 2026-06-18: Wire gates_drift.json — dynamic gate application (mesa score override + conviction threshold)
 $__gatesDriftPath = Join-Path $PSScriptRoot "lib_gates_drift_wire.ps1"
 if (Test-Path $__gatesDriftPath) { . $__gatesDriftPath }
