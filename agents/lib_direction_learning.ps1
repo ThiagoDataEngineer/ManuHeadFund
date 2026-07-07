@@ -671,6 +671,11 @@ function Get-CounterfactualSkips {
     if (-not $Snapshots -or -not $PriceFetcher) { return @() }
     $now = Get-Date
     $out = @()
+    # 2026-07-07 fix travamento boot scan_master: cache de preco por market. Antes,
+    # cada snapshot elegivel (podia ser centenas/milhares) disparava 1 CoinEx-GetTicker
+    # sequencial -> com timeout 15s/chamada o boot ficava minutos/horas congelado
+    # (self_heal marcava zumbi_log_parado). Agora 1 fetch por market unico.
+    $priceCache = @{}
     foreach ($s in $Snapshots) {
         if (-not $s) { continue }
         $decision = if ($s.PSObject.Properties['decision']) { "$($s.decision)" } else { "" }
@@ -683,8 +688,14 @@ function Get-CounterfactualSkips {
         $entry = if ($s.PSObject.Properties['entry_price']) { [double]$s.entry_price } else { 0 }
         if ($entry -le 0) { continue }
         $mkt = if ($s.PSObject.Properties['market']) { "$($s.market)" } else { "" }
+        if (-not $mkt) { continue }
         $exit = $null
-        try { $exit = [double](& $PriceFetcher $mkt) } catch { $exit = $null }
+        if ($priceCache.ContainsKey($mkt)) {
+            $exit = $priceCache[$mkt]
+        } else {
+            try { $exit = [double](& $PriceFetcher $mkt) } catch { $exit = $null }
+            $priceCache[$mkt] = $exit   # cacheia inclusive falha (null) p/ nao re-tentar
+        }
         if (-not $exit -or $exit -le 0) { continue }
         $out += [PSCustomObject]@{
             gate        = if ($s.PSObject.Properties['gate'] -and $s.gate) { "$($s.gate)" } else { "veto" }
