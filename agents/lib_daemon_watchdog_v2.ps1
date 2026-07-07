@@ -129,7 +129,10 @@ function Watch-DaemonsLoopInfinite {
         [string]$LogFile
     )
 
-    $lockDir = Join-Path $ProjectRoot "journal" "daemon_locks"
+    # 2026-07-07 FIX: Join-Path com 3 args e PS7-only; no PS 5.1 LANCA "parametro
+    # posicional" e o loop rodava com $lockDir vazio -> Test-DaemonHealthy nunca
+    # achava lock -> Down=4 eterno (todos os criticos "dead/stale"). Usa 2-arg.
+    $lockDir = Join-Path (Join-Path $ProjectRoot "journal") "daemon_locks"
     $scriptsDir = Join-Path $ProjectRoot "scripts"
 
     # Daemons que DEVEM estar rodando
