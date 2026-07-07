@@ -468,17 +468,28 @@ function Invoke-GemExecute {
     try {
         if (Get-Command Get-DynamicCapitalAllocation -ErrorAction SilentlyContinue) {
             $regime = if ($null -ne $global:MARKET_REGIME) { $global:MARKET_REGIME } else { "BEAR_WEAK" }
+
+            # 2026-07-07: detecta scalp pra aplicar 3% em vez de 1%
+            $isScalp = if (Get-Command Test-IsScalp -ErrorAction SilentlyContinue) {
+                Test-IsScalp -Strategy $Signal.strategy -PlannedDurationMinutes $PlannedDurationMin
+            } else { $false }
+
             $spotCap = CoinEx-GetSpotCapitalUSDT
             $futuresCap = CoinEx-GetFuturesCapitalUSDT
             $alloc = Get-DynamicCapitalAllocation -SpotUsdt $spotCap -FuturesUsdt $futuresCap -Regime $regime
 
             if ($alloc) {
                 $allocForTrade = if ($hasFutures) { $alloc.short_alloc } else { $alloc.long_alloc }
+
+                # 3% em BULL_STRONG ou scalps; 1% default
+                $riskPct = if ($regime -eq "BULL_STRONG" -or $isScalp) { 0.03 } else { 0.01 }
+                $allocForTrade = $allocForTrade * $riskPct / 0.01  # normalize para o calc
+
                 $dynamicSize = Get-SizePerTrade -AllocatedCapital $allocForTrade -MaxConcurrentTrades 5 -StopLossPct 0.02
 
                 if ($dynamicSize -gt 0) {
                     $usd_size = $dynamicSize
-                    $sizingMethod = "dynamic_feedback_$regime"
+                    $sizingMethod = "dynamic_feedback_${regime}_$(if ($isScalp) { 'scalp_3pct' } else { '1pct' })"
                 }
             }
         }

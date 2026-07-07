@@ -32,9 +32,9 @@ $script:HybridConfig = @{
     total_capital = $null
     spot_capital = $null
     futures_capital = $null
-    position_pct = 0.01  # 1% per trade in any market
-    fallback_spot = 954.40
-    fallback_futures = 2700.43
+    position_pct = 0.01  # base 1% per trade (3% em BULL_STRONG ou scalps)
+    fallback_spot = 2425.33      # 2026-07-07: atualizado para saldo real
+    fallback_futures = 2718.49   # 2026-07-07: atualizado para saldo real
     last_updated = $null
 }
 
@@ -111,7 +111,28 @@ function Get-DynamicCapital {
 # (linha ~124) e Get-DynamicCapital tem fallback interno.
 
 # ════════════════════════════════════════════════════════
-# CALCULATE POSITION SIZE (1% cap per market)
+# DETECT SCALP (trade duration <5min or scalp strategy)
+# ════════════════════════════════════════════════════════
+
+function Test-IsScalp {
+    <#
+    .SYNOPSIS
+        Detecta se um trade é scalp baseado na estratégia ou timeframe
+        SCALP: <5min, ou estratégias com "SCALP" no nome
+    #>
+    param(
+        [string] $Strategy = "",
+        [int] $PlannedDurationMinutes = 0
+    )
+
+    $isScalpStrategy = $Strategy -match "SCALP|INTRADAY_5M|MICRO"
+    $isScalpDuration = $PlannedDurationMinutes -gt 0 -and $PlannedDurationMinutes -lt 5
+
+    return ($isScalpStrategy -or $isScalpDuration)
+}
+
+# ════════════════════════════════════════════════════════
+# CALCULATE POSITION SIZE (1% base, 3% em BULL_STRONG/scalps)
 # ════════════════════════════════════════════════════════
 
 function Get-PositionSize {
@@ -119,7 +140,9 @@ function Get-PositionSize {
         [ValidateSet("SPOT", "FUTURES")]
         [string] $Market,
 
-        [string] $Regime = "BEAR_WEAK"
+        [string] $Regime = "BEAR_WEAK",
+
+        [bool] $IsScalp = $false  # 2026-07-07: 3% em scalps (<5min)
     )
 
     # Re-fetch capital every trade (detects deposits in real-time)
@@ -131,12 +154,16 @@ function Get-PositionSize {
         $script:HybridConfig.futures_capital
     }
 
-    # Base: 1% of available capital in that market
-    $position = $capital * 0.01
+    # 2026-07-07: Regra de sizing agressivo
+    # - BULL_STRONG: 3% (confiança alta)
+    # - Scalp: 3% (trade curto, risco limitado por tempo)
+    # - Resto: 1% (conservador)
+    $basePct = if ($Regime -eq "BULL_STRONG" -or $IsScalp) { 0.03 } else { 0.01 }
+    $position = $capital * $basePct
 
-    # Regime multiplier (conservative)
+    # Regime multiplier (conservative ajuste fino)
     $multiplier = switch ($Regime) {
-        "BULL_STRONG" { 1.0 }
+        "BULL_STRONG" { 1.0 }   # ja tem 3% de base, nao multiplica
         "BULL_WEAK" { 1.0 }
         "BEAR_WEAK" { 1.0 }
         "BEAR_STRONG" { 0.5 }
@@ -145,8 +172,8 @@ function Get-PositionSize {
 
     $position = $position * $multiplier
 
-    # Hard cap: never exceed 1% of that market's capital
-    $maxCap = $capital * 0.01
+    # Hard cap: BULL_STRONG permite 3%, resto capped em 1%
+    $maxCap = if ($Regime -eq "BULL_STRONG" -or $IsScalp) { $capital * 0.03 } else { $capital * 0.01 }
     $position = [Math]::Min($position, $maxCap)
 
     return @{
@@ -155,6 +182,8 @@ function Get-PositionSize {
         position_pct = [Math]::Round(($position / $capital) * 100, 2)
         available_capital = [Math]::Round($capital, 2)
         regime = $Regime
+        is_scalp = $IsScalp
+        sizing_aggressive = ($position / $capital) -gt 0.015  # flag: >1.5% = agressivo
     }
 }
 
