@@ -133,6 +133,7 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 "[DBG2 after-dot-source] DryRun=$DryRun" | Out-File -FilePath "$env:TEMP\dryrun_trace.log" -Append -Encoding utf8
 . (Join-Path $agentsDir "orchestrator_v6.ps1")
 . (Join-Path $agentsDir "lib_beta_calculator_multitf.ps1")  # FIX 2026-07-07: RC #2 — Beta calculator wire-up
+. (Join-Path $agentsDir "lib_position_sync_realtime.ps1")   # FIX 2026-07-07 ROOT CAUSE — Sync posições reais API
 . (Join-Path $agentsDir "lib_operational_whitelist.ps1")  # 2026-06-01: Whitelist SHORT bypass para Tier D
 . (Join-Path $agentsDir "lib_enhanced_short_entry.ps1")   # 2026-06-01: Enhanced SHORT entry filter + regime trailing
 . (Join-Path $agentsDir "lib_mesa_consensus_relaxed.ps1") # 2026-06-01: Relaxar Mesa Consensus + Permitir Tier C com FORTE_3
@@ -1364,6 +1365,20 @@ function Invoke-MasterCycle {
         $hasNews = if (Get-Command Test-CycleHasNews -ErrorAction SilentlyContinue) {
             Test-CycleHasNews -GemCount $gems.Count -MesaPassed $mesaPassed -TrailPhaseChg $trailChg -Executions $execCount
         } else { $true }
+
+        # ── FIX 2026-07-07 ROOT CAUSE: Sync posições reais da exchange ──
+        # Sem sync automático, posições abertas pelo sistema não eram rastreadas
+        # Agora: a cada ciclo, fetch CoinEx API e atualiza journal + Supabase
+        if (Get-Command Sync-PositionsFromCoinEx -ErrorAction SilentlyContinue) {
+            try {
+                $syncResult = Sync-PositionsFromCoinEx -PublishToSupabase $true -JournalDir $journalDir
+                if ($syncResult.synced_count -gt 0) {
+                    Write-MasterLog "✓ Sync: $($syncResult.synced_count) posições sincronizadas (open_positions_tracking.jsonl + Supabase)"
+                }
+            } catch {
+                Write-MasterLog "⚠️ Sync falhou (nao critico): $_" "WARN"
+            }
+        }
 
         if ($hasNews) {
             # Format-TgCycleSummary: mensagem estruturada com contadores e detalhes
