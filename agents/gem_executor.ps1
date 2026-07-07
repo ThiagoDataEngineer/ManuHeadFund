@@ -545,6 +545,67 @@ function Invoke-GemExecute {
         } catch { }  # API falha -> nao bloqueia (degradacao graciosa; outros gates seguem)
     }
 
+    # ── FIX 2026-07-07: CASCADING ADD POSITION PREVENTION ────────────────────
+    # BUG RAIZ: gem_executor abria 15+ Add Positions em cascata sem validação
+    # Causa: sem check de posição existente, leverage acumulado, ou limite Add Positions
+    # Solução: validar ANTES de executar qualquer ordem
+
+    # Check posições existentes no mercado
+    $existingPosition = $null
+    try {
+        $allPositions = CoinEx-GetPendingPositions -ErrorAction Stop
+        $existingPosition = @($allPositions | Where-Object market -eq $mkt) | Select-Object -First 1
+    } catch {
+        Write-Host "  [WARN] Falha ao verificar posições existentes: $_" -ForegroundColor Yellow
+    }
+
+    if ($existingPosition) {
+        # Posição JÁ EXISTE neste mercado
+        $currentLeverage = [double]$existingPosition.leverage
+        $currentMargin = [double]$existingPosition.cml_position_value
+        $currentQty = [double]$existingPosition.open_interest
+        $maxLeveragePerPair = 10  # HARD LIMIT: nunca mais de 10X por par
+        $maxAddPositionsAllowed = 3
+
+        # Contar quantos Add Positions já temos registrados para este market
+        $journalPath = Join-Path $global:JOURNAL_DIR "trade_outcomes.jsonl"
+        $addPositionCount = 0
+        if (Test-Path $journalPath) {
+            try {
+                $outcomes = @(Get-Content $journalPath -Encoding UTF8 | ConvertFrom-Json -ErrorAction SilentlyContinue)
+                $sixHoursAgo = (Get-Date).AddHours(-6)
+                $addPositions = @($outcomes | Where-Object { $_.market -eq $mkt -and $_.status -eq "open" -and ([datetime]$_.entry_date) -gt $sixHoursAgo })
+                $addPositionCount = @($addPositions).Count
+            } catch {}
+        }
+
+        # Validações de limite
+        if ($currentLeverage -ge $maxLeveragePerPair) {
+            Write-Host "  [CASCADE BLOCK] ${mkt}: Já tem leverage=$currentLeverage >= limite=$maxLeveragePerPair. NÃO fazer Add Position." -ForegroundColor Red
+            try { Send-TelegramAlert -Message "🚫 GEM bloqueado (cascata): $mkt leverage=$currentLeverage >= $maxLeveragePerPair`nPosição: $currentQty @ $($existingPosition.avg_entry_price)`nCapital: $currentMargin USDT" | Out-Null } catch {}
+            if (Get-Command Add-GemRejection -ErrorAction SilentlyContinue) {
+                try { Add-GemRejection -Path (Join-Path $global:JOURNAL_DIR "gem_recent_decisions.json") -Market $mkt -Reason "cascade_leverage_max:$currentLeverage" } catch {}
+            }
+            return [PSCustomObject]@{ blocked = $true; blocked_by = @("cascade_leverage_max_$currentLeverage"); market = $mkt }
+        }
+
+        if ($addPositionCount -ge $maxAddPositionsAllowed) {
+            Write-Host "  [CASCADE BLOCK] ${mkt}: Já tem $addPositionCount Add Positions >= limite=$maxAddPositionsAllowed. Posição FECHADA para reforço." -ForegroundColor Red
+            try { Send-TelegramAlert -Message "🚫 GEM bloqueado (cascata): $mkt tem $addPositionCount Add Positions, limite atingido`nPosição travada" | Out-Null } catch {}
+            if (Get-Command Add-GemRejection -ErrorAction SilentlyContinue) {
+                try { Add-GemRejection -Path (Join-Path $global:JOURNAL_DIR "gem_recent_decisions.json") -Market $mkt -Reason "cascade_add_position_max:$addPositionCount" } catch {}
+            }
+            return [PSCustomObject]@{ blocked = $true; blocked_by = @("cascade_add_position_max_$addPositionCount"); market = $mkt }
+        }
+
+        # OK fazer Add Position (mas com limite de tamanho)
+        $maxAddAmount = $capital * 0.05  # Máximo 5% do capital por Add
+        if ($usd_size -gt $maxAddAmount) {
+            $usd_size = $maxAddAmount
+            Write-Host "  [CASCADE LIMIT] Reducido tamanho de Add: $($Gem.sizing_pct * 100)% → 5% capital (~$maxAddAmount USDT)" -ForegroundColor Yellow
+        }
+    }
+
     # ── 1. GEM SAFETY GUARDS (block runaway exposure) ────────────────────────
     # Aplica em DryRun tambem para sinalizar bloqueios em paper trade.
     $safetyStatePath = Join-Path $global:JOURNAL_DIR "gem_safety_state.json"
