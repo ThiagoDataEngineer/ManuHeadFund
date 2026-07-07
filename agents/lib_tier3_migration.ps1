@@ -119,27 +119,30 @@ function Migrate-EvolutionState {
         try {
             $data = Get-Content $file.FullName -Raw | ConvertFrom-Json
 
+            # Flatten reasoning to simple text (avoid complex JSON serialization issues)
+            $reasoning_text = "Evolution file: $($file.Name) | Score: $($data.score ?? 0) | Confidence: $($data.confidence ?? 0)"
+
             $normalized = @{
-                id            = [string]($data.id ?? $file.BaseName)
+                # Don't include id — let Supabase BIGSERIAL auto-generate
                 agent_name    = "evolution_engine"
                 decision_type = "adaptation"
+                symbol        = ""  # Evolution is system-wide, no specific symbol
+                direction     = ""
                 conviction    = [double]($data.score ?? 0)
                 confidence    = [double]($data.confidence ?? 0)
-                reasoning     = @{
-                    file     = $file.Name
-                    timestamp = $data.timestamp
-                    data     = $data
-                }
+                reasoning     = @{ text = $reasoning_text }
                 outcome       = "applied"
                 created_at    = $file.CreationTime
                 decided_at    = $file.LastWriteTime
             }
 
-            Save-StateRecords -Table "agent_decisions" -Records @($normalized) -PrimaryKey "id" | Out-Null
+            # Don't specify PrimaryKey — let table auto-generate id
+            Save-StateRecords -Table "agent_decisions" -Records @($normalized) -PrimaryKey $null | Out-Null
             $result.imported++
 
         } catch {
             $result.errors++
+            Write-Verbose "[tier3] Evolution error: $_"
         }
     }
 
