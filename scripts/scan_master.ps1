@@ -132,6 +132,7 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 . (Join-Path $agentsDir "lib_esquadrao_mocks.ps1")
 "[DBG2 after-dot-source] DryRun=$DryRun" | Out-File -FilePath "$env:TEMP\dryrun_trace.log" -Append -Encoding utf8
 . (Join-Path $agentsDir "orchestrator_v6.ps1")
+. (Join-Path $agentsDir "lib_beta_calculator_multitf.ps1")  # FIX 2026-07-07: RC #2 — Beta calculator wire-up
 . (Join-Path $agentsDir "lib_operational_whitelist.ps1")  # 2026-06-01: Whitelist SHORT bypass para Tier D
 . (Join-Path $agentsDir "lib_enhanced_short_entry.ps1")   # 2026-06-01: Enhanced SHORT entry filter + regime trailing
 . (Join-Path $agentsDir "lib_mesa_consensus_relaxed.ps1") # 2026-06-01: Relaxar Mesa Consensus + Permitir Tier C com FORTE_3
@@ -1141,6 +1142,21 @@ function Invoke-MasterCycle {
         if ($topCandidates.Count -eq 0) {
             Write-MasterLog "Nenhum par passou o pre-screen - Orchestrator pulado" "WARN"
         } else {
+            # ── FIX 2026-07-07 RC #2: Sincronizar Beta ANTES do Orchestrator ──
+            # Mentor gate procura por $beta no Supabase (mentor_agent.ps1:476)
+            # Sem beta publicado = 80%+ rejeições. Sincronizar markets candidatos.
+            if (Get-Command Sync-AllBetasMultiTF -ErrorAction SilentlyContinue) {
+                try {
+                    $betaMkts = @($topCandidates.market | Where-Object { $_ -and $_ -ne "BTCUSDT" })
+                    if ($betaMkts.Count -gt 0) {
+                        Write-Host "[Beta] Sincronizando betas para $($betaMkts.Count) mercados..." -ForegroundColor Cyan
+                        Sync-AllBetasMultiTF -Markets $betaMkts
+                    }
+                } catch {
+                    Write-MasterLog "WARN: Beta sync falhou (nao critico): $_" "WARN"
+                }
+            }
+
             Write-Host "`n[ORCH] $($topCandidates.Count) candidatos para analise completa..." -ForegroundColor Cyan
 
             # ── Pre-fetch paralelo opt-in: roda Invoke-OrchestratorV6 em RunspacePool ──
