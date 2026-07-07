@@ -28,16 +28,15 @@ function Test-DaemonHealthy {
         $lock = Get-Content $lockPath -Encoding UTF8 | ConvertFrom-Json -ErrorAction Stop
         $pidValue = [int]$lock.pid
 
-        # Check 1: PID existe?
+        # Check 1: PID existe? (liveness AUTORITATIVA)
+        # 2026-07-07 FIX: o lock 'ts' e um START timestamp gravado UMA vez no boot
+        # do singleton (nao um heartbeat rolante). O check antigo tratava 'ts' como
+        # heartbeat e marcava stale qualquer daemon > MaxAgeMinutes de vida -> TODO
+        # daemon saudavel aparecia "dead/stale" 5min apos subir (Down=4 eterno na
+        # frota religada). Se o PID do lock esta VIVO, o daemon esta saudavel. Ponto.
         $proc = Get-Process -Id $pidValue -ErrorAction SilentlyContinue
         if (-not $proc) {
-            return $false  # PID morto
-        }
-
-        # Check 2: Lock não é stale?
-        $lockAge = [int]((Get-Date) - [datetime]$lock.ts).TotalMinutes
-        if ($lockAge -gt $MaxAgeMinutes) {
-            return $false  # Stale
+            return $false  # PID morto = realmente down
         }
 
         return $true
