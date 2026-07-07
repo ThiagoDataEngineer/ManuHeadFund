@@ -18,6 +18,8 @@ $journalDir = Join-Path $root "journal"
 $snapsPath = Join-Path $journalDir "signal_snapshots.jsonl"
 $gradesPath = Join-Path $journalDir "decision_grades.jsonl"
 $calibPath = Join-Path $journalDir "llm_calibration.json"
+# _Mirror-LearningToSupabase (espelho manuheadfund) vive em lib_direction_learning.
+. (Join-Path $root "agents\lib_direction_learning.ps1")
 
 if (-not (Test-Path $snapsPath)) { Write-Host "sem snapshots"; exit 0 }
 
@@ -111,6 +113,25 @@ foreach ($k in $agg.Keys) {
 }
 ($calib | Sort-Object n -Descending | ConvertTo-Json -Depth 4) | Out-File -FilePath $calibPath -Encoding UTF8 -Force
 Write-Host "placar: $($calib.Count) grupos -> $calibPath"
+
+# Espelho Supabase (manuheadfund.decision_grades_agg) — AGREGADO por decision|direction|regime.
+# PK = key. correct_rate = accuracy (correct/n). Best-effort; nao quebra o script.
+if ((Get-Command _Mirror-LearningToSupabase -ErrorAction SilentlyContinue) -and $calib.Count -gt 0) {
+    $nowUtc = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
+    $gradeRows = @($calib | ForEach-Object {
+        @{
+            key          = [string]$_.key
+            decision     = [string]$_.decision
+            direction    = [string]$_.direction
+            regime       = [string]$_.regime
+            n            = [int]$_.n
+            correct_rate = [double]$_.accuracy
+            avg_move_dir = [double]$_.avg_move_dir
+            updated_at   = $nowUtc
+        }
+    })
+    _Mirror-LearningToSupabase -Table "decision_grades_agg" -PrimaryKey "key" -Records $gradeRows
+}
 $calib | Where-Object { $_.n -ge 8 } | Sort-Object accuracy | Select-Object -First 6 | ForEach-Object {
     "  PIOR bolso: $($_.key) acc=$($_.accuracy) n=$($_.n) (mercado andou $($_.avg_move_dir)% na direcao)"
 }

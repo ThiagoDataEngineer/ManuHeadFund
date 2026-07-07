@@ -40,19 +40,26 @@ function Get-EvolutionParams {
     $params = @{}
     foreach ($p in $reg) { $params[$p.name] = [double]$p.default }
     $path = Join-Path $JournalDir "evolution_params.json"
+    $overlay = $null
     if (Test-Path $path) {
-        try {
-            $overlay = Get-Content $path -Raw -Encoding UTF8 | ConvertFrom-Json
-            foreach ($p in $reg) {
-                if ($overlay.PSObject.Properties[$p.name]) {
-                    # CLAMP no engine (bound 1 de 2)
-                    $v = [double]$overlay.($p.name)
-                    if ($v -lt $p.min) { $v = $p.min }
-                    if ($v -gt $p.max) { $v = $p.max }
-                    $params[$p.name] = $v
-                }
+        try { $overlay = Get-Content $path -Raw -Encoding UTF8 | ConvertFrom-Json } catch { $overlay = $null }
+    }
+    # Read-back Supabase (fecha o loop na NUVEM — runner sem journal local). So quando
+    # nao ha overlay local E o helper de read-back esta carregado (mantem agnostico).
+    if ($null -eq $overlay -and (Get-Command _Get-LearningFromSupabase -ErrorAction SilentlyContinue)) {
+        $rows = @(_Get-LearningFromSupabase -Table "evolution_params" -Filter @{ id = "current" })
+        if ($rows.Count -gt 0) { $overlay = $rows[0] }
+    }
+    if ($null -ne $overlay) {
+        foreach ($p in $reg) {
+            if ($overlay.PSObject.Properties[$p.name] -and $null -ne $overlay.($p.name)) {
+                # CLAMP no engine (bound 1 de 2)
+                $v = [double]$overlay.($p.name)
+                if ($v -lt $p.min) { $v = $p.min }
+                if ($v -gt $p.max) { $v = $p.max }
+                $params[$p.name] = $v
             }
-        } catch { }
+        }
     }
     return [PSCustomObject]$params
 }
@@ -203,14 +210,32 @@ function Invoke-EvolutionCycle {
         }
         $newParams[$prop.param] = [double]$prop.after
         $applied += $prop
-        $entry = @{ ts=(Get-Date).ToUniversalTime().ToString("o"); param=$prop.param
+        $tsNow = (Get-Date).ToUniversalTime().ToString("o")
+        $entry = @{ ts=$tsNow; param=$prop.param
                     before=$prop.before; after=$prop.after; reason=$prop.reason
                     evidence=$ev } | ConvertTo-Json -Compress -Depth 4
         Add-Content -Path $histPath -Value $entry -Encoding utf8
+
+        # Espelho Supabase (manuheadfund.evolution_history) — 1 linha por mudanca (PK ts).
+        # Guard por Get-Command: mantem o engine AGNOSTICO (principio #1) — se o helper
+        # de mirror nao esta carregado, e no-op. Nunca chama API direto aqui.
+        if (Get-Command _Mirror-LearningToSupabase -ErrorAction SilentlyContinue) {
+            _Mirror-LearningToSupabase -Table "evolution_history" -PrimaryKey "ts" -Records @(
+                @{ ts=$tsNow; param=[string]$prop.param; before=[double]$prop.before
+                   after=[double]$prop.after; reason=[string]$prop.reason }
+            )
+        }
     }
 
     if ($applied.Count -gt 0) {
         ([PSCustomObject]$newParams | ConvertTo-Json) | Out-File -FilePath (Join-Path $JournalDir "evolution_params.json") -Encoding UTF8 -Force
+
+        # Espelho Supabase (manuheadfund.evolution_params) — singleton id="current".
+        if (Get-Command _Mirror-LearningToSupabase -ErrorAction SilentlyContinue) {
+            $singleton = @{ id = "current"; updated_at = (Get-Date).ToUniversalTime().ToString("o") }
+            foreach ($k in $newParams.Keys) { $singleton[$k] = [double]$newParams[$k] }
+            _Mirror-LearningToSupabase -Table "evolution_params" -PrimaryKey "id" -Records @($singleton)
+        }
     }
     if ($ownerPending.Count -gt 0) {
         $pend = @{ ts=(Get-Date).ToUniversalTime().ToString("o"); proposals=$ownerPending } | ConvertTo-Json -Depth 4

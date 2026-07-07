@@ -14,6 +14,8 @@ $ErrorActionPreference = "Stop"
 $root = Split-Path $PSScriptRoot -Parent
 . (Join-Path $root "agents\config.ps1")
 . (Join-Path $root "agents\lib_coinex.ps1")
+# _Mirror-LearningToSupabase (espelho manuheadfund) vive em lib_direction_learning.
+. (Join-Path $root "agents\lib_direction_learning.ps1")
 
 $cfPath = Join-Path $root "journal\mce_counterfactual.jsonl"
 if (-not (Test-Path $cfPath)) {
@@ -105,3 +107,22 @@ $outPath = Join-Path $root "journal\mce_counterfactual_summary.json"
     groups = $summary
 } | ConvertTo-Json -Depth 4 | Set-Content $outPath -Encoding UTF8
 Write-Host "Resumo salvo em journal\mce_counterfactual_summary.json" -ForegroundColor Green
+
+# Espelho Supabase (manuheadfund.mce_counterfactual_agg) — AGREGADO por regime|direction.
+# PK = group ("regime|direction"). Best-effort; nao quebra o report se falhar.
+if ((Get-Command _Mirror-LearningToSupabase -ErrorAction SilentlyContinue) -and $summary.Count -gt 0) {
+    $mceRows = @($summary | ForEach-Object {
+        $parts = "$($_.group)".Split("|")
+        @{
+            group        = [string]$_.group
+            regime       = [string]$parts[0]
+            direction    = if ($parts.Count -gt 1) { [string]$parts[1] } else { "" }
+            n            = [int]$_.n
+            hit_rate     = [double]$_.win_rate_24h
+            avg_fwd_24h  = [double]$_.avg_fwd_24h
+            avg_fwd_72h  = if ($null -ne $_.avg_fwd_72h) { [double]$_.avg_fwd_72h } else { $null }
+            updated_at   = $nowUtc.ToString("yyyy-MM-ddTHH:mm:ssZ")
+        }
+    })
+    _Mirror-LearningToSupabase -Table "mce_counterfactual_agg" -PrimaryKey "group" -Records $mceRows
+}

@@ -13,7 +13,12 @@ $targets = @(
     "agents/lib_trailing_adaptive.ps1",
     "agents/lib_trailing_orphan_detection.ps1",
     "agents/lib_trailing_policy_live.ps1",
-    "scripts/trailing_stop_monitor.ps1"
+    "scripts/trailing_stop_monitor.ps1",
+    "agents/lib_daemon_watchdog_v2.ps1",
+    "agents/lib_direction_learning.ps1",
+    "agents/lib_evolution_engine.ps1",
+    "scripts/mce_counterfactual_report.ps1",
+    "scripts/grade_llm_decisions.ps1"
 )
 
 Describe "PS 5.1 parse guard (arquivos editados)" {

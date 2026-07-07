@@ -10,6 +10,43 @@
 # "Se nao e compra, pode ser venda": Get-BiasRecommendation pesa sinais LONG vs SHORT
 # multiplicados pelo que historicamente funcionou naquele contexto.
 
+# state_store p/ espelho Supabase (schema manuheadfund). Lazy-load: so carrega se
+# ainda nao disponivel (evita re-source quando o runner ja carregou).
+if (-not (Get-Command Save-StateRecords -ErrorAction SilentlyContinue)) {
+    $_dlStateStore = Join-Path $PSScriptRoot "lib_state_store.ps1"
+    if (Test-Path $_dlStateStore) { . $_dlStateStore }
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# _Mirror-LearningToSupabase -- helper best-effort compartilhado por TODOS os
+# espelhos de aprendizado (learned_multipliers, evolution_*, mce_agg, grades_agg).
+# Fecha o schema em "manuheadfund" so nesta chamada (nao mexe no schema global que
+# o trailing usa). NUNCA lanca: falha do Supabase nao pode quebrar o write local.
+# No backend "local" (default fora da nuvem) e no-op silencioso.
+# ─────────────────────────────────────────────────────────────────────────────
+function _Mirror-LearningToSupabase {
+    param(
+        [Parameter(Mandatory)] [string] $Table,
+        [Parameter(Mandatory)] [string] $PrimaryKey,
+        [object[]] $Records
+    )
+    $recs = @($Records | Where-Object { $null -ne $_ })
+    if ($recs.Count -eq 0) { return }
+    if (-not (Get-Command Test-StateBackend -ErrorAction SilentlyContinue)) { return }
+    if (-not (Get-Command Save-StateRecords -ErrorAction SilentlyContinue)) { return }
+    if ((Test-StateBackend) -ne "supabase") { return }   # local = no-op
+
+    $prevSchema = $global:STATE_STORE_SCHEMA
+    try {
+        $global:STATE_STORE_SCHEMA = "manuheadfund"
+        Save-StateRecords -Table $Table -Records $recs -PrimaryKey $PrimaryKey
+    } catch {
+        Write-Warning "[learning-mirror] espelho '$Table' no Supabase falhou (local gravado OK): $($_.Exception.Message)"
+    } finally {
+        $global:STATE_STORE_SCHEMA = $prevSchema
+    }
+}
+
 # ─────────────────────────────────────────────────────────────────────────────
 # _WinRateToMultiplier (PURA) -- converte win_rate em multiplier de conviction.
 # Unificado: multiplier = clamp(0.5, 1.5, 0.5 + win_rate). win_rate 0.5 -> 1.0 neutro.
@@ -623,18 +660,69 @@ function Save-LearnedStats {
         if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
         $payload = @{ updated_at = (Get-Date).ToUniversalTime().ToString("o"); stats = @($Stats) }
         ($payload | ConvertTo-Json -Depth 6) | Set-Content -Path $Path -Encoding UTF8
-        return $true
     } catch { return $false }
+
+    # Espelho Supabase (schema manuheadfund) — best-effort. O JSONL local ACIMA e o
+    # ground-truth local; falha aqui NUNCA quebra o save. Formato AGREGADO por chave
+    # (source|direction|regime) — pequeno de gravar, rapido de ler. Read-back na nuvem
+    # em Get-LearnedStats (sem journal local no runner). Ver [[project_trades_via_app_journal_furado]].
+    _Mirror-LearningToSupabase -Table "learned_multipliers" -PrimaryKey "key" -Records @(
+        @($Stats) | ForEach-Object {
+            if ($null -eq $_) { return }
+            @{
+                key         = [string]$_.key
+                source      = [string]$_.source
+                direction   = [string]$_.direction
+                regime      = [string]$_.regime
+                n           = [int]$_.n
+                wins        = [int]$_.wins
+                win_rate    = [double]$_.win_rate
+                avg_pnl_pct = [double]$_.avg_pnl_pct
+                sum_pnl     = [double]$_.sum_pnl
+                reliable    = [bool]$_.reliable
+                updated_at  = (Get-Date).ToUniversalTime().ToString("o")
+            }
+        }
+    )
+    return $true
 }
 
 function Get-LearnedStats {
     param([string]$Path)
-    if (-not $Path -or -not (Test-Path $Path)) { return @() }
+    # 1) Fonte local (ground-truth fora da nuvem)
+    if ($Path -and (Test-Path $Path)) {
+        try {
+            $obj = Get-Content $Path -Raw | ConvertFrom-Json
+            if ($obj -and $obj.PSObject.Properties['stats']) {
+                $local = @($obj.stats)
+                if ($local.Count -gt 0) { return $local }
+            }
+        } catch { }
+    }
+    # 2) Read-back Supabase (fecha o loop na NUVEM — o runner nao tem journal local).
+    #    So quando o local esta vazio/ausente E backend=supabase.
+    return (_Get-LearningFromSupabase -Table "learned_multipliers")
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# _Get-LearningFromSupabase -- read-back best-effort do schema manuheadfund.
+# Retorna @() se backend local, tabela ausente, ou erro. Nunca lanca.
+# ─────────────────────────────────────────────────────────────────────────────
+function _Get-LearningFromSupabase {
+    param([Parameter(Mandatory)] [string] $Table, [hashtable] $Filter = @{})
+    if (-not (Get-Command Test-StateBackend -ErrorAction SilentlyContinue)) { return @() }
+    if (-not (Get-Command Get-StateRecords -ErrorAction SilentlyContinue)) { return @() }
+    if ((Test-StateBackend) -ne "supabase") { return @() }
+    $prevSchema = $global:STATE_STORE_SCHEMA
     try {
-        $obj = Get-Content $Path -Raw | ConvertFrom-Json
-        if ($obj -and $obj.PSObject.Properties['stats']) { return @($obj.stats) }
+        $global:STATE_STORE_SCHEMA = "manuheadfund"
+        return @(Get-StateRecords -Table $Table -Filter $Filter)
+    } catch {
+        Write-Warning "[learning-mirror] read-back '$Table' do Supabase falhou: $($_.Exception.Message)"
         return @()
-    } catch { return @() }
+    } finally {
+        $global:STATE_STORE_SCHEMA = $prevSchema
+    }
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
