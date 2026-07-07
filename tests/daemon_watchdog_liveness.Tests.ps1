@@ -44,4 +44,18 @@ Describe "Test-DaemonHealthy liveness por PID (nao por idade do lock)" {
     It "sem lock => DOWN" {
         Test-DaemonHealthy -DaemonName "inexistente" -LockDir $script:lockDir -MaxAgeMinutes 5 | Should Be $false
     }
+
+    Context "Fallback pidfile (sentinel_movers / collect_1h_klines usam journal/<name>.pid)" {
+        # $lockDir aqui e journal/daemon_locks; o journal e o pai.
+        It "sentinel_movers vivo via journal/sentinel.pid (sem .lock) => SAUDAVEL" {
+            $journal = Split-Path $script:lockDir -Parent
+            "$PID" | Set-Content (Join-Path $journal "sentinel.pid") -Encoding UTF8
+            Test-DaemonHealthy -DaemonName "sentinel_movers" -LockDir $script:lockDir -MaxAgeMinutes 5 | Should Be $true
+        }
+        It "collect_1h_klines PID morto no pidfile => DOWN" {
+            $journal = Split-Path $script:lockDir -Parent
+            "999999" | Set-Content (Join-Path $journal "collect_1h.pid") -Encoding UTF8
+            Test-DaemonHealthy -DaemonName "collect_1h_klines" -LockDir $script:lockDir -MaxAgeMinutes 5 | Should Be $false
+        }
+    }
 }

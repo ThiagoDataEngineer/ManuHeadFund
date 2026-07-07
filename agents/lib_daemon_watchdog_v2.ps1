@@ -21,7 +21,26 @@ function Test-DaemonHealthy {
     $lockPath = Join-Path $LockDir "$DaemonName.lock"
 
     if (-not (Test-Path $lockPath)) {
-        return $false  # Sem lock = morto
+        # 2026-07-07 FIX: nem todo daemon usa daemon_locks/<name>.lock. sentinel_movers
+        # e collect_1h_klines gravam liveness em journal/<name>.pid (nomes curtos).
+        # Sem este fallback, esses 2 apareciam SEMPRE down (lock inexistente) -> Down>=2
+        # perpetuo + tentativas de restart inuteis (singleton recusa). Checa o pidfile.
+        $journalDir = Split-Path $LockDir -Parent   # journal/daemon_locks -> journal
+        $pidMap = @{
+            "sentinel_movers"   = "sentinel.pid"
+            "collect_1h_klines" = "collect_1h.pid"
+        }
+        $pidFileName = if ($pidMap.ContainsKey($DaemonName)) { $pidMap[$DaemonName] } else { "$DaemonName.pid" }
+        $pidPath = Join-Path $journalDir $pidFileName
+        if (Test-Path $pidPath) {
+            $pidRaw = (Get-Content $pidPath -Raw -ErrorAction SilentlyContinue)
+            $pidNum = 0
+            if ([int]::TryParse(($pidRaw -replace '\s',''), [ref]$pidNum) -and $pidNum -gt 0) {
+                if (Get-Process -Id $pidNum -ErrorAction SilentlyContinue) { return $true }
+            }
+            return $false
+        }
+        return $false  # Sem lock nem pidfile = morto
     }
 
     try {
