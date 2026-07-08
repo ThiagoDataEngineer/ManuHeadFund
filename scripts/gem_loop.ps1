@@ -92,6 +92,7 @@ try {
 # Core libs (ordem importa)
 try {
     . (Join-Path $agentsDir "lib_coinex.ps1") -ErrorAction Stop
+    . (Join-Path $agentsDir "lib_coinex_positions_fetch.ps1") -ErrorAction SilentlyContinue  # Provides CoinEx-GetPendingPositions with -IsFutures
     . (Join-Path $agentsDir "lib_telegram.ps1") -ErrorAction Stop
     . (Join-Path $agentsDir "lib_idempotency.ps1") -ErrorAction SilentlyContinue  # B14 callback idempotency
     . (Join-Path $agentsDir "lib_retry.ps1") -ErrorAction SilentlyContinue  # B19 retry transient
