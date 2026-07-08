@@ -32,12 +32,24 @@ function Write-Heartbeat {
 }
 
 function Load-Dependencies {
+    # Load config
+    $configPath = Join-Path $PSScriptRoot "config.local.ps1"
+    if (Test-Path $configPath) {
+        . $configPath
+        Write-Log "Loaded config.local.ps1" "INFO"
+    }
+
+    # Set global API URL
+    $global:COINEX_BASE_URL = "https://api.coinex.com"
+
+    # Load Tori confluence detector
     $libPath = Join-Path $PSScriptRoot "lib_tori_confluence_detector.ps1"
     if (Test-Path $libPath) {
         . $libPath
         Write-Log "Loaded lib_tori_confluence_detector" "INFO"
     }
 
+    # Load CoinEx API library
     $coinexPath = Join-Path $PSScriptRoot "lib_coinex.ps1"
     if (Test-Path $coinexPath) {
         . $coinexPath

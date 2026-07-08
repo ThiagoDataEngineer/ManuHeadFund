@@ -1,0 +1,86 @@
+# config.local.ps1 - Local configuration for Tori system
+# Date: 2026-07-08
+# NOTE: This file contains sensitive data. Keep private.
+
+# ============================================================================
+# COINEX API CREDENTIALS (from memory or GitHub Actions secrets)
+# ============================================================================
+
+# Try to load from environment first, then use placeholder
+$script:COINEX_ACCESS_ID = if ($env:COINEX_ACCESS_ID -and $env:COINEX_ACCESS_ID -notlike "*unknown*") {
+    $env:COINEX_ACCESS_ID
+} else {
+    "placeholder_access_id_from_coinex"
+}
+
+$script:COINEX_SECRET_KEY = if ($env:COINEX_SECRET_KEY -and $env:COINEX_SECRET_KEY -notlike "*unknown*") {
+    $env:COINEX_SECRET_KEY
+} else {
+    "placeholder_secret_key_from_coinex"
+}
+
+# ============================================================================
+# COINEX API ENDPOINTS
+# ============================================================================
+
+$global:COINEX_BASE_URL = "https://api.coinex.com"
+$global:COINEX_WS_URL = "wss://ws.coinex.com"
+
+# ============================================================================
+# TELEGRAM ALERTS (optional)
+# ============================================================================
+
+$script:TELEGRAM_BOT_TOKEN = if ($env:TELEGRAM_BOT_TOKEN -and $env:TELEGRAM_BOT_TOKEN -notlike "*unknown*") {
+    $env:TELEGRAM_BOT_TOKEN
+} else {
+    ""
+}
+
+$script:TELEGRAM_CHAT_ID = if ($env:TELEGRAM_CHAT_ID -and $env:TELEGRAM_CHAT_ID -notlike "*unknown*") {
+    $env:TELEGRAM_CHAT_ID
+} else {
+    ""
+}
+
+# ============================================================================
+# SUPABASE (optional cloud state storage)
+# ============================================================================
+
+$script:SUPABASE_URL = if ($env:SUPABASE_URL -and $env:SUPABASE_URL -notlike "*unknown*") {
+    $env:SUPABASE_URL
+} else {
+    ""
+}
+
+$script:SUPABASE_ANON_KEY = if ($env:SUPABASE_ANON_KEY -and $env:SUPABASE_ANON_KEY -notlike "*unknown*") {
+    $env:SUPABASE_ANON_KEY
+} else {
+    ""
+}
+
+$script:SUPABASE_SERVICE_KEY = if ($env:SUPABASE_SERVICE_KEY -and $env:SUPABASE_SERVICE_KEY -notlike "*unknown*") {
+    $env:SUPABASE_SERVICE_KEY
+} else {
+    ""
+}
+
+# ============================================================================
+# TRADING PARAMETERS
+# ============================================================================
+
+$script:CAPITAL_USDT = 100.0                # Paper trading capital
+$script:POSITION_SIZE_PCT = 2.0             # % of capital per trade
+$script:MAX_POSITIONS = 5                   # Max concurrent positions
+$script:RISK_REWARD_RATIO = 5.0             # Minimum R:R
+
+# ============================================================================
+# TORI DAEMON SETTINGS
+# ============================================================================
+
+$script:SCAN_INTERVAL_MINUTES = 240         # 4-hour cycle
+$script:CONFLUENCE_THRESHOLD = 80           # Min score 0-100
+$script:TIMEFRAMES = @("1W", "1D", "4H", "1H")
+
+Write-Host "✅ Config loaded (live trading: DISABLED for safety)" -ForegroundColor Green
+
+

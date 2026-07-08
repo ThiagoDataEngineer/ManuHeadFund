@@ -82,3 +82,6 @@ $script:CONFLUENCE_THRESHOLD = 80           # Min score 0-100
 $script:TIMEFRAMES = @("1W", "1D", "4H", "1H")
 
 Write-Host "✅ Config loaded (live trading: DISABLED for safety)" -ForegroundColor Green
+
+
+

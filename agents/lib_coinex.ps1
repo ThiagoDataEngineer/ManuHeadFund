@@ -133,8 +133,23 @@ function CoinEx-GetCandles($market, $period, $limit=100) {
 }
 
 function CoinEx-GetFuturesCandles($market, $period, $limit=100) {
-    $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/futures/kline?market=$market&period=$period&limit=$limit" -Method GET -TimeoutSec 15 -ErrorAction Stop
-    if ($r.code -ne 0) { throw "CoinEx futures candles error: $($r.message)" }
+    # Convert period format: 1h -> 1hour, 4h -> 4hour, 1d -> 1day, etc.
+    $periodFormatted = if ($period -match '(\d+)(h|d|m|w)') {
+        $num = $Matches[1]
+        $unit = switch($Matches[2]) {
+            'h' { 'hour' }
+            'd' { 'day' }
+            'w' { 'week' }
+            'm' { 'minute' }
+            default { 'hour' }
+        }
+        "$num$unit"
+    } else {
+        $period
+    }
+
+    $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/spot/kline?market=$market&period=$periodFormatted&limit=$limit" -Method GET -TimeoutSec 15 -ErrorAction Stop
+    if ($r.code -ne 0) { throw "CoinEx candles error: $($r.message)" }
     return $r.data | ForEach-Object {
         [PSCustomObject]@{
             ts=$([long]$_.created_at); open=[double]$_.open; high=[double]$_.high
