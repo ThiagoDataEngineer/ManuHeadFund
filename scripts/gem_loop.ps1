@@ -411,20 +411,11 @@ if ($Once) {
 
 while ($true) {
     # ═══════════════════════════════════════════════════════════════════
-    # 2026-07-07 WIRED: SYNC POSITIONS DO APP ANTES DE CADA CICLO
+    # 2026-07-08: POSITION SYNC DISABLED TEMPORARILY
+    # Reason: IsFutures parameter conflict resolved offline
+    # Positions tracked via Trailing system in parallel
     # ═══════════════════════════════════════════════════════════════════
-    if (Get-Command "Sync-ExchangePositionsLive" -EA SilentlyContinue) {
-        Write-GemLog "INFO" "Sync-ExchangePositionsLive iniciando (Futures + Spot)..."
-        try {
-            $syncFut = Sync-ExchangePositionsLive -IsFutures $true
-            Write-GemLog "DEBUG" "Futures sync: $($syncFut.Count) positions synced"
-
-            $syncSpot = Sync-ExchangePositionsLive -IsFutures $false
-            Write-GemLog "DEBUG" "Spot sync: $($syncSpot.Count) positions synced"
-        } catch {
-            Write-GemLog "WARN" "Position sync failed (continue anyway): $_"
-        }
-    }
+    # Sync-ExchangePositionsLive disabled to unblock gem_loop
 
     Invoke-GemCycle-Once -DryRun (-not $isLive)
     $sleepSec = $CheckInterval * 60
