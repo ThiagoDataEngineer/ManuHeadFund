@@ -334,7 +334,10 @@ function Invoke-GemExecute {
     )
 
     $mkt = $Gem.market
-    $sizing_pct = $Gem.sizing_pct
+    $sizing_pct = if ($Gem.sizing_pct -and $Gem.sizing_pct -gt 0) { $Gem.sizing_pct } else {
+        # Fallback: se gem_agent não preencheu, calcular default (0.5% de capital)
+        if ($global:GEM_CAPITAL_MOMENTUM) { $global:GEM_CAPITAL_MOMENTUM } else { 0.005 }
+    }
     $vd  = $Gem.vol_data
 
     Write-Host ""
