@@ -144,6 +144,18 @@ locks/*.lock
 # Daemon singleton locks (runtime state)
 journal/daemon_locks/
 
+# Daemon heartbeat files (updated every minute, don't version)
+journal/*heartbeat*
+journal/*_heartbeat.txt
+journal/tori_daemon_heartbeat.txt
+journal/gem_loop_heartbeat.txt
+journal/scan_master_heartbeat.txt
+
+# Daemon state files (updated continuously during operation)
+journal/*state.json
+journal/tori_daemon_state.json
+journal/gem_loop_state.json
+
 backtest/data/
 journal/klines_1h_*.jsonl
 journal/scan_master_stdout.txt

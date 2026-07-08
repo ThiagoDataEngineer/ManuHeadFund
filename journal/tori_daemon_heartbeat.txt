@@ -1,5 +1,0 @@
-{
-  "status": "alive",
-  "setups_count": 0,
-  "timestamp": "2026-07-08T18:00:26.2916833-03:00"
-}
