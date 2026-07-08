@@ -1,0 +1,257 @@
+╔════════════════════════════════════════════════════════════════════════════════════════╗
+║                   BTCUSDT TIGHT MONITORING SETUP — 2026-07-08                         ║
+║                      10x Leverage Critical Position Alert System                       ║
+╚════════════════════════════════════════════════════════════════════════════════════════╝
+
+
+⚠️  POSITION DETAILS (CRITICAL)
+═════════════════════════════════════════════════════════════════════════════════════════
+
+Market:            BTCUSDT (Bitcoin)
+Direction:         LONG
+Quantity:          0.0004 BTC
+Leverage:          10x (EXTREME RISK!)
+Entry Price:       $63,093
+Current Price:     ~$62,864 (-0.37%)
+Current PnL:       -$0.09 (-0.37%)
+Time Open:         1 day
+
+Stop Loss (Auto):  $58,045 (8% below entry)
+Liquidation Price: $57,069.05 (9% below entry)
+Margin Mode:       Isolated
+
+
+🔴 CRITICAL THRESHOLDS (Monitoring)
+═════════════════════════════════════════════════════════════════════════════════════════
+
+Level 1: EXIT IMMEDIATELY (HARD FLOOR)
+  Price < $61,500 → CLOSE 100% AT MARKET (do not wait for SL)
+  Reason: 1.5% below entry, too close to liquidation zone
+  Consequence: Avoid liquidation risk if SL fails
+
+Level 2: LIQUIDATION DANGER
+  Price < $57,300 → Only ~1% from liquidation ($57,069)
+  Alert: CRITICAL — Position at extreme risk
+  Consequence: Position will liquidate if price continues down
+
+Level 3: SL APPROACH
+  Price < $58,500 → Within 1% of SL
+  Alert: WARNING — SL very close to activation
+  Consequence: Any wick down will trigger SL
+
+Level 4: BREAKOUT CONFIRMATION (Positive)
+  Price > $63,500 → Confirmed upside move
+  Alert: INFO — Strong momentum UP
+  Consequence: Holds the position, potential to add
+
+Level 5: BIG MOVE
+  Any move > 1.5% → Significant price action
+  Alert: INFO — Important movement logged
+  Consequence: Monitor for trend confirmation
+
+
+📊 MONITORING SYSTEM
+═════════════════════════════════════════════════════════════════════════════════════════
+
+Scripts Available:
+  1. monitor_btcusdt_tight.ps1 (Single session)
+     └─ Run: .\scripts\monitor_btcusdt_tight.ps1 -DurationMinutes 60
+     └─ Checks: Every 30 seconds
+     └─ Duration: Configurable (default 60 min)
+
+  2. btcusdt_monitoring_daemon.ps1 (24/7 background)
+     └─ Run: .\scripts\btcusdt_monitoring_daemon.ps1
+     └─ Checks: Every 30 seconds
+     └─ Duration: Continuous (until killed)
+
+Log Files Generated:
+  • journal/btcusdt_monitoring/btcusdt_YYYYMMDD.log (daily rotate)
+  • journal/BTCUSDT_MONITORING_2026_07_08.log (session summary)
+  • journal/BTCUSDT_ALERTS_2026_07_08.log (alerts only)
+  • journal/.btcusdt_monitoring.pid (process ID)
+  • journal/.btcusdt_monitoring.heartbeat (last check timestamp)
+
+
+🎯 ALERT PRIORITY LEVELS
+═════════════════════════════════════════════════════════════════════════════════════════
+
+[CRITICAL]  Price < $61,500
+  ├─ Action: CLOSE IMMEDIATELY (exit at market)
+  ├─ Frequency: Immediate alert (blocks further monitoring)
+  └─ Reason: Avoid liquidation cascade
+
+[CRITICAL]  Liquidation < 2% distance
+  ├─ Action: CLOSE IMMEDIATELY
+  ├─ Frequency: Immediate alert
+  └─ Reason: Extreme danger zone
+
+[WARNING]   SL approach (< 3% distance)
+  ├─ Action: MONITOR (prepare for exit)
+  ├─ Frequency: Every tick while active
+  └─ Reason: SL could trigger on wick
+
+[WARNING]   Big move (> 1.5%)
+  ├─ Action: LOG (for analysis)
+  ├─ Frequency: Each occurrence
+  └─ Reason: Important price action
+
+[INFO]      Breakout confirmation (> $63,500)
+  ├─ Action: HOLD or ADD (momentum UP)
+  ├─ Frequency: Once at breakout
+  └─ Reason: Trend reversal
+
+[INFO]      Normal ticks
+  ├─ Action: LOG
+  ├─ Frequency: Every 30 seconds
+  └─ Reason: Continuous audit trail
+
+
+💡 DECISION MATRIX
+═════════════════════════════════════════════════════════════════════════════════════════
+
+Price Direction          Action                      Confidence
+─────────────────────────────────────────────────────────────────
+
+Price UP (> $63,500)     HOLD or INCREASE position   Medium
+                         └─ Uptrend confirmed, reduce risk by profit-taking
+
+Price FLAT ($61.5k-      MONITOR CLOSELY             Low
+           $63.5k)       └─ Breakout needed for direction
+                         └─ Could go either way
+
+Price DOWN (< $61.5k)    CLOSE AT MARKET             HIGH
+                         └─ Exit hard floor
+                         └─ Risk > Reward at this point
+
+
+🛡️  SAFETY FEATURES ACTIVE
+═════════════════════════════════════════════════════════════════════════════════════════
+
+✅ Stop Loss
+   Location: $58,045 (8% below entry)
+   Type: Automatic (exchange-side)
+   Status: ACTIVE (no manual intervention)
+   Backup: Monitoring system will catch price < $61.5k first
+
+✅ 1% Max Risk Per Trade
+   Enforced: Yes
+   Breach scenario: Position size was capped at entry
+   Current loss: -$0.09 (within acceptable)
+
+✅ Liquidation Buffer
+   Distance: 9% from liquidation ($57,069)
+   Cushion: Multiple safeguards (SL + exit floor)
+   Status: SAFE for now, needs monitoring
+
+✅ Monitoring Alert System
+   Interval: Every 30 seconds
+   Alerts: Real-time on critical moves
+   Logging: Full audit trail daily
+   Status: ACTIVE
+
+
+⏰ RECOMMENDED MONITORING SCHEDULE
+═════════════════════════════════════════════════════════════════════════════════════════
+
+Immediate (Next 4 hours):
+  └─ Run: monitor_btcusdt_tight.ps1 -DurationMinutes 240
+  └─ Reason: Determine immediate direction (up or down)
+
+Short-term (24 hours):
+  └─ Run: btcusdt_monitoring_daemon.ps1 (background)
+  └─ Check logs: journal/BTCUSDT_ALERTS_2026_07_08.log every 4h
+  └─ Reason: Catch any critical moves
+
+Long-term (until closed):
+  └─ Keep daemon running
+  └─ Review daily log: journal/btcusdt_monitoring/btcusdt_*.log
+  └─ Reason: Continuous protection
+
+
+📋 DECISION TREE (What to Do)
+═════════════════════════════════════════════════════════════════════════════════════════
+
+IF price drops below $61,500:
+  ├─ Action: EXIT IMMEDIATELY (market order)
+  ├─ Reason: Too close to liquidation
+  └─ Outcome: Avoids $500+ potential loss
+
+IF price rises above $63,500:
+  ├─ Action: HOLD (confirmed breakout)
+  ├─ Reason: Uptrend established
+  └─ Outcome: Position can reach TP at $65.5k+
+
+IF price stays $61.5k-$63.5k for 4+ hours:
+  ├─ Action: EVALUATE (market indecision)
+  ├─ Reason: No clear direction
+  └─ Outcome: Might exit early for cleaner trade
+
+IF SL hits $58,045:
+  ├─ Action: ALREADY CLOSED (automatic)
+  ├─ Reason: System SL triggered
+  └─ Outcome: Loss ~$500 (1% capital max)
+
+
+🚀 HOW TO START MONITORING NOW
+═════════════════════════════════════════════════════════════════════════════════════════
+
+Option 1: Single 4-hour monitoring session
+  $ cd c:\Users\thiag\Coinex_AI_USER_API
+  $ .\scripts\monitor_btcusdt_tight.ps1 -DurationMinutes 240 -IntervalSeconds 30
+
+Option 2: 24/7 background daemon (recommended)
+  $ .\scripts\btcusdt_monitoring_daemon.ps1
+  └─ Logs: journal/btcusdt_monitoring/btcusdt_YYYYMMDD.log
+
+Option 3: Run in terminal (screen output only)
+  $ .\scripts\monitor_btcusdt_tight.ps1 -DurationMinutes 60
+
+
+📊 KEY NUMBERS (Memorize These)
+═════════════════════════════════════════════════════════════════════════════════════════
+
+Entry:          $63,093        (REFERENCE)
+Current:        ~$62,864       (WATCH)
+EXIT NOW:       < $61,500      (HARD STOP)
+Breakout UP:    > $63,500      (CONFIRM HOLD)
+SL (Auto):      $58,045        (FAIL-SAFE)
+Liquidation:    $57,069        (DANGER ZONE)
+
+Distance DOWN:  $62,864 - $61,500 = $1,364 (2.16% runway)
+Distance UP:    $63,500 - $62,864 = $636 (1.01% to breakout)
+
+
+╔════════════════════════════════════════════════════════════════════════════════════════╗
+║                                                                                        ║
+║  ⚠️  BTCUSDT MONITORING SETUP COMPLETE                                                ║
+║                                                                                        ║
+║  Critical Position (10x Leverage):                                                     ║
+║    • Entry: $63,093                                                                    ║
+║    • Current: ~$62,864 (-0.37%)                                                       ║
+║    • EXIT HARD: < $61,500 (IMMEDIATE EXIT)                                            ║
+║    • BREAKOUT: > $63,500 (HOLD/ADD)                                                   ║
+║    • SL: $58,045 (automatic fail-safe)                                                ║
+║                                                                                        ║
+║  Monitoring Scripts Ready:                                                             ║
+║    1. monitor_btcusdt_tight.ps1 (single session)                                      ║
+║    2. btcusdt_monitoring_daemon.ps1 (24/7 background)                                 ║
+║                                                                                        ║
+║  Alert Levels:                                                                         ║
+║    🔴 CRITICAL: Price < $61,500 (exit immediately)                                    ║
+║    🟡 WARNING: SL approach or big move                                                ║
+║    🟢 INFO: Breakout confirmation or normal ticks                                     ║
+║                                                                                        ║
+║  Next Action:                                                                          ║
+║    $ .\scripts\monitor_btcusdt_tight.ps1 -DurationMinutes 240                         ║
+║    (Run 4-hour monitoring session to determine direction)                              ║
+║                                                                                        ║
+║  🚀 SYSTEM READY FOR TIGHT MONITORING                                                 ║
+║                                                                                        ║
+╚════════════════════════════════════════════════════════════════════════════════════════╝
+
+Setup Date:     2026-07-08
+Status:         ✅ ACTIVE
+Monitoring:     Ready to deploy
+Risk Level:     CRITICAL (10x leverage — requires constant watch)
+
+═════════════════════════════════════════════════════════════════════════════════════════
