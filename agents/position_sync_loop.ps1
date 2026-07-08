@@ -16,6 +16,7 @@ $journalDir = Join-Path $baseDir "journal"
 
 try {
     . "$scriptDir\lib_coinex.ps1" -ErrorAction SilentlyContinue
+    . "$scriptDir\lib_coinex_positions_fetch.ps1" -ErrorAction SilentlyContinue
     . "$scriptDir\lib_position_sync_realtime.ps1" -ErrorAction SilentlyContinue
     . "$scriptDir\lib_journal.ps1" -ErrorAction SilentlyContinue
 } catch {
