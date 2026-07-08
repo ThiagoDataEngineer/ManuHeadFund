@@ -1,0 +1,8 @@
+No C:\Users\thiag\Coinex_AI_USER_API\agents\lib_beta_calculator_multitf.ps1:228 caractere:34
++             Write-Host "  [Beta] $mkt: Skipped (reason: $($betaData.r ...
++                                  ~~~~~
+Referência de variável inválida. ':' não era seguido de um caractere de nome de variável válido. Considere usar ${} 
+para delimitar o nome.
+    + CategoryInfo          : ParserError: (:) [], ParentContainsErrorRecordException
+    + FullyQualifiedErrorId : InvalidVariableReferenceWithDrive
+ 

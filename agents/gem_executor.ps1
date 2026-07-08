@@ -26,6 +26,9 @@
 # 2026-07-08: Trailing stop learning logger (enrich logs para auto-aprendizado)
 $__trailingLoggerPath = Join-Path $PSScriptRoot "lib_trailing_learning_logger.ps1"
 if (Test-Path $__trailingLoggerPath) { . $__trailingLoggerPath }
+# 2026-07-08: Essential alerts only (remove spam, critical only)
+$__essentialAlertsPath = Join-Path $PSScriptRoot "lib_telegram_essential_alerts.ps1"
+if (Test-Path $__essentialAlertsPath) { . $__essentialAlertsPath }
 # 2026-05-21: B9 cache TTL (Add-GemRejection + Test-GemRecentlyRejected).
 # Bug encontrado: scan_master dot-sourced gem_executor mas NAO lib_gem_decision_cache,
 # entao Get-Command Test-GemRecentlyRejected returnava null silently -> cache check
