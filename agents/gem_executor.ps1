@@ -667,14 +667,61 @@ function Invoke-GemExecute {
     # CAPITULACAO -> libera LONG (compra fundo) | BEAR -> bloqueia LONG, libera SHORT
     # BULL -> libera LONG | NEUTRO -> espera. Substitui o gate simples.
     if (Get-Command Get-MarketScenario -ErrorAction SilentlyContinue) {
-        # 2026-07-03 FIX: $direction so e resolvido MUITO depois (secao 3) -> aqui era
-        # sempre null -> default LONG -> gems SHORT avaliadas como LONG neste gate
-        # (ZKPUSDT SHORT bloqueado 4x como "bloqueia LONG"). Le direto do $Gem.
-        $dirForGate = "LONG"
-        if ($Gem.PSObject.Properties['direction'] -and ("$($Gem.direction)".ToUpper() -in @("LONG","SHORT"))) {
+        # 2026-07-08 CRITICAL FIX: BUG RAIZ do LDOUSDT flip SHORT->LONG->SHORT.
+        # Problema: $dirForGate era hardcoded LONG (linha 673 original), mas $direction
+        # so resolve MUITO depois em linha ~1011 via conviction score. Gate BTC-core
+        # avaliava TUDO como LONG -> bloqueava SHORTs validos em BEAR regime -> proxima
+        # iteracao recalculava SHORT -> proximo gate bloqueava de novo como LONG.
+        # Solucao: usar MESMO calculo de conviction ANTES do gate BTC-core, nao depois.
+        # Isto garante $dirForGate eh consistente com a direcao que SERA executada.
+
+        # Pre-calcular convictions AGORA (replicated from section 3 mais abaixo)
+        # para que gate BTC-core tome decisao com direção CORRETA.
+        $dirForGate = "LONG"  # default se nao conseguir calcular
+
+        if ($Gem.PSObject.Properties['direction'] -and "$($Gem.direction)" -in @("LONG","SHORT")) {
+            # Direcao explicita no GEM - use ela
             $dirForGate = "$($Gem.direction)".ToUpper()
-        } elseif ($direction) {
-            $dirForGate = "$direction".ToUpper()
+        } else {
+            # Calcular conviction SHORT vs LONG AGORA (pre-cálculo)
+            # Este é exatamente o mesmo código que aparecerá em section 3 (linhas ~938-1011)
+            $convShortPre = 50
+            $convLongPre = 50
+
+            # Pump-fade detection (ativo blocker para LONG)
+            if (Get-Command Detect-EarlyPump -ErrorAction SilentlyContinue) {
+                try {
+                    $pdChangePre = if ($null -ne $Gem.change_24h) { [double]$Gem.change_24h } else { 0 }
+                    $pdVolRPre = if ($null -ne $Gem.vol_data.volume_ratio) { [double]$Gem.vol_data.volume_ratio } else { 1.0 }
+                    $pdRsiPre = if ($null -ne $Gem.rsi_14) { [double]$Gem.rsi_14 } else { 50 }
+                    $pumpDetectPre = Detect-EarlyPump -Market $mkt -ChangePercent24h $pdChangePre -VolumeRatio $pdVolRPre -RSI $pdRsiPre -CurrentPrice $price
+                    if ($pumpDetectPre.is_pump -and $pumpDetectPre.pump_stage -match "FADE|TOP") {
+                        $convShortPre = [math]::Min(100, [int]$pumpDetectPre.confidence + 20)
+                        $convLongPre = [math]::Max(0, 50 - [int]$pumpDetectPre.confidence)
+                    }
+                } catch { }
+            }
+
+            # Regime bias (BEAR favorece SHORT, BULL favorece LONG)
+            if ($global:CURRENT_REGIME -match "BEAR") {
+                $convShortPre += 10
+                $convLongPre = [math]::Max($convLongPre - 5, 40)
+            } elseif ($global:CURRENT_REGIME -match "BULL") {
+                $convLongPre += 10
+                $convShortPre = [math]::Max($convShortPre - 5, 40)
+            }
+
+            # Decidir direcao PRE com base em conviction gap
+            $convShortPre = [math]::Min([math]::Max([int]$convShortPre, 0), 100)
+            $convLongPre = [math]::Min([math]::Max([int]$convLongPre, 0), 100)
+
+            if ([math]::Abs($convShortPre - $convLongPre) -ge 20) {
+                $dirForGate = if ($convShortPre -gt $convLongPre) { "SHORT" } else { "LONG" }
+            } else {
+                # Convictions proximais - nao decide aqui, deixa section 3 resolver
+                # (pode virar SKIP)
+                $dirForGate = "LONG"  # default (sera reverificado em section 3)
+            }
         }
         try {
             $scen = Get-MarketScenario
