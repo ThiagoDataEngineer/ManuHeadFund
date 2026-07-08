@@ -21,6 +21,7 @@ docs/GIT_CREDENTIALS.md
 secrets/
 credentials/
 agents/config.local.ps1
+agents/config.local.ps1.backup*
 *.secret
 *.key
 *.pem
