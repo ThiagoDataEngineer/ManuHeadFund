@@ -85,8 +85,8 @@ $RR_PREFERIDO      = 3.0      # risco/retorno preferido (1:3) — paper trade ca
 # Aumentado para 75 — exige confluence REAL (narrativa + estrutura + orgânico).
 # Bloqueado G8-MID/LATE (chase risk em pumps já em andamento).
 $SCORE_MINIMO      = 75.0     # score ponderado minimo — REFORÇADO para qualidade
-$MAX_TRADES_DIA    = 5        # maximo de trades por dia (aumentar para 10 durante calibração)
-$MAX_RISCO_ABERTO  = 0.03     # 3% do capital em risco simultaneamente
+$MAX_TRADES_DIA    = 15       # maximo de trades por dia — AUMENTADO para scalping agressivo (antes era 5)
+$MAX_RISCO_ABERTO  = 0.05     # 5% do capital em risco simultaneamente — AUMENTADO de 3% para permitir 8+ trades
 $ALAVANCAGEM_MAX   = 5.0      # alavancagem maxima global
 
 # ── Pesos dos Agentes (somam 1.0) ────────────────────────────────────────────
