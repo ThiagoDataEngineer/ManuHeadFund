@@ -23,6 +23,9 @@
 . (Join-Path $PSScriptRoot "lib_position_protection.ps1")  # 2026-07-02 FIX: SL+TP placement CRÍTICO
 # 2026-06-17: Triagem agent (aplica aprendizado a conviction scores)
 . (Join-Path $PSScriptRoot "triagem_agent.ps1")
+# 2026-07-08: Trailing stop learning logger (enrich logs para auto-aprendizado)
+$__trailingLoggerPath = Join-Path $PSScriptRoot "lib_trailing_learning_logger.ps1"
+if (Test-Path $__trailingLoggerPath) { . $__trailingLoggerPath }
 # 2026-05-21: B9 cache TTL (Add-GemRejection + Test-GemRecentlyRejected).
 # Bug encontrado: scan_master dot-sourced gem_executor mas NAO lib_gem_decision_cache,
 # entao Get-Command Test-GemRecentlyRejected returnava null silently -> cache check

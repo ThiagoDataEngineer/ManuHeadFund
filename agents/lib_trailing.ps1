@@ -472,6 +472,29 @@ function Update-TrailingStops {
                 $pos.active     = $false
                 $pos | Add-Member -NotePropertyName "closedAt" -NotePropertyValue (Get-Date -Format "yyyy-MM-dd HH:mm:ss") -Force
                 $pos | Add-Member -NotePropertyName "closeReason" -NotePropertyValue "stop_atingido" -Force
+
+                # 2026-07-08: Log efetividade do stop pra aprendizado
+                if (Get-Command Write-TrailingEffectiveness -ErrorAction SilentlyContinue) {
+                    try {
+                        $regime = if ($pos.PSObject.Properties['regime'] -and $pos.regime) { "$($pos.regime)" } else { "UNKNOWN" }
+                        $maxGain = if ($pos.side -eq "LONG") { ([double]$pos.peak - [double]$pos.entry) } `
+                                   else { ([double]$pos.entry - ([double]$pos.peak)) }
+                        $openedAt = if ($pos.PSObject.Properties['openedAt']) { [datetime]$pos.openedAt } else { [datetime]::UtcNow }
+                        $duration = ([datetime]::UtcNow - $openedAt).TotalMinutes
+
+                        [void](Write-TrailingEffectiveness -Market $pos.market `
+                            -Side $pos.side `
+                            -Entry ([double]$pos.entry) `
+                            -Exit ([double]$pos.stopCurrent) `
+                            -ExitPrice $price `
+                            -StopLossAtExit ([double]$pos.stopCurrent) `
+                            -ExitReason "SL_HIT" `
+                            -MaxGain $maxGain `
+                            -DurationMinutes $duration `
+                            -Regime $regime) )
+                    } catch { }
+                }
+
                 # 2026-06-17 #2: auto-registra outcome p/ o motor de aprendizado (fail-safe)
                 if (Get-Command Add-LearningOutcome -ErrorAction SilentlyContinue) {
                     try {
@@ -487,7 +510,54 @@ function Update-TrailingStops {
             }
 
             $calc = Get-TrailingNewStop -Pos $pos -CurrentPrice $price
-            
+
+            # 2026-07-08: Enrich trailing logs pra auto-aprendizado do sistema
+            if (Get-Command Write-TrailingDecision -ErrorAction SilentlyContinue) {
+                try {
+                    $regime = if ($pos.PSObject.Properties['regime'] -and $pos.regime) { "$($pos.regime)" } `
+                              elseif ($global:MARKET_REGIME) { "$($global:MARKET_REGIME)" } else { "UNKNOWN" }
+                    $atr = if ($pos.PSObject.Properties['atr'] -and $pos.atr) { [double]$pos.atr } else { 0 }
+
+                    [void](Write-TrailingDecision -Market $pos.market `
+                        -Side $pos.side `
+                        -Phase $calc.newPhase `
+                        -Entry ([double]$pos.entry) `
+                        -CurrentPrice $price `
+                        -StopOld ([double]$pos.stopCurrent) `
+                        -StopNew ([double]$calc.newStop) `
+                        -TakeProfit ([double]$pos.target) `
+                        -Peak ([double]$calc.newPeak) `
+                        -Regime $regime `
+                        -ATR $atr `
+                        -Changed $calc.changed `
+                        -Reason $(if ($calc.changed) { "phase_$($calc.newPhase)" } else { "routine_update" }) )
+                } catch {
+                    # Silent fail - não interrompe trailing
+                }
+            }
+
+            # Se fase mudou, log de transição
+            if ($calc.newPhase -ne [int]$pos.phase) {
+                if (Get-Command Write-TrailingPhaseTransition -ErrorAction SilentlyContinue) {
+                    try {
+                        $regime = if ($pos.PSObject.Properties['regime'] -and $pos.regime) { "$($pos.regime)" } else { "UNKNOWN" }
+                        $buffer = [math]::Abs([double]$calc.newStop - [double]$pos.entry)
+
+                        Write-TrailingPhaseTransition -Market $pos.market `
+                            -Side $pos.side `
+                            -PhaseFrom ([int]$pos.phase) `
+                            -PhaseTo ([int]$calc.newPhase) `
+                            -Entry ([double]$pos.entry) `
+                            -CurrentPrice $price `
+                            -StopNew ([double]$calc.newStop) `
+                            -TakeProfit ([double]$pos.target) `
+                            -Regime $regime `
+                            -BufferApplied $buffer `
+                            -TriggerCondition "Price reached $(if($calc.newPhase -eq 1) { '33%' } elseif($calc.newPhase -eq 2) { '66%' } elseif($calc.newPhase -eq 3) { 'target' })" | Out-Null
+                    } catch { }
+                }
+            }
+
             # 2026-05-25 BUG FIX: peak deve persistir mesmo sem mudanca de fase.
             # Antes: peak so era salvo se $calc.changed -> em mercado lateral o peak
             # nunca subia, e quando trigger acontecia entre runs, o peak antigo
