@@ -437,23 +437,10 @@ function Invoke-GemExecute {
         return [PSCustomObject]@{ blocked = $true; blocked_by = @("spike_BEARISH_G1B"); market = $mkt }
     }
 
-    # ── HUMAN APPROVAL: trades >$100 precisam confirmação ───────────────────────
-    # 2026-06-09: user approva via TG antes de executar
-    $capital     = if (Get-Command CoinEx-GetTotalCapitalUSDT -ErrorAction SilentlyContinue) {
-        CoinEx-GetTotalCapitalUSDT
-    } else { $global:CAPITAL_TOTAL }
-    $usd_size_check = [math]::Round($capital * $Gem.sizing.sizing_pct, 2)
-
-    if ($usd_size_check -ge 100 -and (Get-Command Request-HumanApproval -ErrorAction SilentlyContinue)) {
-        $approval = Request-HumanApproval -Market $mkt -SizeUsd $usd_size_check
-        if ($approval.approved -eq $false) {
-            Write-Host "BLOQUEADO: human approval rejeitou $mkt \$$usd_size_check" -ForegroundColor Red
-            return [PSCustomObject]@{ blocked = $true; blocked_by = @("human_approval_rejected"); market = $mkt }
-        } elseif ($approval.approved -eq $null) {
-            Write-Host "AGUARDANDO: human approval pra $mkt \$$usd_size_check (timeout 5min)" -ForegroundColor Yellow
-            return [PSCustomObject]@{ blocked = $true; blocked_by = @("human_approval_pending"); market = $mkt }
-        }
-    }
+    # ── 2026-07-08: REMOVED HUMAN APPROVAL GATE ───────────────────────────────────
+    # User requirement: "human approval não deve existir"
+    # All trades execute autonomously if score >= threshold, NO Telegram gate
+    # (capital sizing validation still applies via risk limits)
 
     # ── Detectar tipo de mercado ──────────────────────────────────────────────
     # 2026-05-19 PM: usa Get-GemRouteForMarket (consolidado via lib_market_router_wire)

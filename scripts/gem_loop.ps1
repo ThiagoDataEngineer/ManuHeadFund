@@ -133,12 +133,10 @@ try {
     Write-GemLog "DEBUG" "Trailing stop ativado"
 } catch { }
 
-# Governance: Circuit breaker + Human approval + TG handler (2026-06-09)
+# Governance: Circuit breaker ONLY (no human approval — see TRADING_AUTONOMY.md)
 try {
     . (Join-Path $agentsDir "lib_circuit_breaker_simple.ps1") -ErrorAction SilentlyContinue
-    . (Join-Path $agentsDir "lib_human_approval_simple.ps1") -ErrorAction SilentlyContinue
-    . (Join-Path $agentsDir "lib_tg_approval_handler.ps1") -ErrorAction SilentlyContinue
-    Write-GemLog "DEBUG" "Governance libs carregadas (circuit breaker + human approval)"
+    Write-GemLog "DEBUG" "Governance libs carregadas (circuit breaker, no human approval)"
 } catch { }
 
 # Macro + Halving aware (2026-06-09 — WIRE halving cycle + DCA strategy)
