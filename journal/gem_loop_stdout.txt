@@ -1,0 +1,8 @@
+[2026-07-08 18:30:00] [SKIP] Outro gem_loop VIVO ja detem o singleton lock; este PID=9084 exit.
+[2026-07-08 18:30:47] [SKIP] Outro gem_loop VIVO ja detem o singleton lock; este PID=28348 exit.
+[2026-07-08 18:32:18] [SKIP] Outro gem_loop VIVO ja detem o singleton lock; este PID=22940 exit.
+ƒo. Config loaded (live trading: DISABLED for safety)
+ƒo. Config loaded (live trading: DISABLED for safety)
+[2026-07-08 18:32:56] [DEBUG] LLM keys (env): ANTHROPIC_API_KEY=EMPTY | GROQ_API_KEY=EMPTY | GROQ_API_KEY_2=EMPTY | MISTRAL_API_KEY=EMPTY | CEREBRAS_API_KEY=EMPTY | FRED_API_KEY=EMPTY
+[2026-07-08 18:32:56] [ERROR] Falha ao carregar core libs: O cmdlet Export-ModuleMember pode ser chamado apenas de dentro de um m¢dulo.
+[2026-07-08 18:35:30] [SKIP] Outro gem_loop VIVO ja detem o singleton lock; este PID=13868 exit.

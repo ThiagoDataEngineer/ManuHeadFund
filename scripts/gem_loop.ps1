@@ -400,6 +400,20 @@ function Invoke-GemCycle-Once {
     }
 }
 
+# ═══════════════════════════════════════════════════════════════════════════════
+# 2026-07-08: STARTUP — Auto-aprendizado daemon (grade_llm_decisions 1h interval)
+# ═══════════════════════════════════════════════════════════════════════════════
+$gradeDaemonPath = Join-Path $scriptRoot "grade_llm_daemon.ps1"
+if (Test-Path $gradeDaemonPath) {
+    try {
+        # Start grade daemon in background (independent process)
+        $gradePid = Start-Process powershell -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File `"$gradeDaemonPath`"" -PassThru -WindowStyle Hidden
+        Write-GemLog "INFO" "Grade daemon started (PID=$($gradePid.Id), interval=1h, auto-learning ATIVO)"
+    } catch {
+        Write-GemLog "WARN" "Failed to start grade daemon: $_"
+    }
+}
+
 # Main loop
 if ($Once) {
     Invoke-GemCycle-Once -DryRun (-not $isLive)
