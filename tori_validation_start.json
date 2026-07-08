@@ -1,0 +1,47 @@
+[
+  {
+    "price_initial": 0.051741,
+    "pair": "ALCHUSDT",
+    "time_initial": "2026-07-08T14:37:07.7961994-03:00"
+  },
+  {
+    "price_initial": 1.0318,
+    "pair": "GASUSDT",
+    "time_initial": "2026-07-08T14:37:07.7961994-03:00"
+  },
+  {
+    "price_initial": 0.6888,
+    "pair": "QTUMUSDT",
+    "time_initial": "2026-07-08T14:37:07.7961994-03:00"
+  },
+  {
+    "price_initial": 1.5643,
+    "pair": "ATOMUSDT",
+    "time_initial": "2026-07-08T14:37:07.7961994-03:00"
+  },
+  {
+    "price_initial": 0.4182,
+    "pair": "MNTUSDT",
+    "time_initial": "2026-07-08T14:37:07.7961994-03:00"
+  },
+  {
+    "price_initial": 0.042304,
+    "pair": "CFXUSDT",
+    "time_initial": "2026-07-08T14:37:07.7961994-03:00"
+  },
+  {
+    "price_initial": 0.077153,
+    "pair": "AUSDT",
+    "time_initial": "2026-07-08T14:37:07.7961994-03:00"
+  },
+  {
+    "price_initial": 1.8877,
+    "pair": "NEARUSDT",
+    "time_initial": "2026-07-08T14:37:07.7961994-03:00"
+  },
+  {
+    "price_initial": 0.6807,
+    "pair": "RAYUSDT",
+    "time_initial": "2026-07-08T14:37:07.7961994-03:00"
+  }
+]
