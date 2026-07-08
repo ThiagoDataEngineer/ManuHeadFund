@@ -7,7 +7,6 @@ $ErrorActionPreference = "SilentlyContinue"
 
 $criticalFiles = @(
     "agents\gem_executor.ps1"
-    "agents\scan_master.ps1"
     "agents\lib_tori_confluence_detector.ps1"
     "agents\lib_coinex.ps1"
     "agents\lib_beta_calculator_multitf.ps1"
@@ -18,6 +17,7 @@ $criticalFiles = @(
     "agents\lib_telegram_essential_alerts.ps1"
     "agents\lib_tori_html_renderer.ps1"
     "agents\lib_trailing.ps1"
+    "scripts\scan_master.ps1"
 )
 
 Write-Host "🛡️ PRE-FLIGHT CHECK — Validating critical files..." -ForegroundColor Cyan
