@@ -1,0 +1,120 @@
+═════════════════════════════════════════════════════════════════════════════════════════
+  QUICK REFERENCE — TRADE AUDIT 2026-07-07 — AÇÕES IMEDIATAS
+═════════════════════════════════════════════════════════════════════════════════════════
+
+📌 PORTFOLIO STATUS
+  Health: 79.1/100 → Target: 88/100
+  Capital at Risk: ~$500 USD
+  Capital Liberatable: ~$188 USD
+  Regime: BEAR_WEAK (baixa volatilidade, recuperação de queda)
+
+═════════════════════════════════════════════════════════════════════════════════════════
+
+🔴 FECHAR 100% (Libera $101.38)
+═════════════════════════════════════════════════════════════════════════════════════════
+
+1. AAVEUSDT
+   Entry: $95.81 | Current: $95.81 | PnL: -$2.27 (-4.22%)
+   Problem: 38h morta. Consolidação. Drawdown sem bounce.
+   Action: MARKET SELL em $95.80 HOJE
+   Libera: $51.38
+
+2. WLDUSDT
+   Entry: $0.3858 | Current: $0.3858 | PnL: -$0.78 (-1.44%)
+   Problem: SHORT entrada ruim (após pump). SL apertado vs reward distante.
+   Action: LIMIT SELL em $0.3810 (break-even) HOJE
+   Libera: $50.00
+
+═════════════════════════════════════════════════════════════════════════════════════════
+
+🟡 REDUZIR 50% (Libera $135.86)
+═════════════════════════════════════════════════════════════════════════════════════════
+
+3. CRCLXUSDT (LONG)
+   Entry: $69.11 | Current: $69.11 | PnL: -$7.95 (-5.90%)
+   Action: VENDA 50% em $70.50
+   Novo SL: $67
+   HOLD 50% esperando $75+
+   Libera: $67.38
+
+4. PYTHUSDT (LONG)
+   Entry: $0.04558 | Current: $0.04558 | PnL: -$6.27 (-4.58%)
+   Action: VENDA 1.502k em $0.0460 (break-even)
+   Novo SL: $0.0415
+   HOLD 1.503k esperando acima $0.0500
+   Libera: $68.48
+
+═════════════════════════════════════════════════════════════════════════════════════════
+
+🟢 HOLD & MONITOR (Bons setups)
+═════════════════════════════════════════════════════════════════════════════════════════
+
+5. BTCUSDT (LONG) ⭐ AUMENTAR AMANHÃ
+   Entry: $63.093k | PnL: +$0.25 (+0.98%)
+   Action: HOLD hoje (suporte $61.5k forte)
+   Tomorrow if $63.5k+: aumenta para 0.0008 BTC @ 5x (menos risco que 10x)
+   TP: $65.5k (50%) + $67k (exit 100%)
+   SL: $61.5k (mercado quebrou = exit)
+
+6. LDOUSDT (LONG) ⭐ STRONG
+   Entry: $0.3165 | PnL: +$0.48 (+0.44%)
+   Setup: Breakout 4h + spike 1h + RSI 55-62 (momentum UP)
+   Action: HOLD até $0.38
+   Quando $0.335+ → trailing SL $0.310
+   TP 50%: $0.375 | TP 100%: $0.42
+
+7. WAVESUSDT (LONG) ⭐ HOLD 24h
+   Entry: $0.2678 | PnL: -$2.55 (-1.32%)
+   Setup: Consolidação baixa + pin bar bullish + SL macro $0.24 forte
+   Action: HOLD até amanhã
+   If $0.295+ → TP 50% + trailing 50%
+   If $0.245- → exit 100%
+   If BTC $62.5k- → exit imediatamente
+
+8. LRCUSDT (LONG) ⚠️ RISKY
+   Entry: $0.01105 | PnL: -$0.035 (-0.13%)
+   Problem: Recém aberta, ainda caindo, volume fraco
+   Action: Se acima $0.0112 em 2h → HOLD até $0.0120
+   Se cai $0.0102- → EXIT automático
+   Requer acompanhamento 4h (não fire&forget)
+
+═════════════════════════════════════════════════════════════════════════════════════════
+
+⚡ CHECKLIST HOJE À NOITE
+═════════════════════════════════════════════════════════════════════════════════════════
+
+[ ] FECHE AAVEUSDT em $95.80 (MARKET)
+[ ] FECHE WLDUSDT em $0.3810 (LIMIT)
+[ ] REDUZIR CRCLXUSDT 50% em $70.50
+[ ] REDUZIR PYTHUSDT 50% em $0.0460
+[ ] Ativar trailing SL em LDOUSDT ($0.310 quando acima $0.335)
+[ ] Ativar trailing SL em WAVESUSDT ($0.270 quando acima $0.290)
+[ ] Monitorar LRCUSDT próximas 4h
+[ ] Dormir tranquilo — capital liberado, saúde melhorada
+
+═════════════════════════════════════════════════════════════════════════════════════════
+
+📊 RESULTADO ESPERADO
+═════════════════════════════════════════════════════════════════════════════════════════
+
+Antes:  Health 79.1/100 | Capital locked $500 | 3 posições com drawdown
+Depois: Health 88/100   | Capital freed $188  | Operações só confluência multi-TF
+
+Win Rate esperada: +15-20% (disciplina multi-TF + RR ≥ 3:1)
+Próxima entrada: Aguarde breakout claro + volume + 2+ timeframes alinhados
+
+═════════════════════════════════════════════════════════════════════════════════════════
+
+🎓 APRENDIZADO
+═════════════════════════════════════════════════════════════════════════════════════════
+
+✓ Confluência multi-TF (4h + 1h + 15m) é obrigatória
+✓ Posições mortas >24h sem movimento = EXIT (capital preso)
+✓ SHORTs em BEAR_WEAK são exceção, não regra
+✓ RR ≥ 3:1 antes da entrada
+✓ Tamanho micro ($25-30) permite leverage conservador (3-5x) sem risco sistêmico
+
+═════════════════════════════════════════════════════════════════════════════════════════
+
+Relatório: PROFESSIONAL_TRADE_AUDIT_2026_07_07.md (completo)
+Visual: https://claude.ai/code/artifact/424aef2e-b028-41b7-ae12-db63660f72c0

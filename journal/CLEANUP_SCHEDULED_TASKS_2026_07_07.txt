@@ -1,0 +1,111 @@
+╔════════════════════════════════════════════════════════════════════════════════════════╗
+║                      CLEANUP — Scheduled Tasks & Startup                               ║
+║                              2026-07-07                                                ║
+╚════════════════════════════════════════════════════════════════════════════════════════╝
+
+O QUE ENCONTREI RODANDO LOCALMENTE
+═════════════════════════════════════════════════════════════════════════════════════════
+
+🚨 TAREFA AGENDADA (Task Scheduler):
+  Name: ManuHeadFund-AutoRecovery
+  Status: ENABLED (Ativa)
+  Schedule: A CADA 5 MINUTOS (PT5M)
+  Início: 2026-07-05 11:42:03 BRT
+  Executa: C:\Users\thiag\Coinex_AI_USER_API\scripts\auto_recovery.ps1
+  Impact: Rodava continuamente background
+
+🚨 STARTUP FILES (3 Arquivos):
+  1. CoinexAIGem.lnk
+  2. CoinexAIPaper.lnk
+  3. ManuHeadFund_Fleet.cmd
+
+  Local: C:\Users\thiag\AppData\Roaming\Microsoft\Windows\Start Menu\Programs\Startup\
+  Impact: Iniciavam automaticamente no boot
+
+
+AÇÕES EXECUTADAS
+═════════════════════════════════════════════════════════════════════════════════════════
+
+✅ DELETADA Tarefa Agendada: ManuHeadFund-AutoRecovery
+   └─ Confirmado removida do Task Scheduler
+   └─ Não vai mais rodar a cada 5 minutos
+
+✅ DELETADOS 3 Startup Files:
+   └─ CoinexAIGem.lnk
+   └─ CoinexAIPaper.lnk
+   └─ ManuHeadFund_Fleet.cmd
+   └─ Confirmado removidos do Startup Folder
+
+✅ VERIFICADO Processos em Execução:
+   └─ Nenhum gem_loop/daemon/manuhead ainda rodando
+
+
+STATUS FINAL
+═════════════════════════════════════════════════════════════════════════════════════════
+
+Local System:          🟢 LIMPO
+  ✅ Nenhuma tarefa agendada
+  ✅ Nenhum startup file
+  ✅ Nenhum processo background
+
+Sistema ManuHeadFund:  🟡 OFFLINE
+  ⏸️ Todos os daemons parados
+  ⏸️ Cloud functions (GitHub Actions) ainda rodando (se existentes)
+  ⏸️ Supabase está ativa (dados salvos)
+
+Dados:                 ✅ PRESERVADO
+  ✅ Posições abertas salvas em JSON
+  ✅ Trade journal preservado
+  ✅ Histórico mantido
+
+
+PRÓXIMOS PASSOS (Você Decidir)
+═════════════════════════════════════════════════════════════════════════════════════════
+
+Opção 1: DEIXAR OFFLINE (Modo Manual)
+  - Sistema não rodará automaticamente
+  - Você inicia manualmente quando quiser
+  - Dados continuam acessíveis
+  - Status: ✅ Recomendado (melhor controle agora)
+
+Opção 2: REATIVAR (Modo Auto)
+  - Recriar tarefas agendadas
+  - Relançar daemons
+  - Volta ao modo 24/7
+  - Status: ⏸️ Por enquanto pausado
+
+Opção 3: MIGRAR PARA CLOUD
+  - Usar GitHub Actions + Supabase
+  - Não depende do local rodando
+  - Melhor para daemon confiável
+  - Status: 🚀 Já temos infra pronta
+
+
+RECOMENDAÇÃO
+═════════════════════════════════════════════════════════════════════════════════════════
+
+Deixar OFFLINE por enquanto porque:
+  1. Análise acabou de ser feita (eval & corrections)
+  2. Framework atualizado (pump-fade SHORTs agora válidos)
+  3. Daemons precisam de reload com gates ajustados
+  4. Melhor testar changes ANTES de rodar 24/7 again
+
+Quando estiver pronto para reativar:
+  1. Testar gates atualizados em backtest
+  2. Validar novo framework localmente
+  3. Então relançar com: start_fleet.ps1 (manual)
+  4. Ou recreate scheduled tasks conforme desejado
+
+
+═════════════════════════════════════════════════════════════════════════════════════════
+
+Sistema LOCAL:  🟢 LIMPO E SEGURO
+Dados:          ✅ INTACTOS
+Controle:       🎯 MANUAL (seu)
+
+Ready para próximas ações! ✅
+
+═════════════════════════════════════════════════════════════════════════════════════════
+
+Executado: 2026-07-07 agora
+Confirmação: ✅ Tudo deletado com sucesso
