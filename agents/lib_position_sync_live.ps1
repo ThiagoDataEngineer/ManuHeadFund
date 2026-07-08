@@ -8,27 +8,18 @@
 
 $_positionSyncDir = Split-Path $PSScriptRoot -Parent | Join-Path -ChildPath "journal"
 
+# 2026-07-08: DISABLED - CoinEx-GetPendingPositions param conflict
+# Function temporarily stub to prevent "IsFutures" parameter errors
 function Sync-ExchangePositionsLive {
-    <#
-    .SYNOPSIS
-    Fetch pending positions from exchange, mirror to Supabase open_positions table.
-    Logs all activity to exchange_sync_log. Graceful fallback if network fails.
-
-    .PARAMETER IsFutures
-    $true = fetch Futures, $false = fetch Spot (default $true)
-
-    .PARAMETER MaxPositions
-    Safety limit (default 100 per side)
-
-    .OUTPUTS
-    @(position_records_synced...)
-    #>
     [CmdletBinding()]
     [OutputType([object[]])]
     param(
         [bool]$IsFutures = $true,
         [int]$MaxPositions = 100
     )
+
+    # Stub: return empty, position tracking via Trailing system
+    return @()
 
     try {
         $posType = if ($IsFutures) { "Futures" } else { "Spot" }
