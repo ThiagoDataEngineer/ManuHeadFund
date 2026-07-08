@@ -127,6 +127,13 @@ foreach ($__tddLib in @("lib_sizing_centralized.ps1","lib_leverage_cap.ps1","lib
 $__chartGatePath = Join-Path $PSScriptRoot "lib_chart_gate_active.ps1"
 if (Test-Path $__chartGatePath) { . $__chartGatePath }
 
+# 2026-07-08 CRÍTICO FIX: Position sync — sincroniza CoinEx app com tracking.jsonl a cada ciclo
+$__posSyncPath = Join-Path $PSScriptRoot "lib_position_sync_realtime.ps1"
+if (Test-Path $__posSyncPath) {
+    try { . $__posSyncPath }
+    catch { Write-Host "[WARN] Failed to load position sync: $_" -ForegroundColor Yellow }
+}
+
 # 2026-05-29: Order validation (retry+fallback SL/TP) + Position protection (garante TP/SL reais).
 # Causa raiz corrigida: SL/TP embutido em ordem MARKET nao aplica confiavel na CoinEx V2.
 # Solucao: aplicar SL/TP via set-position-* APOS fill + validar + retry.
