@@ -100,6 +100,16 @@ foreach ($__learnDep in @("lib_learning_engine.ps1","lib_evolution_engine.ps1","
     if (Test-Path $__learnPath) { . $__learnPath }
 }
 
+# 2026-07-08: TORI TRADES INTEGRATION — confluence gate + analysis layer
+# Wire lib_tori_confluence_detector + lib_tori_trades_scanner + wrapper gate
+foreach ($__toriLib in @("lib_tori_confluence_detector.ps1","lib_tori_trades_scanner.ps1","lib_tori_gate_wrapper.ps1")) {
+    $__toriPath = Join-Path $PSScriptRoot $__toriLib
+    if (Test-Path $__toriPath) {
+        try { . $__toriPath }
+        catch { Write-Host "[WARN] Failed to load ${__toriLib}: $_" -ForegroundColor Yellow }
+    }
+}
+
 # 2026-06-18: Wire gates_drift.json — dynamic gate application (mesa score override + conviction threshold)
 $__gatesDriftPath = Join-Path $PSScriptRoot "lib_gates_drift_wire.ps1"
 if (Test-Path $__gatesDriftPath) { . $__gatesDriftPath }
@@ -805,6 +815,56 @@ function Invoke-GemExecute {
             }
         } catch {
             Write-Host "  [CHART PATTERN ERROR] ${mkt}: $_ (fallback: allow)" -ForegroundColor Yellow
+        }
+    }
+
+    # ── 2-TORI: TORI CONFLUENCE GATE (2026-07-08: core technical validation layer) ──
+    # NEW: Confluence score MUST be >= 80 (strict gate). Replaces old Tori signal logic.
+    # 5 signals: Volume Climax, RSI Extreme, Fractal Pattern, CHoCH, Volume Profile
+    # Fail-closed: insufficient data or error = BLOCK entry
+    # Wire into: early gate, before conviction/mesa score (technical first)
+    if (Get-Command Test-ToriConfluence -ErrorAction SilentlyContinue) {
+        try {
+            $dirForConfluence = "LONG"  # determine direction first
+            if ($Gem.PSObject.Properties['direction'] -and "$($Gem.direction)" -in @("LONG","SHORT")) {
+                $dirForConfluence = "$($Gem.direction)".ToUpper()
+            }
+
+            $toriConfluence = Test-ToriConfluence -Market $mkt -SetupType $dirForConfluence -TimeframeMinutes 60 -Price $price -TimeoutSeconds 6
+
+            # Log detailed analysis
+            Write-Host "  [TORI CONFLUENCE] ${mkt}: score=$($toriConfluence.confluence_score)/100 status=$(if ($toriConfluence.allows) { 'PASS' } else { 'BLOCK' })" -ForegroundColor $(if ($toriConfluence.allows) { 'Green' } else { 'Yellow' })
+
+            if ($toriConfluence.signals_fired -and $toriConfluence.signals_fired.Count -gt 0) {
+                Write-Host "  [TORI SIGNALS] ${mkt}: $($toriConfluence.signals_fired -join ' + ')" -ForegroundColor DarkGray
+            }
+
+            # Fail-closed: if confluence score too low, BLOCK
+            if (-not $toriConfluence.allows) {
+                Write-Host "  [TORI CONFLUENCE BLOCK] ${mkt}: score=$($toriConfluence.confluence_score) < threshold=80 (reason: $($toriConfluence.reason))" -ForegroundColor Red
+                try { Send-TelegramAlert -Message "GEM bloqueado ${mkt}: Tori confluence baixa ($($toriConfluence.confluence_score)/100) - sem edge tecnica`n$($toriConfluence.reason)" | Out-Null } catch {}
+
+                # Cache rejection with Tori score
+                if (Get-Command Add-GemRejection -ErrorAction SilentlyContinue) {
+                    try {
+                        Add-GemRejection -Path (Join-Path $global:JOURNAL_DIR "gem_recent_decisions.json") -Market $mkt `
+                            -Reason "tori_confluence:$($toriConfluence.confluence_score)" `
+                            -ToriConfluenceScore $toriConfluence.confluence_score
+                    } catch {}
+                }
+
+                # Write audit log
+                if ($toriConfluence.audit_log) {
+                    Write-Host "  [TORI AUDIT]`n$($toriConfluence.audit_log)" -ForegroundColor DarkGray
+                }
+
+                return [PSCustomObject]@{ blocked = $true; blocked_by = @("tori_confluence_$($toriConfluence.confluence_score)_lt_80"); market = $mkt }
+            }
+
+            Write-Host "  [TORI CONFLUENCE OK] ${mkt}: technical entry validated (confluence=$($toriConfluence.confluence_score))" -ForegroundColor Green
+        } catch {
+            Write-Host "  [TORI CONFLUENCE ERROR] ${mkt}: $_ (fallback: allow)" -ForegroundColor Yellow
+            # Fail-gracious: if Tori gate fails, allow (other gates still active)
         }
     }
 

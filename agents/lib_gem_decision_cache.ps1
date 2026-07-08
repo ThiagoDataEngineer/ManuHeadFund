@@ -1,10 +1,12 @@
-﻿# lib_gem_decision_cache.ps1 -- B9 fix 2026-05-20 PM6+.
+﻿# lib_gem_decision_cache.ps1 -- B9 fix 2026-05-20 PM6+ with Tori confluence tracking
 # TTL cache pra GEM decisions recentes: mesma (market,reason) dentro de N min = skip.
 # Resolve loop de re-veto (DASH rejeitado 5x hoje com mesmo MCE_BLOCK 0.1823 -> ~$0.03 desperdicio).
 #
+# 2026-07-08 ENHANCEMENT: Track Tori confluence scores for failed entries
 # Schema: journal/gem_recent_decisions.json
 # [
-#   {"market":"DASHUSDT", "reason":"MCE_BLOCK 0.1823", "ts":"2026-05-20T18:00:00Z"},
+#   {"market":"DASHUSDT", "reason":"MCE_BLOCK 0.1823", "tori_confluence":65, "ts":"2026-05-20T18:00:00Z"},
+#   {"market":"BTCUSDT", "reason":"tori_confluence:75_lt_80", "tori_confluence":75, "ts":"2026-07-08T12:00:00Z"},
 #   ...
 # ]
 #
@@ -48,17 +50,26 @@ function Add-GemRejection {
     param(
         [Parameter(Mandatory)] [string] $Path,
         [Parameter(Mandatory)] [string] $Market,
-        [Parameter(Mandatory)] [string] $Reason
+        [Parameter(Mandatory)] [string] $Reason,
+        [int] $ToriConfluenceScore = -1   # 2026-07-08: optional Tori score tracking
     )
     $normReason = _GemCache-NormReason $Reason
     $entries = @(_GemCache-Load -Path $Path)
     # Dedup por (market, normReason): remove existente, adiciona novo timestamp
     $entries = @($entries | Where-Object { -not ($_.market -eq $Market -and (_GemCache-NormReason $_.reason) -eq $normReason) })
-    $entries += [PSCustomObject]@{
+
+    $newEntry = [PSCustomObject]@{
         market = $Market
         reason = $Reason
         ts     = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ssZ")
     }
+
+    # Add Tori confluence score if provided
+    if ($ToriConfluenceScore -ge 0) {
+        $newEntry | Add-Member -NotePropertyName tori_confluence -NotePropertyValue $ToriConfluenceScore
+    }
+
+    $entries += $newEntry
     # Mantem so ultimos 200 entries (rolling)
     if ($entries.Count -gt 200) {
         $entries = $entries[-200..-1]
