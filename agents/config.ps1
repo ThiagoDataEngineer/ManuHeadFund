@@ -206,44 +206,44 @@ $TORI_SIGNALS_FILE = Join-Path $JOURNAL_DIR "tori_paper_signals.jsonl"
 # ── GemAgent — Micro-Caps Explosivos (SPOT, pipeline independente) ────────────
 
 # Deteccao de volume spike (Gate 1)
-$GEM_VOL_SPIKE_MIN    = 2.0       # minimo 2.0x volume medio para spike
+$global:GEM_VOL_SPIKE_MIN    = 2.0       # minimo 2.0x volume medio para spike
 
 # Filtros de mercado (Gates 2-3)
-$GEM_MCAP_DISCOVERY   = 2000000.0   # mcap <= $2M: modo DISCOVERY
-$GEM_MCAP_MOMENTUM    = 20000000.0  # mcap <= $20M: modo MOMENTUM (acima: ignorar)
-$GEM_LISTING_DAYS_MAX = 10          # Gate 5: max dias desde listagem (novidade)
+$global:GEM_MCAP_DISCOVERY   = 2000000.0   # mcap <= $2M: modo DISCOVERY
+$global:GEM_MCAP_MOMENTUM    = 20000000.0  # mcap <= $20M: modo MOMENTUM (acima: ignorar)
+$global:GEM_LISTING_DAYS_MAX = 10          # Gate 5: max dias desde listagem (novidade)
 
 # Sizing por modo (% do capital total)
 # 2026-05-20 PM4: aumentado 0.2->0.5% e 0.4->0.8% por math realista.
 #   Math antes: $5.52/trade DISCOVERY = EV ~$14/mes (10 trades), nao move ponteiro $2762.
 #   Math agora: $13.81/trade DISCOVERY = EV ~$34/mes, ainda 2.5x abaixo de RISK_MAXIMO_PCT 1%.
 #   Drawdown max 10 stops seguidos = 2.5% capital (vs golden rule 1% per trade respected).
-$GEM_CAPITAL_DISCOVERY = 0.005  # 0.5% para DISCOVERY (altissimo risco)
-$GEM_CAPITAL_MOMENTUM  = 0.008  # 0.8% para MOMENTUM
+$global:GEM_CAPITAL_DISCOVERY = 0.005  # 0.5% para DISCOVERY (altissimo risco)
+$global:GEM_CAPITAL_MOMENTUM  = 0.008  # 0.8% para MOMENTUM
 
 # Stop e target por modo (fracao do preco de entrada)
-$GEM_STOP_DISCOVERY   = 0.50   # -50% DISCOVERY
-$GEM_STOP_MOMENTUM    = 0.30   # -30% MOMENTUM
-$GEM_TARGET_DISCOVERY = 2.00   # +200% DISCOVERY (R:R implicito 1:4)
-$GEM_TARGET_MOMENTUM  = 0.90   # +90%  MOMENTUM
+$global:GEM_STOP_DISCOVERY   = 0.50   # -50% DISCOVERY
+$global:GEM_STOP_MOMENTUM    = 0.30   # -30% MOMENTUM
+$global:GEM_TARGET_DISCOVERY = 2.00   # +200% DISCOVERY (R:R implicito 1:4)
+$global:GEM_TARGET_MOMENTUM  = 0.90   # +90%  MOMENTUM
 
 # Duracao maxima de posicao (dias corridos)
-$GEM_MAX_DAYS_DISC    = 30
-$GEM_MAX_DAYS_MOM     = 21
-$GEM_TRAILING_PCT     = 0.30   # trailing stop: 30% abaixo do pico
+$global:GEM_MAX_DAYS_DISC    = 30
+$global:GEM_MAX_DAYS_MOM     = 21
+$global:GEM_TRAILING_PCT     = 0.30   # trailing stop: 30% abaixo do pico
 
 # Score minimo para abertura de posicao
-$GEM_SCORE_MIN_DISC   = 45     # DISCOVERY: 2026-06-11 relaxed 55→45 (allow AINUSDT score=50)
-$GEM_SCORE_MIN_MOM    = 40     # MOMENTUM: 2026-06-11 relaxed 45→40
+$global:GEM_SCORE_MIN_DISC   = 45     # DISCOVERY: 2026-06-11 relaxed 55→45 (allow AINUSDT score=50)
+$global:GEM_SCORE_MIN_MOM    = 40     # MOMENTUM: 2026-06-11 relaxed 45→40
 
 # Acumulacao organica — thresholds (Gate 6)
-$GEM_CV_ORGANIC_MIN   = 0.5    # coef. variacao de volume: heterogeneidade minima
-$GEM_WASH_MAX_PCT     = 0.40   # max 40% de candles suspeitos de wash
-$GEM_GREEN_RATIO_MIN  = 0.65   # min 65% de candles de alta (compradores dominantes)
-$GEM_WICK_RATIO_MAX   = 2.5    # max ratio sombra/corpo (pressao vendedora)
+$global:GEM_CV_ORGANIC_MIN   = 0.5    # coef. variacao de volume: heterogeneidade minima
+$global:GEM_WASH_MAX_PCT     = 0.40   # max 40% de candles suspeitos de wash
+$global:GEM_GREEN_RATIO_MIN  = 0.65   # min 65% de candles de alta (compradores dominantes)
+$global:GEM_WICK_RATIO_MAX   = 2.5    # max ratio sombra/corpo (pressao vendedora)
 
 # Range minimo para pre-filtro (Gate 1 complementar)
-$GEM_RANGE_MIN_PCT    = 0.15   # variacao minima de 15% no dia
+$global:GEM_RANGE_MIN_PCT    = 0.15   # variacao minima de 15% no dia
 
 # ── LLM Quota Optimization (2026-05-26) ──────────────────────────────────────
 # Groq free tier: 14.4K reqs/dia (muito restritivo com 3 drones Mesa).
