@@ -68,4 +68,4 @@ function CoinEx-GetPendingPositions {
     }
 }
 
-Export-ModuleMember -Function @('Get-CoinExFuturesPositions', 'Get-CoinExSpotBalance', 'CoinEx-GetPendingPositions')
+# Functions exported via dot-sourcing: Get-CoinExFuturesPositions, Get-CoinExSpotBalance, CoinEx-GetPendingPositions
