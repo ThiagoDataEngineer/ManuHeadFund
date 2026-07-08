@@ -6,6 +6,7 @@ function Get-CoinExFuturesPositions {
     <#
     .SYNOPSIS
     Busca posições FUTURES abertas da CoinEx API
+    (Wrapper de CoinEx-GetPendingPositions que já existe em lib_coinex.ps1)
 
     .OUTPUTS
     @(position objects)
@@ -14,12 +15,12 @@ function Get-CoinExFuturesPositions {
     param()
 
     try {
-        # GET /v2/futures/positions
-        if (Get-Command CoinEx-Get -ErrorAction SilentlyContinue) {
-            $response = CoinEx-Get "/v2/futures/positions" -ErrorAction SilentlyContinue
-
-            if ($response -and $response.data) {
-                return @($response.data | Where-Object { $_.position_qty -gt 0 })
+        # CoinEx-GetPendingPositions já existe em lib_coinex.ps1 e usa CoinEx-Get
+        # que usa $COINEX_ACCESS_ID e $COINEX_SECRET_KEY (setados em config.ps1)
+        if (Get-Command CoinEx-GetPendingPositions -ErrorAction SilentlyContinue) {
+            $positions = @(CoinEx-GetPendingPositions -ErrorAction SilentlyContinue)
+            if ($positions -and $positions.Count -gt 0) {
+                return $positions
             }
         }
     } catch {

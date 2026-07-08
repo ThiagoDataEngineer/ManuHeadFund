@@ -11,20 +11,23 @@ $baseDir = Split-Path -Parent $scriptDir
 $journalDir = Join-Path $baseDir "journal"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# LOAD CONFIG + LIBS
+# LOAD CONFIG + LIBS (SAME AS GEM_EXECUTOR)
 # ─────────────────────────────────────────────────────────────────────────────
 
 try {
-    # Carregar config (com credenciais)
-    . "$scriptDir\config.ps1" -ErrorAction SilentlyContinue
+    # Carregar config.ps1 (setup ambiente, credenciais via $env:)
+    . "$scriptDir\config.ps1" -ErrorAction Stop
 
-    # Carregar libs
-    . "$scriptDir\lib_coinex.ps1" -ErrorAction SilentlyContinue
+    # Carregar libs em EXATA ordem de gem_executor
+    . "$scriptDir\lib_coinex.ps1" -ErrorAction Stop
+    . "$scriptDir\lib_position_sync_realtime.ps1" -ErrorAction Stop
+
+    # Posição fetch helper
     . "$scriptDir\lib_coinex_positions_fetch.ps1" -ErrorAction SilentlyContinue
-    . "$scriptDir\lib_position_sync_realtime.ps1" -ErrorAction SilentlyContinue
-    . "$scriptDir\lib_journal.ps1" -ErrorAction SilentlyContinue
+
 } catch {
-    Write-Host "❌ Erro ao carregar libs: $_" -ForegroundColor Red
+    Write-Host "❌ Erro ao carregar: $_" -ForegroundColor Red
+    Write-Host "   Stack: $($_.ScriptStackTrace)" -ForegroundColor Red
     exit 1
 }
 
