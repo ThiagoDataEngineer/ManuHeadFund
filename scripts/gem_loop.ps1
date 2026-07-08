@@ -3,20 +3,20 @@
 # Por que existe (2026-05-18):
 # - scan_master roda DAILY (1x/dia) -- ideal para orchestrator V6 + trailing
 # - GemAgent precisa de ritmo INTRA-DAY (micro-cap pumps tempo-sensiveis)
-# - Loop separado: cycle 1h default
+# - Loop separado: cycle 10min (LIVE trading, não 1h!)
 #
 # Mesmos guards do gem_executor (tier filter + sizing + freq + custodial removido).
 # Idempotent: nao spawna se ja tem gem_loop rodando.
 #
 # Uso:
-#   pwsh -File scripts\gem_loop.ps1                       # cycle default 60min
-#   pwsh -File scripts\gem_loop.ps1 -CheckInterval 30     # 30min cycle
+#   pwsh -File scripts\gem_loop.ps1                       # cycle default 10min LIVE
+#   pwsh -File scripts\gem_loop.ps1 -CheckInterval 5      # 5min cycle (aggressive)
 #   pwsh -File scripts\gem_loop.ps1 -Force                # bypassa idempotent
 #
 # PS 5.1. UTF-8 BOM.
 
 param(
-    [int]$CheckInterval = 60,   # minutos entre cycles GemScan
+    [int]$CheckInterval = 10,   # minutos entre cycles GemScan (LIVE: 10min não 60!)
     [switch]$Once,              # roda 1 cycle e sai (teste / cloud)
     [switch]$Force,             # ignora idempotent
     [switch]$DryRun             # nao executa ordens reais (passa -DryRun ao executor)

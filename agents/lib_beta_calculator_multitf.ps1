@@ -1,4 +1,4 @@
-﻿# lib_beta_calculator_multitf.ps1 -- Beta multi-TF calculator (FALTAVA!)
+# lib_beta_calculator_multitf.ps1 -- Beta multi-TF calculator (FALTAVA!)
 #
 # Calcula beta (correlação) entre altcoin e BTC em 1D/4H/1H
 # Persiste em Supabase beta_history table (que Mentor lê)
@@ -240,3 +240,4 @@ function Sync-AllBetasMultiTF {
 #   . agents/lib_beta_calculator_multitf.ps1
 #   Sync-AllBetasMultiTF -Markets $candidateMarkets
 # ─────────────────────────────────────────────────────────────────────
+
