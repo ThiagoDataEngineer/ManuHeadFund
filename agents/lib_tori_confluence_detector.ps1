@@ -588,4 +588,4 @@ function Get-RSI {
 # EXPORT
 # ============================================================================
 
-Export-ModuleMember -Function Get-VolumeClimax, Get-RSIExtreme, Get-FractalPattern, Get-StructuralBreak, Get-VolumeProfile, Get-ConfluenceScoreEnhanced
+# All functions are automatically available after dot-sourcing

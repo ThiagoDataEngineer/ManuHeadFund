@@ -1,0 +1,12 @@
+$env:COINEX_ACCESS_ID = 'unknown command "view" for "gh secret"  Usage:  gh secret <command> [flags]  Available commands:   delete   list   set'
+$env:COINEX_SECRET_KEY = 'unknown command "view" for "gh secret"  Usage:  gh secret <command> [flags]  Available commands:   delete   list   set'
+$env:TELEGRAM_BOT_TOKEN = 'unknown command "view" for "gh secret"  Usage:  gh secret <command> [flags]  Available commands:   delete   list   set'
+$env:TELEGRAM_CHAT_ID = 'unknown command "view" for "gh secret"  Usage:  gh secret <command> [flags]  Available commands:   delete   list   set'
+$env:SUPABASE_URL = 'unknown command "view" for "gh secret"  Usage:  gh secret <command> [flags]  Available commands:   delete   list   set'
+$env:SUPABASE_ANON_KEY = 'unknown command "view" for "gh secret"  Usage:  gh secret <command> [flags]  Available commands:   delete   list   set'
+$env:SUPABASE_SERVICE_KEY = 'unknown command "view" for "gh secret"  Usage:  gh secret <command> [flags]  Available commands:   delete   list   set'
+
+
+
+
+
