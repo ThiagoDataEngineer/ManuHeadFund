@@ -11,10 +11,14 @@ $baseDir = Split-Path -Parent $scriptDir
 $journalDir = Join-Path $baseDir "journal"
 
 # ─────────────────────────────────────────────────────────────────────────────
-# LOAD LIBS
+# LOAD CONFIG + LIBS
 # ─────────────────────────────────────────────────────────────────────────────
 
 try {
+    # Carregar config (com credenciais)
+    . "$scriptDir\config.ps1" -ErrorAction SilentlyContinue
+
+    # Carregar libs
     . "$scriptDir\lib_coinex.ps1" -ErrorAction SilentlyContinue
     . "$scriptDir\lib_coinex_positions_fetch.ps1" -ErrorAction SilentlyContinue
     . "$scriptDir\lib_position_sync_realtime.ps1" -ErrorAction SilentlyContinue
