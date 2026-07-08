@@ -925,9 +925,104 @@ function Invoke-GemExecute {
     $cachedTag = if ($precision) { "true" } else { "false" }
     Write-Host "  [PRECISION] $mkt $precType quote=$pricePrec base=$basePrec cached=$cachedTag" -ForegroundColor DarkGray
 
-    # 2026-06-08: Suporta LONG ou SHORT baseado no direction field
-    $direction = if ($Gem.PSObject.Properties['direction']) { [string]$Gem.direction } else { "LONG" }
-    $direction = if ($direction -in @("LONG","SHORT")) { $direction } else { "LONG" }
+    # 2026-07-08 FIX: Remove viés LONG automático. Decide direção via conviction multi-TF.
+    # Bug: entrada sem direction property default LONG, perdendo SHORTs óbvios (CRCLX case).
+    # Solução: se direction explícita, use. Senão, decide via convictions + pump-fade detector.
+    $direction = "SKIP"
+
+    if ($Gem.PSObject.Properties['direction'] -and "$($Gem.direction)" -in @("LONG","SHORT")) {
+        $direction = "$($Gem.direction)".ToUpper()
+        Write-Host "  [DIRECTION] Explícita no GEM: $direction" -ForegroundColor DarkYellow
+    } else {
+        # Sem direção explícita: calcular convictions LONG e SHORT
+        $longConv = 50
+        $shortConv = 50
+
+        # Detect pump-fade pattern (ativo blocker para LONG)
+        $isPumpFade = $false
+        $pumpDetectScore = 0
+        if (Get-Command Detect-EarlyPump -ErrorAction SilentlyContinue) {
+            try {
+                $pdChange = if ($null -ne $Gem.change_24h) { [double]$Gem.change_24h } else { 0 }
+                $pdVolR   = if ($null -ne $Gem.vol_data.volume_ratio) { [double]$Gem.vol_data.volume_ratio } else { 1.0 }
+                $pdRsi    = if ($null -ne $Gem.rsi_14) { [double]$Gem.rsi_14 } else { 50 }
+                $pumpDetect = Detect-EarlyPump -Market $mkt -ChangePercent24h $pdChange -VolumeRatio $pdVolR -RSI $pdRsi -CurrentPrice $price
+                if ($pumpDetect.is_pump -and $pumpDetect.pump_stage -match "FADE|TOP") {
+                    $isPumpFade = $true
+                    $pumpDetectScore = [int]$pumpDetect.confidence
+                    $shortConv = [math]::Min(100, $pumpDetectScore + 20)  # pump-fade = SHORT favorecido
+                    $longConv = [math]::Max(0, 50 - $pumpDetectScore)    # LONG desfavorecido
+                }
+            } catch { }
+        }
+
+        # Overextension + RSI check (mean-reversion SHORT favorecido)
+        if (-not $isPumpFade -and $prices.Count -ge 20) {
+            try {
+                $rsi = if ($null -ne $Gem.rsi_14) { [double]$Gem.rsi_14 } else { 50 }
+                if ($rsi -gt 65) {
+                    # Overbought: SHORT melhor
+                    $shortConv += 15
+                    $longConv = [math]::Max($longConv - 10, 30)
+                    Write-Host "  [OVEREXTENSION] RSI=$rsi (overbought) -> SHORT favorecido" -ForegroundColor DarkYellow
+                } elseif ($rsi -lt 35) {
+                    # Oversold: LONG melhor
+                    $longConv += 15
+                    $shortConv = [math]::Max($shortConv - 10, 30)
+                    Write-Host "  [OVERSOLD] RSI=$rsi (oversold) -> LONG favorecido" -ForegroundColor DarkYellow
+                }
+            } catch { }
+        }
+
+        # Apply regime bias
+        if ($global:CURRENT_REGIME -match "BEAR") {
+            # BEAR: SHORT mais favorecido
+            $shortConv += 10
+            $longConv = [math]::Max($longConv - 5, 40)
+        } elseif ($global:CURRENT_REGIME -match "BULL") {
+            # BULL: LONG mais favorecido
+            $longConv += 10
+            $shortConv = [math]::Max($shortConv - 5, 40)
+        }
+
+        # Clamp to 0-100
+        $longConv = [math]::Min([math]::Max([int]$longConv, 0), 100)
+        $shortConv = [math]::Min([math]::Max([int]$shortConv, 0), 100)
+
+        # Usar Resolve-EntryDirection (fail-closed)
+        if (Get-Command Resolve-EntryDirection -ErrorAction SilentlyContinue) {
+            try {
+                $dirDecision = Resolve-EntryDirection -AllowLong $true -AllowShort $true `
+                    -LongConviction $longConv -ShortConviction $shortConv -MinConviction 45
+                if ($dirDecision.act) {
+                    $direction = $dirDecision.direction
+                    Write-Host "  [DIRECTION] Resolvida via conviction: $direction (Long=$longConv Short=$shortConv, motivo: $($dirDecision.reason))" -ForegroundColor DarkYellow
+                } else {
+                    Write-Host "  [DIRECTION] SKIP — nenhum lado com conviction suficiente (L=$longConv S=$shortConv < 45 minimo)" -ForegroundColor DarkGray
+                    $direction = "SKIP"
+                }
+            } catch {
+                Write-Host "  [DIRECTION] Resolve-EntryDirection falhou ($_); fallback conservador: SKIP" -ForegroundColor Yellow
+                $direction = "SKIP"
+            }
+        } else {
+            # Fallback: se uma conviction é significativamente maior, usa
+            if ([math]::Abs($shortConv - $longConv) -ge 20) {
+                $direction = if ($shortConv -gt $longConv) { "SHORT" } else { "LONG" }
+                Write-Host "  [DIRECTION] Fallback (Resolve-EntryDirection NA): $direction (conviction gap=$([math]::Abs($shortConv - $longConv)))" -ForegroundColor Yellow
+            } else {
+                $direction = "SKIP"
+                Write-Host "  [DIRECTION] Fallback SKIP — convictions próximas (L=$longConv S=$shortConv)" -ForegroundColor DarkGray
+            }
+        }
+    }
+
+    # Block se SKIP (falha-fechado: sem direção clara = não entra)
+    if ($direction -eq "SKIP") {
+        Write-Host "  BLOQUEADO: Nenhuma direção com confidence suficiente" -ForegroundColor Red
+        return [PSCustomObject]@{ blocked = $true; blocked_by = @("no_direction_confidence"); market = $mkt }
+    }
+    $direction = if ($direction -in @("LONG","SHORT")) { $direction } else { "LONG" }  # safety check
 
     # 2026-06-17 fix: gems TRIGGER tem sizing sem stop_pct/target_pct -> StopPct=0 lancava.
     # Resolve-StopTargetPct devolve fracoes validas (default R:R 1:5) se ausentes/invalidas.
