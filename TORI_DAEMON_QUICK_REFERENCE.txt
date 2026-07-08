@@ -1,0 +1,199 @@
+╔══════════════════════════════════════════════════════════════════════════════╗
+║                   TORI DAEMON 24/7 SCANNER - QUICK REFERENCE                 ║
+╚══════════════════════════════════════════════════════════════════════════════╝
+
+WHAT IT DOES (In One Sentence)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Scans 150 CoinEx futures pairs every 4 hours, detects trendlines with 5-signal
+confluence scoring, tracks P&L, sends Telegram alerts, auto-restarts on crash.
+
+QUICK START (30 seconds)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. Edit config.local.ps1:
+   $env:COINEX_ACCESS_ID = "..."
+   $env:COINEX_SECRET_KEY = "..."
+
+2. Start daemon:
+   cd agents
+   .\Start-ToriDaemon.ps1
+
+3. Check status:
+   Get-Job -Name "ToriDaemon*"
+
+4. View logs:
+   Get-Content ../journal/tori_daemon.log -Tail 50
+
+5. Generate dashboard:
+   . tori_daemon_reporter.ps1; Export-ToriReports
+   Start-Process ../journal/reports/tori_dashboard.html
+
+STOP DAEMON
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+.\Stop-ToriDaemon.ps1              # Graceful
+.\Stop-ToriDaemon.ps1 -Force       # Force kill
+.\Stop-ToriDaemon.ps1 -GenerateReport  # + Save report
+
+KEY FILES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Source Code:
+  agents/tori_daemon_24h.ps1          Main daemon (4-hour loop)
+  agents/tori_telegram_alerts.ps1     Alert formatting
+  agents/tori_daemon_reporter.ps1     Dashboard + exports
+  agents/Start-ToriDaemon.ps1         Launcher
+  agents/Stop-ToriDaemon.ps1          Shutdown
+  agents/tori_daemon_watchdog.ps1     Process monitor
+
+Documentation:
+  docs/TORI_DAEMON_DEPLOYMENT.md      Full deployment guide (850 lines)
+  agents/TORI_DAEMON_README.md        Quick start (200 lines)
+  TORI_DAEMON_DELIVERY_SUMMARY.md     Project overview
+
+Tests:
+  tests/tori_daemon_integration.Tests.ps1  32 Pester tests
+
+State & Monitoring:
+  journal/tori_daemon_state.json      Active setups + metrics
+  journal/tori_daemon.log             Daemon logs
+  journal/tori_daemon_heartbeat.txt   5-min heartbeat
+  journal/tori_daemon_watchdog.log    Watchdog logs
+  journal/reports/tori_dashboard.html Interactive dashboard
+
+HOW IT WORKS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Every 4 hours:
+  1. Scan 150 USDT pairs (1W, 1D, 4H, 1H timeframes)
+  2. Detect trendlines (≥2 touches, 5-35° slope)
+  3. Calculate 5-signal confluence score (0-100)
+  4. Filter by threshold (≥80)
+  5. Track entries, stops, targets
+  6. Monitor for target hits / stop hits
+  7. Update P&L
+  8. Send Telegram alerts
+  9. Save state (JSON)
+  10. Sleep 4 hours + heartbeat every 5 min
+
+Watchdog (every 30 seconds):
+  • Monitor daemon heartbeat (should be <5 min old)
+  • If stale (>10 min): auto-restart daemon
+  • Max 3 restarts per session
+  • Log all events
+
+TELEGRAM ALERTS (4 Types)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. New Setup (score ≥80)
+   🟢 NEW SETUP — BTCUSDT [1D]
+   Confidence: 87/100 | Entry: 63,420 | Stop: 64,650 | Target: 60,500 | R:R: 3.3x
+
+2. Target Hit
+   ✅ CLOSED — TARGET HIT
+   BTCUSDT: 63,420 → 60,500 | Profit: +$2,920 (+4.6%) | Hold: 3h 24m
+
+3. Stop Loss
+   ❌ CLOSED — STOPPED
+   BTCUSDT: 63,420 → 64,650 | Loss: -$1,229 (-1.9%) | Hold: 47m
+
+4. Summary (every 4 hours)
+   Active Setups: 12 (5 LONG, 7 SHORT) | Avg Score: 84/100
+   Recent Trades: 8 (6 wins, 2 losses) | Win Rate: 75% | P&L: +$3,250
+
+MONITORING COMMANDS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Status:
+  Get-Job -Name "ToriDaemon*"
+  Get-Content journal/tori_daemon_heartbeat.txt | ConvertFrom-Json
+
+Logs:
+  Get-Content journal/tori_daemon.log -Tail 50
+  Get-Content journal/tori_daemon_watchdog.log -Tail 50
+
+State:
+  $state = Get-Content journal/tori_daemon_state.json | ConvertFrom-Json
+  $state.active_setups | Select pair, trend_type, confidence_score, unrealized_pnl
+  $state.performance | Format-Table
+
+Reports:
+  . agents/tori_daemon_reporter.ps1
+  Export-ToriReports
+  Start-Process journal/reports/tori_dashboard.html
+
+Tests:
+  Invoke-Pester tests/tori_daemon_integration.Tests.ps1 -Verbose
+
+PERFORMANCE TARGETS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Scan time:     8-10 minutes (150 pairs × 4 timeframes)
+Memory:        <200 MB
+CPU (idle):    <5%
+CPU (scanning):<50%
+Disk I/O:      <100 KB per scan
+API rate:      <50 req/min (CoinEx limit)
+Heartbeat:     Every 5 minutes
+Startup:       <10 seconds
+Shutdown:      <30 seconds
+
+CONFIGURATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Edit tori_daemon_24h.ps1 line 20-30:
+
+  $script:SCAN_INTERVAL_MINUTES = 240    # 4 hours (can reduce to 120, 60, etc)
+  $script:HEARTBEAT_INTERVAL_SEC = 300   # 5 minutes
+  $script:TIMEFRAMES = @("1W", "1D", "4H", "1H")
+  $script:CONFLUENCE_THRESHOLD = 80      # Min score (50-90 range)
+  $script:MAX_PAIRS_PER_SCAN = 150       # Pairs per cycle
+  $script:API_RATE_LIMIT_DELAY_MS = 100  # Milliseconds between calls
+
+TROUBLESHOOTING
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Issue: Daemon won't start
+  → Check config.local.ps1 exists with COINEX keys
+  → Check lib files exist (lib_tori_*.ps1, lib_coinex.ps1)
+  → View startup log: Get-Content journal/tori_daemon_startup.log -Tail 30
+
+Issue: Frequent crashes
+  → View watchdog logs: Get-Content journal/tori_daemon_watchdog.log -Tail 50
+  → Check if API timeout: increase SCAN_INTERVAL_MINUTES
+  → Check network connectivity
+
+Issue: No Telegram alerts
+  → Verify TELEGRAM_BOT_TOKEN and TELEGRAM_CHAT_ID in config.local.ps1
+  → Bot must be member of chat
+  → Test manually: . agents/tori_telegram_alerts.ps1; Send-TelegramMessage "Test"
+
+Issue: Memory/disk growing
+  → Check state file size: (Get-Item journal/tori_daemon_state.json).Length / 1MB
+  → If >50MB: restart daemon (creates fresh state)
+  → Archive old logs: tar -czf journal/logs_$(date +%Y%m%d).tar.gz journal/tori_*.log
+
+FULL DOCUMENTATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+See docs/TORI_DAEMON_DEPLOYMENT.md for:
+  • Complete installation from scratch
+  • Windows/Linux/WSL deployment
+  • Automated startup (Scheduled Tasks + Cron)
+  • Advanced configuration
+  • Performance tuning
+  • Disaster recovery
+  • Monitoring integration (Prometheus)
+  • Security best practices
+
+CONTACTS & SUPPORT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Documentation:      docs/TORI_DAEMON_DEPLOYMENT.md
+Quick Start:        agents/TORI_DAEMON_README.md
+Project Overview:   TORI_DAEMON_DELIVERY_SUMMARY.md
+Logs:               journal/tori_daemon*.log
+State:              journal/tori_daemon_state.json
+Dashboard:          journal/reports/tori_dashboard.html
+
+STATUS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✅ PRODUCTION READY
+✅ PS 5.1+ COMPATIBLE
+✅ ZERO EXTERNAL DEPENDENCIES
+✅ 32 INTEGRATION TESTS
+✅ CRASH-SAFE WITH AUTO-RESTART
+✅ COMPREHENSIVE LOGGING
+✅ 2,000+ LINES DOCUMENTATION
+
+Version 1.0 | 2026-07-08 | Enterprise Grade
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
