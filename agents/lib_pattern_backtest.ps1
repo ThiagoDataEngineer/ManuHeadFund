@@ -240,5 +240,5 @@ function Invoke-PatternBacktest {
     }
 }
 
-# (Export-ModuleMember removed - this is a script, not a module)
+# (
 

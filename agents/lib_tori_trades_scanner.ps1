@@ -557,5 +557,5 @@ function Export-ToriSetupsToJson {
 }
 
 # Public interface
-# (Export-ModuleMember removed - this is a script, not a module)
+# (
 

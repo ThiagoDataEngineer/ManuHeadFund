@@ -252,12 +252,12 @@ function Send-CriticalErrorAlert {
     Send-EssentialAlert -Type "CRITICAL_ERROR" -Message $Message
 }
 
-# (Export-ModuleMember removed - this is a script, not a module)
-    'Send-TradeOpenAlert'
+# (    'Send-TradeOpenAlert'
     'Send-TradeCloseAlert'
     'Send-TrailingGainAlert'
     'Send-SystemDownAlert'
     'Send-SystemUpAlert'
     'Send-CriticalErrorAlert'
 ) -ErrorAction SilentlyContinue
+
 

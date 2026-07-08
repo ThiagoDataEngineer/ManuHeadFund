@@ -411,5 +411,5 @@ function New-ToriHtmlDashboard {
     Write-Host "HTML dashboard exported to: $OutputPath" -ForegroundColor Green
 }
 
-# (Export-ModuleMember removed - this is a script, not a module)
+# (
 
