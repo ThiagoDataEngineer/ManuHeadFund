@@ -240,4 +240,5 @@ function Invoke-PatternBacktest {
     }
 }
 
-Export-ModuleMember -Function Invoke-PatternBacktest, Get-CandleHistory, Test-PumpFadePattern, Test-BreakoutPattern, Test-RSIDivergencePattern
+# (Export-ModuleMember removed - this is a script, not a module)
+

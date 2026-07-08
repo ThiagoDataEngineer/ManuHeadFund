@@ -406,10 +406,11 @@ $STOP_LOSS_PER_ASSET_CONFIG = @{
 #   • Live: Monitor "stops hit" vs "positions closed" ratio
 #   •Expected: Wicks hit should be <5% (vs current ~40%)
 
-Export-ModuleMember -Function @(
+# (Export-ModuleMember removed - this is a script, not a module)
     'Get-SLByATR',
     'Get-SLByWickPercentile',
     'Get-SLByRegimeAwareBATR',
     'Get-SLByHybrid'
 )
+
 

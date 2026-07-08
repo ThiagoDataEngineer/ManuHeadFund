@@ -557,4 +557,5 @@ function Export-ToriSetupsToJson {
 }
 
 # Public interface
-Export-ModuleMember -Function Invoke-ToriTradesAnalysis, Export-ToriSetupsToJson
+# (Export-ModuleMember removed - this is a script, not a module)
+

@@ -1,4 +1,4 @@
-﻿# gem_executor.ps1 -- Execucao real de gems na CoinEx
+# gem_executor.ps1 -- Execucao real de gems na CoinEx
 # Padrao: FUTURES (isolated margin). Fallback: SPOT quando par nao tem futuros.
 # Dot-source: . (Join-Path $PSScriptRoot "gem_executor.ps1")
 
@@ -1648,3 +1648,4 @@ function Write-GemTradeJournal {
 
     Add-Content -Path $tradeFile -Value $row -Encoding utf8
 }
+

@@ -225,7 +225,7 @@ function Sync-AllBetasMultiTF {
             $ok = Publish-BetaToSupabase -Market $mkt -BetaData $betaData
             if ($ok) { $successful++ } else { $failed++ }
         } else {
-            Write-Host "  [Beta] $mkt: Skipped (reason: $($betaData.reason))" -ForegroundColor Yellow
+            Write-Host "  [Beta] $mkt : Skipped (reason: $($betaData.reason))" -ForegroundColor Yellow
             $failed++
         }
     }
