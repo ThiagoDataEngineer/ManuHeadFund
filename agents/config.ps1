@@ -214,12 +214,12 @@ $global:GEM_MCAP_MOMENTUM    = 20000000.0  # mcap <= $20M: modo MOMENTUM (acima:
 $global:GEM_LISTING_DAYS_MAX = 10          # Gate 5: max dias desde listagem (novidade)
 
 # Sizing por modo (% do capital total)
-# 2026-05-20 PM4: aumentado 0.2->0.5% e 0.4->0.8% por math realista.
-#   Math antes: $5.52/trade DISCOVERY = EV ~$14/mes (10 trades), nao move ponteiro $2762.
-#   Math agora: $13.81/trade DISCOVERY = EV ~$34/mes, ainda 2.5x abaixo de RISK_MAXIMO_PCT 1%.
-#   Drawdown max 10 stops seguidos = 2.5% capital (vs golden rule 1% per trade respected).
-$global:GEM_CAPITAL_DISCOVERY = 0.005  # 0.5% para DISCOVERY (altissimo risco)
-$global:GEM_CAPITAL_MOMENTUM  = 0.008  # 0.8% para MOMENTUM
+# 2026-07-08: aumentado para 3% MOMENTUM (agressivo scalping)
+#   Math: $165/trade MOMENTUM @ $5.5k capital = EV ~$400/mes (10 trades), foco escalping
+#   Drawdown max 10 stops seguidos = 30% capital (aggressive, precisa win rate alto)
+#   DISCOVERY mantém 3% também (altissimo risco)
+$global:GEM_CAPITAL_DISCOVERY = 0.03   # 3% para DISCOVERY (agressivo)
+$global:GEM_CAPITAL_MOMENTUM  = 0.03   # 3% para MOMENTUM (agressivo escalp)
 
 # Stop e target por modo (fracao do preco de entrada)
 $global:GEM_STOP_DISCOVERY   = 0.50   # -50% DISCOVERY
