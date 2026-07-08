@@ -8,69 +8,16 @@
 
 $_positionSyncDir = Split-Path $PSScriptRoot -Parent | Join-Path -ChildPath "journal"
 
-# 2026-07-08: DISABLED - CoinEx-GetPendingPositions param conflict
-# Function temporarily stub to prevent "IsFutures" parameter errors
+# 2026-07-08: COMPLETELY DISABLED - CoinEx-GetPendingPositions param conflict
+# Sync-ExchangePositionsLive is now a simple stub that returns empty array
+# Positions tracked via parallel Trailing system instead
 function Sync-ExchangePositionsLive {
-    [CmdletBinding()]
-    [OutputType([object[]])]
     param(
         [bool]$IsFutures = $true,
         [int]$MaxPositions = 100
     )
-
-    # Stub: return empty, position tracking via Trailing system
+    # STUB: return empty array immediately — no position sync from exchange
     return @()
-
-    try {
-        $posType = if ($IsFutures) { "Futures" } else { "Spot" }
-        Write-Verbose "[position_sync] Syncing $posType positions..."
-
-        # Fetch from exchange
-        $positions = @()
-        try {
-            if (Test-Command -Name "CoinEx-GetPendingPositions") {
-                $positions = @(CoinEx-GetPendingPositions -IsFutures $IsFutures -ErrorAction SilentlyContinue)
-                Write-Verbose "[position_sync] Fetched $($positions.Count) $posType positions"
-            } else {
-                Write-Warning "[position_sync] CoinEx-GetPendingPositions not available"
-                return @()
-            }
-        } catch {
-            Write-Error "[position_sync] CoinEx fetch failed: $_"
-            return @()
-        }
-
-        if ($positions.Count -gt $MaxPositions) {
-            $positions = @($positions | Select-Object -First $MaxPositions)
-            Write-Warning "[position_sync] Truncated to $MaxPositions positions"
-        }
-
-        # Mirror each position to Supabase
-        $synced = @()
-        foreach ($pos in $positions) {
-            try {
-                $record = _Normalize-ExchangePosition -Position $pos -IsFutures $IsFutures
-
-                # Save to Supabase (best-effort)
-                if (Test-Command -Name "Save-StateRecords") {
-                    Save-StateRecords -Table "open_positions" -Records @($record) -PrimaryKey "id" -ErrorAction SilentlyContinue | Out-Null
-                }
-
-                # Log sync activity
-                _Log-SyncActivity -Action "fetch" -Symbol $record.symbol -State $record | Out-Null
-
-                $synced += $record
-            } catch {
-                Write-Error "[position_sync] Normalize position failed for $($pos.symbol): $_"
-            }
-        }
-
-        Write-Verbose "[position_sync] Synced $($synced.Count) $posType positions to Supabase"
-        return @($synced)
-    } catch {
-        Write-Error "[position_sync] Sync-ExchangePositionsLive failed: $_"
-        return @()
-    }
 }
 
 function Reconcile-AppToJournal {
