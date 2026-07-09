@@ -107,45 +107,61 @@ $candles1D = @(Get-CoinexCandles -Market $Market -Timeframe "1D" -Limit $Lookbac
 
 ---
 
-## 2. CREDENCIAIS FALTANDO
+## 2. CREDENCIAIS — ESTÃO EM GITHUB, FALTAM LOCALMENTE
 
-### 2.1 CoinEx API Keys
+### 2.1 Status no GitHub Actions ✅
 
-**Status**: `agents/config.local.ps1` tem **placeholders**
+**Confirmado**: Todas as credenciais estão setadas em GitHub Actions secrets:
 
+| Secret | Status | Último update |
+|--------|--------|---------------|
+| `GROQ_API_KEY` | ✅ SET | 3 weeks ago |
+| `GROQ_API_KEY_2` | ✅ SET | 3 weeks ago |
+| `ANTHROPIC_API_KEY` | ✅ SET | 3 weeks ago |
+| `COINEX_ACCESS_ID` | ✅ SET | 2 months ago |
+| `COINEX_SECRET_KEY` | ✅ SET | 2 months ago |
+| `SUPABASE_*` | ✅ SET | 2 days ago |
+| `TELEGRAM_*` | ✅ SET | 2 weeks ago |
+
+**Conclusão**: Nuvem (GitHub Actions) está **100% configurada e funcionando**.
+
+### 2.2 Status Localmente ❌
+
+**config.local.ps1** tem **placeholders**:
 ```powershell
-# Atual (inútil)
 $script:COINEX_ACCESS_ID = "placeholder_access_id_from_coinex"
 $script:COINEX_SECRET_KEY = "placeholder_secret_key_from_coinex"
 ```
 
-**Impacto**: Qualquer call a `CoinEx-*` funções retornará erro 401/403.
+**Env vars** estão **vazios**:
+```
+$env:GROQ_API_KEY = [VAZIO]
+$env:ANTHROPIC_API_KEY = [VAZIO]
+```
 
-**Solução**:
-1. Ir para https://www.coinex.com/user/setting/api
-2. Gerar nova chave ou copiar existente
-3. Atualizar `agents/config.local.ps1` ou setar env vars:
-   ```powershell
-   $env:COINEX_ACCESS_ID = "sua_chave_aqui"
-   $env:COINEX_SECRET_KEY = "seu_secret_aqui"
-   ```
+**Impacto**: Teste local de Mesa/Beta/CoinEx falha. Nuvem funciona fine.
 
-### 2.2 LLM API Keys
+### 2.3 Solução (RÁPIDA)
 
-**Status**: **FALTAM COMPLETAMENTE**
-
-| Variável | Valor Atual | Necessário? | Origem |
-|----------|------------|-----------|--------|
-| `$env:GROQ_API_KEY` | ❌ VAZIO | ✅ SIM (Mesa drones primary) | https://console.groq.com/keys |
-| `$env:GROQ_API_KEY_2` | ❌ VAZIO | ⚠️ OPC (fallback rate-limit) | https://console.groq.com/keys |
-| `$env:ANTHROPIC_API_KEY` | ❌ VAZIO | ✅ SIM (Haiku fallback) | https://console.anthropic.com/ |
-
-**Impacto**: Mesa drones retornam NULL → Consensus = CAOS → Sistema veta tudo.
-
-**Solução**: Obter keys e setar:
+**Opção A (1 comando):**
 ```powershell
-$env:GROQ_API_KEY = "gsk_..."
-$env:ANTHROPIC_API_KEY = "sk-ant-..."
+. carregar_secrets_github.ps1
+```
+Script que automaticamente busca secrets de GitHub Actions e popula `$env:*`.
+
+**Opção B (manual, 1-2 min):**
+```powershell
+gh secret view GROQ_API_KEY | Set-Item Env:GROQ_API_KEY
+gh secret view ANTHROPIC_API_KEY | Set-Item Env:ANTHROPIC_API_KEY
+gh secret view COINEX_ACCESS_ID | Set-Item Env:COINEX_ACCESS_ID
+gh secret view COINEX_SECRET_KEY | Set-Item Env:COINEX_SECRET_KEY
+```
+
+**Opção C (permanente):**
+Editar `agents/config.local.ps1` manualmente e adicionar:
+```powershell
+$script:GROQ_API_KEY = "gsk_..." # de gh secret view GROQ_API_KEY
+$script:ANTHROPIC_API_KEY = "sk-ant-..." # de gh secret view ANTHROPIC_API_KEY
 ```
 
 ---
@@ -174,52 +190,56 @@ $env:ANTHROPIC_API_KEY = "sk-ant-..."
 
 ## 4. PLANO DE ATIVAÇÃO (PRÓXIMOS PASSOS)
 
-### Fase 1: Obter Credenciais (30 min)
+### Fase 1: Carregar Credenciais de GitHub (1 min) ⚡
 
-1. **Groq API**: https://console.groq.com/keys
-   - Free tier: 30 RPM (mais que suficiente)
-   - Copia a chave `gsk_...`
+**JÁ ESTÃO NO GITHUB!** Só precisa carregar localmente.
 
-2. **Anthropic Claude**: https://console.anthropic.com/
-   - Free tier: $5 crédito
-   - Copia a chave `sk-ant-...`
-
-3. **CoinEx**: https://www.coinex.com/user/setting/api
-   - Cria nova key ou copia existente
-   - Access ID + Secret Key
-
-### Fase 2: Setar Variáveis (5 min)
-
-**Opção A (temporário):**
 ```powershell
-$env:GROQ_API_KEY = "gsk_..."
-$env:ANTHROPIC_API_KEY = "sk-ant-..."
-$env:COINEX_ACCESS_ID = "..."
-$env:COINEX_SECRET_KEY = "..."
+# 1 comando resolve tudo:
+. carregar_secrets_github.ps1
+
+# Validar que carregou:
+Write-Host $env:GROQ_API_KEY.Substring(0,10)...
+Write-Host $env:ANTHROPIC_API_KEY.Substring(0,10)...
 ```
 
-**Opção B (permanente):**
-Editar `agents/config.local.ps1`:
+Se isso funcionar, pule direto para **Fase 2 (validar)**.
+
+**Se gh CLI não estiver autenticado:**
 ```powershell
-$script:GROQ_API_KEY = "gsk_..."
-$script:ANTHROPIC_API_KEY = "sk-ant-..."
-$script:COINEX_ACCESS_ID = "..."
-$script:COINEX_SECRET_KEY = "..."
+gh auth login
+# Fazer login com seu GitHub account
 ```
 
-### Fase 3: Validação (10 min)
+### Fase 2: Validar Carregamento (1 min)
 
 ```powershell
-# 1. Rodar diagnóstico
 . diagnostico_bloqueios.ps1
+```
 
-# 2. Verificar Mesa drones
+Deve mostrar:
+- ✅ GROQ_API_KEY: SET (xxx chars)
+- ✅ ANTHROPIC_API_KEY: SET (xxx chars)
+- ✅ COINEX_ACCESS_ID: REAL (não placeholder)
+- ✅ lib_beta_calculator_multitf.ps1: FIXED
+- ✅ lib_gem_discovery.ps1: OK
+
+### Fase 3: Testar Mesa Drones (5 min)
+
+```powershell
+# 1. Carregar libs
+. agents/lib_claude.ps1
 . agents/mesa_agent.ps1
-$mesa = Invoke-Mesa -Market "BTCUSDT" -Context @{macro="bullish"}
-# Deve retornar: consensus="FORTE_3", sinal_consenso="LONG" ou "SHORT"
 
-# 3. Rodar suites de teste
-Invoke-Pester tests/gem_executor.Tests.ps1
+# 2. Testar 1 drone em isolado
+$test1 = Invoke-MesaDrone -Drone "termal" -UserContent "Mercado: BTCUSDT. Análise: RSI 65, acima EMA, volume alto. Qual sinal?"
+# Deve retornar: @{sinal="LONG"|"SHORT"|"NEUTRO", forca=60-90, justificativa="...", confluencias=@(...)}
+
+# 3. Testar mesa completo
+$mesa = Invoke-Mesa -Market "BTCUSDT" -Context @{macro="bullish"}
+# Deve retornar consensus != "CAOS" (antes voltava CAOS 100%)
+
+Write-Host "Mesa test: $($mesa.consensus) / $($mesa.sinal_consenso) / score=$($mesa.score_avg)"
 ```
 
 ### Fase 4: Deploy (5 min)

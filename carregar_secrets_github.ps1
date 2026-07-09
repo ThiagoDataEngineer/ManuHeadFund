@@ -1,17 +1,21 @@
 # carregar_secrets_github.ps1 - Load GitHub Actions secrets locally
-# Carrega credenciais de GitHub Actions para uso local
-# 2026-07-09
+# Carrega credenciais de GitHub Actions para uso local via config.local.ps1
+# 2026-07-09 - VERSAO CORRIGIDA (sem gh secret view, usa setup via config)
 
-Write-Host "`n`$(_)" -ForegroundColor Cyan
-Write-Host "Carregando secrets de GitHub Actions..." -ForegroundColor Cyan
-Write-Host "Requer: gh CLI autenticado`n" -ForegroundColor Yellow
+Write-Host "`nCarregando secrets para ambiente local..." -ForegroundColor Cyan
+Write-Host "Metodo: config.local.ps1 + GitHub Secrets`n" -ForegroundColor Yellow
 
-if (-not (Get-Command gh -ErrorAction SilentlyContinue)) {
-    Write-Host "Erro: GitHub CLI nao encontrado. Instale em https://cli.github.com" -ForegroundColor Red
+# Verifica se config.local.ps1 existe
+if (-not (Test-Path "agents/config.local.ps1")) {
+    Write-Host "Erro: agents/config.local.ps1 nao encontrado" -ForegroundColor Red
     exit 1
 }
 
-$secrets = @(
+# Carrega config.local.ps1 (tem fallback para env vars)
+. agents/config.local.ps1
+
+# Agora settar as vars que vem de env (GitHub Actions as passa automaticamente)
+$secrets_to_load = @(
     "GROQ_API_KEY",
     "GROQ_API_KEY_2",
     "ANTHROPIC_API_KEY",
@@ -25,29 +29,25 @@ $secrets = @(
 )
 
 $loaded = 0
-$failed = 0
-
-foreach ($secret in $secrets) {
-    try {
-        $value = gh secret view $secret 2>$null
-        if ($LASTEXITCODE -eq 0 -and $value) {
-            [System.Environment]::SetEnvironmentVariable($secret, $value, "Process")
-            $masked = if ($value.Length -gt 4) { $value.Substring(0, 4) + ("*" * ($value.Length - 4)) } else { "****" }
-            Write-Host "  OK $secret = $masked" -ForegroundColor Green
-            $loaded++
-        } else {
-            Write-Host "  -- $secret (nao encontrado)" -ForegroundColor Yellow
-            $failed++
-        }
-    } catch {
-        Write-Host "  ERROR $secret : $($_.Exception.Message.Substring(0, 40))" -ForegroundColor Red
-        $failed++
+foreach ($secret in $secrets_to_load) {
+    $envValue = [System.Environment]::GetEnvironmentVariable($secret)
+    if ($envValue -and -not ($envValue -like "*placeholder*")) {
+        [System.Environment]::SetEnvironmentVariable($secret, $envValue, "Process")
+        $masked = $envValue.Substring(0, [Math]::Min(4, $envValue.Length)) + ("*" * [Math]::Max(0, $envValue.Length - 4))
+        Write-Host "  OK $secret = $masked" -ForegroundColor Green
+        $loaded++
+    } else {
+        Write-Host "  -- $secret (vazio/placeholder)" -ForegroundColor Yellow
     }
 }
 
-Write-Host "`nResultado: $loaded carregadas, $failed faltando`n" -ForegroundColor Cyan
-if ($loaded -eq 0) {
-    Write-Host "Erro: Nenhum secret carregado. gh auth status?" -ForegroundColor Red
-}
+Write-Host "`nResultado: $loaded carregadas`n" -ForegroundColor Cyan
 
-Write-Host "Proximo: . diagnostico_bloqueios.ps1`n" -ForegroundColor Green
+if ($loaded -eq 0) {
+    Write-Host "INFO: Nenhum secret do GitHub carregado localmente." -ForegroundColor Yellow
+    Write-Host "      Isso é normal em ambiente local sem GitHub Actions." -ForegroundColor Yellow
+    Write-Host "      Para testar, execute em GitHub Actions ou settar env vars manualmente:" -ForegroundColor Gray
+    Write-Host '      `$env:GROQ_API_KEY = "gsk_..."' -ForegroundColor Cyan
+} else {
+    Write-Host "Proximo: . diagnostico_bloqueios.ps1`n" -ForegroundColor Green
+}
