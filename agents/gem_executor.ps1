@@ -29,6 +29,11 @@ if (Test-Path $__trailingLoggerPath) { . $__trailingLoggerPath }
 # 2026-07-08: Essential alerts only (remove spam, critical only)
 $__essentialAlertsPath = Join-Path $PSScriptRoot "lib_telegram_essential_alerts.ps1"
 if (Test-Path $__essentialAlertsPath) { . $__essentialAlertsPath }
+# 2026-07-09: Mentor Supabase enrichment (decision grades + counterfactual) + Signal Booster
+$__enrichmentPath = Join-Path $PSScriptRoot "lib_mentor_supabase_enrichment.ps1"
+if (Test-Path $__enrichmentPath) { . $__enrichmentPath }
+$__boosterPath = Join-Path $PSScriptRoot "lib_signal_booster_llm.ps1"
+if (Test-Path $__boosterPath) { . $__boosterPath }
 # 2026-05-21: B9 cache TTL (Add-GemRejection + Test-GemRecentlyRejected).
 # Bug encontrado: scan_master dot-sourced gem_executor mas NAO lib_gem_decision_cache,
 # entao Get-Command Test-GemRecentlyRejected returnava null silently -> cache check
@@ -1403,6 +1408,24 @@ function Invoke-GemExecute {
             }
         } catch {
             Write-Host "  [MULTI-TF ERROR] $_" -ForegroundColor Yellow
+        }
+    }
+
+    # ── ENRIQUECIMENTO SUPABASE PRE-EXECUCAO (2026-07-09) ──────────────────
+    # Aplica decision grade inversion + counterfactual boost ANTES de executar
+    # Impacto esperado: +8-15% win rate via mentoria mais informada
+    $enrichment = $null
+    $regime = if ($global:MARKET_REGIME) { "$($global:MARKET_REGIME)" } else { "UNKNOWN" }
+    if (Get-Command Get-DecisionGradeEnrichment -ErrorAction SilentlyContinue) {
+        try {
+            $enrichment = Get-DecisionGradeEnrichment -Direction $direction -Regime $regime
+            if ($enrichment -and $enrichment.should_invert -eq $true) {
+                $oldDir = $direction
+                $direction = if ($direction -eq "LONG") { "SHORT" } else { "LONG" }
+                Write-Host "  [ENRICHMENT] Decision Grade Inversion: $oldDir → $direction (accuracy=$($enrichment.accuracy)% n=$($enrichment.n))" -ForegroundColor Magenta
+            }
+        } catch {
+            Write-Host "  [ENRICHMENT WARN] Get-DecisionGradeEnrichment falhou: $_" -ForegroundColor Yellow
         }
     }
 

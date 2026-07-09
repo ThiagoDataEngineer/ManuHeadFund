@@ -1,4 +1,4 @@
-﻿# mentor_agent.ps1 — MentorAgent: veto final com sabedoria dos melhores traders
+# mentor_agent.ps1 — MentorAgent: veto final com sabedoria dos melhores traders
 # Persona: sintese de Livermore, Tudor Jones, Druckenmiller, Seykota, Soros,
 #          Dennis/Faith, Douglas, Schwartz, Darvas, Raschke, Hayes, Woo
 # Ver: knowledge/MENTOR.md e knowledge/MENTOR_PROMPT.md
@@ -12,6 +12,14 @@ if (Test-Path (Join-Path $PSScriptRoot "lib_mentor_gate_block.ps1")) {
 # E3 Decision Reflection (2026-05-22): PRIOR RESOLVED block injection
 if (Test-Path (Join-Path $PSScriptRoot "lib_decision_reflection.ps1")) {
     . (Join-Path $PSScriptRoot "lib_decision_reflection.ps1")
+}
+
+# MENTOR ENRICHMENT WIRE (2026-07-09)
+if (Test-Path (Join-Path $PSScriptRoot "lib_mentor_supabase_enrichment.ps1")) {
+    . (Join-Path $PSScriptRoot "lib_mentor_supabase_enrichment.ps1")
+}
+if (Test-Path (Join-Path $PSScriptRoot "lib_signal_booster_llm.ps1")) {
+    . (Join-Path $PSScriptRoot "lib_signal_booster_llm.ps1")
 }
 # E1 Schema 5-tier wire (2026-05-23): Get-SizingTiltMultiplier integration
 if (Test-Path (Join-Path $PSScriptRoot "lib_mentor_schema.ps1")) {
@@ -321,9 +329,62 @@ Responda em JSON:
         return [PSCustomObject]@{
             veredicto="ABORTAR"; confianca_mentor=0; risco_identificado="ALTO"
             qualidade_final="D"; motivo_veto="Mentor indisponivel - abortando por seguranca"
-            mensagem_mentor="Sem resposta do mentor. Por Tudor Jones: quando ha duvida, nao opere."
+            mensagem_mentor="Sem resposta do mentor. Por Tudor Jones: quando ha duvida, nao operate."
             tamanho_posicao_aprovado=0; stop_final=0; alvo_final=0; rr_final=0
         }
+    }
+
+    # ── ENRIQUECIMENTO POS-MENTOR (2026-07-09) ────────────────────────────────
+    # Aplica 3 boosts: grade_history + counterfactual + market_performance
+    # Resultado: confidence + X% se historico + counterfactual alineados
+    $confidenceBoost = 0
+    $boostSources = @()
+
+    if (Get-Command Get-GradeHistoryBoost -ErrorAction SilentlyContinue) {
+        try {
+            # Extrai enrichment dados de Supabase (se disponivel)
+            $gradeData = $null
+            if (Get-Command Get-DecisionGradeEnrichment -ErrorAction SilentlyContinue) {
+                $gradeData = Get-DecisionGradeEnrichment -Direction "LONG" -Regime $regime
+            }
+            if ($gradeData) {
+                $gradeBoost = Get-GradeHistoryBoost -GradeData $gradeData -Direction "LONG" -Regime $regime
+                if ($gradeBoost) {
+                    $confidenceBoost += $gradeBoost.boost_pct
+                    $boostSources += "$($gradeBoost.source)(+$($gradeBoost.boost_pct)%)"
+                    Write-Host "  [BOOST] Grade History: $($gradeBoost.source) +$($gradeBoost.boost_pct)% (confidence=$($gradeBoost.confidence))" -ForegroundColor Magenta
+                }
+            }
+        } catch {
+            Write-Host "  [BOOST WARN] Grade history boost falhou: $_" -ForegroundColor Yellow
+        }
+    }
+
+    if (Get-Command Get-CounterfactualBoost -ErrorAction SilentlyContinue) {
+        try {
+            # Busca skipped gains via counterfactual
+            $cxData = $null
+            if (Get-Command Get-CounterfactualEnrichment -ErrorAction SilentlyContinue) {
+                $cxData = Get-CounterfactualEnrichment -Market $Market -Direction "LONG"
+            }
+            if ($cxData) {
+                $cxBoost = Get-CounterfactualBoost -CounterfactualData $cxData
+                if ($cxBoost) {
+                    $confidenceBoost += $cxBoost.boost_pct
+                    $boostSources += "$($cxBoost.source)(+$($cxBoost.boost_pct)%)"
+                    Write-Host "  [BOOST] Counterfactual: $($cxBoost.source) +$($cxBoost.boost_pct)% (reconsidered_wins=$($cxBoost.reconsidered_wins))" -ForegroundColor Magenta
+                }
+            }
+        } catch {
+            Write-Host "  [BOOST WARN] Counterfactual boost falhou: $_" -ForegroundColor Yellow
+        }
+    }
+
+    # Aplica boost a confidence do mentor
+    if ($confidenceBoost -gt 0) {
+        $oldConf = $result.confianca_mentor
+        $result.confianca_mentor = [math]::Min(100, $result.confianca_mentor + $confidenceBoost)
+        Write-Host "  [ENRICHMENT] Confidence boost: $oldConf → $($result.confianca_mentor) (+${confidenceBoost}% from: $($boostSources -join ', '))" -ForegroundColor Magenta
     }
 
     $color = switch ($result.veredicto) {
@@ -1088,3 +1149,4 @@ JSON: { "decision":"APROVAR"|"VETAR", "confianca":0-100, "mentor_mensagem":"2-3 
         provider_used   = $providerUsed   # 2026-05-20 PM
     }
 }
+
