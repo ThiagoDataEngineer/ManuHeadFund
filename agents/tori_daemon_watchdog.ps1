@@ -323,10 +323,8 @@ function Start-ToriWatchdog {
 }
 
 # ============================================================================
-# EXPORT & ENTRY POINT
+# ENTRY POINT
 # ============================================================================
-
-Export-ModuleMember -Function Start-ToriWatchdog, Test-DaemonHeartbeat, Test-DaemonProcess
 
 # If run directly (not sourced)
 if ($MyInvocation.InvocationName -ne ".") {

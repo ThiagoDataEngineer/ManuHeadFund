@@ -63,5 +63,3 @@ function Recalibrate-SignalTriggersFile {
     return $recalCount
 }
 
-# Export: se caller disser "Apply-MentorRecalibrationToSnapshot", tem disponível
-Export-ModuleMember -Function Apply-MentorRecalibrationToSnapshot, Recalibrate-SignalTriggersFile

@@ -57,14 +57,14 @@ function Format-NewSetupAlert {
         [PSObject]$Setup
     )
 
-    # Map signal strings to emoji
+    # Map signal strings to labels
     $signalEmoji = @{
-        "VOLUME_CLIMAX" = "📊"
-        "RSI_EXTREME" = "📈"
-        "FRACTAL_BULLISH" = "⬇️"
-        "FRACTAL_BEARISH" = "⬆️"
-        "CHOCH" = "🔄"
-        "VOLUME_PROFILE" = "🎯"
+        "VOLUME_CLIMAX" = "[VOL]"
+        "RSI_EXTREME" = "[RSI]"
+        "FRACTAL_BULLISH" = "[FB]"
+        "FRACTAL_BEARISH" = "[FBR]"
+        "CHOCH" = "[CHOCH]"
+        "VOLUME_PROFILE" = "[VP]"
     }
 
     $signals = $Setup.signals_fired -split "\|"
@@ -73,7 +73,7 @@ function Format-NewSetupAlert {
     foreach ($signal in $signals) {
         $signal = $signal.Trim()
         if ($signal -ne "") {
-            $emoji = "✅"
+            $emoji = "[OK]"
             foreach ($key in $signalEmoji.Keys) {
                 if ($signal -match $key) {
                     $emoji = $signalEmoji[$key]
@@ -84,19 +84,19 @@ function Format-NewSetupAlert {
         }
     }
 
-    $trendEmoji = if ($Setup.trend_type -eq "LONG") { "🟢" } else { "🔴" }
-    $scoreColor = if ($Setup.confidence_score -ge 90) { "🔥" } else { "⭐" }
+    $trendEmoji = if ($Setup.trend_type -eq "LONG") { "[LONG]" } else { "[SHORT]" }
+    $scoreColor = if ($Setup.confidence_score -ge 90) { "[HOT]" } else { "[STAR]" }
 
     $message = @"
 $trendEmoji NEW SETUP - $($Setup.pair) [$($Setup.timeframe)]
 $($Setup.trend_type) Entry
 
 $scoreColor Confidence: $($Setup.confidence_score)/100
-📍 Entry: $(Format-Number $Setup.entry_price)
-🛑 Stop: $(Format-Number $Setup.stop_loss)
-🎯 Target: $(Format-Number $Setup.target_price)
-💰 R:R: $([Math]::Round($Setup.rr_ratio, 2))x
-⚡ RSI: $([Math]::Round($Setup.rsi, 0))
+[ENTRY] Entry: $(Format-Number $Setup.entry_price)
+[STOP] Stop: $(Format-Number $Setup.stop_loss)
+[TARGET] Target: $(Format-Number $Setup.target_price)
+[RR] R:R: $([Math]::Round($Setup.rr_ratio, 2))x
+[RSI] RSI: $([Math]::Round($Setup.rsi, 0))
 
 Signals:
 $($signalList -join "`n")
@@ -119,7 +119,7 @@ function Format-TargetHitAlert {
         [PSObject]$Setup
     )
 
-    $trendEmoji = if ($Setup.trend_type -eq "LONG") { "🟢" } else { "🔴" }
+    $trendEmoji = if ($Setup.trend_type -eq "LONG") { "[LONG]" } else { "[SHORT]" }
 
     $holdTime = if ($Setup.closed_time -and $Setup.timestamp) {
         $duration = [DateTime]::Parse($Setup.closed_time) - [DateTime]::Parse($Setup.timestamp)
@@ -133,7 +133,7 @@ function Format-TargetHitAlert {
     }
 
     $message = @"
-✅ SETUP CLOSED - TARGET HIT
+[WIN] SETUP CLOSED - TARGET HIT
 $trendEmoji $($Setup.pair) [$($Setup.timeframe)]
 
 Entry: $(Format-Number $Setup.entry_price)
@@ -160,7 +160,7 @@ function Format-StopHitAlert {
         [PSObject]$Setup
     )
 
-    $trendEmoji = if ($Setup.trend_type -eq "LONG") { "🟢" } else { "🔴" }
+    $trendEmoji = if ($Setup.trend_type -eq "LONG") { "[LONG]" } else { "[SHORT]" }
 
     $holdTime = if ($Setup.closed_time -and $Setup.timestamp) {
         $duration = [DateTime]::Parse($Setup.closed_time) - [DateTime]::Parse($Setup.timestamp)
@@ -174,7 +174,7 @@ function Format-StopHitAlert {
     }
 
     $message = @"
-❌ SETUP STOPPED
+[LOSS] SETUP STOPPED
 $trendEmoji $($Setup.pair) [$($Setup.timeframe)]
 
 Entry: $(Format-Number $Setup.entry_price)
@@ -240,24 +240,24 @@ function Format-SummaryReport {
     }
 
     $message = @"
-📊 SCAN SUMMARY - 4-HOUR CYCLE
-═══════════════════════════════
+[SUMMARY] SCAN SUMMARY - 4-HOUR CYCLE
+=====================================
 
-👁️ Active Setups: $($ActiveSetups.Count)
-  🟢 LONG: $longCount
-  🔴 SHORT: $shortCount
-  ⭐ Avg Score: $([Math]::Round($avgConfidence, 0))/100
+[ACTIVE] Active Setups: $($ActiveSetups.Count)
+  [LONG] LONG: $longCount
+  [SHORT] SHORT: $shortCount
+  [SCORE] Avg Score: $([Math]::Round($avgConfidence, 0))/100
 
-📈 Recent Trades: $totalTrades
-  ✅ Wins: $winCount
-  ❌ Losses: $lossCount
-  📊 Win Rate: $([Math]::Round($winRate, 1))%
+[TRADES] Recent Trades: $totalTrades
+  [WIN] Wins: $winCount
+  [LOSS] Losses: $lossCount
+  [WR] Win Rate: $([Math]::Round($winRate, 1))%
 
-💰 P&L (Last 4h): $([math]::Round($totalPnL, 2)) USDT
-🏆 Top Gainer: $topGainerDisplay
+[PNL] P&L (Last 4h): $([math]::Round($totalPnL, 2)) USDT
+[TOP] Top Gainer: $topGainerDisplay
 
-📍 Pairs Scanned: $($PerformanceMetrics.pairs_analyzed)
-🔍 Scans Completed: $($PerformanceMetrics.total_scans)
+[PAIRS] Pairs Scanned: $($PerformanceMetrics.pairs_analyzed)
+[SCANS] Scans Completed: $($PerformanceMetrics.total_scans)
 
 Time: $(Get-Date -Format "yyyy-MM-dd HH:mm:ss UTC")
 "@
@@ -370,8 +370,3 @@ function Send-SummaryReport {
     Send-TelegramMessage -Message $message
 }
 
-# ============================================================================
-# EXPORT
-# ============================================================================
-
-Export-ModuleMember -Function Send-NewSetupAlert, Send-TargetHitAlert, Send-StopHitAlert, Send-SummaryReport, Format-NewSetupAlert, Format-TargetHitAlert, Format-StopHitAlert, Format-SummaryReport

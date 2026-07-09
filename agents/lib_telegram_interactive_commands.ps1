@@ -425,14 +425,3 @@ function Invoke-TelegramCommand {
     }
 }
 
-Export-ModuleMember -Function @(
-    'Send-HelpMenu'
-    'Send-HealthCheck'
-    'Send-PositionsList'
-    'Send-AnalyzeRequest'
-    'Send-MentorDiscussion'
-    'Send-RecalibrateRequest'
-    'Send-LearningReport'
-    'Send-PnLReport'
-    'Invoke-TelegramCommand'
-) -ErrorAction SilentlyContinue

@@ -101,4 +101,3 @@ function Audit-RegimeDetectorLive {
     }
 }
 
-Export-ModuleMember -Function Invoke-RegimeDetectorAudit, Apply-RegimePassivization, Audit-RegimeDetectorLive

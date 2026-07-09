@@ -279,14 +279,3 @@ function Update-TrailingWithSmartSL {
 # EXPORT
 # ============================================================================
 
-# 2026-07-02 FIX: Export-ModuleMember so funciona em modulo (.psm1); em dot-source
-# lancava erro terminante e o loader marcava a lib como FALHA. Guard condicional.
-if ($MyInvocation.MyCommand.ScriptBlock.Module) {
-    Export-ModuleMember -Function @(
-        'Test-OrderFlowIntensity',
-        'Test-VolumePriceAgreement',
-        'New-StopLevelStructure',
-        'Update-StopLevel',
-        'Update-TrailingWithSmartSL'
-    )
-}

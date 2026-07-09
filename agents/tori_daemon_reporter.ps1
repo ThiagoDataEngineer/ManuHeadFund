@@ -574,10 +574,8 @@ function Export-ToriReports {
 }
 
 # ============================================================================
-# EXPORT
+# ENTRY POINT
 # ============================================================================
-
-Export-ModuleMember -Function Export-ToriReports, Export-HtmlDashboard, Export-JsonReport, Export-CsvReport
 
 # If run directly
 if ($MyInvocation.InvocationName -ne ".") {

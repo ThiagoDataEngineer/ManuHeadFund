@@ -553,25 +553,3 @@ $(if ($ExecResult.error) { "Erro: $($ExecResult.error)" })
 # EXPORT - Funções públicas
 # ============================================================================
 
-# 2026-07-02 FIX: Export-ModuleMember so funciona em modulo (.psm1); guard p/ dot-source
-if ($MyInvocation.MyCommand.ScriptBlock.Module) {
-    Export-ModuleMember -Function @(
-        'Telegram-SendMessage',
-        'Telegram-SendTradeOpened',
-        'Telegram-SendTradeClosed',
-        'Telegram-SendTrailingActivated',
-        'Telegram-SendRiskAlert',
-        'Telegram-SendDailySummary',
-        'Telegram-SendGemFound',
-        'Telegram-SendGemApprovalRequest',
-        'Telegram-SendGemExecuted',
-        'Telegram-SendDashboardSnapshot',
-        'Telegram-SendSystemStatus',
-        'Telegram-SendCalibrationProgress',
-        'Telegram-SendQuotaWarning',
-        'Send-TelegramAlert',
-        'Send-GemAlert',
-        'Format-TgGemApproval',
-        'Format-TgGemExecuted'
-    )
-}

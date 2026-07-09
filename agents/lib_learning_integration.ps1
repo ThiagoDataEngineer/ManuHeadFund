@@ -217,11 +217,3 @@ function Invoke-LearningCycle {
 }
 
 # ============================================================================
-# EXPORTS
-# ============================================================================
-
-Export-ModuleMember -Function @(
-    'Record-TradeEntry'
-    'Record-TradeExit'
-    'Invoke-LearningCycle'
-)
