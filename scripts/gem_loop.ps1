@@ -285,6 +285,7 @@ function Invoke-GemCycle-Once {
 
                     # Converter em gem compatível
                     $gem = @{
+                        trigger_id = $sig.id
                         market = $sig.market
                         score = [int]($(if ($null -ne $sig.conviction) { $sig.conviction } else { 50 }))
                         mode = "TRIGGER"
@@ -336,8 +337,13 @@ function Invoke-GemCycle-Once {
                 if ($r.blocked) {
                     Write-GemLog "BLOCKED" "$mkt -- $($r.blocked_by -join '; ')"
                     # Mark trigger as skipped if from signal_triggers
+                    # 2026-07-08: gravar razao REAL (blocked_by) em vez do catch-all
+                    # "gem_safety_blocked" que escondeu 2327 skips; e marcar so o
+                    # trigger deste gem (id match), nao todos do market.
                     if ($g.mode -eq "TRIGGER") {
                         try {
+                            $reasonNote = "blocked: " + (@($r.blocked_by) -join '; ')
+                            if ($reasonNote.Length -gt 180) { $reasonNote = $reasonNote.Substring(0, 180) }
                             $triggerFile = Join-Path $global:JOURNAL_DIR "signal_triggers.jsonl"
                             if (Test-Path $triggerFile) {
                                 $lines = @(Get-Content $triggerFile -ErrorAction SilentlyContinue)
@@ -345,9 +351,11 @@ function Invoke-GemCycle-Once {
                                 foreach ($line in $lines) {
                                     if (-not $line) { continue }
                                     $sig = $line | ConvertFrom-Json -ErrorAction SilentlyContinue
-                                    if ($sig.market -eq $mkt) {
+                                    $isMatch = if ($g.trigger_id) { $sig.id -eq $g.trigger_id }
+                                               else { $sig.market -eq $mkt -and $sig.status -eq "pending" }
+                                    if ($isMatch) {
                                         $sig.status = "skipped"
-                                        $sig.notes = "gem_safety_blocked"
+                                        $sig.notes = $reasonNote
                                     }
                                     $updated += ($sig | ConvertTo-Json -Compress)
                                 }
@@ -367,7 +375,9 @@ function Invoke-GemCycle-Once {
                                 foreach ($line in $lines) {
                                     if (-not $line) { continue }
                                     $sig = $line | ConvertFrom-Json -ErrorAction SilentlyContinue
-                                    if ($sig.market -eq $mkt) {
+                                    $isMatch = if ($g.trigger_id) { $sig.id -eq $g.trigger_id }
+                                               else { $sig.market -eq $mkt -and $sig.status -eq "pending" }
+                                    if ($isMatch) {
                                         $sig.status = "processed"
                                         $sig.notes = "gem_executor_executed"
                                     }

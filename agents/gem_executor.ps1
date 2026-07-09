@@ -1,4 +1,4 @@
-# gem_executor.ps1 -- Execucao real de gems na CoinEx
+﻿# gem_executor.ps1 -- Execucao real de gems na CoinEx
 # Padrao: FUTURES (isolated margin). Fallback: SPOT quando par nao tem futuros.
 # Dot-source: . (Join-Path $PSScriptRoot "gem_executor.ps1")
 
@@ -1277,6 +1277,18 @@ function Invoke-GemExecute {
         $totCap   = if ($global:TOTAL_CAPITAL_USD) { [double]$global:TOTAL_CAPITAL_USD } else { 0 }
         $exchBal  = 0.0
         try { $exchBal = [double](CoinEx-GetTotalCapitalUSDT) } catch {}
+
+        # 2026-07-08: overage pequeno (<=10%) clampa pro cap em vez de bloquear.
+        # Proposta $102.75 > cap $100 matava o trade inteiro (8 blocks 07-07/08).
+        # Overage >10% continua bloqueando via Test-SizingCap (fail-closed).
+        if (Get-Command Resolve-SizingClamp -ErrorAction SilentlyContinue) {
+            $sizingClamp = Resolve-SizingClamp -ProposedSizeUsd $usd_size -MaxSizeUsd $maxSize
+            if ($sizingClamp.clamped) {
+                Write-Host "  [GEM GUARD] $mkt sizing clamp: $usd_size -> $($sizingClamp.size_usd) (cap)" -ForegroundColor Cyan
+                $usd_size = [double]$sizingClamp.size_usd
+                $qty = [Math]::Round($usd_size / $price, 8)
+            }
+        }
 
         $guards = Test-LiveTradeGuards `
             -Market $mkt -ProposedSizeUsd $usd_size `

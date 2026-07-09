@@ -75,6 +75,27 @@ function Test-SizingCap {
 }
 
 
+function Resolve-SizingClamp {
+    # 2026-07-08: overage pequeno (<=TolerancePct) clampa pro cap em vez de deixar
+    # o guard matar o trade inteiro (ex.: $102.75 > $100 = 8 blocks em 07-07/08).
+    # Overage acima da tolerancia NAO clampa -> Test-SizingCap bloqueia (fail-closed
+    # p/ sizing genuinamente errado). Nunca aumenta size.
+    [CmdletBinding()]
+    param(
+        [double]$ProposedSizeUsd,
+        [double]$MaxSizeUsd,
+        [double]$TolerancePct = 10.0
+    )
+    $clamped = $false
+    $size = $ProposedSizeUsd
+    if ($MaxSizeUsd -gt 0 -and $size -gt $MaxSizeUsd -and $size -le ($MaxSizeUsd * (1 + $TolerancePct / 100))) {
+        $size = $MaxSizeUsd
+        $clamped = $true
+    }
+    return [PSCustomObject]@{ size_usd = $size; clamped = $clamped }
+}
+
+
 # â”€â”€ Guard 2: Frequency cap â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function Test-FrequencyCap {
