@@ -44,6 +44,8 @@ $global:CONST_TRIAGEM_TIER_D_DEFAULT = 50
 $global:CONST_TRIAGEM_TIER_B_DEFAULT = 60
 $global:CONST_TRIAGEM_TIER_A_DEFAULT = 75
 
+# 2026-07-09 FIX: TRIAGEM_THRESHOLDS empirical (scanner range 5-35, not 0-100)
+$global:TRIAGEM_THRESHOLDS = @{ D = 15; B = 25; A = 40 }
 
 # â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 # GO_CRITERION (nomes explÃ­citos pÃ³s DRIFT-2)

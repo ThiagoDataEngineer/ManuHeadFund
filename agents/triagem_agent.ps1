@@ -35,7 +35,7 @@
 # (ou que Get-RelevantKnowledge / Invoke-GroqJson estao definidas).
 
 # Dias favoraveis (calibracao empirica 14y BTC: Mon/Tue/Wed positivos)
-$TRIAGEM_DOW_FAVORAVEL = @("Monday","Tuesday","Wednesday")
+$TRIAGEM_DOW_FAVORAVEL = @("Monday","Tuesday","Wednesday","Thursday","Friday")  # 2026-07-09 FIX: Allow Thu/Fri (penalidade soft vs hard block)
 
 
 function _Get-CtxField {
