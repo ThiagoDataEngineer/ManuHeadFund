@@ -31,13 +31,26 @@
 
 function Get-GemSafetyDefaults {
     if ($global:GEM_SAFETY) { return $global:GEM_SAFETY }
-    return @{
+    $defaults = @{
         MaxExposurePct          = 15.0
         MaxGemsPerDay           = 10
         MaxGemsPerWeek          = 40
         CircuitBreakerStops     = 5
         DoubleConfirmThreshold  = 10.0
     }
+    # 2026-07-09 EVOLUTION WIRE: gem_max_exposure_pct e classe RISK — o engine
+    # NUNCA auto-aplica; so chega aqui via overlay aprovado (requires_owner).
+    # Clamp local [10,25] = bound 2 de 2.
+    if (Get-Command Get-EvolutionParams -ErrorAction SilentlyContinue) {
+        try {
+            $__evo = Get-EvolutionParams
+            if ($__evo.gem_max_exposure_pct) {
+                $__e = [double]$__evo.gem_max_exposure_pct
+                if ($__e -ge 10 -and $__e -le 25) { $defaults.MaxExposurePct = $__e }
+            }
+        } catch {}
+    }
+    return $defaults
 }
 
 function Get-MondayOfWeek {

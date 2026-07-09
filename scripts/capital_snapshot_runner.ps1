@@ -72,6 +72,17 @@ try {
 
     Write-Host ""
     Write-Host "Capital context atualizado em Supabase." -ForegroundColor Green
+
+    # 2026-07-09 REGISTRO DO MOMENTO (nuvem): fotografa calibracoes vigentes
+    # das 5 pecas junto do capital (dedup diario). Correlaciona params -> outcomes.
+    try {
+        . (Join-Path $agentsDir "lib_calibration_snapshot.ps1")
+        if (Write-CalibrationSnapshot) {
+            Write-Host "Calibration snapshot registrado (journal + Supabase)." -ForegroundColor Green
+        }
+    } catch {
+        Write-Host "Calibration snapshot falhou (nao critico): $_" -ForegroundColor Yellow
+    }
 }
 catch {
     Write-Host ""

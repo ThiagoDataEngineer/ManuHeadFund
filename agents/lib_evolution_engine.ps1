@@ -27,8 +27,14 @@ function Get-TunableRegistry {
         [PSCustomObject]@{ name="sentinel_ignition_pct"; class="detection"; default=12;  min=8;   max=20;   step=1 }
         [PSCustomObject]@{ name="pumpfade_min_pump_pct"; class="detection"; default=15;  min=8;   max=25;   step=1 }
         [PSCustomObject]@{ name="pumpfade_dump_pct";     class="detection"; default=-10; min=-20; max=-5;   step=1 }
+        # 2026-07-09: pecas antes FORA do loop (auditoria 5 pecas) — agora tunaveis
+        [PSCustomObject]@{ name="tori_confluence_threshold"; class="detection"; default=80;  min=70;  max=90;  step=2 }
+        [PSCustomObject]@{ name="faro_signals_needed";       class="detection"; default=5;   min=4;   max=6;   step=1 }
         # RISK: nunca auto — qualquer proposta vira requires_owner
         [PSCustomObject]@{ name="gem_sizing_pct";        class="risk";      default=0.5; min=0.1; max=1.0;  step=0.1 }
+        [PSCustomObject]@{ name="stop_atr_multiplier";   class="risk";      default=2.5; min=2.0; max=3.5;  step=0.25 }
+        [PSCustomObject]@{ name="gem_max_exposure_pct";  class="risk";      default=15;  min=10;  max=25;   step=1 }
+        [PSCustomObject]@{ name="trailing_be_buffer_pct"; class="risk";     default=0.02; min=0.01; max=0.05; step=0.005 }
     )
 }
 

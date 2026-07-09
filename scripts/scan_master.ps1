@@ -171,6 +171,12 @@ if (-not $__boot.ok) {
     exit 1
 }
 
+# 2026-07-09 REGISTRO DO MOMENTO: fotografa calibracoes vigentes das 5 pecas
+# (gem_safety/trailing/tori/faro/evolution/stops) pra grading correlacionar
+# "parametro vigente -> outcome". Dedup diario. LLMs aprendendo agentes.
+. (Join-Path $agentsDir "lib_calibration_snapshot.ps1")
+try { Write-CalibrationSnapshot | Out-Null } catch {}
+
 # 2026-05-19 PM: Kelly sizing flag (auto-activated via cron quando 10+ outcomes graduate criteria)
 # Le journal/USE_KELLY_SIZING.flag se presente -> seta $global:USE_KELLY_SIZING=$true
 $_kellyFlag = Join-Path $scriptDir "..\journal\USE_KELLY_SIZING.flag"

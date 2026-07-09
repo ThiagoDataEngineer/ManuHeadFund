@@ -15,6 +15,17 @@
 # ============================================================================
 
 $script:TORI_CONFLUENCE_THRESHOLD = 80    # Minimum confluence score for ALLOW
+# 2026-07-09 EVOLUTION WIRE: threshold agora e tunavel (registry 70-90).
+# Bound 2 de 2: clamp local mesmo se overlay vier fora do range.
+if (Get-Command Get-EvolutionParams -ErrorAction SilentlyContinue) {
+    try {
+        $__evo = Get-EvolutionParams
+        if ($__evo.tori_confluence_threshold) {
+            $__t = [int]$__evo.tori_confluence_threshold
+            if ($__t -ge 70 -and $__t -le 90) { $script:TORI_CONFLUENCE_THRESHOLD = $__t }
+        }
+    } catch {}
+}
 $script:TORI_CANDLE_LOOKBACK = 100        # Candles to fetch for analysis
 $script:TORI_ANALYSIS_TIMEOUT_SEC = 8     # Max time to compute analysis
 

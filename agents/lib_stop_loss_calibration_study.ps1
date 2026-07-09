@@ -30,6 +30,19 @@ function Get-PerAssetStopPct {
         [int] $AtrPeriod = 14
     )
 
+    # 2026-07-09 EVOLUTION WIRE: stop_atr_multiplier e classe RISK (requires_owner).
+    # So aplica overlay aprovado; clamp local [2.0,3.5] = bound 2 de 2.
+    # Caller que passa -Multiplier explicito tem prioridade (2.5 = default sentinel).
+    if ($Multiplier -eq 2.5 -and (Get-Command Get-EvolutionParams -ErrorAction SilentlyContinue)) {
+        try {
+            $__evo = Get-EvolutionParams
+            if ($__evo.stop_atr_multiplier) {
+                $__m = [double]$__evo.stop_atr_multiplier
+                if ($__m -ge 2.0 -and $__m -le 3.5) { $Multiplier = $__m }
+            }
+        } catch {}
+    }
+
     $c = @($Candles)
     if ($c.Count -lt ($AtrPeriod + 1)) {
         return @{ stop_pct = $FallbackPct; source = "fallback"; atr_pct = 0 }
