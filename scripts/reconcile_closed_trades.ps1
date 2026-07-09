@@ -10,17 +10,11 @@ param(
 
 $ErrorActionPreference = "Continue"
 $root = Split-Path $PSScriptRoot -Parent
-$journalDir = Join-Path $root "journal"
 
-. (Join-Path $root "config/config.ps1") -ErrorAction SilentlyContinue
-
-# Load CoinEx API lib
-$coinexLib = Join-Path $root "agents/lib_coinex.ps1"
-if (-not (Test-Path $coinexLib)) {
-    Write-Host "CoinEx lib not found" -ForegroundColor Red
-    exit 1
+# Carrega config se existir; senão usa env vars
+if (Test-Path (Join-Path $root "config/config.ps1")) {
+    . (Join-Path $root "config/config.ps1") -ErrorAction SilentlyContinue
 }
-. $coinexLib
 
 "[$(Get-Date -Format 'HH:mm:ss')] RECONCILE CLOSED TRADES INICIADO"
 "Output: $OutputPath"
