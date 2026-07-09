@@ -210,41 +210,49 @@ function Get-ToriHistoricalCandles {
         [int]$TimeoutSeconds = 3
     )
 
+    # 2026-07-09 FIX RAIZ "0 trades": 3 bugs empilhados aqui bloqueavam 100% das entradas
+    # (todo candidato morria com score=-1 fail_closed:insufficient_candle_data):
+    #   1. Endpoint /v2/futures/candlestick?type=1h NAO EXISTE -> code=4009 unknown method.
+    #      Correto (validado ao vivo): /v2/futures/kline?period=1hour -> code=0.
+    #   2. Payload v2 = OBJETOS {open,close,high,low,volume,created_at}, nao arrays
+    #      posicionais — o parser $_[0]..$_[5] nunca funcionaria.
+    #   3. $global:COINEX_BASE_URL vazio na nuvem (config.ps1 define sem $global: e o
+    #      Setup do workflow sobrescreve config.local.ps1) -> fallback hardcoded.
+    $base = if ($global:COINEX_BASE_URL) { $global:COINEX_BASE_URL } else { "https://api.coinex.com" }
+
+    # Normaliza timeframe p/ formato period da CoinEx v2 (aceita "1h" legado e "1hour")
+    $periodMap = @{
+        "1m" = "1min"; "5m" = "5min"; "15m" = "15min"; "30m" = "30min"
+        "1h" = "1hour"; "2h" = "2hour"; "4h" = "4hour"; "1d" = "1day"; "1w" = "1week"
+    }
+    $period = if ($periodMap.ContainsKey($Timeframe)) { $periodMap[$Timeframe] } else { $Timeframe }
+
+    function _ParseKlineData($data) {
+        return @($data | ForEach-Object {
+            [PSCustomObject]@{
+                timestamp = [int64]$_.created_at
+                open      = [double]$_.open
+                high      = [double]$_.high
+                low       = [double]$_.low
+                close     = [double]$_.close
+                volume    = [double]$_.volume
+            }
+        })
+    }
+
     try {
         # Try futures first (most liquid)
-        $url = "$($global:COINEX_BASE_URL)/v2/futures/candlestick?market=$Market&type=$Timeframe&limit=$Limit"
-
+        $url = "$base/v2/futures/kline?market=$Market&period=$period&limit=$Limit"
         $candles = Invoke-RestMethod -Uri $url -Method GET -TimeoutSec $TimeoutSeconds -ErrorAction Stop
-
         if ($candles.code -eq 0 -and $candles.data -and @($candles.data).Count -gt 0) {
-            # Convert to standard candle format
-            return @($candles.data | ForEach-Object {
-                [PSCustomObject]@{
-                    timestamp = [int64]$_[0]
-                    open      = [double]$_[1]
-                    high      = [double]$_[2]
-                    low       = [double]$_[3]
-                    close     = [double]$_[4]
-                    volume    = [double]$_[5]
-                }
-            })
+            return (_ParseKlineData $candles.data)
         }
 
         # Fallback to spot
-        $url = "$($global:COINEX_BASE_URL)/v2/spot/candlestick?market=$Market&type=$Timeframe&limit=$Limit"
+        $url = "$base/v2/spot/kline?market=$Market&period=$period&limit=$Limit"
         $candles = Invoke-RestMethod -Uri $url -Method GET -TimeoutSec $TimeoutSeconds -ErrorAction Stop
-
         if ($candles.code -eq 0 -and $candles.data -and @($candles.data).Count -gt 0) {
-            return @($candles.data | ForEach-Object {
-                [PSCustomObject]@{
-                    timestamp = [int64]$_[0]
-                    open      = [double]$_[1]
-                    high      = [double]$_[2]
-                    low       = [double]$_[3]
-                    close     = [double]$_[4]
-                    volume    = [double]$_[5]
-                }
-            })
+            return (_ParseKlineData $candles.data)
         }
 
         return $null

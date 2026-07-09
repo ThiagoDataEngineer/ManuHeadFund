@@ -117,38 +117,15 @@ function Start-GemDiscoveryScanner {
 # HELPER: Fetch CoinEx candles
 # ════════════════════════════════════════════════════════════
 
-function Get-CoinExCandles {
-    param(
-        [Parameter(Mandatory=$true)][string] $Market,
-        [ValidateSet("1m", "5m", "15m", "1h", "4h", "1d")][string] $Timeframe = "1h",
-        [int] $Limit = 100
-    )
-
-    try {
-        # MVP: Use CoinEx V2 API
-        $endpoint = "https://api.coinex.com/v2/spot/candlestick?market=$Market&timeframe=$Timeframe&limit=$Limit"
-
-        $response = Invoke-RestMethod -Uri $endpoint -Method GET -TimeoutSec 5 -ErrorAction Stop
-
-        if ($response.code -eq 0 -and $response.data) {
-            # Convert to simple candle objects
-            $candles = $response.data | ForEach-Object {
-                @{
-                    timestamp = $_[0]
-                    open = [double]$_[1]
-                    high = [double]$_[2]
-                    low = [double]$_[3]
-                    close = [double]$_[4]
-                    vol = [double]$_[5]
-                }
-            }
-
-            return $candles
-        }
-    } catch {
-        Write-Host "API Error fetching $Market : $_" -ForegroundColor Gray
-        return $null
-    }
+# 2026-07-09 FIX: a definicao local duplicada aqui usava endpoint INEXISTENTE
+# (/v2/spot/candlestick?timeframe= -> code=4009 unknown method) e parser posicional
+# $_[0..5] num payload que e OBJETO. Alem disso brigava com a definicao canonica de
+# lib_candle_fetcher.ps1 (assinatura -Period): quem carregasse por ultimo vencia ->
+# "Timeframe parameter error" intermitente. Agora: carrega a canonica (que aceita
+# -Timeframe e -Period) em vez de redefinir.
+if (-not (Get-Command Get-CoinExCandles -ErrorAction SilentlyContinue)) {
+    $__fetcherLib = Join-Path $PSScriptRoot "lib_candle_fetcher.ps1"
+    if (Test-Path $__fetcherLib) { . $__fetcherLib }
 }
 
 # ════════════════════════════════════════════════════════════
