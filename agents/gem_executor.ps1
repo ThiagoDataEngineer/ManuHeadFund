@@ -710,9 +710,13 @@ function Invoke-GemExecute {
         # para que gate BTC-core tome decisao com direção CORRETA.
         $dirForGate = "LONG"  # default se nao conseguir calcular
 
-        if ($Gem.PSObject.Properties['direction'] -and "$($Gem.direction)" -in @("LONG","SHORT")) {
+        # 2026-07-09 FIX: gems chegam como HASHTABLE (triggers, TORI_SHORT sweep) e
+        # PSObject.Properties['direction'] NAO enxerga chaves de hashtable -> direction
+        # SHORT era ignorada e o gate avaliava LONG. Check por VALOR funciona p/ ambos.
+        $gemDirRaw = "$($Gem.direction)".ToUpper()
+        if ($gemDirRaw -in @("LONG","SHORT")) {
             # Direcao explicita no GEM - use ela
-            $dirForGate = "$($Gem.direction)".ToUpper()
+            $dirForGate = $gemDirRaw
         } else {
             # Calcular conviction SHORT vs LONG AGORA (pre-cálculo)
             # Este é exatamente o mesmo código que aparecerá em section 3 (linhas ~938-1011)
@@ -841,8 +845,14 @@ function Invoke-GemExecute {
     if (Get-Command Test-ToriConfluence -ErrorAction SilentlyContinue) {
         try {
             $dirForConfluence = "LONG"  # determine direction first
-            if ($Gem.PSObject.Properties['direction'] -and "$($Gem.direction)" -in @("LONG","SHORT")) {
-                $dirForConfluence = "$($Gem.direction)".ToUpper()
+            # 2026-07-09 FIX: check por VALOR (hashtable-safe) — PSObject.Properties
+            # nao enxerga chaves de hashtable; TORI_SHORT/TRIGGER gems sao hashtables.
+            $gemDirConf = "$($Gem.direction)".ToUpper()
+            if ($gemDirConf -in @("LONG","SHORT")) {
+                $dirForConfluence = $gemDirConf
+            } elseif ($dirForGate -in @("LONG","SHORT")) {
+                # coerencia com o pre-calc da section 1c (LDOUSDT flip fix)
+                $dirForConfluence = $dirForGate
             }
 
             $toriConfluence = Test-ToriConfluence -Market $mkt -SetupType $dirForConfluence -TimeframeMinutes 60 -Price $price -TimeoutSeconds 6

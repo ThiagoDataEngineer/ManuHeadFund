@@ -344,14 +344,16 @@ function Invoke-GemCycle-Once {
                             $tc = $null
                             try { $tc = Test-ToriConfluence -Market $m -SetupType "SHORT" -TimeframeMinutes 60 -TimeoutSeconds 6 } catch {}
                             if ($tc -and $tc.allows) {
-                                $toriShortGems += @{
+                                # PSCustomObject (nao hashtable): executor le .direction
+                                # via PSObject em alguns pontos legados
+                                $toriShortGems += [PSCustomObject]@{
                                     market     = $m
                                     score      = [int]$tc.confluence_score
                                     mode       = "TORI_SHORT"
                                     direction  = "SHORT"
                                     conviction = [int]$tc.confluence_score
                                     signal     = ("tori:" + (@($tc.signals_fired) -join '+'))
-                                    sizing     = @{ sizing_pct = 0.02 }
+                                    sizing     = [PSCustomObject]@{ sizing_pct = 0.02 }
                                 }
                                 Write-GemLog "TORI_SHORT" "$m confluence=$($tc.confluence_score) signals=$(@($tc.signals_fired) -join '+')"
                             }
