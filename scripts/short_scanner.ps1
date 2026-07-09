@@ -160,8 +160,15 @@ try {
             try {
                 $url = "https://api.coinex.com/v2/$mtype/kline?market=$Market&period=1day&limit=$Limit"
                 $r = Invoke-RestMethod -Uri $url -Method GET -TimeoutSec 10 -ErrorAction Stop
-                if ($r.code -eq 0 -and $r.data -and @($r.data).Count -ge 20) {
-                    return @($r.data | ForEach-Object {
+                if ($r.code -eq 0 -and $r.data -and @($r.data).Count -ge 21) {
+                    # 2026-07-09 FIX RAIZ detected=0: ultimo candle da API = DIA EM ANDAMENTO
+                    # (parcial). Detect-VolClimax avalia $Volumes[n-1] -> vol_ratio subestimado
+                    # o dia inteiro -> climax >=2.5x quase nunca dispara em live, enquanto o
+                    # backtest (505 sinais, EV +2.85pp) usa candles FECHADOS. Descarta o
+                    # parcial: sinal avaliado no CLOSE do dia = mesma semantica do backtest.
+                    $data = @($r.data)
+                    $data = $data[0..($data.Count - 2)]
+                    return @($data | ForEach-Object {
                         [PSCustomObject]@{
                             open = [double]$_.open; high = [double]$_.high
                             low  = [double]$_.low;  close = [double]$_.close

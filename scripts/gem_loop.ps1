@@ -316,7 +316,60 @@ function Invoke-GemCycle-Once {
 
         # Append Invoke-GemScan results
         $gemsFromScan = @(Invoke-GemScan -TopN 5)
-        $gems = @($triggerGems) + @($gemsFromScan)
+
+        # ── TORI SHORT SWEEP (2026-07-09): 3a fonte de candidatos ──────────────
+        # RAIZ "0 trades": DISCOVERY so gera candidatos LONG-momentum; o padrao
+        # Wyckoff diario do short_scanner disparou 0x em 30 dias neste regime
+        # (medido em 22 mercados). Enquanto isso o PROPRIO gate Tori marca SHORTs
+        # 90-100/100 diariamente (ARB/TIA/INJ em 2026-07-09). Sweep: avalia o
+        # tier_a_live com o MESMO detector do gate; score>=80 vira candidato
+        # direction=SHORT na MESMA esteira — executor re-roda TODOS os gates
+        # (cenario, chart pattern, Tori re-valida, Mesa, Mentor, sizing, circuit
+        # breaker). Cap 3/ciclo. Reversivel: live_enabled=false no universo.
+        $toriShortGems = @()
+        if (-not (Get-Command Test-ToriConfluence -ErrorAction SilentlyContinue)) {
+            $projRoot = Split-Path $global:JOURNAL_DIR -Parent
+            foreach ($tl in @("lib_tori_confluence_detector.ps1","lib_tori_gate_wrapper.ps1")) {
+                $tlp = Join-Path (Join-Path $projRoot "agents") $tl
+                if (Test-Path $tlp) { . $tlp }
+            }
+        }
+        if (Get-Command Test-ToriConfluence -ErrorAction SilentlyContinue) {
+            try {
+                $suPath = Join-Path (Split-Path $global:JOURNAL_DIR -Parent) "config/short_universe.json"
+                if (Test-Path $suPath) {
+                    $su = Get-Content $suPath -Raw | ConvertFrom-Json
+                    if ($su.live_enabled -and $su.tier_a_live) {
+                        foreach ($m in @($su.tier_a_live)) {
+                            $tc = $null
+                            try { $tc = Test-ToriConfluence -Market $m -SetupType "SHORT" -TimeframeMinutes 60 -TimeoutSeconds 6 } catch {}
+                            if ($tc -and $tc.allows) {
+                                $toriShortGems += @{
+                                    market     = $m
+                                    score      = [int]$tc.confluence_score
+                                    mode       = "TORI_SHORT"
+                                    direction  = "SHORT"
+                                    conviction = [int]$tc.confluence_score
+                                    signal     = ("tori:" + (@($tc.signals_fired) -join '+'))
+                                    sizing     = @{ sizing_pct = 0.02 }
+                                }
+                                Write-GemLog "TORI_SHORT" "$m confluence=$($tc.confluence_score) signals=$(@($tc.signals_fired) -join '+')"
+                            }
+                        }
+                        if ($toriShortGems.Count -gt 3) {
+                            $toriShortGems = @($toriShortGems | Sort-Object { [int]$_.score } -Descending | Select-Object -First 3)
+                        }
+                        if ($toriShortGems.Count -gt 0) {
+                            Write-GemLog "INFO" "Tori SHORT sweep: $($toriShortGems.Count) candidato(s) >=80 no tier_a_live"
+                        }
+                    }
+                }
+            } catch {
+                Write-GemLog "WARN" "tori short sweep failed (non-critical): $($_.Exception.Message)"
+            }
+        }
+
+        $gems = @($triggerGems) + @($gemsFromScan) + @($toriShortGems)
         # R4 fix 2026-05-21: cache check ANTES do log "encontrados" + Invoke-GemExecute.
         # Resolve PEAQ/PROVE re-detection spam.
         if (Get-Command Test-GemRecentlyRejected -ErrorAction SilentlyContinue -and $gems.Count -gt 0) {

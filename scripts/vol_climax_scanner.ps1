@@ -127,8 +127,14 @@ function _FetchDailyCandles {
         try {
             $url = "https://api.coinex.com/v2/$mtype/kline?market=$Market&period=1day&limit=$Limit"
             $r = Invoke-RestMethod -Uri $url -Method GET -TimeoutSec 10 -ErrorAction Stop
-            if ($r.code -eq 0 -and $r.data -and @($r.data).Count -ge 20) {
-                return @($r.data | ForEach-Object {
+            if ($r.code -eq 0 -and $r.data -and @($r.data).Count -ge 21) {
+                # 2026-07-09 FIX RAIZ detected=0: ultimo candle = DIA EM ANDAMENTO (parcial).
+                # Detect-VolClimax avalia o ultimo indice -> vol_ratio subestimado o dia
+                # inteiro -> climax quase nunca dispara live (backtest usa fechados).
+                # Descarta o parcial: sinal no CLOSE do dia = semantica do backtest.
+                $data = @($r.data)
+                $data = $data[0..($data.Count - 2)]
+                return @($data | ForEach-Object {
                     [PSCustomObject]@{
                         open  = [double]$_.open
                         high  = [double]$_.high
