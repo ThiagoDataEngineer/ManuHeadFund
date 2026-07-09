@@ -298,6 +298,15 @@ CREATE TABLE IF NOT EXISTS manuheadfund.decision_grades_agg (
     updated_at   TIMESTAMPTZ
 );
 
+-- calibration_snapshots: registro do momento das calibracoes (lib_calibration_snapshot)
+CREATE TABLE IF NOT EXISTS manuheadfund.calibration_snapshots (
+    id      TEXT PRIMARY KEY,   -- data (dedup diario)
+    ts      TEXT,
+    regime  TEXT,
+    payload TEXT
+);
+GRANT ALL ON manuheadfund.calibration_snapshots TO anon, authenticated, service_role;
+
 -- ── CRON DEDUP (SETUP_SUPABASE_CRON_STATE) ───────────────────────────────────
 
 CREATE TABLE IF NOT EXISTS manuheadfund.cron_state (
