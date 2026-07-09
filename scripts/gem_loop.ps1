@@ -382,6 +382,14 @@ function Invoke-GemCycle-Once {
             if (Test-Path (Join-Path $global:JOURNAL_DIR "CONVICTION_GATE.flag")) { $bypass = @("tori_skip","tori_wait") }
             $filtered = @(); $skipped = @()
             foreach ($g in $gems) {
+                # 2026-07-09 FIX: cache de rejeicao e por MARKET (sem direcao). O ARB
+                # SHORT (Tori 100, melhor candidato) morria ETERNAMENTE no cache gravado
+                # pela rejeicao do ARB LONG (65<80) segundos antes no MESMO ciclo.
+                # Gems com direcao explicita (TORI_SHORT/TRIGGER) pulam o cache de
+                # market — os guards reais (exposure_cap, cascade, cenario, dedup de
+                # posicao, Tori/Mesa/Mentor) continuam TODOS no executor.
+                $gDirCache = "$($g.direction)".ToUpper()
+                if ($gDirCache -in @("LONG","SHORT")) { $filtered += $g; continue }
                 # 2026-06-03: Reduzido TTL de 60 para 5 minutos
                 # Tori agora FORÇA ENTRY, então gems rejeitados devem ser re-tentados rapidamente
                 if (Test-GemRecentlyRejected -Path $cachePath -Market $g.market -TtlMinutes 5 -BypassReasons $bypass) {
