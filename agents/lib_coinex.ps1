@@ -118,6 +118,13 @@ function CoinEx-Headers($method, $path, $body, $accessId, $secretKey) {
 
 function CoinEx-GetCandles($market, $period, $limit=100) {
     $type = if ($market -match "USDT$" -and $market -notmatch "SPOT") { "futures" } else { "spot" }
+    # 2026-07-09 FIX: callers passam "1h"/"4h" mas API v2 exige "1hour"/"4hour"
+    # -> code=3639 Invalid Parameter em TODA posicao do trailing (Errors: 6 na nuvem).
+    # Normaliza aqui ("1hour" ja correto passa intacto pelo anchor ^...$).
+    if ($period -match '^(\d+)(m|h|d|w)$') {
+        $unit = switch ($Matches[2]) { 'm' { 'min' } 'h' { 'hour' } 'd' { 'day' } 'w' { 'week' } }
+        $period = "$($Matches[1])$unit"
+    }
     $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/$type/kline?market=$market&period=$period&limit=$limit" -Method GET -TimeoutSec 15 -ErrorAction Stop
     if ($r.code -ne 0) { throw "CoinEx candles error: $($r.message)" }
     return $r.data | ForEach-Object {
@@ -134,13 +141,15 @@ function CoinEx-GetCandles($market, $period, $limit=100) {
 
 function CoinEx-GetFuturesCandles($market, $period, $limit=100) {
     # Convert period format: 1h -> 1hour, 4h -> 4hour, 1d -> 1day, etc.
-    $periodFormatted = if ($period -match '(\d+)(h|d|m|w)') {
+    # 2026-07-09 FIX: 'm' mapeava p/ 'minute' mas API v2 exige 'min' ("15min");
+    # regex ancorada ^...$ p/ nao re-mapear formato ja correto ("1hour").
+    $periodFormatted = if ($period -match '^(\d+)(h|d|m|w)$') {
         $num = $Matches[1]
         $unit = switch($Matches[2]) {
             'h' { 'hour' }
             'd' { 'day' }
             'w' { 'week' }
-            'm' { 'minute' }
+            'm' { 'min' }
             default { 'hour' }
         }
         "$num$unit"
