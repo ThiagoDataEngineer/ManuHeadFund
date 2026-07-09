@@ -107,11 +107,14 @@ foreach ($__learnDep in @("lib_learning_engine.ps1","lib_evolution_engine.ps1","
 
 # 2026-07-08: TORI TRADES INTEGRATION — confluence gate + analysis layer
 # Wire lib_tori_confluence_detector + lib_tori_trades_scanner + wrapper gate
+# 2026-07-09 FIX: $agentsDir disponivel no caller (gem_loop define no inicio)
 foreach ($__toriLib in @("lib_tori_confluence_detector.ps1","lib_tori_trades_scanner.ps1","lib_tori_gate_wrapper.ps1")) {
-    $__toriPath = Join-Path $PSScriptRoot $__toriLib
-    if (Test-Path $__toriPath) {
-        try { . $__toriPath }
-        catch { Write-Host "[WARN] Failed to load ${__toriLib}: $_" -ForegroundColor Yellow }
+    if ($agentsDir) {
+        $__toriPath = Join-Path $agentsDir $__toriLib
+        if (Test-Path $__toriPath) {
+            try { . $__toriPath }
+            catch { Write-Host "[WARN] Failed to load ${__toriLib}: $_" -ForegroundColor Yellow }
+        }
     }
 }
 
