@@ -151,10 +151,18 @@ function Get-TrailingNewStopAdaptive {
         $gain66  = $entry + $range * 0.66
         $newPeak = [math]::Max($peak, $CurrentPrice)
 
+        # 2026-07-08: TOP INSTINCT — Detecta signs de reversão em topo
+        $topInstinct = $false
+        if ($phase -eq 3 -and $newPeak -eq $peak -and $CurrentPrice -ge ($peak * 0.98)) {
+            # Pico não muda + preço perto = pico potencial, aperta SL
+            $topInstinct = $true
+        }
+
         if ($phase -lt 3 -and $CurrentPrice -ge $target) {
             # Fase 3: Trailing ativo — 15% abaixo do pico, nunca recua
             $newPhase = 3
-            $newStop  = [math]::Round($newPeak * 0.85, 4)
+            $tightFactor = if ($topInstinct) { 0.90 } else { 0.85 }
+            $newStop  = [math]::Round($newPeak * $tightFactor, 4)
             $changed  = $true
         } elseif ($phase -lt 2 -and $CurrentPrice -ge $gain66) {
             # Fase 2: Lock +33% do ganho
@@ -181,10 +189,18 @@ function Get-TrailingNewStopAdaptive {
         $gain66  = $entry - $range * 0.66
         $newPeak = [math]::Min($peak, $CurrentPrice)
 
+        # 2026-07-08: TOP INSTINCT — SHORT: detecta floor (fundo potencial)
+        $topInstinct = $false
+        if ($phase -eq 3 -and $newPeak -eq $peak -and $CurrentPrice -le ($peak * 1.02)) {
+            # Pico (piso) não muda + preço perto = piso potencial, aperta SL
+            $topInstinct = $true
+        }
+
         if ($phase -lt 3 -and $CurrentPrice -le $target) {
             # Fase 3 SHORT: trailing 15% acima do pico (preço mínimo), nunca recua
             $newPhase = 3
-            $newStop  = [math]::Round($newPeak * 1.15, 4)
+            $tightFactor = if ($topInstinct) { 1.10 } else { 1.15 }
+            $newStop  = [math]::Round($newPeak * $tightFactor, 4)
             $changed  = $true
         } elseif ($phase -lt 2 -and $CurrentPrice -le $gain66) {
             # Fase 2 SHORT: lock +33% do ganho (stop sobe, pois SHORT)
