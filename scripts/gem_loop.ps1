@@ -206,6 +206,18 @@ if (-not (Get-Command "Invoke-GemScan" -ErrorAction SilentlyContinue)) {
     exit 1
 }
 
+# 2026-07-09 BOOT INTEGRITY GUARD (fail-closed, regra 5): parse error em lib =
+# funcoes somem em silencio (caso lib_position_sync_live: sync morto por `??`).
+. (Join-Path $agentsDir "lib_boot_integrity.ps1")
+$__boot = Assert-BootIntegrity -DaemonName "gem_loop" -AgentsDir $agentsDir -CriticalFunctions @(
+    "Invoke-GemExecute", "Test-GemSafetyGuards", "Get-ExecutableCapitalUSDT",
+    "Get-TrailingNewStop", "Send-TelegramAlert"
+)
+if (-not $__boot.ok) {
+    Write-GemLog "ERROR" "gem_loop abortado por boot integrity: $($__boot.message)"
+    exit 1
+}
+
 Write-GemLog "INFO" "GemLoop iniciado. Interval=${CheckInterval}min | Mode=$modeLabel | PID=$myPid"
 
 # Validar carregamentos

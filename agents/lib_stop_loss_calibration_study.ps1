@@ -14,6 +14,51 @@
 #   D. Hybrid (gráfico + ATR validation)
 
 # ============================================================================
+# RESOLVER PER-ASSET (2026-07-09, TDD): candles -> ATR% -> stop_pct com clamps
+# Substitui o 0.08 fixo do lib_position_protection (falso-positivo 70% em wicks).
+# Fail-safe: sem candles suficientes -> fallback 0.08 (comportamento legado).
+# ============================================================================
+
+function Get-PerAssetStopPct {
+    [CmdletBinding()]
+    param(
+        [object[]] $Candles = @(),
+        [double] $Multiplier = 2.5,
+        [double] $FallbackPct = 0.08,
+        [double] $ClampMin = 0.02,
+        [double] $ClampMax = 0.12,
+        [int] $AtrPeriod = 14
+    )
+
+    $c = @($Candles)
+    if ($c.Count -lt ($AtrPeriod + 1)) {
+        return @{ stop_pct = $FallbackPct; source = "fallback"; atr_pct = 0 }
+    }
+
+    # ATR simples: media dos True Ranges dos ultimos $AtrPeriod candles
+    $trs = @()
+    for ($i = $c.Count - $AtrPeriod; $i -lt $c.Count; $i++) {
+        $high = [double]$c[$i].high
+        $low = [double]$c[$i].low
+        $prevClose = [double]$c[$i - 1].close
+        $tr = [math]::Max($high - $low, [math]::Max([math]::Abs($high - $prevClose), [math]::Abs($low - $prevClose)))
+        $trs += $tr
+    }
+    $atr = ($trs | Measure-Object -Average).Average
+    $lastClose = [double]$c[$c.Count - 1].close
+    if ($lastClose -le 0 -or $atr -le 0) {
+        return @{ stop_pct = $FallbackPct; source = "fallback"; atr_pct = 0 }
+    }
+
+    $atrPct = $atr / $lastClose
+    $stopPct = [math]::Round($atrPct * $Multiplier, 4)
+    if ($stopPct -lt $ClampMin) { $stopPct = $ClampMin }
+    if ($stopPct -gt $ClampMax) { $stopPct = $ClampMax }
+
+    return @{ stop_pct = $stopPct; source = "atr"; atr_pct = [math]::Round($atrPct, 5) }
+}
+
+# ============================================================================
 # FÓRMULA A: ATR-Based (Simples, implementável agora)
 # ============================================================================
 # Conceito: SL = Entry - (N * ATR_14_daily)

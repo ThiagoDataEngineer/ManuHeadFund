@@ -59,7 +59,9 @@ jobs:
       - name: 5. Suites Pester criticas
         shell: powershell
         run: |
-          $suites = "tests\lib_pump_fade_detector.Tests.ps1","tests\beta_hallucination_fix.Tests.ps1","tests\lib_beta_cap_regime_aware.Tests.ps1","tests\lib_evolution_engine.Tests.ps1","tests\lib_crowding_signal.Tests.ps1"
+          # 2026-07-09: +libs_parse_clean (18 libs quebradas em silencio), +capital_context_failsafe
+          # (JOB17 poluia Supabase com bootstrap), +boot_integrity (daemons fail-closed no boot)
+          $suites = "tests\lib_pump_fade_detector.Tests.ps1","tests\beta_hallucination_fix.Tests.ps1","tests\lib_beta_cap_regime_aware.Tests.ps1","tests\lib_evolution_engine.Tests.ps1","tests\lib_crowding_signal.Tests.ps1","tests\libs_parse_clean.Tests.ps1","tests\capital_context_failsafe.Tests.ps1","tests\boot_integrity.Tests.ps1"
           $failed = 0
           foreach ($s in $suites) {
             if (Test-Path $s) {

@@ -158,6 +158,19 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 # NOTE: lib_trailing_adaptive.ps1 and lib_layer4_tori_timestop.ps1 already loaded above (line 77-78)
 # Removing duplicate loads to prevent function shadowing issues
 
+# 2026-07-09 BOOT INTEGRITY GUARD (fail-closed, regra 5): 1 parse error em lib =
+# funcoes somem em silencio (caso lib_trailing: SL trailing morto 20h). Se libs
+# quebradas ou funcoes criticas ausentes -> alerta + EXIT (nao opera quebrado).
+. (Join-Path $agentsDir "lib_boot_integrity.ps1")
+$__boot = Assert-BootIntegrity -DaemonName "scan_master" -AgentsDir $agentsDir -CriticalFunctions @(
+    "Show-TrailingStatus", "Update-TrailingStopsAdaptive", "Send-TelegramAlert",
+    "Get-CapitalContext", "Test-GemSafetyGuards"
+)
+if (-not $__boot.ok) {
+    Write-Host "[FATAL] scan_master abortado por boot integrity (fix as libs e reinicie)" -ForegroundColor Red
+    exit 1
+}
+
 # 2026-05-19 PM: Kelly sizing flag (auto-activated via cron quando 10+ outcomes graduate criteria)
 # Le journal/USE_KELLY_SIZING.flag se presente -> seta $global:USE_KELLY_SIZING=$true
 $_kellyFlag = Join-Path $scriptDir "..\journal\USE_KELLY_SIZING.flag"

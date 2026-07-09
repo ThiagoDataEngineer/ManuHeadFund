@@ -239,6 +239,30 @@ function Repair-PositionProtection {
         return [PSCustomObject]@{ success=$false; market=$Market; reason="invalid_entry" }
     }
 
+    # 2026-07-09 AUDITOR TRAILING: calibracao per-asset do stop (TDD 7/7).
+    # 0.08 fixo gerava falso-positivo ~70% (wick de microcap estoura stop).
+    # Se caller nao passou StopPct explicito, calibra via ATR% com clamps [2%,12%].
+    # Fail-safe: qualquer erro -> mantem 0.08 legado.
+    if ($StopPct -eq 0.08 -and (Get-Command Get-PerAssetStopPct -ErrorAction SilentlyContinue)) {
+        try {
+            $candles = $null
+            if (Get-Command CoinEx-GetFuturesCandles -ErrorAction SilentlyContinue) {
+                $candles = CoinEx-GetFuturesCandles $Market "1h" 30
+            } elseif (Get-Command CoinEx-GetCandles -ErrorAction SilentlyContinue) {
+                $candles = CoinEx-GetCandles $Market "1h" 30
+            }
+            if ($candles) {
+                $calib = Get-PerAssetStopPct -Candles @($candles)
+                if ($calib.source -eq "atr") {
+                    Write-Host "  [StopCalib] $Market ATR%=$($calib.atr_pct) -> stop_pct=$($calib.stop_pct) (era 0.08 fixo)" -ForegroundColor DarkCyan
+                    $StopPct = [double]$calib.stop_pct
+                }
+            }
+        } catch {
+            Write-Host "  [StopCalib] $Market falhou ($_) -- mantendo 0.08 legado" -ForegroundColor Yellow
+        }
+    }
+
     # Calcular SL/TP se nao fornecidos (direcao-aware)
     if ($side -eq "long") {
         if ($StopLoss   -le 0) { $StopLoss   = [math]::Round($entry * (1 - $StopPct), 4) }
