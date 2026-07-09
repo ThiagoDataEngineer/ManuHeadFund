@@ -240,4 +240,4 @@ if ($PSCommandPath -eq $MyInvocation.MyCommand.Path) {
     Invoke-EvolutionAutoRebalance
 }
 
-Export-ModuleMember -Function Invoke-EvolutionAutoRebalance
+# 2026-07-08 FIX: Removed Export-ModuleMember (dot-source .ps1 files don't export)

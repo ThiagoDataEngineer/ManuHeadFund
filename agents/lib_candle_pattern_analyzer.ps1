@@ -221,7 +221,4 @@ function New-CandleAnalysisLog {
     }
 }
 
-# 2026-07-02 FIX: Export-ModuleMember so em modulo (.psm1); guard p/ dot-source
-if ($MyInvocation.MyCommand.ScriptBlock.Module) {
-    Export-ModuleMember -Function Get-CandlePattern, Get-TrailingStopAdjustment, New-CandleAnalysisLog
-}
+# 2026-07-08 FIX: Removed Export-ModuleMember (dot-source .ps1 files don't export)

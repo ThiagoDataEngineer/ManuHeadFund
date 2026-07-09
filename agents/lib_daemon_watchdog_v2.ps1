@@ -195,5 +195,4 @@ function Watch-DaemonsLoopInfinite {
     }
 }
 
-# Export
-Export-ModuleMember -Function Test-DaemonHealthy, Repair-StaleLocks, Invoke-DaemonRestart, Watch-DaemonsLoopInfinite
+# 2026-07-08 FIX: Removed Export-ModuleMember (dot-source .ps1 files don't export)
