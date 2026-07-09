@@ -474,9 +474,37 @@ function CoinEx-GetPosition($market) {
     return $r.data
 }
 
-# DEPRECATED: CoinEx-GetPendingPositions agora definida em lib_coinex_positions_fetch.ps1
-# com parametro -IsFutures. Esta versao mantida only para backward compat references.
-# Apos transicao completa, deletar.
+# 2026-07-09 RESTORED: a "deprecacao" p/ lib_coinex_positions_fetch.ps1 removeu a
+# implementacao real e deixou la um alias RECURSIVO (chamava a si mesmo). Consumidores
+# que carregam so lib_coinex (trailing_stop_monitor, position_risk_cron) quebravam na
+# nuvem com "CoinEx-GetPendingPositions is not recognized". Implementacao original de
+# volta aqui, onde CoinEx-Get (dependencia) vive. Nenhum caller usava -IsFutures.
+function CoinEx-GetPendingPositions {
+    param(
+        [Parameter(Mandatory=$false)]
+        [string]$Market = $null
+    )
+
+    # Se market especificado, retorna apenas essa posicao
+    if ($Market) {
+        $pos = CoinEx-GetPosition -market $Market
+        if ($pos) { return @($pos) }
+        return @()
+    }
+
+    # Caso contrario, busca todas as posicoes abertas
+    $r = CoinEx-Get "/v2/futures/pending-position?market_type=FUTURES"
+    if ($r.code -ne 0) { return @() }
+
+    # 2026-06-18 fix: FILTRA fantasmas (entradas sem market). A API devolvia 1
+    # elemento vazio quando nao ha posicoes -> consumidores estouravam
+    # "Cannot bind argument to parameter 'Market'" (quebrava o trailing na nuvem).
+    $raw = if ($r.data) { @($r.data) } else { @() }
+    $valid = @($raw | Where-Object { $_ -and "$($_.market)".Trim() -ne "" })
+    if ($valid.Count -eq 0) { return @() }
+    if ($valid.Count -eq 1) { return ,$valid }
+    return $valid
+}
 
 # Posicoes abertas consolidadas (SPOT holdings + FUTURES positions).
 # 2026-06-11: implementa o contrato esperado por Sync-TrailingPositionsWithExchange

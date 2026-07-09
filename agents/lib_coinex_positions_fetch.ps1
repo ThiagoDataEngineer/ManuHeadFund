@@ -56,16 +56,28 @@ function Get-CoinExSpotBalance {
     return @()
 }
 
-# Alias para compatibilidade
-function CoinEx-GetPendingPositions {
-    [CmdletBinding()]
-    param([bool]$IsFutures = $true)
-
-    if ($IsFutures) {
-        Get-CoinExFuturesPositions
-    } else {
-        Get-CoinExSpotBalance
+# 2026-07-09 FIX: o alias antigo aqui era RECURSIVO — CoinEx-GetPendingPositions
+# chamava Get-CoinExFuturesPositions que chamava CoinEx-GetPendingPositions de novo
+# (a implementacao real tinha sido deletada de lib_coinex.ps1 na "deprecacao").
+# A implementacao real foi RESTAURADA em lib_coinex.ps1. Este fallback so existe
+# se a real nao estiver carregada, e chama a API direto (sem recursao).
+if (-not (Get-Command CoinEx-GetPendingPositions -ErrorAction SilentlyContinue)) {
+    function CoinEx-GetPendingPositions {
+        param(
+            [Parameter(Mandatory=$false)]
+            [string]$Market = $null
+        )
+        if (-not (Get-Command CoinEx-Get -ErrorAction SilentlyContinue)) { return @() }
+        $path = "/v2/futures/pending-position?market_type=FUTURES"
+        if ($Market) { $path = "/v2/futures/pending-position?market=$Market&market_type=FUTURES" }
+        $r = CoinEx-Get $path
+        if ($r.code -ne 0) { return @() }
+        $raw = if ($r.data) { @($r.data) } else { @() }
+        $valid = @($raw | Where-Object { $_ -and "$($_.market)".Trim() -ne "" })
+        if ($valid.Count -eq 0) { return @() }
+        if ($valid.Count -eq 1) { return ,$valid }
+        return $valid
     }
 }
 
-# Functions exported via dot-sourcing: Get-CoinExFuturesPositions, Get-CoinExSpotBalance, CoinEx-GetPendingPositions
+# Functions exported via dot-sourcing: Get-CoinExFuturesPositions, Get-CoinExSpotBalance, CoinEx-GetPendingPositions (fallback)
