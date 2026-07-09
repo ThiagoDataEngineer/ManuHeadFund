@@ -1,11 +1,17 @@
 -- ============================================================================
--- SETUP_SUPABASE_MANUHEADFUND_2026_07_09.sql
+-- SETUP_SUPABASE_MANUHEADFUND_2026_07_09.sql  (v2 — índices guardados)
 -- Setup COMPLETO e ATUAL do ManuHeadFund no projeto Supabase novo.
 --
 -- ⚠️ ESCOPO: schema `manuheadfund` APENAS. NENHUMA linha toca o schema `public`
 --    (onde vivem payments/shares/lnurl_* e tabelas de outras aplicações).
 --    Tudo IF NOT EXISTS — idempotente, re-rodável, sem DROP, sem ALTER em nada
 --    que já exista.
+--
+-- v2 fix (42703 "column market does not exist"): tabelas PRÉ-EXISTENTES no
+-- projeto podem ter shape diferente (ex: trailing_positions com coluna symbol
+-- em vez de market). CREATE TABLE IF NOT EXISTS pula a criação, mas CREATE
+-- INDEX numa coluna ausente ESTOURA. Agora TODO índice é guardado por checagem
+-- de existência da coluna — cria só se o shape bater.
 --
 -- Consolida (e SUBSTITUI para o projeto novo):
 --   SUPABASE_STATE_SCHEMA.md Etapa 1 · SETUP_SUPABASE_LEARNING_2026_07_07.sql
@@ -65,7 +71,12 @@ CREATE TABLE IF NOT EXISTS manuheadfund.trailing_positions (
     "lastMentorReview"     TEXT,
     "entryRegime"          TEXT
 );
-CREATE INDEX IF NOT EXISTS idx_trailing_market ON manuheadfund.trailing_positions (market);
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_schema='manuheadfund' AND table_name='trailing_positions' AND column_name='market') THEN
+    CREATE INDEX IF NOT EXISTS idx_trailing_market ON manuheadfund.trailing_positions (market);
+  END IF;
+END $$;
 
 -- validation_snapshots: log de cada ciclo do scan_master
 CREATE TABLE IF NOT EXISTS manuheadfund.validation_snapshots (
@@ -75,7 +86,12 @@ CREATE TABLE IF NOT EXISTS manuheadfund.validation_snapshots (
     positions_n  INTEGER,
     payload      JSONB
 );
-CREATE INDEX IF NOT EXISTS idx_validation_ts ON manuheadfund.validation_snapshots (snapshot_ts DESC);
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_schema='manuheadfund' AND table_name='validation_snapshots' AND column_name='snapshot_ts') THEN
+    CREATE INDEX IF NOT EXISTS idx_validation_ts ON manuheadfund.validation_snapshots (snapshot_ts DESC);
+  END IF;
+END $$;
 
 -- mentor_reviews: Layer 2 checkpoint reviews
 CREATE TABLE IF NOT EXISTS manuheadfund.mentor_reviews (
@@ -88,7 +104,12 @@ CREATE TABLE IF NOT EXISTS manuheadfund.mentor_reviews (
     new_stop     NUMERIC,
     payload      JSONB
 );
-CREATE INDEX IF NOT EXISTS idx_mentor_market_ts ON manuheadfund.mentor_reviews (market, review_ts DESC);
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_schema='manuheadfund' AND table_name='mentor_reviews' AND column_name='market') THEN
+    CREATE INDEX IF NOT EXISTS idx_mentor_market_ts ON manuheadfund.mentor_reviews (market, review_ts DESC);
+  END IF;
+END $$;
 
 -- ── TRADE JOURNAL (lib_trade_journal_supabase — formato ATUAL do writer) ─────
 
@@ -110,7 +131,12 @@ CREATE TABLE IF NOT EXISTS manuheadfund.trade_outcomes (
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS idx_trade_symbol_ts ON manuheadfund.trade_outcomes(symbol, entry_ts DESC);
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_schema='manuheadfund' AND table_name='trade_outcomes' AND column_name='symbol') THEN
+    CREATE INDEX IF NOT EXISTS idx_trade_symbol_ts ON manuheadfund.trade_outcomes(symbol, entry_ts DESC);
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS manuheadfund.open_positions (
     id TEXT PRIMARY KEY,
@@ -130,7 +156,12 @@ CREATE TABLE IF NOT EXISTS manuheadfund.open_positions (
     created_at TIMESTAMPTZ DEFAULT now(),
     updated_at TIMESTAMPTZ DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS idx_position_symbol ON manuheadfund.open_positions(symbol);
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_schema='manuheadfund' AND table_name='open_positions' AND column_name='symbol') THEN
+    CREATE INDEX IF NOT EXISTS idx_position_symbol ON manuheadfund.open_positions(symbol);
+  END IF;
+END $$;
 
 CREATE TABLE IF NOT EXISTS manuheadfund.exchange_sync_log (
     id BIGSERIAL PRIMARY KEY,
@@ -166,7 +197,12 @@ CREATE TABLE IF NOT EXISTS manuheadfund.agent_decisions (
     decided_at TIMESTAMPTZ,
     updated_at TIMESTAMPTZ DEFAULT now()
 );
-CREATE INDEX IF NOT EXISTS idx_decisions_created ON manuheadfund.agent_decisions(created_at DESC);
+DO $$ BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.columns
+             WHERE table_schema='manuheadfund' AND table_name='agent_decisions' AND column_name='created_at') THEN
+    CREATE INDEX IF NOT EXISTS idx_decisions_created ON manuheadfund.agent_decisions(created_at DESC);
+  END IF;
+END $$;
 
 -- ── CÉREBRO EVOLUTIVO (learning — SETUP_SUPABASE_LEARNING_2026_07_07) ────────
 
@@ -238,5 +274,12 @@ GRANT ALL ON ALL TABLES    IN SCHEMA manuheadfund TO anon, authenticated, servic
 GRANT ALL ON ALL SEQUENCES IN SCHEMA manuheadfund TO anon, authenticated, service_role;
 
 -- ── VERIFICAÇÃO ──────────────────────────────────────────────────────────────
+-- 1) Tabelas do schema (espere 15+):
 SELECT table_name FROM information_schema.tables
 WHERE table_schema = 'manuheadfund' ORDER BY table_name;
+
+-- 2) DIAGNÓSTICO shape da trailing_positions pré-existente (o 42703 provou que
+--    ela NÃO tem coluna market — precisamos saber o shape real p/ alinhar o código):
+SELECT column_name, data_type FROM information_schema.columns
+WHERE table_schema = 'manuheadfund' AND table_name = 'trailing_positions'
+ORDER BY ordinal_position;
