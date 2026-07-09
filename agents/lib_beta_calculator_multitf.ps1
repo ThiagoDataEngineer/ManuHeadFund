@@ -48,13 +48,13 @@ function Get-BetaMultiTF {
         # Fetch candles: 1D, 4H, 1H
         Write-Host "  [Beta] Fetching candles: 1D, 4H, 1H para $Market..." -ForegroundColor Gray
 
-        $candles1D = @(Get-CoinexCandles -Symbol $Market -Period "1D" -Limit $LookbackCandles -ErrorAction Stop)
-        $candles4H = @(Get-CoinexCandles -Symbol $Market -Period "4H" -Limit $LookbackCandles -ErrorAction Stop)
-        $candles1H = @(Get-CoinexCandles -Symbol $Market -Period "1H" -Limit $LookbackCandles -ErrorAction Stop)
+        $candles1D = @(Get-CoinexCandles -Market $Market -Timeframe "1D" -Limit $LookbackCandles -ErrorAction Stop)
+        $candles4H = @(Get-CoinexCandles -Market $Market -Timeframe "4H" -Limit $LookbackCandles -ErrorAction Stop)
+        $candles1H = @(Get-CoinexCandles -Market $Market -Timeframe "1H" -Limit $LookbackCandles -ErrorAction Stop)
 
-        $btcCandles1D = @(Get-CoinexCandles -Symbol "BTCUSDT" -Period "1D" -Limit $LookbackCandles -ErrorAction Stop)
-        $btcCandles4H = @(Get-CoinexCandles -Symbol "BTCUSDT" -Period "4H" -Limit $LookbackCandles -ErrorAction Stop)
-        $btcCandles1H = @(Get-CoinexCandles -Symbol "BTCUSDT" -Period "1H" -Limit $LookbackCandles -ErrorAction Stop)
+        $btcCandles1D = @(Get-CoinexCandles -Market "BTCUSDT" -Timeframe "1D" -Limit $LookbackCandles -ErrorAction Stop)
+        $btcCandles4H = @(Get-CoinexCandles -Market "BTCUSDT" -Timeframe "4H" -Limit $LookbackCandles -ErrorAction Stop)
+        $btcCandles1H = @(Get-CoinexCandles -Market "BTCUSDT" -Timeframe "1H" -Limit $LookbackCandles -ErrorAction Stop)
 
         if ($candles1D.Count -lt 2 -or $btcCandles1D.Count -lt 2) {
             return @{
