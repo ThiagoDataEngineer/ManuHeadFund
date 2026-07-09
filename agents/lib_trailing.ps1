@@ -56,7 +56,12 @@ function Get-TrailingPositions {
     # state_store path (opt-in)
     if ((_Test-TrailingUsesStateStore) -and (Get-Command Get-StateRecords -ErrorAction SilentlyContinue)) {
         try {
-            $rows = @(Get-StateRecords -Table "trailing_positions")
+            # 2026-07-09 FIX: tabela renomeada trailing_positions -> trailing_state.
+            # A 'trailing_positions' do Supabase pertence ao position_sync (shape
+            # id/symbol/...); este estado usa pk_id/market/... — dois shapes na mesma
+            # tabela = upsert 400 silencioso = estado NUNCA persistia na nuvem
+            # (peaks/fases resetavam a cada run stateless). DDL: docs/SETUP v2.
+            $rows = @(Get-StateRecords -Table "trailing_state")
             $result = @()
             foreach ($item in $rows) {
                 if ($null -ne $item -and $item.PSObject.Properties['market']) {
@@ -115,7 +120,8 @@ function Save-TrailingPositions {
                 $augmented += $copy
             }
             if (@($augmented).Count -gt 0) {
-                Save-StateRecords -Table "trailing_positions" -Records $augmented -PrimaryKey "pk_id"
+                # 2026-07-09: trailing_state (nao trailing_positions — ver Get acima)
+                Save-StateRecords -Table "trailing_state" -Records $augmented -PrimaryKey "pk_id"
             }
             return
         } catch {

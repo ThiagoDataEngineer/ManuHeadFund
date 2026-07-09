@@ -29,6 +29,44 @@ ALTER DEFAULT PRIVILEGES IN SCHEMA manuheadfund GRANT ALL ON SEQUENCES TO anon, 
 
 -- ── CORE STATE (lib_state_store) ─────────────────────────────────────────────
 
+-- trailing_state: estado do trailing/Moon Bag (lib_trailing.ps1, shape pk_id/market)
+-- 2026-07-09: RENOMEADA de trailing_positions — aquela pertence ao position_sync
+-- (shape id/symbol). Dois shapes na mesma tabela = upsert 400 silencioso = estado
+-- do trailing nunca persistia na nuvem (peaks/fases resetavam a cada run).
+CREATE TABLE IF NOT EXISTS manuheadfund.trailing_state (
+    pk_id            TEXT PRIMARY KEY,
+    market           TEXT NOT NULL,
+    side             TEXT NOT NULL,
+    entry            NUMERIC NOT NULL,
+    stop             NUMERIC NOT NULL,
+    target           NUMERIC NOT NULL,
+    size             NUMERIC,
+    "orderId"        TEXT,
+    source           TEXT,
+    mode             TEXT,
+    max_days         INTEGER DEFAULT 0,
+    dd_threshold_pct NUMERIC DEFAULT 30,
+    phase            INTEGER DEFAULT 0,
+    peak             NUMERIC,
+    "stopCurrent"    NUMERIC,
+    active           BOOLEAN DEFAULT TRUE,
+    "openedAt"       TEXT,
+    "updatedAt"      TEXT,
+    "currentPrice"   NUMERIC,
+    "moonBagPairId"  TEXT,
+    "moonBagKind"    TEXT,
+    "layer4Advisory" TEXT,
+    "layer4AdvisoryReason" TEXT,
+    "lastLayer4Review"     TEXT,
+    "moonBagAdvisory"      TEXT,
+    "moonBagAdvisoryReason" TEXT,
+    "lastMoonBagReview"    TEXT,
+    "lastMentorReview"     TEXT,
+    "entryRegime"          TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_trailing_state_market ON manuheadfund.trailing_state (market);
+GRANT ALL ON manuheadfund.trailing_state TO anon, authenticated, service_role;
+
 -- capital_context: snapshot do capital (single-row id=1) — ★ a que faltava (PGRST205)
 CREATE TABLE IF NOT EXISTS manuheadfund.capital_context (
     id          INTEGER PRIMARY KEY DEFAULT 1,
