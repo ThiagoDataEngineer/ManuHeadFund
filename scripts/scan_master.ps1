@@ -702,7 +702,8 @@ function Invoke-MasterCycle {
         try { Sync-TrailingPositionsWithExchange } catch { Write-MasterLog "Sync trailing erro: $_" "WARN" }
         
         try { Update-TrailingStopsAdaptive } catch { Write-MasterLog "Trailing adaptativo erro: $_" "WARN" }
-        Show-TrailingStatus
+        # 2026-07-09 FIX: Show-TrailingStatus causava erro em runspace isolado (sentinel_movers triggers)
+        try { Show-TrailingStatus } catch { <# silenciar display error #> }
 
         # 2026-06-11: auditoria de risco por ciclo — liq proxima, SL alem da liq,
         # lucro destravado sem protecao. Auto-protecao (mover SL) opt-in via
