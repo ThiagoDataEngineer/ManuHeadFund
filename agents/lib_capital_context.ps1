@@ -80,17 +80,20 @@ function Get-CapitalContext {
         $useStateStore = (Get-Command Get-StateRecords -ErrorAction SilentlyContinue) -ne $null
     }
 
-    # Check cache freshness
+    # Check cache freshness (2026-07-09 FIX: tentar LOCAL PRIMEIRO se Supabase falhar)
     if (-not $Force) {
         $cached = $null
-        if ($useStateStore) {
+        # Prioridade: arquivo local > Supabase (Supabase pode estar sem auth em local)
+        if (Test-Path $path) {
+            try {
+                $cached = Get-Content $path -Raw -Encoding UTF8 | ConvertFrom-Json
+            } catch { $cached = $null }
+        }
+        # Se arquivo não tem, tenta Supabase
+        if (-not $cached -and $useStateStore) {
             try {
                 $rows = @(Get-StateRecords -Table "capital_context")
                 if ($rows.Count -gt 0) { $cached = $rows[0] }
-            } catch { $cached = $null }
-        } elseif (Test-Path $path) {
-            try {
-                $cached = Get-Content $path -Raw -Encoding UTF8 | ConvertFrom-Json
             } catch { $cached = $null }
         }
 
