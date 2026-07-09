@@ -103,6 +103,8 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 . (Join-Path $agentsDir "lib_self_recovery.ps1")  # 2026-06-08: auto-healing (diagnostica log + auto-corrige)
 . (Join-Path $agentsDir "lib_bidirectional_direction.ps1")  # 2026-06-08: direcao bidirecional (bear/bull trap)
 . (Join-Path $agentsDir "lib_direction_learning.ps1")  # 2026-06-08: motor aprendizado + signal snapshot
+. (Join-Path $agentsDir "lib_mentor_wire.ps1")  # 2026-07-08 ATIVAÇÃO: Mentor recalibration post-decision
+. (Join-Path $agentsDir "lib_regime_detector_audit.ps1")  # 2026-07-08 ATIVAÇÃO: Regime audit + passivization (BULL_WEAK)
 . (Join-Path $agentsDir "lib_learning_engine.ps1")  # 2026-07-07 ATIVAÇÃO: Learning Engine — analisa logs de erro, calibra conviction
 . (Join-Path $agentsDir "lib_evolution_engine.ps1")  # 2026-07-07 ATIVAÇÃO: Evolution Engine — auto-tuning parametros de deteccao
 . (Join-Path $agentsDir "lib_mentor_invariants.ps1")  # B4 prevention
@@ -1659,6 +1661,25 @@ if (Get-Command Format-TgSystemStart -ErrorAction SilentlyContinue) {
 }
 
 $iteration = 0
+
+# 2026-07-08 STARTUP: Reconcile closed trades + recalibrate mentor
+if ($iteration -eq 0) {
+    Write-Host "[STARTUP] Reconciliando trades fechados + mentor recalibration..." -ForegroundColor Cyan
+    try {
+        if (Get-Command Recalibrate-SignalTriggersFile -ErrorAction SilentlyContinue) {
+            $recal = Recalibrate-SignalTriggersFile -FilePath (Join-Path $global:JOURNAL_DIR "signal_triggers.jsonl")
+            Write-MasterLog "Mentor recalibration: $recal sinais invertidos" "INFO"
+        }
+        $reconScript = Join-Path $PSScriptRoot "reconcile_closed_trades.ps1"
+        if (Test-Path $reconScript) {
+            & $reconScript | Out-Null
+            Write-MasterLog "Trades fechados reconciliados" "INFO"
+        }
+    } catch {
+        Write-MasterLog "[STARTUP] Reconciliação (não crítico): $_" "WARN"
+    }
+}
+
 do {
     $iteration++
     $seasonal = Get-SeasonalityContext
