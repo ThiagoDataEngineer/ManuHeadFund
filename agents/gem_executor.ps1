@@ -367,11 +367,19 @@ function Invoke-GemExecute {
     if (Get-Command Test-GemRecentlyRejected -ErrorAction SilentlyContinue) {
         $cachePath = Join-Path $global:JOURNAL_DIR "gem_recent_decisions.json"
         $skipReason = "score=$($Gem.score) mode=$($Gem.mode)"
+        # 2026-07-09 FIX: chave do cache ganha DIRECAO quando o gem traz direcao
+        # explicita (TORI_SHORT/TRIGGER). Antes: rejeicao do ARB LONG (DISCOVERY,
+        # tori 65<80) matava o ARB SHORT (tori 100) no mesmo ciclo — o melhor
+        # candidato nunca era avaliado. Rejeicoes de gems sem direcao continuam
+        # gravadas/lidas com market puro (comportamento original).
+        $cacheMkt = $mkt
+        $__gemDirCache = "$($Gem.direction)".ToUpper()
+        if ($__gemDirCache -in @("LONG","SHORT")) { $cacheMkt = "$mkt|$__gemDirCache" }
         # 2026-06-17: bypass tori_skip/wait com CONVICTION_GATE on (deixa re-chegar ao gate)
         $__cacheBypass = @()
         if (Test-Path (Join-Path $global:JOURNAL_DIR "CONVICTION_GATE.flag")) { $__cacheBypass = @("tori_skip","tori_wait") }
-        if (Test-GemRecentlyRejected -Path $cachePath -Market $mkt -Reason $skipReason -TtlMinutes 60 -BypassReasons $__cacheBypass) {
-            Write-Host "SKIP CACHE: $mkt mesma condicao <60min (poupanca LLM)" -ForegroundColor DarkGray
+        if (Test-GemRecentlyRejected -Path $cachePath -Market $cacheMkt -Reason $skipReason -TtlMinutes 60 -BypassReasons $__cacheBypass) {
+            Write-Host "SKIP CACHE: $cacheMkt mesma condicao <60min (poupanca LLM)" -ForegroundColor DarkGray
             return [PSCustomObject]@{ blocked = $true; blocked_by = @("recent_decision_cache"); cache_hit = $true }
         }
     }
