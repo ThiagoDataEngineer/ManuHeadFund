@@ -39,103 +39,44 @@ function Send-EssentialAlert {
     switch ($Type) {
         "TRADE_OPEN" {
             $emoji = "🟢"
-            $bold = "**ENTRADA**"
-            $msg = @"
-$emoji $bold — $Market
-
-Entry: $Entry
-Stop: $(if($Market -eq "") { "N/A" } else { "Definido" })
-Alvo: $(if($Market -eq "") { "N/A" } else { "Definido" })
-Capital: $([math]::Round($PnL, 2)) USDT
-
-_$timestamp_
-"@
+            $bold = "ENTRADA"
+            $msg = "$emoji $bold — $Market`n`nEntry: $Entry`nStop: $(if($Market -eq '') { 'N/A' } else { 'Definido' })`nAlvo: $(if($Market -eq '') { 'N/A' } else { 'Definido' })`nCapital: $([math]::Round($PnL, 2)) USDT`n`n_$timestamp_"
         }
 
         "TRADE_CLOSE_TP" {
             $emoji = "✅"
-            $bold = "**TP BATIDO**"
-            $msg = @"
-$emoji $bold — $Market
-
-Entry: $Entry
-Exit: $Exit
-Lucro: $([math]::Round($PnL, 2)) USD (+$([math]::Round($PnLPct, 2))%)
-Tempo: ${DurationMinutes}min
-
-_$timestamp_
-"@
+            $bold = "TP BATIDO"
+            $msg = "$emoji $bold — $Market`n`nEntry: $Entry`nExit: $Exit`nLucro: $([math]::Round($PnL, 2)) USD (+$([math]::Round($PnLPct, 2))%)`nTempo: ${DurationMinutes}min`n`n_$timestamp_"
         }
 
         "TRADE_CLOSE_SL" {
             $emoji = "🔴"
-            $bold = "**SL BATIDO**"
-            $msg = @"
-$emoji $bold — $Market
-
-Entry: $Entry
-Exit: $Exit
-Perda: $([math]::Round($PnL, 2)) USD ($([math]::Round($PnLPct, 2))%)
-Tempo: ${DurationMinutes}min
-
-_$timestamp_
-"@
+            $bold = "SL BATIDO"
+            $msg = "$emoji $bold — $Market`n`nEntry: $Entry`nExit: $Exit`nPerda: $([math]::Round($PnL, 2)) USD ($([math]::Round($PnLPct, 2))%)`nTempo: ${DurationMinutes}min`n`n_$timestamp_"
         }
 
         "TRAILING_GAIN" {
             $emoji = "📈"
-            $bold = "**GANHO GARANTIDO**"
-            $msg = @"
-$emoji $bold — $Market
-
-Lucro atual: +$([math]::Round($PnL, 2)) USD (+$([math]::Round($PnLPct, 2))%)
-SL movido para: $Current (breakeven + buffer)
-Status: Ganho protegido ✓
-
-_$timestamp_
-"@
+            $bold = "GANHO GARANTIDO"
+            $msg = "$emoji $bold — $Market`n`nLucro atual: +$([math]::Round($PnL, 2)) USD (+$([math]::Round($PnLPct, 2))%)`nSL movido para: $Current (breakeven + buffer)`nStatus: Ganho protegido`n`n_$timestamp_"
         }
 
         "SYSTEM_DOWN" {
             $emoji = "🚨"
-            $bold = "**SISTEMA PAROU**"
-            $msg = @"
-$emoji $bold
-
-Daemon: $Market
-Razão: $Message
-
-Ação: Verificar logs e reiniciar
-
-_$timestamp_
-"@
+            $bold = "SISTEMA PAROU"
+            $msg = "$emoji $bold`n`nDaemon: $Market`nRazão: $Message`n`nAção: Verificar logs e reiniciar`n`n_$timestamp_"
         }
 
         "SYSTEM_UP" {
             $emoji = "🟢"
-            $bold = "**SISTEMA ONLINE**"
-            $msg = @"
-$emoji $bold
-
-Daemon: $Market
-Status: Operacional ✓
-
-_$timestamp_
-"@
+            $bold = "SISTEMA ONLINE"
+            $msg = "$emoji $bold`n`nDaemon: $Market`nStatus: Operacional`n`n_$timestamp_"
         }
 
         "CRITICAL_ERROR" {
             $emoji = "🚨"
-            $bold = "**CRÍTICO**"
-            $msg = @"
-$emoji $bold
-
-$Message
-
-Ação: IMEDIATO - verificar console
-
-_$timestamp_
-"@
+            $bold = "CRITICO"
+            $msg = "$emoji $bold`n`n$Message`n`nAção: IMEDIATO - verificar console`n`n_$timestamp_"
         }
 
         default {
