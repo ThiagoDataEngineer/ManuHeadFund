@@ -491,7 +491,7 @@ function Update-TrailingStops {
                             -ExitReason "SL_HIT" `
                             -MaxGain $maxGain `
                             -DurationMinutes $duration `
-                            -Regime $regime) )
+                            -Regime $regime)
                     } catch { }
                 }
 

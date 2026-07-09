@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 <#
   lib_pattern_backtest.ps1 — Validar 3 padrões com histórico 6+ meses
 

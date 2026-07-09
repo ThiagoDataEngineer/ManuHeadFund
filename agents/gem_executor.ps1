@@ -469,14 +469,33 @@ function Invoke-GemExecute {
     # 2026-05-19 PM: sizing usa TOTAL CoinEx (spot+futures) -- representa portfolio real.
     # Execucao em FUTURES exige margem em futures wallet; gate adicional logo abaixo
     # checa se usd_size <= futures_balance pra evitar margin call.
-    $capital     = if (Get-Command CoinEx-GetTotalCapitalUSDT -ErrorAction SilentlyContinue) {
-        CoinEx-GetTotalCapitalUSDT
-    } elseif ($hasFutures) {
-        CoinEx-GetFuturesCapitalUSDT
+    # 2026-07-09 FIX cap_exposure: resolver capital via Get-ExecutableCapitalUSDT
+    # (lib_capital_context) -- cadeia API fresh -> Supabase/journal cache REAL -> bootstrap.
+    # Local sem credenciais passa a usar o capital REAL que a nuvem grava no Supabase,
+    # em vez do bootstrap 100+100 que bloqueava tudo com cap_exposure falso.
+    # Cross margin: conta inteira e colateral; isolated: so futures wallet.
+    # Default isolated (header: "Padrao: FUTURES (isolated margin)"). Cross via $global:GEM_MARGIN_MODE.
+    $__marginMode = if ($global:GEM_MARGIN_MODE) { "$global:GEM_MARGIN_MODE" } else { "isolated" }
+    if (Get-Command Get-ExecutableCapitalUSDT -ErrorAction SilentlyContinue) {
+        $__mt = if ($hasFutures) { "FUTURES" } else { "SPOT" }
+        $__cap = Get-ExecutableCapitalUSDT -MarketType $__mt -MarginMode $__marginMode
+        $capital = $__cap.capital
+        $executionWalletCap = $__cap.wallet_cap
+        if ($__cap.source -match "fallback") {
+            Write-Host "  [Capital] WARN: bootstrap fallback em uso (sem API nem cache real) -- capital=$capital" -ForegroundColor Yellow
+        } else {
+            Write-Host "  [Capital] $($__cap.source): total=$capital wallet=$executionWalletCap mode=$__marginMode" -ForegroundColor DarkCyan
+        }
     } else {
-        CoinEx-GetSpotCapitalUSDT
+        $capital     = if (Get-Command CoinEx-GetTotalCapitalUSDT -ErrorAction SilentlyContinue) {
+            CoinEx-GetTotalCapitalUSDT
+        } elseif ($hasFutures) {
+            CoinEx-GetFuturesCapitalUSDT
+        } else {
+            CoinEx-GetSpotCapitalUSDT
+        }
+        $executionWalletCap = if ($hasFutures) { CoinEx-GetFuturesCapitalUSDT } else { CoinEx-GetSpotCapitalUSDT }
     }
-    $executionWalletCap = if ($hasFutures) { CoinEx-GetFuturesCapitalUSDT } else { CoinEx-GetSpotCapitalUSDT }
 
     # ── Preco atual ───────────────────────────────────────────────────────────
     $tickerEndpoint = if ($hasFutures) { "/v2/futures/ticker?market=$mkt" } else { "/v2/spot/ticker?market=$mkt" }

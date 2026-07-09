@@ -1,4 +1,4 @@
-# lib_signal_booster_llm.ps1 — PLUS ADICIONAL: Signal Confidence Amplification
+﻿# lib_signal_booster_llm.ps1 — PLUS ADICIONAL: Signal Confidence Amplification
 # Multiplica confiança LLM quando histórico + enriquecimento apontam MESMA direção
 # 2026-07-09
 

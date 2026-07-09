@@ -1,4 +1,4 @@
-# lib_trailing_learning_logger.ps1
+﻿# lib_trailing_learning_logger.ps1
 # Enrich trailing stop logs para auto-aprendizado do sistema
 # Registra decisões, transições de fase, efetividade de stops
 # 2026-07-08

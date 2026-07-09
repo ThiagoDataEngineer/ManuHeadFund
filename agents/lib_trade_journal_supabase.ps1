@@ -53,16 +53,17 @@ function Save-TradeOutcome {
             entry_ts = $ts.ToUniversalTime()
             symbol = [string]$TradeRecord.symbol
             direction = [string]$TradeRecord.direction  # LONG|SHORT
-            source = [string]($TradeRecord.source ?? "gem_executor")
+            # 2026-07-09 FIX PS5.1: ?? e PS7-only -- quebrava parse (28 erros, journal Supabase morto local)
+            source = [string]$(if ($TradeRecord.source) { $TradeRecord.source } else { "gem_executor" })
             entry_price = [double]$TradeRecord.entry_price
-            exit_price = [double]($TradeRecord.exit_price ?? 0)
+            exit_price = [double]$(if ($TradeRecord.exit_price) { $TradeRecord.exit_price } else { 0 })
             quantity = [double]$TradeRecord.quantity
-            pnl_realized = [double]($TradeRecord.pnl_realized ?? 0)
-            pnl_percent = [double]($TradeRecord.pnl_percent ?? 0)
-            status = [string]($TradeRecord.status ?? "pending")
+            pnl_realized = [double]$(if ($TradeRecord.pnl_realized) { $TradeRecord.pnl_realized } else { 0 })
+            pnl_percent = [double]$(if ($TradeRecord.pnl_percent) { $TradeRecord.pnl_percent } else { 0 })
+            status = [string]$(if ($TradeRecord.status) { $TradeRecord.status } else { "pending" })
             regime = if ($TradeRecord.regime) { [string]$TradeRecord.regime } else { $null }
-            has_confluence = [bool]($TradeRecord.has_confluence ?? $false)
-            conviction_score = [double]($TradeRecord.conviction_score ?? 0)
+            has_confluence = [bool]$(if ($null -ne $TradeRecord.has_confluence) { $TradeRecord.has_confluence } else { $false })
+            conviction_score = [double]$(if ($TradeRecord.conviction_score) { $TradeRecord.conviction_score } else { 0 })
             created_at = (Get-Date).ToUniversalTime()
         }
 

@@ -179,7 +179,8 @@ function _Normalize-ExchangePosition {
     )
 
     # Expected fields from CoinEx API: orderId, symbol, side, entryPrice, quantity, markPrice, stopLossPrice, takeProfitPrice, created_at
-    $side = [string]($Position.side ?? "LONG")
+    # 2026-07-09 FIX PS5.1: ?? e PS7-only -- quebrava parse da lib inteira (position sync morto, Layer 3)
+    $side = if ($Position.side) { [string]$Position.side } else { "LONG" }
     $symbol = [string]$Position.symbol
 
     # Auto-detect regime (placeholder — integrate with Get-CurrentRegime if available)
@@ -195,9 +196,9 @@ function _Normalize-ExchangePosition {
         direction = $side  # LONG|SHORT
         entry_price = [double]$Position.entryPrice
         quantity = [double]$Position.quantity
-        stop_loss = [double]($Position.stopLossPrice ?? 0)
-        take_profit = [double]($Position.takeProfitPrice ?? 0)
-        current_price = [double]($Position.markPrice ?? $Position.lastPrice ?? 0)
+        stop_loss = [double]$(if ($Position.stopLossPrice) { $Position.stopLossPrice } else { 0 })
+        take_profit = [double]$(if ($Position.takeProfitPrice) { $Position.takeProfitPrice } else { 0 })
+        current_price = [double]$(if ($Position.markPrice) { $Position.markPrice } elseif ($Position.lastPrice) { $Position.lastPrice } else { 0 })
         trailing_stop = if ($Position.trailingStop) { [double]$Position.trailingStop } else { $null }
         source = "app_sync"
         regime = $regime

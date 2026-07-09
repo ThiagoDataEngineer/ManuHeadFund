@@ -1,4 +1,4 @@
-# lib_tori_html_renderer.ps1 - HTML visualization for Tori Trades setups
+﻿# lib_tori_html_renderer.ps1 - HTML visualization for Tori Trades setups
 #
 # Converts PSCustomObject[] setups to interactive HTML dashboard
 # Features: sortable tables, candlestick charts, trendline overlays

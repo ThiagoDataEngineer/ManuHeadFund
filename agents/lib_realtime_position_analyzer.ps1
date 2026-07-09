@@ -1,4 +1,4 @@
-# agents/lib_realtime_position_analyzer.ps1
+﻿# agents/lib_realtime_position_analyzer.ps1
 # Real-time position analysis + auto-learning engine
 # Sync live positions from CoinEx, analyze multi-TF, suggest evolution
 #
@@ -62,7 +62,8 @@ function Analyze-PositionMomentum {
 
     $symbol = $Position.symbol
     $entry = [double]$Position.entry_price
-    $current = [double]$Position.current_price ?? [double]$Position.mark_price
+    # 2026-07-09 FIX PS5.1: ?? e PS7-only
+    $current = if ($Position.current_price) { [double]$Position.current_price } else { [double]$Position.mark_price }
     $pnlPct = (($current - $entry) / $entry) * 100
 
     # Get momentum from CoinEx API (klines)
@@ -92,7 +93,7 @@ function Analyze-PositionMomentum {
             $momentum_1d = ($ups_1d / $klines_1d.Count) * 100
         }
     } catch {
-        Write-Verbose "[realtime] Kline fetch error for $symbol: $_"
+        Write-Verbose "[realtime] Kline fetch error for ${symbol}: $_"
     }
 
     # Decision logic
@@ -131,9 +132,9 @@ function Analyze-PositionMomentum {
     return @{
         symbol         = $symbol
         pnl_pct        = [math]::Round($pnlPct, 2)
-        momentum_1h    = [math]::Round($momentum_1h ?? 0, 1)
-        momentum_4h    = [math]::Round($momentum_4h ?? 0, 1)
-        momentum_1d    = [math]::Round($momentum_1d ?? 0, 1)
+        momentum_1h    = [math]::Round([double]$(if ($null -ne $momentum_1h) { $momentum_1h } else { 0 }), 1)
+        momentum_4h    = [math]::Round([double]$(if ($null -ne $momentum_4h) { $momentum_4h } else { 0 }), 1)
+        momentum_1d    = [math]::Round([double]$(if ($null -ne $momentum_1d) { $momentum_1d } else { 0 }), 1)
         action         = $action
         score          = $score
         regime_match   = if ($Regime -match "BEAR" -and $Position.direction -eq "LONG") { "MISMATCH" } else { "OK" }

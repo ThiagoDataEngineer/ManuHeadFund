@@ -1,4 +1,4 @@
-# lib_telegram_interactive_commands.ps1
+﻿# lib_telegram_interactive_commands.ps1
 # Interactive Telegram commands for capital owner
 # Essential + Control + Analytics + Learning
 # 2026-07-08
@@ -88,7 +88,7 @@ function Send-HealthCheck {
                     Where-Object { $_.CommandLine -match $d } |
                     Select-Object -First 1
             $status = if ($proc) { "✅ UP (PID $($proc.Id))" } else { "❌ DOWN" }
-            $daemon_status += "$d: $status"
+            $daemon_status += "${d}: $status"
         }
 
         # Capital status

@@ -1,4 +1,4 @@
-# lib_telegram_essential_alerts.ps1
+﻿# lib_telegram_essential_alerts.ps1
 # Only essential alerts for capital owner
 # 2026-07-08
 

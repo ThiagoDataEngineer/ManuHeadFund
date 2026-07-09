@@ -1,4 +1,4 @@
-# lib_stop_loss_calibration_study.ps1
+﻿# lib_stop_loss_calibration_study.ps1
 # Estudo de evolução: Stop Loss dedicado por moeda (não % fixo)
 #
 # OBJETIVO: Substituir SL% hardcoded (-8%) por sistema inteligente que:
@@ -406,11 +406,12 @@ $STOP_LOSS_PER_ASSET_CONFIG = @{
 #   • Live: Monitor "stops hit" vs "positions closed" ratio
 #   •Expected: Wicks hit should be <5% (vs current ~40%)
 
+# Export list (comentado 2026-07-09: Export-ModuleMember quebra dot-source; lista orfa causava parse error)
 # (    'Get-SLByATR',
-    'Get-SLByWickPercentile',
-    'Get-SLByRegimeAwareBATR',
-    'Get-SLByHybrid'
-)
+#    'Get-SLByWickPercentile',
+#    'Get-SLByRegimeAwareBATR',
+#    'Get-SLByHybrid'
+# )
 
 
 

@@ -1,4 +1,4 @@
-# lib_mentor_rebalancer.ps1 — Auto-Rebalancear Gates com Discussão LLM
+﻿# lib_mentor_rebalancer.ps1 — Auto-Rebalancear Gates com Discussão LLM
 # 2026-07-05: Problema: 0 trades ao vivo (conviction_threshold=50 muito alto pra BEAR_WEAK)
 # Solução: Sistema autonomamente consulta Mentores, decide ajustes, executa rebalanceamento
 
@@ -24,12 +24,12 @@ function Invoke-MentorRebalancerDiscussion {
     Write-Host "🧠 MENTOR REBALANCER — Discussão Multi-LLM" -ForegroundColor Cyan
     Write-Host "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━" -ForegroundColor Cyan
 
-    # Estado atual
-    $regime = $TradingStats.regime ?? "BEAR_WEAK"
-    $totalTrades = $TradingStats.totalTrades ?? 0
-    $winRate = $TradingStats.winRate ?? 0
-    $conviction = $TradingStats.conviction_threshold ?? 50
-    $consensusGate = $TradingStats.consensus_gate ?? "FORTE"
+    # Estado atual (2026-07-09 FIX PS5.1: ?? e PS7-only, quebrava parse da lib)
+    $regime = if ($TradingStats.regime) { $TradingStats.regime } else { "BEAR_WEAK" }
+    $totalTrades = if ($TradingStats.totalTrades) { $TradingStats.totalTrades } else { 0 }
+    $winRate = if ($TradingStats.winRate) { $TradingStats.winRate } else { 0 }
+    $conviction = if ($TradingStats.conviction_threshold) { $TradingStats.conviction_threshold } else { 50 }
+    $consensusGate = if ($TradingStats.consensus_gate) { $TradingStats.consensus_gate } else { "FORTE" }
 
     Write-Host "`n📊 ESTADO ATUAL:" -ForegroundColor Yellow
     Write-Host "   Regime: $regime"
@@ -270,7 +270,7 @@ function Execute-MentorRebalance {
 
     Set-Content $ConfigFile -Value $newContent -Encoding UTF8
 
-    Write-Host ✅ Config atualizado:" -ForegroundColor Green
+    Write-Host "✅ Config atualizado:" -ForegroundColor Green
     Write-Host "   conviction_threshold = $($MentorDecision.new_conviction_threshold)" -ForegroundColor Cyan
     Write-Host "   consensus_gate = $($MentorDecision.new_consensus_gate)" -ForegroundColor Cyan
     Write-Host "   Confiança: $($MentorDecision.confidence)%" -ForegroundColor Green

@@ -11,9 +11,13 @@ param(
 $ErrorActionPreference = "Continue"
 $root = Split-Path $PSScriptRoot -Parent
 
-# Carrega config se existir; senão usa env vars
-if (Test-Path (Join-Path $root "config/config.ps1")) {
-    . (Join-Path $root "config/config.ps1") -ErrorAction SilentlyContinue
+# 2026-07-09 FIX: path correto e agents/config.ps1 (config/ so tem JSONs).
+# config.ps1 ja carrega config.local.ps1 (credenciais) quando existir.
+if (Test-Path (Join-Path $root "agents\config.ps1")) {
+    . (Join-Path $root "agents\config.ps1")
+}
+if (Test-Path (Join-Path $root "agents\lib_coinex.ps1")) {
+    . (Join-Path $root "agents\lib_coinex.ps1")
 }
 
 "[$(Get-Date -Format 'HH:mm:ss')] RECONCILE CLOSED TRADES INICIADO"

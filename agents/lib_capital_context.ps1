@@ -134,25 +134,60 @@ function Get-CapitalContext {
     $hasFut  = Get-Command CoinEx-GetFuturesCapitalUSDT -ErrorAction SilentlyContinue
 
     if ($hasSpot -or $hasFut) {
+        # 2026-07-09 FIX (causa raiz da poluicao Supabase): CoinEx-Get*CapitalUSDT
+        # retorna o bootstrap global SEM erro quando credenciais ausentes/API falha.
+        # O unico sinal confiavel de fetch REAL e $global:CAPITAL_*_LAST_REFRESH,
+        # que a lib_coinex so atualiza em resposta autenticada bem-sucedida.
+        $preSpotRefresh = $global:CAPITAL_SPOT_LAST_REFRESH
+        $preFutRefresh  = $global:CAPITAL_FUTURES_LAST_REFRESH
         $okSpot = $false; $okFut = $false
         if ($hasSpot) {
             try {
                 $sVal = [double](CoinEx-GetSpotCapitalUSDT)
-                if ($sVal -ge 0) { $spot = $sVal; $okSpot = $true }
+                if ($sVal -ge 0 -and $null -ne $global:CAPITAL_SPOT_LAST_REFRESH -and $global:CAPITAL_SPOT_LAST_REFRESH -ne $preSpotRefresh) {
+                    $spot = $sVal; $okSpot = $true
+                }
             } catch {}
         }
         if ($hasFut) {
             try {
                 $fVal = [double](CoinEx-GetFuturesCapitalUSDT)
-                if ($fVal -ge 0) { $futures = $fVal; $okFut = $true }
+                if ($fVal -ge 0 -and $null -ne $global:CAPITAL_FUTURES_LAST_REFRESH -and $global:CAPITAL_FUTURES_LAST_REFRESH -ne $preFutRefresh) {
+                    $futures = $fVal; $okFut = $true
+                }
             } catch {}
         }
-        # source = fresh apenas se ao menos uma chamada deu certo E o resultado
-        # nao e exclusivamente o fallback global (i.e., total real > 0)
+        # source = fresh apenas com fetch REAL confirmado (LAST_REFRESH avancou)
         if (($okSpot -or $okFut) -and ($spot + $futures) -gt 0) {
             $source = "fresh"
         }
     }
+    # 2026-07-09 FIX: antes do fallback bootstrap, preferir cache REAL mesmo stale.
+    # Local sem credenciais nao consegue fetch fresh, mas a NUVEM (autenticada)
+    # mantem capital_context real no Supabase/journal. Dado real de horas atras
+    # e sempre melhor que bootstrap 100+100 pra gates de exposure.
+    if ($source -eq "fallback") {
+        $staleCache = $null
+        if ($useStateStore) {
+            try {
+                $rows = @(Get-StateRecords -Table "capital_context")
+                if ($rows.Count -gt 0) { $staleCache = $rows[0] }
+            } catch { $staleCache = $null }
+        } elseif (Test-Path $path) {
+            try { $staleCache = Get-Content $path -Raw -Encoding UTF8 | ConvertFrom-Json } catch { $staleCache = $null }
+        }
+        if ($staleCache -and $staleCache.source -and "$($staleCache.source)" -notmatch "fallback" -and ([double]$staleCache.total) -gt 0) {
+            Write-Warning "[capital_context] fetch fresh falhou; usando cache REAL stale (ts=$($staleCache.snapshot_ts) total=$($staleCache.total))"
+            return [PSCustomObject]@{
+                spot = [double]$staleCache.spot
+                futures = [double]$staleCache.futures
+                total = [double]$staleCache.total
+                snapshot_ts = $staleCache.snapshot_ts
+                source = "cached_stale"
+            }
+        }
+    }
+
     # Fallback global vars (set by orchestrator on successful fetches)
     if ($source -eq "fallback") {
         if ($null -ne $global:CAPITAL_SPOT) { $spot = [double]$global:CAPITAL_SPOT }
@@ -162,6 +197,7 @@ function Get-CapitalContext {
             $total = [double]$global:CAPITAL_TOTAL
             $spot = 0; $futures = $total
         }
+        Write-Warning "[capital_context] BOOTSTRAP fallback em uso (spot=$spot fut=$futures) -- gates de exposure operam com capital NAO-REAL"
     }
 
     $total = $spot + $futures
@@ -171,6 +207,13 @@ function Get-CapitalContext {
         total = $total
         snapshot_ts = (Get-Date).ToUniversalTime().ToString("o")
         source = $source
+    }
+
+    # 2026-07-09 FIX: NUNCA persistir fallback bootstrap. Persistir 100+100 aqui
+    # sobrescreve o capital REAL que a nuvem autenticada gravou no Supabase --
+    # foi exatamente isso que travou cap_exposure (12 gems bloqueados com capital falso).
+    if ($source -eq "fallback") {
+        return $ctx
     }
 
     # Persist via state_store (preferido) ou path legacy direto
@@ -305,4 +348,50 @@ function Test-CapitalStale {
     param([double] $Threshold = 30)
     $d = Get-CapitalDrift -Threshold $Threshold
     return [bool]$d.is_stale
+}
+
+
+function Get-ExecutableCapitalUSDT {
+    <#
+    .SYNOPSIS
+    Capital executavel considerando margin mode (2026-07-09).
+
+    Cross margin: colateral = conta inteira -> spot + futures.
+    Isolated:     colateral = so a margem alocada -> futures wallet only.
+    Spot trade:   spot wallet only.
+
+    .OUTPUTS
+    PSCustomObject @{ capital, wallet_cap, margin_mode, source, snapshot_ts }
+    capital    = base pro sizing/exposure gates
+    wallet_cap = teto da carteira de execucao (evita margin call)
+    #>
+    [CmdletBinding()]
+    param(
+        [ValidateSet("FUTURES","SPOT")] [string] $MarketType = "FUTURES",
+        [ValidateSet("cross","isolated")] [string] $MarginMode = "cross",
+        [int] $MaxAgeMinutes = 30
+    )
+
+    $ctx = Get-CapitalContext -MaxAgeMinutes $MaxAgeMinutes
+
+    if ($MarketType -eq "SPOT") {
+        $capital = $ctx.spot
+        $walletCap = $ctx.spot
+    } elseif ($MarginMode -eq "isolated") {
+        # Isolated: so a margem futures responde pela posicao
+        $capital = $ctx.futures
+        $walletCap = $ctx.futures
+    } else {
+        # Cross: conta inteira e colateral
+        $capital = $ctx.total
+        $walletCap = $ctx.futures   # execucao ainda exige saldo na carteira futures
+    }
+
+    return [PSCustomObject]@{
+        capital     = [double]$capital
+        wallet_cap  = [double]$walletCap
+        margin_mode = $MarginMode
+        source      = $ctx.source
+        snapshot_ts = $ctx.snapshot_ts
+    }
 }

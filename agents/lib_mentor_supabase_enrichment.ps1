@@ -1,4 +1,4 @@
-# lib_mentor_supabase_enrichment.ps1
+﻿# lib_mentor_supabase_enrichment.ps1
 # Wire Supabase decision_grades_agg + mce_counterfactual_agg + trailing_positions
 # Enriquecimento sofisticado do mentor com histórico real + contraFatual + performance
 # 2026-07-09

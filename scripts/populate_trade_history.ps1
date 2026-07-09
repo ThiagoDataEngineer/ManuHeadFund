@@ -1,4 +1,4 @@
-# populate_trade_history.ps1 — Popula trade_history_extended.json a partir de trade_outcomes.jsonl
+﻿# populate_trade_history.ps1 — Popula trade_history_extended.json a partir de trade_outcomes.jsonl
 # 2026-07-05: FIX2 integração de dados real. Lê fonte verdade (JSONL) e renderiza JSON pro dashboard.
 # Chamado por: scan_master a cada ciclo (requer wire via scan_master.ps1)
 # Entrada: journal/trade_outcomes.jsonl (21+ trades reais com pnl, close_reason, etc)
@@ -38,19 +38,21 @@ if (-not (Test-Path $outcomeFilePath)) {
 
                 # Mapeamento: trade_outcomes.jsonl → dashboard formato
                 $outcome = if ($trade.win -eq $true) { "WIN" } elseif ($trade.win -eq $false) { "LOSS" } else { "PENDING" }
-                $pnl = $trade.pnl_usd -as [double] ?? 0
+                # 2026-07-09 FIX PS5.1: ?? e PS7-only (16 parse errors, script morto)
+                $pnl = $trade.pnl_usd -as [double]
+                if ($null -eq $pnl) { $pnl = 0 }
 
                 $obj = @{
                     id = $lineNum
                     symbol = $trade.market
-                    type = $trade.direction ?? "UNKNOWN"
+                    type = $(if ($trade.direction) { $trade.direction } else { "UNKNOWN" })
                     entry = [double]$trade.entry_price
                     sl = if ($trade.direction -eq "SHORT") { [double]$trade.entry_price * 1.01 } else { [double]$trade.entry_price * 0.99 }
-                    tp = [double]($trade.exit_price ?? $trade.entry_price)
+                    tp = [double]$(if ($trade.exit_price) { $trade.exit_price } else { $trade.entry_price })
                     risk = [math]::Abs(([double]$trade.entry_price - [double]$trade.sl) / [double]$trade.entry_price) * 100
                     outcome = $outcome
                     pnl = [math]::Round($pnl, 4)
-                    timestamp = $trade.exit_date ?? $trade.registered_at
+                    timestamp = $(if ($trade.exit_date) { $trade.exit_date } else { $trade.registered_at })
                 }
 
                 $trades += $obj

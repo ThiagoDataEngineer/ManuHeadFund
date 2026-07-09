@@ -1,4 +1,4 @@
-# lib_evolution_autonomous_rebalance.ps1 — Evolution Engine com Auto-Rebalanceamento
+﻿# lib_evolution_autonomous_rebalance.ps1 — Evolution Engine com Auto-Rebalanceamento
 # 2026-07-05: Sistema autonomamente decide ajustes de gates via discussão Multi-LLM
 # Roda diariamente (~06h) como parte do Evolution Engine
 
@@ -42,7 +42,7 @@ function Invoke-EvolutionAutoRebalance {
                 $trades += $trade
                 if ($trade.win -eq $true) { $wins++ }
                 elseif ($trade.win -eq $false) { $losses++ }
-                $totalPnL += ($trade.pnl_usd ?? 0)
+                $totalPnL += [double]$(if ($trade.pnl_usd) { $trade.pnl_usd } else { 0 })
             } catch { }
         }
     }

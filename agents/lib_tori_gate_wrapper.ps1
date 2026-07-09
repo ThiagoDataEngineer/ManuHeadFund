@@ -138,7 +138,8 @@ function Test-ToriConfluence {
 
         $score = [int]$confluenceResult.total_score
         $signals = @($confluenceResult.signals_fired)
-        [void]$auditLog.Add("[TORI Gate] Confluence score computed: $score (signals: $(($signals -join ", ") || 'none'))")
+        $signalsJoined = if ($signals.Count -gt 0) { $signals -join ", " } else { "none" }
+        [void]$auditLog.Add("[TORI Gate] Confluence score computed: $score (signals: $signalsJoined)")
 
         # Decision: PASS if score >= threshold
         $passes = ($score -ge $script:TORI_CONFLUENCE_THRESHOLD)
