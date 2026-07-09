@@ -83,6 +83,16 @@ try {
     } catch {
         Write-Host "Calibration snapshot falhou (nao critico): $_" -ForegroundColor Yellow
     }
+
+    # 2026-07-09 SYNC LOCAL→NUVEM: decision_grades, evolution_history, trailing,
+    # counterfactual (vivem local, nao saem do repo, Supabase nao consegue ler)
+    # Best-effort sync via journal_sync_log table. Grading continua local.
+    try {
+        . (Join-Path $agentsDir "lib_journal_sync_supabase.ps1")
+        Sync-JournalToSupabase | Out-Null
+    } catch {
+        Write-Host "Journal sync falhou (nao critico): $_" -ForegroundColor DarkYellow
+    }
 }
 catch {
     Write-Host ""
