@@ -93,6 +93,7 @@ try {
 try {
     . (Join-Path $agentsDir "lib_coinex_positions_fetch.ps1") -ErrorAction SilentlyContinue  # Load FIRST: provides CoinEx-GetPendingPositions with -IsFutures
     . (Join-Path $agentsDir "lib_coinex.ps1") -ErrorAction Stop
+    . (Join-Path $agentsDir "lib_capital_context.ps1") -ErrorAction Stop  # 2026-07-09 FIX: Get-ExecutableCapitalUSDT critico pra sizing + gem_safety
     . (Join-Path $agentsDir "lib_telegram.ps1") -ErrorAction Stop
     . (Join-Path $agentsDir "lib_idempotency.ps1") -ErrorAction SilentlyContinue  # B14 callback idempotency
     . (Join-Path $agentsDir "lib_retry.ps1") -ErrorAction SilentlyContinue  # B19 retry transient

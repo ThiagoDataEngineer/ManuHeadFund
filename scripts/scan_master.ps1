@@ -66,6 +66,7 @@ if (-not (Test-Path $logDir)) { New-Item -ItemType Directory -Path $logDir -Forc
 . (Join-Path $agentsDir "constants_loader.ps1")    # 2026-05-16: single source of truth
 . (Join-Path $agentsDir "config.ps1")
 . (Join-Path $agentsDir "lib_coinex.ps1")
+. (Join-Path $agentsDir "lib_capital_context.ps1")  # 2026-07-09 FIX: Get-ExecutableCapitalUSDT critico pra gem_executor inline
 . (Join-Path $agentsDir "lib_cost_tracker.ps1")
 . (Join-Path $agentsDir "lib_claude.ps1")
 . (Join-Path $agentsDir "lib_macro.ps1")
