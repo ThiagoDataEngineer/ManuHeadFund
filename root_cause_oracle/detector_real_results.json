@@ -1,0 +1,45 @@
+﻿{
+    "total_findings":  7,
+    "timestamp":  "2026-07-10T03:48:37.3870774Z",
+    "findings":  [
+                     {
+                         "pattern":  "api_version_mismatch",
+                         "bug":  "bug_2",
+                         "confidence":  0.9
+                     },
+                     {
+                         "pattern":  "period_format",
+                         "bug":  "bug_2",
+                         "confidence":  0.88
+                     },
+                     {
+                         "pattern":  "shape_mismatch",
+                         "bug":  "bug_4",
+                         "confidence":  0.88
+                     },
+                     {
+                         "pattern":  "missing_table",
+                         "bug":  "bug_6",
+                         "confidence":  0.9
+                     },
+                     {
+                         "pattern":  "missing_table",
+                         "bug":  "bug_7",
+                         "confidence":  0.9
+                     },
+                     {
+                         "pattern":  "cache_collision",
+                         "bug":  "bug_8",
+                         "confidence":  0.89
+                     },
+                     {
+                         "pattern":  "regex_mismatch",
+                         "bug":  "bug_12",
+                         "confidence":  0.93
+                     }
+                 ],
+    "bugs_matched":  [
+
+                     ],
+    "avg_confidence":  0
+}
