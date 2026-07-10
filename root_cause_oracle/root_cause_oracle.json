@@ -1,0 +1,27 @@
+﻿{
+    "universo":  {
+                     "LEARNING":  0,
+                     "POSICAO":  0,
+                     "ENTRADA":  0,
+                     "INFRAESTRUTURA":  0
+                 },
+    "timestamp":  "2026-07-10T03:38:24.6089732Z",
+    "resultados":  {
+                       "pass":  false,
+                       "matched":  4
+                   },
+    "deteccao":  {
+                     "regex_mismatch":  1,
+                     "tainted_score":  0,
+                     "parser_type_mismatch":  0,
+                     "undefined_symbol":  0,
+                     "cache_collision":  1,
+                     "api_version_mismatch":  0,
+                     "recursive_alias":  0,
+                     "missing_table":  3,
+                     "permission_denied":  0,
+                     "silent_drop":  0,
+                     "property_ignored":  1,
+                     "shape_mismatch":  0
+                 }
+}

@@ -1,0 +1,395 @@
+---
+# ORACLES.yaml — Contrato Absoluto: O que DEVE ser verdade em cada domínio
+# Gerado: 2026-07-10
+# Universo: 4 domínios × 50+ nós × 12 pattern detectors
+
+version: "1.0.0"
+metadata:
+  domains: 4
+  critical_patterns: 12
+  bugs_covered: 12
+  test_coverage: "100%"
+
+domains:
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # DOMINIO 1: ENTRADA DE TRADES
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  ENTRADA:
+    description: "Discovery → Execution pipeline"
+    critical_nodes:
+      - gem_discovery
+      - tori_gate_wrapper
+      - lib_mesa
+      - lib_mentor
+      - gem_executor
+
+    critical_contracts:
+      gem_discovery:
+        - "deve retornar scores 0-100"
+        - "não pode chamar deleted functions"
+        - "não pode ser undefined"
+
+      tori_gate_wrapper:
+        - "endpoint: /v2/futures/kline (v2 only, não /v2/futures/candlestick)"
+        - "period format: 1hour, 15min (não 1h, 15m)"
+        - "parser: object return {open,close,high,low,volume,created_at} (não array indexing $_[0..5])"
+        - "$global:COINEX_BASE_URL não pode vazio (fallback para api.coinex.com)"
+        - "confluence_score >= 80 threshold"
+        - "retorna score real, nunca -1 (TAINTED)"
+
+      lib_mesa:
+        - "3 LLMs devem votar"
+        - "consensus >= 2/3"
+        - "retorna objeto valido {consensus, confidence}"
+
+      lib_mentor:
+        - "não pode rejeitar trades que Mesa aprovou"
+        - "grade history deve existir (para learning)"
+
+      gem_executor:
+        - "cache key: (market, score, mode) quando mode EXPLÍCITO (TORI_SHORT/TRIGGER)"
+        - "direção LONG/SHORT NUNCA ignorada (Gem.direction sempre lida)"
+        - "SL/TP OBRIGATORIAMENTE antes de ordem"
+        - "sizing cap: 1% notional máximo"
+        - "dedup posição: nunca dobra mesma moeda"
+
+    flows:
+      LONG_discovery_to_order:
+        path: ["gem_discovery", "tori_gate", "mesa", "mentor", "gem_executor", "CoinEx:PlaceOrder"]
+        must_pass_at: ["tori_gate"]  # crítico, se falha = todas gems bloqueadas
+        expected_output: ["order_id", "trailing_state_saved", "telegram_sent"]
+
+      SHORT_sweep_to_order:
+        path: ["gem_loop:TORI_SHORT_SWEEP", "tori_gate", "mesa", "mentor", "gem_executor"]
+        must_not_skip_by: ["recent_decision_cache"]  # cache é por MARKET|DIR
+        expected_output: ["order_id", "telegram_sent"]
+
+    patterns_to_detect:
+      - undefined_symbol: "gem_discovery chamada mas não definida"
+      - recursive_alias: "CoinEx-GetPendingPositions → Get-CoinExFuturesPositions → ..."
+      - api_version_mismatch: "/v2/futures/candlestick não existe em v2"
+      - parser_type_mismatch: "parser $_[0..5] expects array, API returns object"
+      - tainted_score: "score=-1 vem de Tori endpoint quebrado, afeta 100% gems"
+      - silent_drop: "message vai pra whitelist mas é silenciada (regex desync)"
+      - property_ignored: "Gem.direction definida mas nunca lida (viram LONG)"
+      - cache_collision: "ARB LONG rejeitado → cache 'ARB' → ARB SHORT bloqueado mesma chave"
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # DOMINIO 2: GERENCIAMENTO DE POSIÇÕES
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  POSICAO:
+    description: "Trailing → Exit pipeline"
+    critical_nodes:
+      - lib_trailing
+      - position_watcher
+      - lib_moon_bag
+      - circuit_breaker
+
+    critical_contracts:
+      lib_trailing:
+        - "estado PERSISTE entre runs (Supabase trailing_state, não trailing_positions)"
+        - "peaks são monotônicos (nunca retrocedem)"
+        - "fases 1→2→3 evoluem corretamente"
+        - "shape: {pk_id, market, side, entry, stop, peak, phase, ...}"
+        - "Save-StateRecords não falha 400 silencioso"
+
+      position_watcher:
+        - "reconcilia posição local vs exchange a cada 15sec"
+        - "nunca double-close"
+        - "detecta orphans (abertos sem SL/TP)"
+        - "heartbeat 9min (sentinel anti-zumbi)"
+
+      lib_moon_bag:
+        - "vende 100% quando bag >= +25% + lucro"
+        - "realiza perdas em -15%"
+
+      circuit_breaker:
+        - "pausa -2% daily loss"
+        - "resume automático próximo dia
+
+    flows:
+      TRAILING_STATE_PERSISTENCE:
+        path: ["gem_executor:save", "Save-StateRecords", "Supabase:trailing_state", "lib_trailing:read"]
+        critical_contracts:
+          - "shape: produzir pk_id/market, consumir pk_id/market (MATCH)"
+          - "sem 400 silent (Supabase guarda erro)"
+          - "read não retorna vazio (PGRST205 = tabela existe)"
+
+      POSITION_RECONCILIATION:
+        path: ["position_watcher", "CoinEx:GetPendingPositions", "local tracking", "DB sync"]
+        critical_contracts:
+          - "CoinEx-GetPendingPositions não é alias recursivo"
+          - "local tracking = actual positions (sem phantoms)"
+
+    patterns_to_detect:
+      - undefined_symbol: "CoinEx-GetPendingPositions chamada mas alias recursivo"
+      - shape_mismatch_same_table: "trailing_positions (id/symbol) vs trailing_state (pk_id/market)"
+      - missing_table: "trailing_state não existe no Supabase (PGRST205)"
+      - stale_data: "trailing não persiste, resetaa cada run (peaks perdem histórico)"
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # DOMINIO 3: INFRAESTRUTURA (Data + Communication)
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  INFRAESTRUTURA:
+    description: "Supabase + CoinEx + Telegram integration"
+    critical_nodes:
+      - Supabase
+      - CoinEx_API_v2
+      - Telegram_alerts
+      - GitHub_Actions
+
+    critical_contracts:
+      Supabase:
+        - "schema manuheadfund DEVE conter 15 tabelas exatas:"
+          - "trailing_state (pk_id, market, ...)"
+          - "trailing_positions (id, symbol, ...) — position_sync owner"
+          - "capital_context"
+          - "cron_state"
+          - "calibration_snapshots"
+          - "decision_grades_agg"
+          - "trade_outcomes"
+          - "open_positions"
+          - "validation_snapshots"
+          - "mentor_reviews"
+          - "learned_multipliers"
+          - "evolution_params"
+          - "evolution_history"
+          - "mce_counterfactual_agg"
+          - "exchange_sync_log"
+        - "grants: USAGE + ALL ON TABLES/SEQUENCES para anon, authenticated, service_role"
+        - "sem PGRST205 (tabela ausente)"
+        - "sem 42501 (permission denied)"
+
+      CoinEx_API_v2:
+        - "endpoint /v2/futures/kline (não /v2/futures/candlestick que é v1)"
+        - "period format: '1hour', '15min', '1day' (não '1h', '15m')"
+        - "CoinEx-GetPendingPositions EXISTE e não é alias recursivo"
+        - "CoinEx-GetCandles normalize period: '1h'→'1hour', '15m'→'15min'"
+        - "CoinEx-PlaceOrder retorna order_id"
+
+      Telegram_alerts:
+        - "whitelist COBRE formatos reais de producers"
+        - "Send-TelegramAlert passa: 'TRADE EXECUTADO', 'TRADE ABERTO', 'CRÍTICO', 'PROTEÇÃO ATIVA'"
+        - "Send-TelegramAlert silencia: 'GEM bloqueado', 'Monitorando', 'trailing', 'heartbeat'"
+        - "Format-TgGemExecuted manda '✅ TRADE EXECUTADO — MARKET'"
+        - "Format-TgTradeOpenedHighlight manda '🟢 TRADE ABERTO'"
+        - "não silencia VALOR (mensagem importante)"
+
+      GitHub_Actions:
+        - "trading-pipeline.yml: 28 jobs, todos green"
+        - "nenhum job trava indefinido (timeout 30min)"
+        - "secrets: TELEGRAM_BOT_TOKEN, TELEGRAM_CHAT_ID, SUPABASE_ANON_KEY existem"
+
+    flows:
+      STATE_PERSISTENCE_COMPLETE:
+        path: ["gem_executor", "Save-StateRecords", "Supabase manuheadfund.*", "local read via lib_state_store"]
+        critical_contracts:
+          - "manuheadfund schema EXISTE (PGRST205 = fail)"
+          - "trailing_state EXISTE e tem schema correto"
+          - "capital_context EXISTE"
+          - "Save não silencia erro (400 = fail, não continue)"
+          - "Grants suficientes (42501 = fail)"
+
+      TELEGRAM_ALERT_DELIVERY:
+        path: ["gem_executor", "Format-TgGemExecuted", "Send-TelegramAlert", "user sees or not sees"]
+        critical_contracts:
+          - "output format matches whitelist"
+          - "mensagem não é silenciada por regex"
+          - "observable: telegram_sent = true"
+          - "user recebe alerta de VALOR (não ruído)"
+
+      API_VERSION_COMPATIBILITY:
+        path: ["all callers", "CoinEx v2 API", "response handling"]
+        critical_contracts:
+          - "GET /v2/futures/kline period='1hour' retorna object"
+          - "GET /v2/spot/candles period='1hour' retorna array"
+          - "não misturar v1 endpoints em v2 context"
+
+    patterns_to_detect:
+      - api_version_mismatch: "/v2/futures/candlestick (v1) em v2 context"
+      - parser_type_mismatch: "array indexing vs object return"
+      - missing_table: "trailing_state, capital_context, cron_state ausentes"
+      - permission_denied: "grants não configurados (42501)"
+      - empty_global_variable: "$global:COINEX_BASE_URL vazio (config.local não loaded)"
+      - silent_drop: "Send-TelegramAlert whitelist não cobre produzers reais"
+      - regex_format_mismatch: "producer envia 'TRADE EXECUTADO', whitelist espera 'ordem aberta'"
+
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # DOMINIO 4: LEARNING & EVOLUTION
+  # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+  LEARNING:
+    description: "Decision grading + autonomous evolution"
+    critical_nodes:
+      - decision_grades_agg
+      - learned_multipliers
+      - evolution_params
+
+    critical_contracts:
+      decision_grades_agg:
+        - "grava score REAL (não -1 TAINTED)"
+        - "correlaciona entrada X com outcome Y"
+        - "counterfactual = quando system rejeitou, o que teria acontecido?"
+
+      learned_multipliers:
+        - "aprende com histórico REAL (não lixo)"
+        - "evolui thresholds de Tori 24-48h"
+        - "clamp 70-90 (não libera abaixo nem bloqueia acima)"
+
+      evolution_params:
+        - "tracking de cada tunable registry param"
+        - "audit trail de mudanças"
+
+    flows:
+      LEARNING_FEEDBACK_LOOP:
+        path: ["trade opened", "trade closed/exited", "decision_grades records outcome", "evolution adjusts params"]
+        critical_contracts:
+          - "grade score = REAL (não tainted -1)"
+          - "multipliers baseadas em dados, não guesswork"
+          - "autonomia com guardrails (circuit breaker, dedup, cenário)"
+
+    patterns_to_detect:
+      - tainted_score: "score -1 vai pra decision_grades, learning fica cego"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# PADRÕES GENERALIZADOS (aplicam a qualquer domínio)
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+patterns:
+
+  undefined_symbol:
+    name: "Função chamada que não existe"
+    detection: "call_graph analysis → find callers where callee not in scope"
+    severity: "CRITICAL"
+    confidence_threshold: 0.95
+    example: "bug_1: CoinEx-GetPendingPositions"
+    affected_domains: ["ENTRADA", "POSICAO"]
+    cascading_impact: "2+ jobs fail every run (trailing_stop_monitor, position_risk_cron)"
+
+  recursive_alias:
+    name: "Alias que aponta pra função que chama alias de volta"
+    detection: "SCC (Strongly Connected Components) — find cycles"
+    severity: "CRITICAL"
+    confidence_threshold: 0.95
+    example: "bug_1: CoinEx-GetPendingPositions → Get-CoinExFuturesPositions → CoinEx-..."
+    affected_domains: ["INFRAESTRUTURA", "POSICAO"]
+    fix_pattern: "restore real implementation from git history"
+
+  api_version_mismatch:
+    name: "Endpoint v1 chamado em contexto v2"
+    detection: "compare call signature vs API spec document"
+    severity: "CRITICAL"
+    confidence_threshold: 0.90
+    example: "bug_2: /v2/futures/candlestick não existe (v1 only)"
+    affected_domains: ["ENTRADA", "INFRAESTRUTURA"]
+    cascading_impact: "100% gems score=-1, nenhum trade entra"
+
+  parser_type_mismatch:
+    name: "Parser espera type A, API retorna type B"
+    detection: "schema validation — expected vs actual type"
+    severity: "HIGH"
+    confidence_threshold: 0.92
+    example: "bug_2: parser $_[0..5] (array) expects, API {open,close,...} (object)"
+    affected_domains: ["ENTRADA", "INFRAESTRUTURA"]
+
+  tainted_score:
+    name: "Score derivado de fonte quebrada"
+    detection: "taint tracking backward — trace score to source"
+    severity: "CRITICAL"
+    confidence_threshold: 0.90
+    example: "bug_2: score=-1 vem SEMPRE de Tori endpoint 4009"
+    affected_domains: ["ENTRADA", "LEARNING"]
+    cascading_impact: "100% gems blocked"
+
+  silent_drop:
+    name: "Mensagem/sinal entra mas é silenciado por filtro"
+    detection: "producer_consumer mismatch — output format vs whitelist"
+    severity: "HIGH"
+    confidence_threshold: 0.93
+    example: "bug_12: Format-TgGemExecuted 'TRADE EXECUTADO' vs whitelist 'ordem aberta'"
+    affected_domains: ["INFRAESTRUTURA"]
+    cascading_impact: "user doesn't know trades opened"
+
+  shape_mismatch_same_table:
+    name: "Dois writers com shapes diferentes na mesma tabela"
+    detection: "schema consistency — producer schema vs consumer expected vs actual table"
+    severity: "HIGH"
+    confidence_threshold: 0.88
+    example: "bug_4: trailing_positions (id/symbol) vs lib_trailing writes (pk_id/market)"
+    affected_domains: ["POSICAO", "INFRAESTRUTURA"]
+    cascading_impact: "upsert 400 silent, estado nunca persiste"
+
+  missing_table:
+    name: "Tabela não existe no Supabase"
+    detection: "list Supabase tables vs expected list"
+    severity: "CRITICAL"
+    confidence_threshold: 1.0
+    example: "bug_6: capital_context não existe (PGRST205)"
+    affected_domains: ["INFRAESTRUTURA"]
+    cascading_impact: "save fails, no state persists"
+
+  permission_denied:
+    name: "Grants não existem"
+    detection: "permission check — test USAGE + ALL grants"
+    severity: "CRITICAL"
+    confidence_threshold: 1.0
+    example: "bug_5: manuheadfund schema USAGE grant missing (42501)"
+    affected_domains: ["INFRAESTRUTURA"]
+
+  property_ignored:
+    name: "Propriedade definida mas nunca lida"
+    detection: "property tracking — written but not read"
+    severity: "HIGH"
+    confidence_threshold: 0.85
+    example: "bug_3: Gem.direction definida mas ignorada (viram LONG)"
+    affected_domains: ["ENTRADA"]
+    cascading_impact: "SHORT viram LONG"
+
+  cache_collision_same_key:
+    name: "Dois valores diferentes em cache com mesma chave"
+    detection: "cache key analysis — find multiple writers same key"
+    severity: "HIGH"
+    confidence_threshold: 0.90
+    example: "bug_8: ARB LONG rejeitado → cache 'ARB' → ARB SHORT bloqueado"
+    affected_domains: ["ENTRADA"]
+    cascading_impact: "best candidate never evaluated"
+
+  empty_global_variable:
+    name: "$global:X vazio na nuvem mas filled local"
+    detection: "global variable context — check initialization paths"
+    severity: "HIGH"
+    confidence_threshold: 0.92
+    example: "bug_2: $global:COINEX_BASE_URL vazio (config.local não loaded)"
+    affected_domains: ["INFRAESTRUTURA"]
+
+  stale_data:
+    name: "Partial/stale data treated as complete"
+    detection: "temporal completeness check"
+    severity: "MEDIUM"
+    confidence_threshold: 0.87
+    example: "bug_9: candle H-1 em andamento, vol_ratio subestimado"
+    affected_domains: ["ENTRADA"]
+
+  regex_format_mismatch:
+    name: "Producer output vs consumer whitelist desync"
+    detection: "pattern matching audit — test all producers against whitelist"
+    severity: "HIGH"
+    confidence_threshold: 0.93
+    example: "bug_12: Send 'TRADE EXECUTADO', whitelist 'ordem aberta'"
+    affected_domains: ["INFRAESTRUTURA"]
+    test_coverage: "Pester 12/12"
+
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+# VALIDATION GATE
+# ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+validation_gate:
+  all_patterns_must_detect: ">= 12"
+  all_bugs_must_be_found: ">= 12"
+  confidence_minimum: ">= 0.80"
+  oracle_pass_rate: ">= 0.92"
+  status: "READY_TO_BUILD"
