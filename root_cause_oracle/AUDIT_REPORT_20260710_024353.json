@@ -1,0 +1,195 @@
+{
+  "blockers": [
+    {
+      "severity": "CRITICAL",
+      "issue": "Libs faltando: agents\\scan_master.ps1",
+      "impact": "Sistema não inicia",
+      "fix": "Restaurar de git"
+    },
+    {
+      "severity": "CRITICAL",
+      "issue": "CoinEx credenciais incompletas",
+      "impact": "Trades não executam",
+      "fix": "Set COINEX_ACCESS_ID e COINEX_SECRET_KEY em config.local.ps1"
+    },
+    {
+      "severity": "HIGH",
+      "issue": "Poucos daemons",
+      "impact": "Autonomia reduzida",
+      "fix": "Restaurar gem_loop.ps1 e scan_master.ps1"
+    }
+  ],
+  "timestamp": "2026-07-10T02:43:52Z",
+  "checks": [
+    {
+      "category": "LIBS",
+      "check": "agents\\lib_coinex.ps1 existe",
+      "status": "PASS",
+      "details": "OK",
+      "timestamp": "2026-07-10T02:43:52.7007544-03:00"
+    },
+    {
+      "category": "LIBS",
+      "check": "agents\\lib_gem_decision_cache.ps1 existe",
+      "status": "PASS",
+      "details": "OK",
+      "timestamp": "2026-07-10T02:43:52.7077902-03:00"
+    },
+    {
+      "category": "LIBS",
+      "check": "agents\\lib_position_sync_realtime.ps1 existe",
+      "status": "PASS",
+      "details": "OK",
+      "timestamp": "2026-07-10T02:43:52.7107183-03:00"
+    },
+    {
+      "category": "LIBS",
+      "check": "agents\\gem_executor.ps1 existe",
+      "status": "PASS",
+      "details": "OK",
+      "timestamp": "2026-07-10T02:43:52.7117371-03:00"
+    },
+    {
+      "category": "LIBS",
+      "check": "agents\\scan_master.ps1 existe",
+      "status": "FAIL",
+      "details": "MISSING",
+      "timestamp": "2026-07-10T02:43:52.712713-03:00"
+    },
+    {
+      "category": "CONFIG",
+      "check": "config.local.ps1 existe",
+      "status": "PASS",
+      "details": "OK",
+      "timestamp": "2026-07-10T02:43:52.7329643-03:00"
+    },
+    {
+      "category": "CONFIG",
+      "check": "config.local.ps1 parsa",
+      "status": "PASS",
+      "details": "OK",
+      "timestamp": "2026-07-10T02:43:52.7485396-03:00"
+    },
+    {
+      "category": "CONFIG",
+      "check": "COINEX_ACCESS_ID",
+      "status": "FAIL",
+      "details": "MISSING",
+      "timestamp": "2026-07-10T02:43:52.7517471-03:00"
+    },
+    {
+      "category": "CONFIG",
+      "check": "COINEX_SECRET_KEY",
+      "status": "FAIL",
+      "details": "MISSING",
+      "timestamp": "2026-07-10T02:43:52.7519189-03:00"
+    },
+    {
+      "category": "JOURNAL",
+      "check": "journal\\trade_outcomes.jsonl",
+      "status": "PASS",
+      "details": "OK",
+      "timestamp": "2026-07-10T02:43:52.9747604-03:00"
+    },
+    {
+      "category": "JOURNAL",
+      "check": "journal\\open_positions_tracking.jsonl",
+      "status": "PASS",
+      "details": "OK",
+      "timestamp": "2026-07-10T02:43:53.0166004-03:00"
+    },
+    {
+      "category": "JOURNAL",
+      "check": "journal\\gem_recent_decisions.json",
+      "status": "PASS",
+      "details": "OK",
+      "timestamp": "2026-07-10T02:43:53.0592044-03:00"
+    },
+    {
+      "category": "JOURNAL",
+      "check": "journal\\MARKET_REGIME.flag",
+      "status": "PASS",
+      "details": "OK",
+      "timestamp": "2026-07-10T02:43:53.0998955-03:00"
+    },
+    {
+      "category": "DAEMONS",
+      "check": "gem_loop.ps1",
+      "status": "FAIL",
+      "details": "MISSING",
+      "timestamp": "2026-07-10T02:43:53.1599244-03:00"
+    },
+    {
+      "category": "DAEMONS",
+      "check": "scan_master.ps1",
+      "status": "FAIL",
+      "details": "MISSING",
+      "timestamp": "2026-07-10T02:43:53.161097-03:00"
+    },
+    {
+      "category": "DAEMONS",
+      "check": "position_watcher.ps1",
+      "status": "FAIL",
+      "details": "MISSING",
+      "timestamp": "2026-07-10T02:43:53.1623791-03:00"
+    },
+    {
+      "category": "DAEMONS",
+      "check": "tori_daemon_simple.ps1",
+      "status": "PASS",
+      "details": "EXISTS",
+      "timestamp": "2026-07-10T02:43:53.1635412-03:00"
+    },
+    {
+      "category": "SAFEGUARDS",
+      "check": "Stop Loss Gate",
+      "status": "PASS",
+      "details": "ACTIVE",
+      "timestamp": "2026-07-10T02:43:53.1680214-03:00"
+    },
+    {
+      "category": "SAFEGUARDS",
+      "check": "Entry Quality Gate",
+      "status": "PASS",
+      "details": "ACTIVE",
+      "timestamp": "2026-07-10T02:43:53.2097062-03:00"
+    },
+    {
+      "category": "SAFEGUARDS",
+      "check": "Regime Gate",
+      "status": "PASS",
+      "details": "ACTIVE",
+      "timestamp": "2026-07-10T02:43:53.2768239-03:00"
+    },
+    {
+      "category": "SAFEGUARDS",
+      "check": "Risk Manager",
+      "status": "PASS",
+      "details": "ACTIVE",
+      "timestamp": "2026-07-10T02:43:53.3204521-03:00"
+    },
+    {
+      "category": "SUPABASE",
+      "check": "SUPABASE_URL",
+      "status": "FAIL",
+      "details": "MISSING",
+      "timestamp": "2026-07-10T02:43:53.3625569-03:00"
+    },
+    {
+      "category": "SUPABASE",
+      "check": "SUPABASE_SERVICE_KEY",
+      "status": "FAIL",
+      "details": "MISSING",
+      "timestamp": "2026-07-10T02:43:53.362703-03:00"
+    }
+  ],
+  "confidence": 65.21739130434783,
+  "recommendations": [
+    {
+      "priority": "HIGH",
+      "recommendation": "Configurar Supabase",
+      "benefit": "State persistence na cloud + audit trail",
+      "effort": "15min"
+    }
+  ]
+}
