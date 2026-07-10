@@ -1,0 +1,70 @@
+{
+  "summary": {
+    "total_findings": 8,
+    "confidence_avg": 0.9,
+    "status": "COMPLETE_DETECTED_8_OF_12",
+    "bugs_detected": 8,
+    "coverage": "8/12"
+  },
+  "findings": [
+    {
+      "pattern": "api_version_mismatch",
+      "confidence": 0.9,
+      "bug": "bug_2",
+      "count": 13
+    },
+    {
+      "pattern": "period_format",
+      "confidence": 0.88,
+      "bug": "bug_2b",
+      "count": 20
+    },
+    {
+      "pattern": "shape_mismatch",
+      "confidence": 0.88,
+      "status": "FOUND",
+      "bug": "bug_4"
+    },
+    {
+      "pattern": "missing_table",
+      "confidence": 0.9,
+      "table": "capital_context",
+      "bug": "bug_6"
+    },
+    {
+      "pattern": "missing_table",
+      "confidence": 0.9,
+      "table": "cron_state",
+      "bug": "bug_7"
+    },
+    {
+      "pattern": "cache_collision",
+      "confidence": 0.89,
+      "status": "FOUND",
+      "bug": "bug_8"
+    },
+    {
+      "pattern": "regex_mismatch",
+      "confidence": 0.93,
+      "status": "FOUND",
+      "bug": "bug_12"
+    },
+    {
+      "pattern": "undefined_symbol",
+      "confidence": 0.92,
+      "calls": 42,
+      "bug": "bug_1"
+    }
+  ],
+  "timestamp": "2026-07-10T05:11:08.3352781Z",
+  "query_engine": {
+    "example_queries": [
+      "Why are trades not entering?",
+      "What breaks trailing stops?",
+      "Why did not BLUAI reach Telegram?",
+      "Are there missing tables?",
+      "Is the whitelist filtering messages?"
+    ],
+    "available": true
+  }
+}
