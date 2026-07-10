@@ -305,13 +305,22 @@ function Send-TelegramAlert {
     $msg = $Message
 
     # WHITELIST RADICAL: SÓ DEIXA PASSAR CRÍTICOS
+    # 2026-07-09 FIX: a whitelist SILENCIAVA os proprios eventos de valor:
+    #   - Format-TgGemExecuted ("✅ MARKET [MODE] | Score...") nao casava com nada
+    #   - Format-TgTradeOpenedHighlight ("TRADE ABERTO") nao casava ("ordem aberta")
+    #   - "🚨 CRÍTICO: SL/TP FALHOU" nao casava ("⚠️.*CRÍTICO" exigia ⚠️)
+    #   -> BLUAI abriu autonomo e user NAO recebeu NADA (so viu no app CoinEx).
+    # Padroes agora cobrem os formatos REAIS de open/close/critico/moon-bag.
     $isActionable = (
         ($msg -match "🎯.*ENTRADA|EXECUTAR.*trade|ordem.*aberta") -or
-        ($msg -match "❌.*FECHAD|TRADE.*FECHADO|posição.*fechada|STOP.*HIT|SL.*ativado|TP.*atingido") -or
+        ($msg -match "TRADE ABERTO|TRADE EXECUTADO|GEM EXECUTADO") -or
+        ($msg -match "❌.*FECHAD|TRADE.*FECHADO|posição.*fechada|posicao.*fechada|STOP.*HIT|SL.*ativado|TP.*atingido") -or
         ($msg -match "🛑.*CIRCUIT|CIRCUIT.*BREAKER|DAILY.*LOSS|perda.*limite") -or
         ($msg -match "❌.*ERROR|erro.*crítico|FALHA.*crítica|ERRO.*sistema") -or
         ($msg -match "📊.*REGIME|regime.*mudou|BULL.*BEAR|BEAR.*BULL") -or
-        ($msg -match "⚠️.*CRÍTICO|CRÍTICA.*ação") -or
+        ($msg -match "CRÍTICO|CRITICO|CRITICAL|PROTEÇÃO ATIVA|PROTECAO ATIVA") -or
+        ($msg -match "Moon Bag.*vend|CLIMAX.*vend|HARVEST") -or
+        ($msg -match "RESUMO DIÁRIO|RESUMO DIARIO|DAILY SUMMARY") -or
         ($msg -match "🚀.*PUMP.*SCALP|PUMP.*EXECUTADO|PUMP.*SCALP.*LIVE")
     )
 
@@ -565,7 +574,9 @@ function Format-TgGemExecuted {
     $status = if ($ExecResult.success) { "✅" } else { "❌" }
     $sizeUsd = if ($Gem.sizing -and $Gem.sizing.sizing_usd) { "`$$([math]::Round($Gem.sizing.sizing_usd,2))" } else { "N/A" }
 
-    $msg = "$status <b>$($Gem.market)</b> [$($Gem.mode)] | Score: $($Gem.score) | Size: $sizeUsd"
+    # 2026-07-09: marcador "TRADE EXECUTADO" — sem ele a whitelist do
+    # Send-TelegramAlert silenciava o alerta de execucao (user nunca sabia de open)
+    $msg = "$status <b>TRADE EXECUTADO — $($Gem.market)</b> [$($Gem.mode)] | Score: $($Gem.score) | Size: $sizeUsd"
     if ($ExecResult.error) { $msg += "`nError: $($ExecResult.error)" }
 
     return $msg
