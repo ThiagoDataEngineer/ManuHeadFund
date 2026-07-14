@@ -108,6 +108,74 @@ if ($emptyGlobals.Count -gt 0) {
     Write-Host "  [OK] Bug #10: Empty global variable ($($emptyGlobals.Count)x empty, used $(@($globalRefs | Select-Object -ExpandProperty Line -Unique).Count)x in agents)" -ForegroundColor Green
 }
 
+# ── Detector 13: Orphaned infinite-loop daemon (Bug #13) ────────────────────
+# 2026-07-14: self_heal_guardian.ps1 (while($true) + Sleep) existia, detectava
+# balance_snapshot_stale corretamente, mas NAO estava em start_fleet.ps1 nem em
+# nenhum workflow -- morreu em 07-06 e nada o religou por 8 dias. Deteccao
+# generica: qualquer scripts\*.ps1 com "while ($true)" (daemon de longa duracao)
+# deve aparecer referenciado em ALGUM dos 3 orquestradores conhecidos: start_fleet.ps1
+# (boot local), daily_daemon_restart.ps1 (restart diario local) ou workflows (cloud).
+# NOTA: cross-checado manualmente 2026-07-14 -- sem daily_daemon_restart.ps1 no
+# escopo, o detector gerava 19 falsos positivos (todos os daemons ja cobertos por ele).
+Write-Host "[RUN] Detector 13: Orphaned infinite-loop daemon (Bug #13)" -ForegroundColor Cyan
+
+$loopDaemons = @(Select-String -Path "$RootPath\scripts\*.ps1" -Pattern 'while\s*\(\s*\$true\s*\)' 2>$null |
+    ForEach-Object { Split-Path $_.Path -Leaf } | Select-Object -Unique)
+$orchestrators = @("$RootPath\scripts\start_fleet.ps1", "$RootPath\scripts\daily_daemon_restart.ps1")
+$orchContent = @($orchestrators | Where-Object { Test-Path $_ } | ForEach-Object { Get-Content $_ -Raw }) -join "`n"
+$workflowContent = @(Get-ChildItem "$RootPath\.github\workflows\*.yml" -ErrorAction SilentlyContinue | ForEach-Object { Get-Content $_.FullName -Raw }) -join "`n"
+$orphaned = @($loopDaemons | Where-Object { $orchContent -notmatch [regex]::Escape($_) -and $workflowContent -notmatch [regex]::Escape($_) })
+
+if ($orphaned.Count -gt 0) {
+    # 2026-07-14: confianca MEDIA (nao ALTA) -- deteccao por regex nao distingue
+    # daemon standalone de arquivo dot-sourced como lib (ex: scripts/trailing_stop_manager.ps1
+    # tem while($true) mas gem_loop.ps1 dot-source o homonimo em agents/, nao este).
+    # Requer confirmacao manual antes de agir -- listar como candidato, nao veredito.
+    $findings += @{ bug = "bug_13"; pattern = "orphaned_daemon_candidate"; confidence = 0.55; status = "Infinite-loop script(s) not referenced in start_fleet.ps1/daily_daemon_restart.ps1/workflows -- REQUER REVISAO MANUAL (pode ser lib dot-sourced, script standalone intencional, ou Scheduled Task nao mapeado, nao necessariamente daemon orfao)"; daemons = $orphaned }
+    Write-Host "  [WARN] Bug #13 (candidato, confirmar manualmente): $($orphaned -join ', ')" -ForegroundColor Yellow
+} else {
+    Write-Host "  [SKIP] Bug #13: All infinite-loop daemons are registered somewhere" -ForegroundColor Green
+}
+
+# ── Detector 14: GitHub Actions job missing COINEX creds before CoinEx call (Bug #14) ──
+# 2026-07-14: trading-pipeline.yml Job 0 chamava funcoes que precisam de auth CoinEx
+# sem nunca ter passado COINEX_API_KEY/SECRET_KEY no bloco de Setup daquele job --
+# drones retornavam null silenciosamente -> consensus=CAOS -> 45 trades abortados/5d.
+# NOTA: exclui chamadas a /ping (endpoint publico, nao assinado, nao precisa de auth) --
+# cross-checado manualmente 2026-07-14 (job health-check era falso positivo).
+Write-Host "[RUN] Detector 14: GitHub Actions job missing COINEX creds (Bug #14)" -ForegroundColor Cyan
+
+$missingCoinexJobs = @()
+foreach ($wf in (Get-ChildItem "$RootPath\.github\workflows\*.yml" -ErrorAction SilentlyContinue)) {
+    $lines = Get-Content $wf.FullName
+    $jobStarts = @()
+    for ($i = 0; $i -lt $lines.Count; $i++) {
+        if ($lines[$i] -match '^\s{2}[a-zA-Z0-9_-]+:\s*$' -and $i + 1 -lt $lines.Count -and $lines[$i+1] -match 'name:') {
+            $jobStarts += $i
+        }
+    }
+    for ($j = 0; $j -lt $jobStarts.Count; $j++) {
+        $start = $jobStarts[$j]
+        $end = if ($j + 1 -lt $jobStarts.Count) { $jobStarts[$j+1] } else { $lines.Count }
+        $jobBody = ($lines[$start..($end-1)]) -join "`n"
+        $callsCoinExFn = $jobBody -match 'CoinEx-[A-Za-z]'
+        $callsCoinExPrivateEndpoint = $jobBody -match 'coinex\.com/v2/(?!ping)'
+        $callsCoinEx = $callsCoinExFn -or $callsCoinExPrivateEndpoint
+        $hasCoinExKey = $jobBody -match 'COINEX_API_KEY'
+        if ($callsCoinEx -and -not $hasCoinExKey) {
+            $jobName = ($lines[$start] -replace ':\s*$', '').Trim()
+            $missingCoinexJobs += "$($wf.Name):$jobName"
+        }
+    }
+}
+
+if ($missingCoinexJobs.Count -gt 0) {
+    $findings += @{ bug = "bug_14"; pattern = "missing_coinex_credential_wire"; confidence = 0.80; status = "Job(s) reference CoinEx calls without COINEX_API_KEY in same job body"; jobs = $missingCoinexJobs }
+    Write-Host "  [OK] Bug #14: Job(s) missing COINEX_API_KEY: $($missingCoinexJobs -join ', ')" -ForegroundColor Red
+} else {
+    Write-Host "  [SKIP] Bug #14: All CoinEx-calling jobs have COINEX_API_KEY wired" -ForegroundColor Green
+}
+
 $uniqueBugs = @($findings | Group-Object -Property bug | Select-Object -ExpandProperty Name)
 
 $export = @{

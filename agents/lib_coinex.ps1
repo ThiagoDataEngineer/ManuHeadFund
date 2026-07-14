@@ -813,6 +813,19 @@ function CoinEx-PlaceSpotStopOrder {
     # CoinEx exige dot-separated decimais (locale invariante).
     # ToString() em PT-BR/etc usa virgula e a API rejeita (code 3639) -- usar InvariantCulture.
     $inv = [System.Globalization.CultureInfo]::InvariantCulture
+
+    # 2026-07-14 fix: precisao FIXA (6/8/12 casas) ignorava o par real -- mesmo bug
+    # ja corrigido em gem_executor.ps1:1057 para ordens de entrada (AIUSDT sub-dollar),
+    # mas nunca replicado aqui. Pares sub-dollar (QUAI/SXT/SKL/AIN/BLUAI/SENT) rejeitados
+    # pela CoinEx com "Failed to place order" por amount/price fora da precisao aceita.
+    $precision = $null
+    try { $precision = Get-MarketPrecision -Market $Market -MarketType "spot" } catch {}
+    $amountPrec = if ($precision -and $precision.base_ccy_precision) { [int]$precision.base_ccy_precision } else { 6 }
+    $pricePrec  = if ($precision -and $precision.quote_ccy_precision) { [int]$precision.quote_ccy_precision } else { 8 }
+    if (-not $precision -and $global:DEBUG_COINEX) {
+        Write-Host "[DEBUG] CoinEx-PlaceSpotStopOrder ${Market}: Get-MarketPrecision falhou, usando fallback amount=6 price=8" -ForegroundColor Yellow
+    }
+
     # B20 fix 2026-05-20 PM6+490min: client_id paridade
     $clientId = ""
     if (Get-Command New-OrderClientId -ErrorAction SilentlyContinue) {
@@ -823,8 +836,8 @@ function CoinEx-PlaceSpotStopOrder {
         market_type   = "SPOT"
         side          = $Side
         type          = "limit"
-        amount        = ([math]::Round($Amount, 6)).ToString($inv)
-        price         = ([math]::Round([decimal]$execPrice, 8)).ToString($inv)  # execution price (limit agressivo)
+        amount        = ([math]::Round([decimal]$Amount, $amountPrec)).ToString($inv)
+        price         = ([math]::Round([decimal]$execPrice, $pricePrec)).ToString($inv)  # execution price (limit agressivo)
         ccy           = $base
         # 2026-06-05 fix: Round(,8) ZERAVA precos sub-1e-8 (PEPE2 trigger 1.006e-9
         # -> "0" -> API rejeita -> posicao NUA). Usa decimal+12 casas pra preservar

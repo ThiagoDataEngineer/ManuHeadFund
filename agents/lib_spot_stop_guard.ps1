@@ -165,18 +165,27 @@ function Test-SpotStopFallback {
 function Test-SpotStopPlaceable {
     <#
       Classifica se da pra colocar stop-order nesta posicao. Evita tentar (e logar erro)
-      todo ciclo em poeira/sub-nano/simbolo invalido. PURO.
+      todo ciclo em poeira/sub-nano/simbolo invalido. PURO (MinAmount opcional -- caller
+      resolve via Get-MarketPrecision, que faz I/O; aqui so recebe o valor ja calculado).
+
+      2026-07-14: MinNotionalUsd fixo ($5) nao cobria o min_amount REAL do par -- ordem
+      passava no check interno mas era rejeitada pela CoinEx (lote minimo do par maior
+      que o notional calculado). MinAmount, se fornecido, adiciona esse segundo piso.
     #>
     param(
         [string]$Market,
         [double]$Qty,
         [double]$Price,
-        [double]$MinNotionalUsd = 5.0
+        [double]$MinNotionalUsd = 5.0,
+        [Nullable[double]]$MinAmount = $null
     )
     if ($Market -notmatch 'USDT$')      { return @{ placeable=$false; reason="simbolo_invalido" } }
     if ($Price -le 0)                   { return @{ placeable=$false; reason="sem_preco" } }
     if ($Price -lt 1e-7)                { return @{ placeable=$false; reason="preco_sub_nano" } }
     if (($Qty * $Price) -lt $MinNotionalUsd) { return @{ placeable=$false; reason="poeira" } }
+    if ($MinAmount -and $MinAmount.Value -gt 0 -and $Qty -lt $MinAmount.Value) {
+        return @{ placeable=$false; reason="abaixo_lote_minimo_par" }
+    }
     return @{ placeable=$true; reason="ok" }
 }
 
@@ -286,7 +295,14 @@ function Sync-SpotStopsToExchange {
             if ($tk.data) { $last = [double]$tk.data[0].last }
         } catch {}
         $priceMap[$mkt] = $last
-        $chk = Test-SpotStopPlaceable -Market $mkt -Qty ([double]$pos.qty) -Price $last
+        $minAmt = $null
+        if (Get-Command Get-MarketPrecision -ErrorAction SilentlyContinue) {
+            try {
+                $prec = Get-MarketPrecision -Market $mkt -MarketType "spot"
+                if ($prec -and $prec.min_amount) { $minAmt = [double]$prec.min_amount }
+            } catch {}
+        }
+        $chk = Test-SpotStopPlaceable -Market $mkt -Qty ([double]$pos.qty) -Price $last -MinAmount $minAmt
         if ($chk.placeable) {
             $placeable += $pos
         } else {

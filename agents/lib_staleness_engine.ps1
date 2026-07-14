@@ -71,6 +71,20 @@ $script:STALENESS_REGISTRY = @(
         source_paths = @()
         auto_safe = $true
         priority_base = "MEDIUM"
+    },
+    @{
+        # 2026-07-14: balance_snapshot.json ficou 5 dias sem atualizar (SPOT/FUTURES
+        # $100/$100 no cache vs $2457/$2702 real) e foi reportado ao user como "atual"
+        # sem aviso. Nenhum item do registry cobria dados financeiros de saldo.
+        name = "balance_snapshot"
+        item_pattern = "balance_snapshot.json"
+        rerun_cmd = "powershell -File scripts/capital_snapshot_runner.ps1"
+        capital_sensitive = $true
+        time_sensitive = $true
+        max_age_days = 0.083  # ~2h -- saldo de carteira nao pode ficar horas desatualizado
+        source_paths = @()
+        auto_safe = $true
+        priority_base = "HIGH"
     }
 )
 

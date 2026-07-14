@@ -32,5 +32,11 @@ Start-DaemonIfDead -ScriptName "sentinel_movers.ps1"
 Start-DaemonIfDead -ScriptName "collect_1h_klines.ps1"
 Start-DaemonIfDead -ScriptName "gem_loop.ps1"
 Start-DaemonIfDead -ScriptName "daemon_watchdog_loop.ps1" # ← Watchdog auto-recovery infinito
+# 2026-07-14: self_heal_guardian.ps1 e o "guardiao de auto-cura" (DETECTA->CURA->
+# REGISTRA->APRENDE->ESCALA) mas NUNCA estava neste launcher -- mesma causa raiz
+# do comentario acima (07-04: guardian tambem morria e nada o religava). Achado
+# ao investigar por que balance_snapshot_stale ficou 5 dias sem escalar Telegram:
+# o proprio guardian estava morto desde 07-06, sem ninguem religar.
+Start-DaemonIfDead -ScriptName "self_heal_guardian.ps1"
 
 Add-Content -Path (Join-Path $journal "fleet_boot.log") -Value "[$(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')] start_fleet executado + watchdog_loop (auto-recovery ativo)" -Encoding utf8
