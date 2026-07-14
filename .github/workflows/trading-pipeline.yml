@@ -1372,3 +1372,26 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
           & ./scripts/apply_fix_close_reason_2026_07_14.ps1
+
+
+  # ============================================================================
+  # JOB (one-shot): DIAGNOSTIC -- confirma de verdade se close_reason existe
+  # exec_sql sempre retorna 'ok' (mesmo bug que fez a verificacao anterior
+  # reportar OK falsamente). Este job usa RAISE EXCEPTION real como prova.
+  # ============================================================================
+  diag-close-reason:
+    name: Diagnostic close_reason (one-shot)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run diagnostic
+        shell: pwsh
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          & ./scripts/diag_check_close_reason_2026_07_14.ps1
