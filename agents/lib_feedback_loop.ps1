@@ -123,7 +123,18 @@ function ConvertTo-SupabaseOutcome {
         foreach ($p in $Outcome.PSObject.Properties) { $payload[$p.Name] = $p.Value }
     }
 
+    # 2026-07-14 fix: id e PRIMARY KEY NOT NULL em manuheadfund.trade_outcomes;
+    # esta funcao nunca preenchia, toda gravacao violava a constraint (achado
+    # ao investigar o phantom-loop de trailing_state -- mesmo bug de auditoria
+    # incompleta, campo obrigatorio nunca setado). Mesmo padrao de geracao de
+    # lib_trade_journal_supabase.ps1 (ticks+market+guid, garante unicidade).
+    $tsForId = & $get "ts"
+    $ticks = try { ([datetime]::Parse([string]$tsForId)).Ticks } catch { [datetime]::UtcNow.Ticks }
+    $idMarket = (& $get "market")
+    $genId = "{0}|{1}|feedback_loop|{2}" -f $ticks, $idMarket, ([guid]::NewGuid().ToString().Substring(0,8))
+
     return @{
+        id           = $genId
         market       = [string](& $get "market")
         side         = [string](& $get "side")
         mode         = [string](& $get "mode")
