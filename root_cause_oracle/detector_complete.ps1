@@ -139,7 +139,7 @@ if ($orphaned.Count -gt 0) {
 
 # ── Detector 14: GitHub Actions job missing COINEX creds before CoinEx call (Bug #14) ──
 # 2026-07-14: trading-pipeline.yml Job 0 chamava funcoes que precisam de auth CoinEx
-# sem nunca ter passado COINEX_API_KEY/SECRET_KEY no bloco de Setup daquele job --
+# sem nunca ter passado COINEX_ACCESS_ID/SECRET_KEY no bloco de Setup daquele job --
 # drones retornavam null silenciosamente -> consensus=CAOS -> 45 trades abortados/5d.
 # NOTA: exclui chamadas a /ping (endpoint publico, nao assinado, nao precisa de auth) --
 # cross-checado manualmente 2026-07-14 (job health-check era falso positivo).
@@ -161,7 +161,7 @@ foreach ($wf in (Get-ChildItem "$RootPath\.github\workflows\*.yml" -ErrorAction 
         $callsCoinExFn = $jobBody -match 'CoinEx-[A-Za-z]'
         $callsCoinExPrivateEndpoint = $jobBody -match 'coinex\.com/v2/(?!ping)'
         $callsCoinEx = $callsCoinExFn -or $callsCoinExPrivateEndpoint
-        $hasCoinExKey = $jobBody -match 'COINEX_API_KEY'
+        $hasCoinExKey = $jobBody -match 'COINEX_ACCESS_ID'
         if ($callsCoinEx -and -not $hasCoinExKey) {
             $jobName = ($lines[$start] -replace ':\s*$', '').Trim()
             $missingCoinexJobs += "$($wf.Name):$jobName"
@@ -170,10 +170,10 @@ foreach ($wf in (Get-ChildItem "$RootPath\.github\workflows\*.yml" -ErrorAction 
 }
 
 if ($missingCoinexJobs.Count -gt 0) {
-    $findings += @{ bug = "bug_14"; pattern = "missing_coinex_credential_wire"; confidence = 0.80; status = "Job(s) reference CoinEx calls without COINEX_API_KEY in same job body"; jobs = $missingCoinexJobs }
-    Write-Host "  [OK] Bug #14: Job(s) missing COINEX_API_KEY: $($missingCoinexJobs -join ', ')" -ForegroundColor Red
+    $findings += @{ bug = "bug_14"; pattern = "missing_coinex_credential_wire"; confidence = 0.80; status = "Job(s) reference CoinEx calls without COINEX_ACCESS_ID in same job body"; jobs = $missingCoinexJobs }
+    Write-Host "  [OK] Bug #14: Job(s) missing COINEX_ACCESS_ID: $($missingCoinexJobs -join ', ')" -ForegroundColor Red
 } else {
-    Write-Host "  [SKIP] Bug #14: All CoinEx-calling jobs have COINEX_API_KEY wired" -ForegroundColor Green
+    Write-Host "  [SKIP] Bug #14: All CoinEx-calling jobs have COINEX_ACCESS_ID wired" -ForegroundColor Green
 }
 
 $uniqueBugs = @($findings | Group-Object -Property bug | Select-Object -ExpandProperty Name)

@@ -6,7 +6,7 @@
 
 # CoinEx API Credentials (authentication)
 # Apenas 2 credenciais sao necessarias (CoinEx nao usa Passphrase)
-if (-not $env:COINEX_API_KEY) { $env:COINEX_API_KEY = "PLACEHOLDER_API_KEY" }
+if (-not $env:COINEX_ACCESS_ID) { $env:COINEX_ACCESS_ID = "PLACEHOLDER_ACCESS_ID" }
 if (-not $env:COINEX_SECRET_KEY) { $env:COINEX_SECRET_KEY = "PLACEHOLDER_SECRET_KEY" }
 
 # CoinEx API Base URL
@@ -28,4 +28,4 @@ if (-not $env:SUPABASE_ANON_KEY) {
 # Debug flag (opcional)
 # $env:DEBUG_MODE = "1"
 
-Write-Host "[config.local.ps1] CoinEx auth: $(if ($env:COINEX_API_KEY -and $env:COINEX_API_KEY -ne 'PLACEHOLDER_API_KEY') { 'CONFIGURED' } else { 'MISSING - using placeholders' })" -ForegroundColor $(if ($env:COINEX_API_KEY -and $env:COINEX_API_KEY -ne 'PLACEHOLDER_API_KEY') { 'Green' } else { 'Yellow' })
+Write-Host "[config.local.ps1] CoinEx auth: $(if ($env:COINEX_ACCESS_ID -and $env:COINEX_ACCESS_ID -ne 'PLACEHOLDER_ACCESS_ID') { 'CONFIGURED' } else { 'MISSING - using placeholders' })" -ForegroundColor $(if ($env:COINEX_ACCESS_ID -and $env:COINEX_ACCESS_ID -ne 'PLACEHOLDER_ACCESS_ID') { 'Green' } else { 'Yellow' })
