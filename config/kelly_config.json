@@ -1,0 +1,13 @@
+{
+  "spot": {
+    "min_size": 10,
+    "kelly_percent": 0.02,
+    "max_size": 50
+  },
+  "futures": {
+    "leverage": 3,
+    "min_size": 50,
+    "kelly_percent": 0.015,
+    "max_size": 200
+  }
+}

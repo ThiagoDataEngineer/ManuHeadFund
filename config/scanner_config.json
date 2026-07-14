@@ -1,0 +1,14 @@
+{
+  "short": {
+    "volume_climax_min": 2.0,
+    "score_min": 40,
+    "enabled": true,
+    "confluence_min": 1,
+    "mode": "pump_dump"
+  },
+  "long": {
+    "score_min": 50,
+    "enabled": true,
+    "confluence_min": 2
+  }
+}

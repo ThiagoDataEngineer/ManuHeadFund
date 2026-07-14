@@ -1,0 +1,9 @@
+{
+  "auto_trail_winners": true,
+  "auto_execute_futures": true,
+  "auto_close_losers": true,
+  "manual_override_enabled": false,
+  "auto_execute_short": true,
+  "human_approval_required": false,
+  "auto_execute_long": true
+}
