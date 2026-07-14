@@ -51,8 +51,15 @@ END
 }
 
 Write-Host "Real diagnostic (RAISE EXCEPTION based, not exec_sql's always-'ok' return):" -ForegroundColor Cyan
+# 2026-07-14 rodada 2: primeira migracao so cobriu closeReason; PGRST204
+# persistiu na rota real (Close-TrailingPosition) porque closedAt/exitPrice
+# tambem faltavam e eu nao tinha auditado a funcao inteira. Cobre os 3 agora.
 Assert-ColumnExists -Schema "manuheadfund" -Table "trailing_state" -Column "closeReason"
+Assert-ColumnExists -Schema "manuheadfund" -Table "trailing_state" -Column "closedAt"
+Assert-ColumnExists -Schema "manuheadfund" -Table "trailing_state" -Column "exitPrice"
 Assert-ColumnExists -Schema "manuheadfund" -Table "trade_outcomes" -Column "close_reason"
+Assert-ColumnExists -Schema "manuheadfund" -Table "trade_outcomes" -Column "market"
+Assert-ColumnExists -Schema "manuheadfund" -Table "trade_outcomes" -Column "payload"
 
 # Segundo teste: confirma que exec_sql roda como role com permissao de ALTER
 $permSql = @"
