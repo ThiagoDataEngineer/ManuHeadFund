@@ -339,6 +339,25 @@ function Invoke-GemExecute {
     }
     $vd  = $Gem.vol_data
 
+    # 2026-07-14 fix: $global:CURRENT_REGIME nunca era atribuido em codigo de
+    # producao (so em agents/config.ps1 como $CURRENT_REGIME de escopo LOCAL,
+    # que nao vaza pra $global: quando dot-sourced dentro de uma funcao).
+    # Resultado: os gates de excecao "NEUTRO->libera SHORT em BEAR" (secao 1c
+    # abaixo) e "ALLOW_LONG_IN_BEAR_WEAK" NUNCA disparavam -- candidatos SHORT
+    # score=100 (ex: ETHUSDT/XRPUSDT/AVAXUSDT TORI_SHORT) eram bloqueados por
+    # cenario:NEUTRO mesmo com regime real=BEAR_WEAK. Mesmo bug ja documentado
+    # e corrigido em scripts/short_scanner.ps1:96-109 ("CONTRATO: Get-CurrentRegime
+    # NUNCA existiu"), nunca replicado aqui. Mesmo padrao de fallback.
+    if (-not $global:CURRENT_REGIME) {
+        try {
+            $rsPath = Join-Path $global:JOURNAL_DIR "regime_state.json"
+            if (Test-Path $rsPath) {
+                $rs = Get-Content $rsPath -Raw | ConvertFrom-Json
+                if ($rs.regime) { $global:CURRENT_REGIME = [string]$rs.regime }
+            }
+        } catch {}
+    }
+
     Write-Host ""
     Write-Host "=== GEM EXECUTOR -- $mkt ===" -ForegroundColor Cyan
 
