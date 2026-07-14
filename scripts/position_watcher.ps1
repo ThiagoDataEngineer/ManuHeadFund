@@ -300,26 +300,37 @@ while ($true) {
                         # 2026-07-14 fix: falha de PLACE so era logada local -- posicao ficava
                         # sem stop na exchange por dias sem ninguem saber (achado real: QUAI/SXT/
                         # SKL/AIN/BLUAI/SENT "Failed to place order" na interface, nunca alertado).
-                        # Alerta imediato + escalacao se recorrente (mesmo padrao de
-                        # self_heal_guardian Add-Incident: 3x/24h -> severidade alta).
+                        # Alerta imediato + escalacao se recorrente.
+                        #
+                        # 2026-07-14 correcao: primeira versao gravava em journal/*.jsonl local,
+                        # que so existe no runner efemero do GitHub Actions e e destruido ao fim
+                        # do job -- contador nunca acumulava entre ciclos (mesmo bug estrutural
+                        # do phantom-loop de trailing_state). Migrado para Supabase (state_store),
+                        # unico jeito de persistir entre runs na nuvem.
+                        #
+                        # Janela recalibrada: medida a cadencia real do schedule (*/5 no yaml, mas
+                        # GitHub Actions throttling reduz para ~35-45min efetivos, confirmado
+                        # empiricamente: 30 runs, media 39.6min, mediana 38.2min). "3 falhas" a
+                        # cutoff de 15min nunca bateria -- ajustado para 4h (cobre ~6 ciclos reais).
                         try {
                             Send-TelegramAlert -Message "SPOT $($ss.market): FALHA ao colocar stop ($($ss.action)) -- posicao SEM protecao. Detalhe: $($ss.detail)" | Out-Null
                         } catch {}
                         try {
-                            $failFile = Join-Path $journalDir "spot_stop_failures.jsonl"
-                            $rec = @{ ts = (Get-Date).ToUniversalTime().ToString("o"); market = $ss.market; action = $ss.action; detail = "$($ss.detail)" } | ConvertTo-Json -Compress
-                            Add-Content -Path $failFile -Value $rec -Encoding utf8
-                            $cutoff = (Get-Date).ToUniversalTime().AddMinutes(-15)
-                            $recentFails = 0
-                            foreach ($line in (Get-Content $failFile -ErrorAction SilentlyContinue)) {
+                            $recentFails = 1
+                            if (Get-Command Get-StateRecords -ErrorAction SilentlyContinue) {
                                 try {
-                                    $f = $line | ConvertFrom-Json
-                                    if ($f.market -eq $ss.market -and ([datetime]::Parse($f.ts).ToUniversalTime() -gt $cutoff)) { $recentFails++ }
-                                } catch {}
+                                    $rec = @{ pk_id = "$($ss.market)_$([Guid]::NewGuid().ToString('N').Substring(0,8))"; market = $ss.market; action = $ss.action; detail = "$($ss.detail)"; ts = (Get-Date).ToUniversalTime().ToString("o") }
+                                    Save-StateRecords -Table "spot_stop_failures" -Records @($rec) -PrimaryKey "pk_id"
+                                    $cutoff = (Get-Date).ToUniversalTime().AddHours(-4)
+                                    $all = @(Get-StateRecords -Table "spot_stop_failures" -Filter @{ market = $ss.market })
+                                    $recentFails = @($all | Where-Object { try { [datetime]::Parse("$($_.ts)").ToUniversalTime() -gt $cutoff } catch { $false } }).Count
+                                } catch {
+                                    Write-WatchLog "WARN" "spot_stop_failures state_store falhou (contador nao confiavel neste ciclo): $_"
+                                }
                             }
                             if ($recentFails -ge 3) {
-                                Write-WatchLog "WARN" "SPOT $($ss.market): ESCALADO -- $recentFails falhas de stop em 15min, posicao exposta"
-                                Send-TelegramAlert -Message "ALERTA SPOT $($ss.market): $recentFails falhas consecutivas de stop em 15min -- POSICAO SEM PROTECAO ha varios ciclos. Verificar manualmente." | Out-Null
+                                Write-WatchLog "WARN" "SPOT $($ss.market): ESCALADO -- $recentFails falhas de stop em 4h, posicao exposta"
+                                Send-TelegramAlert -Message "ALERTA SPOT $($ss.market): $recentFails falhas consecutivas de stop em 4h -- POSICAO SEM PROTECAO ha varios ciclos. Verificar manualmente." | Out-Null
                             }
                         } catch {}
                     }

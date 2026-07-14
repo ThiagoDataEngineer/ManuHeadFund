@@ -1346,3 +1346,29 @@ jobs:
           }
 
 
+
+
+  # ============================================================================
+  # JOB (one-shot): APPLY CLOSE_REASON SCHEMA FIX (2026-07-14)
+  # So roda via workflow_dispatch manual -- nunca no schedule automatico.
+  # Aplica docs/SETUP_SUPABASE_FIX_CLOSE_REASON_2026_07_14.sql via RPC exec_sql.
+  # Corrige PGRST204 (closeReason ausente em trailing_state, close_reason
+  # ausente em trade_outcomes) que causava loop infinito de falso-phantom
+  # em QUAI/SXT/SENT e outras posicoes fechadas.
+  # ============================================================================
+  apply-close-reason-fix:
+    name: Apply close_reason Schema Fix (one-shot)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply migration
+        shell: pwsh
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          & ./scripts/apply_fix_close_reason_2026_07_14.ps1
