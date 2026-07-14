@@ -212,7 +212,6 @@ jobs:
           New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
           $content = "`$env:COINEX_API_KEY = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
           $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
-          $content += "`$env:COINEX_PASSPHRASE = '${{ secrets.COINEX_PASSPHRASE }}'" + "`n"
           $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
           $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
           # 2026-06-18 Fase 2: creds Supabase em TODOS os jobs -> trailing/risk/dashboard
@@ -251,7 +250,6 @@ jobs:
           New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
           $content = "`$env:COINEX_API_KEY = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
           $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
-          $content += "`$env:COINEX_PASSPHRASE = '${{ secrets.COINEX_PASSPHRASE }}'" + "`n"
           $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
           $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
           # 2026-06-18 Fase 2: creds Supabase em TODOS os jobs -> trailing/risk/dashboard
@@ -294,7 +292,6 @@ jobs:
           New-Item -ItemType Directory -Path "agents","journal","logs","dashboard" -Force | Out-Null
           $content = "`$env:COINEX_API_KEY = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
           $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
-          $content += "`$env:COINEX_PASSPHRASE = '${{ secrets.COINEX_PASSPHRASE }}'" + "`n"
           $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
           $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
           # 2026-06-18 Fase 2: creds Supabase em TODOS os jobs -> trailing/risk/dashboard
@@ -372,7 +369,6 @@ jobs:
           New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
           $content = "`$env:COINEX_API_KEY = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
           $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
-          $content += "`$env:COINEX_PASSPHRASE = '${{ secrets.COINEX_PASSPHRASE }}'" + "`n"
           $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
           $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
           # 2026-06-18 Fase 2: creds Supabase em TODOS os jobs -> trailing/risk/dashboard
@@ -417,7 +413,6 @@ jobs:
           New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
           $content = "`$env:COINEX_API_KEY = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
           $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
-          $content += "`$env:COINEX_PASSPHRASE = '${{ secrets.COINEX_PASSPHRASE }}'" + "`n"
           $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
           $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
           $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
@@ -456,7 +451,6 @@ jobs:
           New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
           $content = "`$env:COINEX_API_KEY = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
           $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
-          $content += "`$env:COINEX_PASSPHRASE = '${{ secrets.COINEX_PASSPHRASE }}'" + "`n"
           $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
           $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
           $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
@@ -499,7 +493,6 @@ jobs:
           New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
           $content = "`$env:COINEX_API_KEY = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
           $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
-          $content += "`$env:COINEX_PASSPHRASE = '${{ secrets.COINEX_PASSPHRASE }}'" + "`n"
           $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
           $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
           # 2026-06-18 Fase 2: creds Supabase em TODOS os jobs -> trailing/risk/dashboard
@@ -543,7 +536,6 @@ jobs:
           New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
           $content = "`$env:COINEX_API_KEY = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
           $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
-          $content += "`$env:COINEX_PASSPHRASE = '${{ secrets.COINEX_PASSPHRASE }}'" + "`n"
           $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
           $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
           # 2026-06-18 Fase 2: creds Supabase em TODOS os jobs -> trailing/risk/dashboard
@@ -588,7 +580,6 @@ jobs:
           New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
           $content = "`$env:COINEX_API_KEY = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
           $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
-          $content += "`$env:COINEX_PASSPHRASE = '${{ secrets.COINEX_PASSPHRASE }}'" + "`n"
           $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
           $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
           # 2026-06-18 Fase 2: creds Supabase em TODOS os jobs -> trailing/risk/dashboard
@@ -633,7 +624,6 @@ jobs:
           New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
           $content = "`$env:COINEX_API_KEY = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
           $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
-          $content += "`$env:COINEX_PASSPHRASE = '${{ secrets.COINEX_PASSPHRASE }}'" + "`n"
           $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
           $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
           # 2026-06-18 Fase 2: creds Supabase em TODOS os jobs -> trailing/risk/dashboard
@@ -679,7 +669,6 @@ jobs:
           New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
           $content = "`$env:COINEX_API_KEY = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
           $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
-          $content += "`$env:COINEX_PASSPHRASE = '${{ secrets.COINEX_PASSPHRASE }}'" + "`n"
           $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
           $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
           # 2026-06-18 Fase 2: creds Supabase em TODOS os jobs -> trailing/risk/dashboard
@@ -725,7 +714,6 @@ jobs:
           New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
           $content = "`$env:COINEX_API_KEY = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
           $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
-          $content += "`$env:COINEX_PASSPHRASE = '${{ secrets.COINEX_PASSPHRASE }}'" + "`n"
           $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
           $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
           # 2026-06-18 Fase 2: creds Supabase em TODOS os jobs -> trailing/risk/dashboard
@@ -771,7 +759,6 @@ jobs:
           New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
           $content = "`$env:COINEX_API_KEY = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
           $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
-          $content += "`$env:COINEX_PASSPHRASE = '${{ secrets.COINEX_PASSPHRASE }}'" + "`n"
           $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
           $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
           # 2026-06-18 Fase 2: creds Supabase em TODOS os jobs -> trailing/risk/dashboard
@@ -817,7 +804,6 @@ jobs:
           New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
           $content = "`$env:COINEX_API_KEY = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
           $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
-          $content += "`$env:COINEX_PASSPHRASE = '${{ secrets.COINEX_PASSPHRASE }}'" + "`n"
           $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
           $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
           # 2026-06-18 Fase 2: creds Supabase em TODOS os jobs -> trailing/risk/dashboard
@@ -866,7 +852,6 @@ jobs:
           New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
           $content = "`$env:COINEX_API_KEY = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
           $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
-          $content += "`$env:COINEX_PASSPHRASE = '${{ secrets.COINEX_PASSPHRASE }}'" + "`n"
           $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
           $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
           # 2026-06-18 Fase 2: creds Supabase em TODOS os jobs -> trailing/risk/dashboard
@@ -915,7 +900,6 @@ jobs:
           New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
           $content = "`$env:COINEX_API_KEY = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
           $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
-          $content += "`$env:COINEX_PASSPHRASE = '${{ secrets.COINEX_PASSPHRASE }}'" + "`n"
           $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
           $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
           # LLM keys - opcionais para weekly cost report
@@ -968,7 +952,6 @@ jobs:
           New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
           $content = "`$env:COINEX_API_KEY = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
           $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
-          $content += "`$env:COINEX_PASSPHRASE = '${{ secrets.COINEX_PASSPHRASE }}'" + "`n"
           $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
           $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
           $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
@@ -1004,7 +987,6 @@ jobs:
           New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
           $content = "`$env:COINEX_API_KEY = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
           $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
-          $content += "`$env:COINEX_PASSPHRASE = '${{ secrets.COINEX_PASSPHRASE }}'" + "`n"
           $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
           $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
           $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
@@ -1040,7 +1022,6 @@ jobs:
           New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
           $content = "`$env:COINEX_API_KEY = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
           $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
-          $content += "`$env:COINEX_PASSPHRASE = '${{ secrets.COINEX_PASSPHRASE }}'" + "`n"
           $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
           $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
           $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
@@ -1083,7 +1064,6 @@ jobs:
           New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
           $content = "`$env:COINEX_API_KEY = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
           $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
-          $content += "`$env:COINEX_PASSPHRASE = '${{ secrets.COINEX_PASSPHRASE }}'" + "`n"
           $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
           $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
           $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
@@ -1119,7 +1099,6 @@ jobs:
           New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
           $content = "`$env:COINEX_API_KEY = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
           $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
-          $content += "`$env:COINEX_PASSPHRASE = '${{ secrets.COINEX_PASSPHRASE }}'" + "`n"
           $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
           $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
           $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
@@ -1159,7 +1138,6 @@ jobs:
           New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
           $content = "`$env:COINEX_API_KEY = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
           $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
-          $content += "`$env:COINEX_PASSPHRASE = '${{ secrets.COINEX_PASSPHRASE }}'" + "`n"
           $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
           $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
           $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
@@ -1214,7 +1192,6 @@ jobs:
           New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
           $content = "`$env:COINEX_API_KEY = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
           $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
-          $content += "`$env:COINEX_PASSPHRASE = '${{ secrets.COINEX_PASSPHRASE }}'" + "`n"
           $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
           $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
           $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
@@ -1293,7 +1270,6 @@ jobs:
           New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
           $content = "`$env:COINEX_API_KEY = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
           $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
-          $content += "`$env:COINEX_PASSPHRASE = '${{ secrets.COINEX_PASSPHRASE }}'" + "`n"
           $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
           $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
           $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"

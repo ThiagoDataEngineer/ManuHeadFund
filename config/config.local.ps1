@@ -5,10 +5,9 @@
 #   . (Join-Path $root "agents/config.local.ps1") -ErrorAction SilentlyContinue
 
 # CoinEx API Credentials (authentication)
-# IMPORTANTE: Estes valores devem ser iguais aos gh secrets do GitHub Actions
+# Apenas 2 credenciais sao necessarias (CoinEx nao usa Passphrase)
 if (-not $env:COINEX_API_KEY) { $env:COINEX_API_KEY = "PLACEHOLDER_API_KEY" }
 if (-not $env:COINEX_SECRET_KEY) { $env:COINEX_SECRET_KEY = "PLACEHOLDER_SECRET_KEY" }
-if (-not $env:COINEX_PASSPHRASE) { $env:COINEX_PASSPHRASE = "PLACEHOLDER_PASSPHRASE" }
 
 # CoinEx API Base URL
 $env:BASE_URL = "https://api.coinex.com/v2"
