@@ -36,6 +36,15 @@ CREATE TABLE IF NOT EXISTS manuheadfund.spot_stop_failures (
 CREATE INDEX IF NOT EXISTS idx_spot_stop_failures_market_ts ON manuheadfund.spot_stop_failures (market, ts DESC);
 GRANT ALL ON manuheadfund.spot_stop_failures TO anon, authenticated, service_role;
 
+-- 2026-07-14 segunda rodada: ALTER TABLE via exec_sql aplicou as colunas de
+-- verdade (confirmado via information_schema.columns), mas o PGRST204
+-- continuou em 2 runs subsequentes (uma delas rodando 1min45s DEPOIS da
+-- migracao ter completado -- descartando race condition). Causa: PostgREST
+-- mantem cache de schema em memoria que nao se auto-invalida em ALTER TABLE
+-- executado via RPC/exec_sql (fora do fluxo normal de migration do Supabase).
+-- Precisa de reload explicito.
+NOTIFY pgrst, 'reload schema';
+
 -- Verificacao pos-migração (rodar manualmente para confirmar):
 -- SELECT column_name FROM information_schema.columns
 --   WHERE table_schema='manuheadfund' AND table_name='trailing_state' AND column_name='closeReason';
