@@ -1395,3 +1395,25 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
           & ./scripts/diag_check_close_reason_2026_07_14.ps1
+
+
+  # ============================================================================
+  # JOB (one-shot): DIAGNOSTIC 2 -- testa via rota real (POST direto na tabela,
+  # nao via exec_sql). Isola se o problema e cache RPC-only vs cache geral.
+  # ============================================================================
+  diag2-direct-column-test:
+    name: Diagnostic 2 Direct Column Test (one-shot)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run diagnostic
+        shell: pwsh
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          & ./scripts/diag2_direct_column_test_2026_07_14.ps1
