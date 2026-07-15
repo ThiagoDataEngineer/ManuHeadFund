@@ -857,6 +857,38 @@ function Invoke-GemExecute {
         } catch { Write-Host "  [CENARIO] ${mkt}: check falhou (fallback allow): $_" -ForegroundColor Yellow }
     }
 
+    # ── 1d. CROWDING GATE (2026-07-15: shadow -> ativo) ──
+    # Evidencia n=5133 (ESTUDO 2026-07-04, lib_crowding_signal.ps1): funding
+    # extremo+ -> fwd24h -0.73% e LONG vira edge negativo (43-46% win). Caso
+    # real: WAVESUSDT logada CROWDED_LONGS (funding 0.43%) dias antes de -18%
+    # -- o shadow previu, nada agiu. v1: LONG+long_caution = BLOCK;
+    # SHORT+short_boost = so log (boost de conviction fica pro v2, apos
+    # observar telemetria). Fail-open: sem funding/futures -> no-op.
+    if (-not (Get-Command Get-CrowdingSignal -ErrorAction SilentlyContinue)) {
+        $crowdLibPath = Join-Path $PSScriptRoot "lib_crowding_signal.ps1"
+        if (Test-Path $crowdLibPath) { . $crowdLibPath }
+    }
+    if (Get-Command Get-CrowdingSignal -ErrorAction SilentlyContinue) {
+        try {
+            $crowd = Get-CrowdingSignal -Market $mkt
+            if ($crowd -and $crowd.available) {
+                $dirCrowd = "$($Gem.direction)".ToUpper()
+                if ($dirCrowd -notin @("LONG","SHORT")) { $dirCrowd = "LONG" }
+                if ($dirCrowd -eq "LONG" -and $crowd.long_caution) {
+                    Write-Host "  [CROWDING BLOCK] ${mkt}: $($crowd.crowding) funding=$($crowd.funding_pct)% -- LONG edge negativo (hist 43-46% win)" -ForegroundColor Red
+                    try { Send-TelegramAlert -Message "GEM bloqueado ${mkt}: crowding $($crowd.crowding) (funding $($crowd.funding_pct)%) -> LONG sem edge" | Out-Null } catch {}
+                    if (Get-Command Add-GemRejection -ErrorAction SilentlyContinue) {
+                        try { Add-GemRejection -Path (Join-Path $global:JOURNAL_DIR "gem_recent_decisions.json") -Market $mkt -Reason "crowding:$($crowd.crowding)" } catch {}
+                    }
+                    return [PSCustomObject]@{ blocked = $true; blocked_by = @("crowding:$($crowd.crowding)"); market = $mkt }
+                }
+                if ($dirCrowd -eq "SHORT" -and $crowd.short_boost) {
+                    Write-Host "  [CROWDING] ${mkt}: short_boost ativo ($($crowd.crowding) funding=$($crowd.funding_pct)%) -- telemetria v1, sem alterar conviction" -ForegroundColor DarkYellow
+                }
+            }
+        } catch { }
+    }
+
     # ── 2. CHART PATTERN GATE (2026-06-18: bloqueador ativo) ──
     # Rejeita pump-chase, topping patterns, fake breakouts ANTES de qualquer outra gate
     # Economia: evita -11% (COAIUSDT tipo) com zero LLM
