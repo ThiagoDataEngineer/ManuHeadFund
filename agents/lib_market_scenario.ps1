@@ -43,25 +43,25 @@ function Resolve-MarketScenario {
         [double]$Rsi, [double]$Momentum30dPct, [double]$VolRatio
     )
     if ($Price -le 0 -or $Ema20 -le 0 -or $Ema50 -le 0) {
-        return [pscustomobject]@{ scenario="UNKNOWN"; strategy="cautela"; allow_long=$true; allow_short=$false; reason="dados_invalidos" }
+        return [pscustomobject]@{ scenario="UNKNOWN"; strategy="cautela"; allow_long=$true; allow_short=$false; reason="dados_invalidos"; momentum_30d=$Momentum30dPct }
     }
 
     $cap = Test-Capitulation -Rsi $Rsi -VolRatio $VolRatio -Price $Price -Ema200 $Ema200
     if ($cap.is_capitulation) {
-        return [pscustomobject]@{ scenario="CAPITULACAO"; strategy="acumula_long_fundo"; allow_long=$true; allow_short=$false; reason=$cap.reason }
+        return [pscustomobject]@{ scenario="CAPITULACAO"; strategy="acumula_long_fundo"; allow_long=$true; allow_short=$false; reason=$cap.reason; momentum_30d=$Momentum30dPct }
     }
 
     $bear = ($Price -lt $Ema20) -and ($Price -lt $Ema50) -and ($Momentum30dPct -lt 0)
     if ($bear) {
-        return [pscustomobject]@{ scenario="BEAR"; strategy="short_ou_caixa"; allow_long=$false; allow_short=$true; reason="abaixo EMA20+50, mom ${Momentum30dPct}%" }
+        return [pscustomobject]@{ scenario="BEAR"; strategy="short_ou_caixa"; allow_long=$false; allow_short=$true; reason="abaixo EMA20+50, mom ${Momentum30dPct}%"; momentum_30d=$Momentum30dPct }
     }
 
     $bull = ($Price -gt $Ema20) -and ($Momentum30dPct -gt 0)
     if ($bull) {
-        return [pscustomobject]@{ scenario="BULL"; strategy="long"; allow_long=$true; allow_short=$false; reason="acima EMA20, mom ${Momentum30dPct}%" }
+        return [pscustomobject]@{ scenario="BULL"; strategy="long"; allow_long=$true; allow_short=$false; reason="acima EMA20, mom ${Momentum30dPct}%"; momentum_30d=$Momentum30dPct }
     }
 
-    return [pscustomobject]@{ scenario="NEUTRO"; strategy="espera"; allow_long=$false; allow_short=$false; reason="chop sem direcao" }
+    return [pscustomobject]@{ scenario="NEUTRO"; strategy="espera"; allow_long=$false; allow_short=$false; reason="chop sem direcao"; momentum_30d=$Momentum30dPct }
 }
 
 # Wire I/O: busca indicadores BTC e resolve cenario (cache 10min).
@@ -84,6 +84,24 @@ function Get-MarketScenario {
         $vols=@($cs|ForEach-Object{$_.v}); $v20=($vols[($vols.Count-20)..($vols.Count-1)]|Measure-Object -Average).Average; $v3=($vols[($vols.Count-3)..($vols.Count-1)]|Measure-Object -Average).Average
         $volRatio=if($v20 -gt 0){[math]::Round($v3/$v20,2)}else{1}
         $sc = Resolve-MarketScenario -Price $price -Ema20 $e20 -Ema50 $e50 -Ema200 $e200 -Rsi $rsi -Momentum30dPct $mom30 -VolRatio $volRatio
+
+        # 2026-07-14: bear_severity (WEAK/STRONG/NONE) -- mesma formula de
+        # backtest/regime_change_monitor.py:45-50 (dist=SMA200, mom20=20d),
+        # replicada aqui pra nao depender de $global:CURRENT_REGIME (nunca
+        # atribuido em producao) nem de journal/regime_state.json (gitignored,
+        # inacessivel no runner efemero da nuvem). e200 aqui e proxy de 60
+        # candles (nao 200 reais, mesma limitacao ja documentada na funcao),
+        # dist fica mais sensivel que o monitor original -- aceitavel pra um
+        # sinal binario WEAK/STRONG, nao pra precisao fina.
+        $mom20 = if ($closes.Count -ge 21 -and $closes[-21] -gt 0) { ($price - $closes[-21]) / $closes[-21] } else { 0 }
+        $distSma = if ($e200 -gt 0) { ($price - $e200) / $e200 } else { 0 }
+        $bearSeverity = "NONE"
+        if ($distSma -lt -0.20 -and $mom20 -lt -0.10) { $bearSeverity = "STRONG" }
+        elseif ($distSma -lt 0 -and $mom20 -lt 0) { $bearSeverity = "WEAK" }
+        $sc | Add-Member -MemberType NoteProperty -Name "mom20" -Value ([math]::Round($mom20*100,2)) -Force
+        $sc | Add-Member -MemberType NoteProperty -Name "dist_sma" -Value ([math]::Round($distSma*100,2)) -Force
+        $sc | Add-Member -MemberType NoteProperty -Name "bear_severity" -Value $bearSeverity -Force
+
         $script:__scenCache=$sc; $script:__scenCacheAt=(Get-Date)
         return $sc
     } catch {

@@ -339,24 +339,23 @@ function Invoke-GemExecute {
     }
     $vd  = $Gem.vol_data
 
-    # 2026-07-14 fix: $global:CURRENT_REGIME nunca era atribuido em codigo de
-    # producao (so em agents/config.ps1 como $CURRENT_REGIME de escopo LOCAL,
-    # que nao vaza pra $global: quando dot-sourced dentro de uma funcao).
-    # Resultado: os gates de excecao "NEUTRO->libera SHORT em BEAR" (secao 1c
-    # abaixo) e "ALLOW_LONG_IN_BEAR_WEAK" NUNCA disparavam -- candidatos SHORT
-    # score=100 (ex: ETHUSDT/XRPUSDT/AVAXUSDT TORI_SHORT) eram bloqueados por
-    # cenario:NEUTRO mesmo com regime real=BEAR_WEAK. Mesmo bug ja documentado
-    # e corrigido em scripts/short_scanner.ps1:96-109 ("CONTRATO: Get-CurrentRegime
-    # NUNCA existiu"), nunca replicado aqui. Mesmo padrao de fallback.
-    if (-not $global:CURRENT_REGIME) {
-        try {
-            $rsPath = Join-Path $global:JOURNAL_DIR "regime_state.json"
-            if (Test-Path $rsPath) {
-                $rs = Get-Content $rsPath -Raw | ConvertFrom-Json
-                if ($rs.regime) { $global:CURRENT_REGIME = [string]$rs.regime }
-            }
-        } catch {}
-    }
+    # 2026-07-14 fix (rodada 1, REVERTIDA): tentei $global:CURRENT_REGIME <-
+    # journal/regime_state.json como fallback. NAO funcionou na nuvem: esse
+    # arquivo e gitignored (journal/*state.json), nunca existe no runner
+    # efemero (checkout limpo por job). Investigado mais fundo: NENHUMA fonte
+    # de regime sobrevive no runner cloud hoje -- MARKET_REGIME.flag tambem
+    # gitignored, e a tabela Supabase public.regime_state e escrita com
+    # 'market' ausente (NOT NULL UNIQUE -> insert sempre falha) e phase="BULL"
+    # hardcoded (nao reflete BEAR_WEAK real). $global:CURRENT_REGIME
+    # literalmente nunca e atribuido em nenhum arquivo de producao (so em
+    # teste). Corrigir essa infra e trabalho separado (Supabase regime_state
+    # com escrita real, fora do escopo deste fix pontual).
+    #
+    # RODADA 2 (esta): em vez de depender de uma fonte de regime externa
+    # quebrada, uso o dado que Get-MarketScenario JA calcula ao vivo nesta
+    # mesma chamada (momentum_30d do BTC, sempre fresco, zero infra externa).
+    # bear real = momentum negativo -- mesmo sinal que Resolve-MarketScenario
+    # usa internamente pra decidir BEAR vs NEUTRO, so exposto agora no retorno.
 
     Write-Host ""
     Write-Host "=== GEM EXECUTOR -- $mkt ===" -ForegroundColor Cyan
@@ -791,15 +790,22 @@ function Invoke-GemExecute {
             $blockShort = ($dirForGate -eq "SHORT") -and (-not $scen.allow_short)
 
             # 2026-07-03 DIVERGENCIA REGIME x CENARIO: cenario mede SO o BTC (EMA20/50 +
-            # momentum 30d). NEUTRO = BTC em chop -> bloqueava AMBAS as direcoes. Mas o
-            # regime detector mede o mercado todo; em BEAR_WEAK/BEAR_STRONG com BTC em
-            # chop = "moagem" — exatamente o bolso onde o counterfactual mostrou SHORT
-            # de alt funcionando (56% win, mediana +4.9%, docs/ESTUDO_GATES_SHORT).
-            # Fisica: microcap deriva -41%/ano independente do chop do BTC (lei 4).
-            # Regra: NEUTRO + regime global BEAR -> libera SHORT (LONG continua bloqueado).
-            if ($blockShort -and $scen.scenario -eq "NEUTRO" -and ("$($global:CURRENT_REGIME)" -match "BEAR")) {
+            # momentum 30d). NEUTRO = BTC em chop -> bloqueava AMBAS as direcoes. Mas em
+            # chop com momentum de 30d negativo = "moagem" — exatamente o bolso onde o
+            # counterfactual mostrou SHORT de alt funcionando (56% win, mediana +4.9%,
+            # docs/ESTUDO_GATES_SHORT). Fisica: microcap deriva -41%/ano independente do
+            # chop do BTC (lei 4). Regra: NEUTRO + momentum BTC negativo -> libera SHORT
+            # (LONG continua bloqueado).
+            #
+            # 2026-07-14 fix: condicao original checava $global:CURRENT_REGIME -match
+            # "BEAR", mas essa variavel NUNCA e atribuida em codigo de producao (so em
+            # teste) -- gate morto desde a criacao, nunca disparou em live trading.
+            # Substituido por $scen.momentum_30d (ja calculado ao vivo por Get-MarketScenario
+            # nesta mesma chamada, sem depender de infra externa quebrada -- ver rodada 1
+            # revertida acima, journal/regime_state.json e gitignored/inacessivel na nuvem).
+            if ($blockShort -and $scen.scenario -eq "NEUTRO" -and $scen.momentum_30d -lt 0) {
                 $blockShort = $false
-                Write-Host "  [CENARIO NEUTRO->SHORT OK] ${mkt}: BTC chop mas regime=$($global:CURRENT_REGIME) (moagem favorece short de alt)" -ForegroundColor DarkYellow
+                Write-Host "  [CENARIO NEUTRO->SHORT OK] ${mkt}: BTC chop mas momentum_30d=$($scen.momentum_30d)% negativo (moagem favorece short de alt)" -ForegroundColor DarkYellow
             }
             # 2026-06-30 SURF: em vez de so bloquear LONG no bear, SURFA o bear (SHORT).
             # Shadow-first: sem journal/REGIME_SURF_SHORT_LIVE.flag -> so loga; com flag -> ordem real.
@@ -823,12 +829,19 @@ function Invoke-GemExecute {
             # 2026-07-03 FIX: a condicao antiga comparava o CENARIO com o nome do REGIME —
             # cenario so vale UNKNOWN/CAPITULACAO/BEAR/BULL/NEUTRO, entao era IMPOSSIVEL
             # e a flag nasceu morta (LONG 100% bloqueado em BEAR/NEUTRO desde a criacao).
-            # O certo: BEAR_WEAK e regime (global:CURRENT_REGIME), nao cenario.
+            # 2026-07-14 FIX 2: a correcao anterior apontou pro lugar certo
+            # ($global:CURRENT_REGIME -eq "BEAR_WEAK") mas essa variavel tambem
+            # nunca e atribuida em producao (mesmo bug do gate SHORT acima) --
+            # gate continuou morto. Substituido por $scen.bear_severity (WEAK/
+            # STRONG/NONE), calculado ao vivo dentro de Get-MarketScenario com
+            # a mesma formula de backtest/regime_change_monitor.py (dist SMA200
+            # + momentum 20d) -- so libera 20% LONG em bear FRACO, nunca em
+            # bear forte (mantém a intenção original da flag).
             $allowLongInBearFlag = Join-Path $global:JOURNAL_DIR "ALLOW_LONG_IN_BEAR_WEAK.flag"
             $allowLongInBear = Test-Path $allowLongInBearFlag
-            $effectiveBlockLong = $blockLong -and -not ($allowLongInBear -and ("$($global:CURRENT_REGIME)" -eq "BEAR_WEAK") -and $dirForGate -eq "LONG")
+            $effectiveBlockLong = $blockLong -and -not ($allowLongInBear -and $scen.bear_severity -eq "WEAK" -and $dirForGate -eq "LONG")
             if ($blockLong -and -not $effectiveBlockLong) {
-                Write-Host "  [CENARIO LONG-EXCECAO] ${mkt}: flag ALLOW_LONG_IN_BEAR_WEAK + regime=BEAR_WEAK libera LONG (cenario=$($scen.scenario))" -ForegroundColor DarkYellow
+                Write-Host "  [CENARIO LONG-EXCECAO] ${mkt}: flag ALLOW_LONG_IN_BEAR_WEAK + bear_severity=WEAK libera LONG (cenario=$($scen.scenario))" -ForegroundColor DarkYellow
             }
 
             if ($effectiveBlockLong -or $blockShort) {

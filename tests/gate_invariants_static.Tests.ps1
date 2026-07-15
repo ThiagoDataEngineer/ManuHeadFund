@@ -47,11 +47,21 @@ Describe "Invariantes: direcao no gate de cenario (gem_executor)" {
 }
 
 Describe "Invariantes: flags referenciadas existem no codigo com condicao alcancavel" {
-    It "ALLOW_LONG_IN_BEAR_WEAK usa regime global (nao cenario)" {
+    It "ALLOW_LONG_IN_BEAR_WEAK nao usa CURRENT_REGIME nem compara scenario a BEAR_WEAK" {
+        # 2026-07-03: exigia CURRENT_REGIME (fix da epoca: scen.scenario -eq
+        # "BEAR_WEAK" era IMPOSSIVEL, scenario so vale UNKNOWN/CAPITULACAO/
+        # BEAR/BULL/NEUTRO). 2026-07-14: descoberto que $global:CURRENT_REGIME
+        # em si NUNCA e atribuido em codigo de producao (so em teste) -- o fix
+        # de 07-03 apontou pra fonte certa mas essa fonte nunca teve dados,
+        # gate continuou morto. Substituido por $scen.bear_severity (WEAK/
+        # STRONG/NONE), calculado ao vivo dentro de Get-MarketScenario (formula
+        # de backtest/regime_change_monitor.py: dist SMA200 + momentum 20d) --
+        # nao depende de infra externa (journal/regime_state.json e gitignored,
+        # inacessivel no runner efemero da nuvem).
         $txt = Get-Content (Join-Path $root "agents\gem_executor.ps1") -Raw
         $section = [regex]::Match($txt, '(?s)ALLOW_LONG_IN_BEAR_WEAK.{0,600}').Value
-        # a condicao deve referenciar CURRENT_REGIME, nunca scen.scenario -eq BEAR_WEAK
-        ($section -match 'CURRENT_REGIME') | Should Be $true
+        $section | Should Not BeNullOrEmpty
         ($section -match '\$scen\.scenario\s+-eq\s+"BEAR_WEAK"') | Should Be $false
+        ($section -match '\$scen\.bear_severity\s+-eq\s+"WEAK"') | Should Be $true
     }
 }
