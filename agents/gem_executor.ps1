@@ -554,9 +554,23 @@ function Invoke-GemExecute {
     # ── Detectar tipo de mercado ──────────────────────────────────────────────
     # 2026-05-19 PM: usa Get-GemRouteForMarket (consolidado via lib_market_router_wire)
     # GEM prefere spot (sem leverage; risco controlado). Fallback ao pattern antigo.
+    # 2026-07-16 FIX (achado real via forced-test-trade ETHUSDT SHORT, run
+    # 29444619342): $hasFutures aqui SEMPRE significou "rota ATUAL escolhida
+    # e futures" (market_type -eq "FUTURES"), NAO "mercado TEM futures
+    # disponivel". Modo GEM prefere spot por padrao mesmo quando ambos
+    # existem (Get-RouteForMode, intencional) -- entao pra um par com
+    # spot+futures, $hasFutures ficava $false aqui, mesmo com futures real
+    # disponivel. Meu guard SHORT-em-SPOT (linha ~1329, commit 8d4566f)
+    # herdou esse significado errado e bloqueava SHORT com a mensagem "so
+    # tem SPOT disponivel" mesmo quando futures existia de verdade. Fix:
+    # variavel separada $futuresAvailable com o significado correto
+    # (mercado tem futures, independente da rota escolhida), $hasFutures
+    # continua significando "rota atual e futures" (uso extensivo abaixo,
+    # nao renomeado pra minimizar blast radius).
     if (Get-Command Get-GemRouteForMarket -ErrorAction SilentlyContinue) {
         $routeInfo = Get-GemRouteForMarket -Market $mkt
         $hasFutures = ($routeInfo.market_type -eq "FUTURES")
+        $futuresAvailable = [bool]$routeInfo.futures_available
         $marketType = $routeInfo.market_type
         if ($marketType -eq "NONE") {
             Write-Host "  [Route] $mkt sem rota disponivel (delisted?) -- abortar" -ForegroundColor Red
@@ -565,6 +579,7 @@ function Invoke-GemExecute {
         Write-Host "  [Route] $mkt -> $($routeInfo.route) (spot=$($routeInfo.spot_available) fut=$($routeInfo.futures_available))" -ForegroundColor DarkCyan
     } else {
         $hasFutures  = CoinEx-HasFuturesMarket $mkt
+        $futuresAvailable = $hasFutures
         $marketType  = if ($hasFutures) { "FUTURES" } else { "SPOT" }
     }
     # 2026-05-19 PM: sizing usa TOTAL CoinEx (spot+futures) -- representa portfolio real.
@@ -1327,7 +1342,15 @@ function Invoke-GemExecute {
     # futures se SHORT e futures disponivel; bloquear explicitamente (fail
     # -closed) se SHORT e SOMENTE spot disponivel.
     if ($direction -eq "SHORT" -and $marketType -ne "FUTURES") {
-        if ($hasFutures) {
+        # 2026-07-16 FIX rodada 2 (achado real via forced-test-trade ETHUSDT
+        # SHORT, run 29444619342): checava $hasFutures ("rota atual e
+        # futures", sempre $false aqui pq acabamos de confirmar
+        # marketType != FUTURES) em vez de $futuresAvailable ("mercado TEM
+        # futures", o dado que realmente importa). Bloqueava SHORT com a
+        # mensagem enganosa "so tem SPOT disponivel" mesmo com futures
+        # disponivel de verdade -- confirmado no log real: "[Route] ETHUSDT
+        # -> spot (spot=True fut=True)" seguido de bloqueio incorreto.
+        if ($futuresAvailable) {
             Write-Host "  [ROUTE OVERRIDE] ${mkt}: SHORT exige futures -- corrigindo rota de spot para futures" -ForegroundColor DarkYellow
             $marketType = "FUTURES"
             $hasFutures = $true
