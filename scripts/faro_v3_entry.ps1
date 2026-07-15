@@ -38,20 +38,42 @@ $positionSize = $totalCap * $CapitalPercent
 Write-Host "📊 Capital: \$$totalCap | Position size: \$$positionSize" -ForegroundColor Yellow
 
 # Check active position count
-$posFile = Join-Path $journalDir "faro_v3_positions.jsonl"
-$activePositions = @()
-if (Test-Path $posFile) {
-    Get-Content $posFile | ForEach-Object {
-        try {
-            $obj = $_ | ConvertFrom-Json
-            if ($obj.status -eq "active") { $activePositions += $obj }
-        } catch {}
+# 2026-07-15 cloud fix: journal/faro_v3_positions.jsonl e local e NAO persiste
+# entre runs do GitHub Actions (runner efemero) -- o guard MaxPositions nunca
+# limitava na nuvem. Fonte de verdade: posicoes reais abertas na exchange.
+$activeCount = 0
+$exchangeCountOk = $false
+if (Get-Command CoinEx-GetPendingPositions -ErrorAction SilentlyContinue) {
+    try {
+        $exchangePos = @(CoinEx-GetPendingPositions -ErrorAction Stop)
+        $activeCount = @($exchangePos).Count
+        $exchangeCountOk = $true
+        Write-Host "Posicoes abertas na exchange: $activeCount (fonte: API)" -ForegroundColor Yellow
+    } catch {
+        Write-Warning "WARN: contagem via exchange falhou: $_"
+    }
+}
+if (-not $exchangeCountOk) {
+    # Fallback legado (ambiente local com daemon)
+    $posFile = Join-Path $journalDir "faro_v3_positions.jsonl"
+    if (Test-Path $posFile) {
+        Get-Content $posFile | ForEach-Object {
+            try {
+                $obj = $_ | ConvertFrom-Json
+                if ($obj.status -eq "active") { $activeCount++ }
+            } catch {}
+        }
     }
 }
 
-if ($activePositions.Count -ge $MaxPositions) {
-    Write-Host "WARN: Max positions ($MaxPositions) reached; skipping new entries" -ForegroundColor Yellow
+if ($activeCount -ge $MaxPositions) {
+    Write-Host "WARN: Max positions ($MaxPositions) reached ($activeCount abertas); skipping new entries" -ForegroundColor Yellow
     exit 0
+}
+
+# Garantir que $posFile esteja definido para uso posterior (escrita em Add-Content)
+if (-not (Test-Path Variable:posFile)) {
+    $posFile = Join-Path $journalDir "faro_v3_positions.jsonl"
 }
 
 # Read recent candidates (last 10 minutes)

@@ -1417,3 +1417,51 @@ jobs:
           SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
           & ./scripts/diag2_direct_column_test_2026_07_14.ps1
+
+  # ============================================================================
+  # JOB: FARO V3 — detector pre-pump + auto-entry (2026-07-15)
+  # Reativacao na nuvem do daemon local morto. Engine -> Entry sequenciais no
+  # MESMO runner (o elo journal/faro_v3_candidates.jsonl e local com janela de
+  # 10min -- so funciona dentro do mesmo job). Manager NAO agendado: Trailing
+  # Stop Monitor + Position Risk Manager ja gerenciam todas as posicoes futures
+  # e o stop/TP vai embutido na propria ordem de entrada.
+  # Guard: cron_guard interval:60 (min 1h entre execucoes reais).
+  # ============================================================================
+  faro-v3:
+    name: FARO V3 Pre-Pump (engine + entry)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
+          $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
+          $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run FARO V3
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          & ./scripts/cron_guard.ps1 -JobId "faro_v3" -Schedule "interval:60"
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "=== FARO V3 ENGINE ===" -ForegroundColor Cyan
+            try {
+              & ./scripts/faro_v3_engine.ps1
+              Write-Host "=== FARO V3 ENTRY ===" -ForegroundColor Cyan
+              & ./scripts/faro_v3_entry.ps1 -DryRun $false -CapitalPercent 0.01 -MaxPositions 3
+              Write-Host "OK" -ForegroundColor Green
+            } catch {
+              Write-Host "WARN: $_" -ForegroundColor Yellow
+            }
+          }
+          exit 0
