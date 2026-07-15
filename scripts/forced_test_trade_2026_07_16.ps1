@@ -123,8 +123,25 @@ if ($ForceGatesPass) {
 if ($DryRun) {
     Write-Host "  [DRY RUN] Guard sera testado mas Invoke-GemExecute roda em modo DryRun (nenhuma ordem real)." -ForegroundColor Yellow
 }
-$result = if ($DryRun) { Invoke-GemExecute -Gem $gem -DryRun } else { Invoke-GemExecute -Gem $gem }
 
-Write-Host ""
-Write-Host "=== RESULTADO ===" -ForegroundColor Cyan
-$result | Format-List
+# O guard (Invoke-OrderRouted sobrescrita acima) lanca excecao de proposito
+# quando o valor excede o teto -- e o resultado ESPERADO de seguranca, nao
+# um erro fatal do job. Captura aqui pra sair com exit 0 (job GitHub Actions
+# nao falha por um abort de seguranca funcionando corretamente).
+try {
+    $result = if ($DryRun) { Invoke-GemExecute -Gem $gem -DryRun } else { Invoke-GemExecute -Gem $gem }
+    Write-Host ""
+    Write-Host "=== RESULTADO ===" -ForegroundColor Cyan
+    $result | Format-List
+} catch {
+    if ($_.Exception.Message -match "^forced_test_trade: valor excede teto hard") {
+        Write-Host ""
+        Write-Host "=== ABORTADO PELO GUARD (esperado, sem erro) ===" -ForegroundColor Yellow
+        Write-Host $_.Exception.Message -ForegroundColor Yellow
+        exit 0
+    }
+    Write-Host ""
+    Write-Host "=== ERRO INESPERADO ===" -ForegroundColor Red
+    Write-Host $_.Exception.Message -ForegroundColor Red
+    throw
+}
