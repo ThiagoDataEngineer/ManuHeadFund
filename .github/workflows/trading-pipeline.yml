@@ -395,73 +395,19 @@ jobs:
           }
 
   # ============================================================================
-  # JOB 5: GEM SCANNER (a cada 5min) — DISCOVER CANDIDATES
-  # 2026-07-15: Fetch CoinEx gainers/losers → Insert gems_candidates Supabase
-  # Alimenta gem-executor com candidatos
-  # ============================================================================
-  gem-scanner:
-    name: Gem Scanner (Discovery)
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
-          $content = "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
-          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
-          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
-          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
-
-      # 2026-07-15: PGRST205 confirmado em producao -- public.gems_candidates
-      # nunca foi criada (nem no Dashboard). Tenta criar via rpc/exec_sql se
-      # essa funcao existir no projeto (padrao comum em setups Supabase).
-      # continue-on-error: se a RPC nao existir, so loga e segue -- nao
-      # bloqueia o resto do pipeline. Idempotente (CREATE TABLE IF NOT EXISTS).
-      - name: Ensure gems_candidates table exists
-        shell: pwsh
-        continue-on-error: true
-        run: |
-          $url = "${{ secrets.SUPABASE_URL }}"
-          $key = "${{ secrets.SUPABASE_SERVICE_KEY }}"
-          if (-not $url -or -not $key) { Write-Host "sem credenciais, skip"; exit 0 }
-
-          $headers = @{
-            "Authorization" = "Bearer $key"
-            "apikey" = $key
-            "Content-Type" = "application/json"
-          }
-
-          $ddl = Get-Content "docs/SETUP_SUPABASE_GEMS_CANDIDATES.sql" -Raw
-
-          try {
-            $body = @{ query = $ddl } | ConvertTo-Json
-            Invoke-RestMethod -Uri "$url/rest/v1/rpc/exec_sql" -Method POST -Headers $headers -Body $body -ErrorAction Stop | Out-Null
-            Write-Host "OK: gems_candidates criada/confirmada via rpc/exec_sql" -ForegroundColor Green
-          } catch {
-            Write-Host "AVISO: rpc/exec_sql nao disponivel ou falhou -- tabela precisa ser criada manualmente no Supabase Dashboard com docs/SETUP_SUPABASE_GEMS_CANDIDATES.sql" -ForegroundColor Yellow
-            Write-Host "Detalhe: $($_.Exception.Message)" -ForegroundColor DarkYellow
-          }
-
-      - name: Run
-        shell: pwsh
-        env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
-        run: |
-          pwsh scripts/gem_scanner_live.ps1
-
-  # ============================================================================
-  # JOB 6: GEM EXECUTOR (a cada 5min) — EXECUTA TRADES REAIS!
-  # 2026-07-15: Wire das 3 gates (breadth + pump + timing) + real trade execution
+  # JOB 5+6: GEM SCANNER+EXECUTOR FUNDIDO (a cada 5min) — EXECUTA TRADES REAIS!
+  # 2026-07-16: Fusao do par gem-scanner/gem-executor (jobs separados via fila
+  # Supabase gems_candidates). Causa raiz eliminada: essa tabela nunca existiu
+  # em producao (PGRST205 confirmado, runs 29435987538/29437724246) e nao ha
+  # rpc/exec_sql exposta nesse projeto pra criar via API (404 confirmado).
+  # Decisao (usuario): fundir discovery+execucao no mesmo processo, sem
+  # round-trip pelo Supabase -- mesmo padrao ja usado por gem_loop.ps1
+  # (pipeline "cloud-trading"). Ver scripts/gem_scanner_executor_live.ps1.
+  # Wire das 3 gates (breadth + pump + timing) + real trade execution
   # SPOT LONG, FUTURES LONG/SHORT com capital real
   # ============================================================================
-  gem-executor:
-    name: Gem Executor (Trade Execution)
-    needs: gem-scanner
+  gem-scanner-executor:
+    name: Gem Scanner+Executor (Discovery + Trade Execution)
     runs-on: ubuntu-latest
 
     steps:
@@ -485,10 +431,10 @@ jobs:
         shell: pwsh
         continue-on-error: false
         run: |
-          Write-Host "=== GEM EXECUTOR (LIVE TRADING) ===" -ForegroundColor Green
+          Write-Host "=== GEM SCANNER+EXECUTOR (LIVE TRADING) ===" -ForegroundColor Green
           try {
-            & ./scripts/gem_executor_live.ps1 -AutoExecute $true
-            Write-Host "✓ Execution cycle complete" -ForegroundColor Green
+            & ./scripts/gem_scanner_executor_live.ps1 -AutoExecute $true
+            Write-Host "Execution cycle complete" -ForegroundColor Green
           } catch {
             Write-Host "ERROR: $_" -ForegroundColor Red
             throw

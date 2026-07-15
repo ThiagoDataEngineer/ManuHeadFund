@@ -2,7 +2,38 @@
 
 ## Status
 
-⚠️ **CORRIGIDO 2026-07-15 apos auditoria E2E real — ver riscos conhecidos abaixo**
+✅ **2026-07-16: pipeline gems_candidates FUNDIDO, causa raiz P2 eliminada**
+
+`scripts/gem_scanner_live.ps1` + `scripts/gem_executor_live.ps1` (jobs
+separados `gem-scanner`→`gem-executor` no workflow) foram **substituidos**
+por `scripts/gem_scanner_executor_live.ps1` (job unico `gem-scanner-executor`).
+
+Motivo: `public.gems_candidates` **nunca existiu** em producao (confirmado por
+log real, `PGRST205` nos runs 29435987538 e 29437724246 — "Could not find the
+table 'public.gems_candidates' in the schema cache"). Tentativa de criar via
+`rpc/exec_sql` tambem falhou (404 — essa RPC nao esta exposta nesse projeto
+Supabase). Nenhuma tabela ja existente (`trailing_state`, `trade_outcomes`,
+`decision_grades_agg`) serve pra "candidato pendente" sem misturar conceitos
+incompativeis com o schema real delas (posicao aberta vs trade concluido vs
+agregado de aprendizado). Decisao do usuario: eliminar a fila Supabase
+inteiramente, fundindo discovery+execucao no mesmo processo — mesmo padrao
+que `scripts/gem_loop.ps1` (pipeline "cloud-trading") ja usava com sucesso.
+
+`gem_scanner_live.ps1`, `gem_executor_live.ps1` e
+`docs/SETUP_SUPABASE_GEMS_CANDIDATES.sql` ficam no repo como historico/
+referencia mas **nao sao mais chamados por nenhum job do workflow**. Nao
+reativar sem entender que essa via depende de uma tabela que nao existe.
+
+Validado localmente antes do commit: candidato real gerado por
+`gem_scanner_executor_live.ps1` passa da checagem de score (que antes
+bloqueava 100% dos candidatos, achado P1) e chega nas gates
+breadth/pump/timing normalmente — 13/13 candidatos avaliados, bloqueios sao
+decisoes reais de gate (`breadth_long_blocked` com mercado neutro), nao mais
+erros silenciosos.
+
+---
+
+## Historico (2026-07-15, arquitetura anterior com fila Supabase)
 
 - Oracle V2 Simple: Verificacoes de integracao (5 checks) -- **so testa existencia de
   arquivos/funcoes, NAO testa o shape real do dado ponta-a-ponta** (achado P8).
