@@ -395,6 +395,45 @@ jobs:
           }
 
   # ============================================================================
+  # JOB 6: GEM EXECUTOR (a cada 5min) — EXECUTA TRADES REAIS!
+  # 2026-07-15: Wire das 3 gates (breadth + pump + timing) + real trade execution
+  # SPOT LONG, FUTURES LONG/SHORT com capital real
+  # ============================================================================
+  gem-executor:
+    name: Gem Executor (Trade Execution)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
+          $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
+          $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run
+        shell: pwsh
+        continue-on-error: false
+        run: |
+          Write-Host "=== GEM EXECUTOR (LIVE TRADING) ===" -ForegroundColor Green
+          try {
+            & ./scripts/gem_executor_live.ps1 -AutoExecute $true
+            Write-Host "✓ Execution cycle complete" -ForegroundColor Green
+          } catch {
+            Write-Host "ERROR: $_" -ForegroundColor Red
+            throw
+          }
+
+  # ============================================================================
   # JOB 6b: EARLY WARNING SCAN (pre-pump/dump detection — OBSERVATORY)
   # 2026-06-30: multi-signal (whale+tori+narrativa+vol+macro) ANTES do movimento.
   # So loga em journal/early_warning_alerts.jsonl + TG. NAO executa trade.
