@@ -1539,13 +1539,27 @@ function Invoke-GemExecute {
 
     # ── 2026-06-03: VALIDAÇÃO OBRIGATÓRIA DE TP ANTES DE ABRIR ──────────────────
     # BUG: CoinEx API está rejeitando TP alto (0.334+) e colocando TP mínimo (0.111).
-    # SOLUÇÃO: Validar que TP é razoável ANTES de abrir. Se TP < entry*1.01, BLOQUEAR.
+    # SOLUÇÃO: Validar que TP é razoável ANTES de abrir.
+    # 2026-07-16 FIX (achado real via forced-test-trade ARBUSDT SHORT, runs
+    # 29445042483 e 29445171696): checagem original "TP < entry*1.01 ->
+    # bloqueia" so faz sentido pra LONG (TP acima do entry = lucro). Pra
+    # SHORT, TP correto e ABAIXO do entry (lucro quando preco cai) --
+    # tp_vs_entry sempre < 1 num SHORT valido, entao essa checagem
+    # bloqueava 100% dos SHORT em futures, sempre, independente de
+    # preco/timing (confirmado: 2 tentativas identicas, mesmo bloqueio).
+    # Nunca foi pego antes porque nenhum SHORT tinha chegado ate essa
+    # validacao em producao real ate hoje. Fix: direcao-aware.
     if ($hasFutures) {
         $tp_vs_entry = $tgt_price / $price
-        $tp_min_acceptable = 1.01  # TP deve ser pelo menos 1% acima entry
-        if ($tp_vs_entry -lt $tp_min_acceptable) {
-            Write-Host "  [GEM BLOQUEADO] TP INVALIDO: TP=$tgt_price vs Entry=$price (ratio=$([Math]::Round($tp_vs_entry, 4)))" -ForegroundColor Red
-            $blockMsg = "*GEM BLOQUEADO* -- $mkt`nMotivo: TP invalido (rejeitado por API?)`nTP: $tgt_price vs Entry: $price`nAcao: Revisar CoinEx API limits"
+        $tp_min_acceptable_pct = 0.01  # TP deve estar pelo menos 1% distante do entry
+        $tpInvalid = if ($direction -eq "SHORT") {
+            $tp_vs_entry -gt (1 - $tp_min_acceptable_pct)  # SHORT: TP deve ficar >=1% ABAIXO
+        } else {
+            $tp_vs_entry -lt (1 + $tp_min_acceptable_pct)  # LONG: TP deve ficar >=1% ACIMA
+        }
+        if ($tpInvalid) {
+            Write-Host "  [GEM BLOQUEADO] TP INVALIDO: TP=$tgt_price vs Entry=$price dir=$direction (ratio=$([Math]::Round($tp_vs_entry, 4)))" -ForegroundColor Red
+            $blockMsg = "*GEM BLOQUEADO* -- $mkt`nMotivo: TP invalido (rejeitado por API?)`nTP: $tgt_price vs Entry: $price (dir=$direction)`nAcao: Revisar CoinEx API limits"
             try { Send-TelegramAlert -Message $blockMsg | Out-Null } catch {}
             return [PSCustomObject]@{ blocked = $true; blocked_by = @("tp_validation_failed:tp_too_close_to_entry"); market = $mkt }
         }
