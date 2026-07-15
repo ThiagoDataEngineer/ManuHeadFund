@@ -22,30 +22,60 @@ Write-Host "================================================" -ForegroundColor C
 Write-Host ""
 
 # =========================================================================
-# FETCH GAINERS/LOSERS FROM COINEX
+# FETCH GAINERS/LOSERS FROM COINEX (usar config/universos)
 # =========================================================================
-Write-Host "[1] Fetching CoinEx gainers/losers..." -ForegroundColor Yellow
+Write-Host "[1] Fetching CoinEx data..." -ForegroundColor Yellow
 
 $tickers = @()
 
+# Carregar universos do config
+$shortUniversePath = Join-Path $PSScriptRoot "..\config\short_universe.json"
+$longUniversePath = Join-Path $PSScriptRoot "..\config\long_universe.json"
+
+$topMarkets = @()
+if (Test-Path $shortUniversePath) {
+    $shortUni = Get-Content $shortUniversePath -Raw | ConvertFrom-Json
+    $topMarkets += @($shortUni.markets | Select-Object -ExpandProperty market | Select-Object -First 15)
+}
+if (Test-Path $longUniversePath) {
+    $longUni = Get-Content $longUniversePath -Raw | ConvertFrom-Json
+    $topMarkets += @($longUni.markets | Select-Object -ExpandProperty market | Select-Object -First 15)
+}
+
+# Se nao conseguir carregar, usar fallback
+if ($topMarkets.Count -eq 0) {
+    $topMarkets = @("BTCUSDT", "ETHUSDT", "LINKUSDT", "DOGEUSDT", "AVAXUSDT", "BNBUSDT", "XRPUSDT")
+}
+
 try {
-    # GET /v2/public/market/tickers, market=spot, limit=50
-    $url = 'https://api.coinex.com/v2/public/market/tickers?market=spot' + '&limit=' + $Limit
-    $response = Invoke-RestMethod -Uri $url -ErrorAction Stop
+    foreach ($market in $topMarkets) {
+        try {
+            $url = 'https://api.coinex.com/v2/spot/kline?market=' + $market + '&period=1day&limit=30'
+            $resp = Invoke-RestMethod -Uri $url -TimeoutSec 5 -ErrorAction Stop
 
-    if ($response.data -and $response.data.tickers) {
-        # Parse response: tickers sorted by 24h change (%)
-        $tickers = $response.data.tickers | Sort-Object -Property change24h -Descending | Select-Object -First 30
+            if ($resp.data -and @($resp.data).Count -gt 0) {
+                $closes = @($resp.data | ForEach-Object { [double]$_.close })
+                $change24h = if ($closes.Count -ge 2) {
+                    (($closes[-1] - $closes[-2]) / $closes[-2]) * 100
+                } else { 0 }
 
-        Write-Host "  ✓ Fetched $($tickers.Count) coins" -ForegroundColor Green
-        Write-Host "  Top gainer: $($tickers[0].symbol) (+$($tickers[0].change24h)%)" -ForegroundColor Cyan
-        Write-Host "  Bottom loser: $($tickers[-1].symbol) ($($tickers[-1].change24h)%)" -ForegroundColor Cyan
-    } else {
-        Write-Host "  ✗ No tickers in response" -ForegroundColor Red
+                $tickers += [PSCustomObject]@{
+                    symbol = $market
+                    change24h = $change24h
+                    volume24h = if ($resp.data[0].volume) { [double]$resp.data[0].volume } else { 0 }
+                }
+            }
+        } catch {
+            # Continua com proximo market
+        }
     }
+
+    $tickers = $tickers | Sort-Object -Property change24h -Descending
+
+    Write-Host "  ✓ Fetched $($tickers.Count) coins from config universos" -ForegroundColor Green
 } catch {
     Write-Host "  ✗ CoinEx API error: $_" -ForegroundColor Red
-    Write-Host "  (Continuing with fallback candidates)" -ForegroundColor Yellow
+    Write-Host "  (Continuing with fallback)" -ForegroundColor Yellow
 }
 
 # =========================================================================
@@ -57,8 +87,8 @@ Write-Host "[2] Generating candidates..." -ForegroundColor Yellow
 $candidates = @()
 
 foreach ($ticker in $tickers) {
-    # Skip stablecoins
-    if ($ticker.symbol -match "(USDT|USDC|BUSD|TUSD)$") {
+    # Skip pure stablecoins (USDT, USDC, BUSD como base, nao par)
+    if ($ticker.symbol -match "^(USDT|USDC|BUSD|TUSD)$") {
         continue
     }
 
