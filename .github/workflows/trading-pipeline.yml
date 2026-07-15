@@ -1395,6 +1395,35 @@ jobs:
 
 
   # ============================================================================
+  # JOB (one-shot): DIAG CAPITAL READ-ONLY (2026-07-16)
+  # So roda via workflow_dispatch manual. Confirma capital real SPOT/FUTURES
+  # antes de forcar 1 trade de teste controlado (prova o caminho de execucao
+  # pos-gates, nunca exercitado em producao ate agora). NAO envia ordem.
+  # Remover job apos uso -- diagnostico pontual, nao faz parte do pipeline.
+  # ============================================================================
+  diag-capital-readonly:
+    name: Diag Capital Read-Only (one-shot)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run diagnostic
+        shell: pwsh
+        run: |
+          & ./scripts/diag_capital_readonly_2026_07_15.ps1
+
+  # ============================================================================
   # JOB (one-shot): APPLY CLOSE_REASON SCHEMA FIX (2026-07-14)
   # So roda via workflow_dispatch manual -- nunca no schedule automatico.
   # Aplica docs/SETUP_SUPABASE_FIX_CLOSE_REASON_2026_07_14.sql via RPC exec_sql.
