@@ -117,7 +117,19 @@ if ($ForceGatesPass) {
             details = [PSCustomObject]@{}; audit_log = "forced_test_trade_override"
         }
     }
-    Write-Host "  [OVERRIDE] Test-ParallelBreadthGate + Get-MarketScenario + Test-ToriConfluence mockadas -- todas permitem" -ForegroundColor Yellow
+    # 2026-07-16 rodada 2: ETHUSDT SHORT bloqueou em pump_short_blocked
+    # (Pump=natural_uptrend -- ETH real esta em alta natural saudavel agora,
+    # gate corretamente recusa SHORT em uptrend organico, so libera SHORT em
+    # pump_and_dump). Mockando tambem pra completar a prova do SHORT.
+    function Test-PumpDumpGate {
+        param([string]$Market, [hashtable]$Metadata)
+        return [PSCustomObject]@{
+            allow_long = $true; allow_short = $true
+            pump_class = "forced_test"; pump_score = 0
+            reason = "forced_test_trade_override"
+        }
+    }
+    Write-Host "  [OVERRIDE] Test-ParallelBreadthGate + Get-MarketScenario + Test-ToriConfluence + Test-PumpDumpGate mockadas -- todas permitem" -ForegroundColor Yellow
 }
 
 if ($DryRun) {
