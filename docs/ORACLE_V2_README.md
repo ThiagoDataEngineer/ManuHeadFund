@@ -2,11 +2,74 @@
 
 ## Status
 
-✅ **SISTEMA PRONTO PARA AUDITORIA INDEPENDENTE**
+⚠️ **CORRIGIDO 2026-07-15 apos auditoria E2E real — ver riscos conhecidos abaixo**
 
-- Oracle V2 Simple: Verificacoes de integracao (5 checks)
-- E2E Trading Flow Tests: Testes de ponta-a-ponta (26 test cases)
-- GitHub Actions: Job gem-executor rodando a cada 5 minutos com capital real
+- Oracle V2 Simple: Verificacoes de integracao (5 checks) -- **so testa existencia de
+  arquivos/funcoes, NAO testa o shape real do dado ponta-a-ponta** (achado P8).
+  "16/16 passing" nao significa "gera trades" — ja gerou falso-positivo uma vez.
+- E2E Trading Flow Tests: 26 test cases, todos com candidato **sintetico ja no
+  formato certo** (`score=75` etc.) — nunca testaram o candidato real gravado
+  por `gem_scanner_live.ps1`. Isso mascarou o bug critico P1 (ver abaixo).
+- GitHub Actions: 2 pipelines de trade PARALELOS rodando a cada 5min (ver secao
+  "Risco conhecido: pipelines duplicados").
+
+### O que quebrou e foi corrigido (auditoria 2026-07-15, agent a8499866)
+
+Depois de 4+ ciclos de producao com **zero trades** apesar de candidatos sendo
+gerados, uma auditoria completa (nao mais fix reativo por sintoma) achou a
+causa raiz real:
+
+- **P1 (critico)**: `gem_scanner_live.ps1` grava candidato com campo `tori_score`,
+  mas `Invoke-GemExecute` (`agents/gem_executor.ps1:424`) le `$Gem.score` (campo
+  diferente). Em PowerShell `$null -lt 40` avalia `$true`, entao **100% dos
+  candidatos eram bloqueados na primeira gate** (`score_below_min`), antes de
+  chegar nas 3 gates novas (breadth/pump/timing). Fix: `gem_executor_live.ps1`
+  agora mapeia o shape reduzido do scanner pro shape que `Invoke-GemExecute`
+  espera antes de chamar a funcao.
+- **P2**: tabela `gems_candidates` nunca teve schema versionado no repo (criada
+  manualmente no Supabase Dashboard, se e que existe). Scripts usavam
+  `SUPABASE_ANON_KEY` sem RLS policy confirmada — insert podia falhar 401/403
+  silenciosamente. Fix: `docs/SETUP_SUPABASE_GEMS_CANDIDATES.sql` criado +
+  scripts trocados pra `SUPABASE_SERVICE_KEY` (bypassa RLS, mesmo padrao ja
+  usado em `agents/lib_state_store.ps1:110`).
+- **P3**: `gem_executor_live.ps1` buscava candidatos sem `WHERE status=pending`
+  nem ordenacao — reprocessava os mesmos registros todo ciclo. Fix: query com
+  `status=eq.pending&order=discovered_at.desc` + PATCH pra marcar
+  `executed`/`blocked` apos processar.
+- **P5**: `agents/lib_breadth_monitor.ps1` usava endpoint `/v2/public/markets`,
+  que **nao existe** na API CoinEx v2 (404 confirmado por teste direto). Isso
+  produzia `Breadth=unknown` sempre, degradando o gate silenciosamente (nao
+  bloqueava sozinho, mas mascarava a decisao real). Fix: trocado pra
+  `/v2/spot/ticker` (retorna ~1300 mercados de uma vez, sem paginacao),
+  validado contra API real: 881 pares USDT, breadth 47.4%.
+- **P6/P7**: gate de entry-timing tinha precedencia de operador arriscada
+  (`-ErrorAction SilentlyContinue -and ...` sem parenteses) e engolia a
+  excecao real sem logar mensagem (`Entry=error` nos logs sem detalhe algum).
+  Fix: parenteses explicitos + log da `$_.Exception.Message` no catch.
+
+### Risco conhecido: pipelines duplicados (P4, NAO resolvido)
+
+Existem **dois pipelines de trade real independentes** rodando em paralelo a
+cada 5 minutos no mesmo workflow, sem lock distribuido entre eles:
+
+1. **`cloud-trading`** (job antigo) → `scripts/gem_loop.ps1 -Once` → 4 fontes
+   de candidato (signal_triggers local, `Invoke-GemScan`, Tori SHORT sweep,
+   Tori LONG sweep) → `Invoke-GemExecute` direto.
+2. **`gem-scanner` + `gem-executor`** (par novo, 2026-07-15) → scan de
+   `config/short_universe.json`+`long_universe.json` → Supabase
+   `gems_candidates` → `Invoke-GemExecute`.
+
+Ambos rodam em runners GitHub Actions isolados (checkout limpo por job), sem
+estado compartilhado (`journal/*.json` e gitignored e nao sobrevive entre
+jobs). A unica protecao real e o guard de "Add Position" na propria CoinEx
+(`CoinEx-GetPendingPositions`), que so age **depois** que a primeira posicao
+ja existe — nao impede os dois pipelines de tentar abrir a MESMA posicao pela
+primeira vez quase simultaneamente no mesmo ciclo de 5min.
+
+**Decisao consciente 2026-07-15**: manter os dois ativos por enquanto (nao
+desativar nenhum), ate haver dados suficientes de qual pipeline performa
+melhor. Se voce observar posicao duplicada no mesmo mercado/direcao em
+horarios muito proximos, essa e a causa mais provavel — nao um bug de gate.
 
 ---
 

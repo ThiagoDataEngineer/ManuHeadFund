@@ -1,4 +1,4 @@
-# lib_breadth_monitor.ps1 -- Parallel breadth gate (altcoin micro-trends)
+﻿# lib_breadth_monitor.ps1 -- Parallel breadth gate (altcoin micro-trends)
 # 2026-07-15: Destranca altcoin trades mesmo quando BTC em NEUTRO/chop
 # Detecta: top 50 gainers/losers, breadth%, vol spike, trend classification
 
@@ -33,17 +33,16 @@ function Get-AltcoinBreadth {
     }
 
     try {
-        # === Fetch top 50 gainers (price_change_24h_desc) ===
-        # CoinEx API: /v2/public/markets (public, no auth)
+        # === Fetch all spot tickers (24h OHLCV) ===
+        # 2026-07-15 FIX: /v2/public/markets NAO EXISTE na API CoinEx v2 (404
+        # confirmado). Endpoint real e /v2/spot/ticker -- sem params, retorna
+        # ~1300 mercados de uma vez com open/close/volume, sem paginacao.
+        # Causa raiz de breadth_trend="unknown" em producao (auditoria 2026-07-15,
+        # agent a8499866). Achado P5.
         $base = if ($global:COINEX_BASE_URL) { $global:COINEX_BASE_URL } else { "https://api.coinex.com" }
-        $url = "$base/v2/public/markets"
+        $url = "$base/v2/spot/ticker"
 
-        $params = @{
-            paginate_by = "price_change_24h_desc"
-            paginate_limit = 50
-        }
-
-        $r = Invoke-RestMethod -Uri $url -Body $params -Method GET -TimeoutSec 8 -ErrorAction Stop
+        $r = Invoke-RestMethod -Uri $url -Method GET -TimeoutSec 8 -ErrorAction Stop
 
         if ($r.code -ne 0 -or -not $r.data -or $r.data.Count -eq 0) {
             return @{
@@ -58,14 +57,17 @@ function Get-AltcoinBreadth {
         }
 
         # === Parse market data ===
-        $markets = $r.data
+        # Filtra so pares *USDT (evita contar BTC-quoted/ETH-quoted markets 2x)
+        $markets = @($r.data | Where-Object { $_.market -match "USDT$" })
         $green = 0
         $totalVolUSD = 0.0
         $volatilityScores = @()
 
         foreach ($m in $markets) {
-            $change24h = if ($m.price_change_24h_pct) { [double]$m.price_change_24h_pct } else { 0 }
-            $vol24h = if ($m.volume_24h) { [double]$m.volume_24h } else { 0 }
+            $openPx = if ($m.open) { [double]$m.open } else { 0 }
+            $closePx = if ($m.close) { [double]$m.close } else { 0 }
+            $change24h = if ($openPx -gt 0) { (($closePx - $openPx) / $openPx) * 100 } else { 0 }
+            $vol24h = if ($m.value) { [double]$m.value } else { 0 }  # value = volume em quote currency (USDT)
 
             # Count greens
             if ($change24h -gt 0) { $green++ }

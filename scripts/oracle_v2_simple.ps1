@@ -1,4 +1,4 @@
-# oracle_v2_simple.ps1 -- Detector simplificado (sem try-catch complexo)
+﻿# oracle_v2_simple.ps1 -- Detector simplificado (sem try-catch complexo)
 # Fluxos: gem_loop -> gem_executor (3 gates) -> SPOT/FUTURES execucao
 # 2026-07-15: Testes de integracao
 

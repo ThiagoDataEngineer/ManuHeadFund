@@ -1,4 +1,4 @@
-# gem_scanner_live.ps1 — Scan CoinEx gainers/losers → Insere em gems_candidates Supabase
+﻿# gem_scanner_live.ps1 — Scan CoinEx gainers/losers → Insere em gems_candidates Supabase
 # Origem de candidatos para gem_executor_live.ps1
 # 2026-07-15: Discovery pipeline
 
@@ -140,7 +140,13 @@ if ($candidates.Count -gt 0) {
 Write-Host ""
 Write-Host "[3] Inserting into Supabase gems_candidates..." -ForegroundColor Yellow
 
-if (-not $env:SUPABASE_URL -or -not $env:SUPABASE_ANON_KEY) {
+# 2026-07-15 FIX: SERVICE_KEY bypassa RLS (padrao ja usado em lib_state_store.ps1
+# linha 110). ANON_KEY sozinha so funciona se existir policy RLS explicita pra
+# role anon -- gems_candidates nao tem schema versionado, entao nao da pra
+# confirmar por codigo. Fallback pra ANON_KEY mantido por compatibilidade.
+$supabaseKey = if ($env:SUPABASE_SERVICE_KEY) { $env:SUPABASE_SERVICE_KEY } else { $env:SUPABASE_ANON_KEY }
+
+if (-not $env:SUPABASE_URL -or -not $supabaseKey) {
     Write-Host "  ✗ SUPABASE env vars missing" -ForegroundColor Red
     Write-Host "  (Skipping insert)" -ForegroundColor Yellow
     exit 0
@@ -155,20 +161,22 @@ foreach ($gem in $candidates) {
 
         $url = "$env:SUPABASE_URL/rest/v1/gems_candidates"
         $headers = @{
-            "Authorization" = "Bearer $env:SUPABASE_ANON_KEY"
-            "apikey" = $env:SUPABASE_ANON_KEY
+            "Authorization" = "Bearer $supabaseKey"
+            "apikey" = $supabaseKey
             "Content-Type" = "application/json"
             "Prefer" = "return=minimal"
         }
 
-        $response = Invoke-RestMethod -Uri $url -Method POST -Headers $headers -Body $body -ErrorAction Stop
+        Invoke-RestMethod -Uri $url -Method POST -Headers $headers -Body $body -ErrorAction Stop | Out-Null
 
         $inserted++
         Write-Host "  ✓ $($gem.market) inserted" -ForegroundColor Green
 
     } catch {
         $failed++
-        Write-Host "  ✗ $($gem.market) failed: $_" -ForegroundColor Red
+        $errMsg = $_.Exception.Message
+        if ($_.ErrorDetails -and $_.ErrorDetails.Message) { $errMsg = $_.ErrorDetails.Message }
+        Write-Host "  ✗ $($gem.market) failed: $errMsg" -ForegroundColor Red
     }
 }
 

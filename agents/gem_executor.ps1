@@ -469,14 +469,25 @@ function Invoke-GemExecute {
     }
 
     # Gate #2: Entry timing (RSI 15M)
-    $entryTiming = if (Get-Command Test-EntryTimingGate -ErrorAction SilentlyContinue -and $Gem.trendline_score -and [double]$Gem.trendline_score -ge 70) {
+    # 2026-07-15 FIX (achado P6, auditoria agent a8499866): condicao original
+    # misturava -ErrorAction (parametro nomeado de Get-Command) com -and na
+    # mesma expressao sem parenteses -- funcionava "por acidente" no parser
+    # PS mas era fragil/dificil de auditar. Parenteses explicitos agora.
+    $hasEntryTimingFn = [bool](Get-Command Test-EntryTimingGate -ErrorAction SilentlyContinue)
+    $hasTrendlineScore = ($null -ne $Gem.trendline_score) -and ([double]$Gem.trendline_score -ge 70)
+
+    $entryTiming = if ($hasEntryTimingFn -and $hasTrendlineScore) {
         try {
-            Test-EntryTimingGate -Market $mkt -DailyTrendlineScore [double]$Gem.trendline_score -ToriScore [int]$Gem.score
+            Test-EntryTimingGate -Market $mkt -DailyTrendlineScore ([double]$Gem.trendline_score) -ToriScore ([int]$Gem.score)
         } catch {
-            @{ signal = "error"; confidence = 0; effective_tori_score = [int]$Gem.score; passes_gate = $true; reason = "entry_timing_error" }
+            # 2026-07-15 FIX (achado P7): excecao era descartada sem log --
+            # impossivel diagnosticar de fora por que o gate falhava.
+            Write-Host "  [ENTRY TIMING ERROR] ${mkt}: $($_.Exception.Message)" -ForegroundColor Red
+            @{ signal = "error"; confidence = 0; effective_tori_score = [int]$Gem.score; passes_gate = $true; reason = "entry_timing_error: $($_.Exception.Message)" }
         }
     } else {
-        @{ signal = "unknown"; confidence = 0; effective_tori_score = [int]$Gem.score; passes_gate = $true; reason = "trendline_weak_or_missing" }
+        $skipReason = if (-not $hasEntryTimingFn) { "function_not_loaded" } else { "trendline_weak_or_missing" }
+        @{ signal = "unknown"; confidence = 0; effective_tori_score = [int]$Gem.score; passes_gate = $true; reason = $skipReason }
     }
 
     # Aplicar gates conforme direcao

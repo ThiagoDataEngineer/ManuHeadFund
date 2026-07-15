@@ -1,4 +1,4 @@
-# E2E_trading_flow.Tests.ps1 -- Testes completos dos fluxos SPOT e FUTURES
+﻿# E2E_trading_flow.Tests.ps1 -- Testes completos dos fluxos SPOT e FUTURES
 # 2026-07-15: Validacao de ponta-a-ponta com capital real
 # Casos: SPOT LONG, FUTURES SHORT, FUTURES LONG
 
