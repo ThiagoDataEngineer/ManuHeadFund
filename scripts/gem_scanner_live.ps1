@@ -13,7 +13,10 @@ $ErrorActionPreference = "Stop"
 # =========================================================================
 # CONFIG
 # =========================================================================
-. (Join-Path $PSScriptRoot "..\agents\config.local.ps1") -ErrorAction SilentlyContinue
+$configPath = Join-Path $PSScriptRoot "..\agents\config.local.ps1"
+if (Test-Path $configPath) {
+    . $configPath
+}
 
 Write-Host ""
 Write-Host "================================================" -ForegroundColor Cyan
@@ -138,7 +141,7 @@ Write-Host ""
 Write-Host "[3] Inserting into Supabase gems_candidates..." -ForegroundColor Yellow
 
 if (-not $env:SUPABASE_URL -or -not $env:SUPABASE_ANON_KEY) {
-    Write-Host "  ✗ SUPABASE env vars not set" -ForegroundColor Red
+    Write-Host "  ✗ SUPABASE env vars missing" -ForegroundColor Red
     Write-Host "  (Skipping insert)" -ForegroundColor Yellow
     exit 0
 }
