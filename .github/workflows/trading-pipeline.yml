@@ -418,6 +418,9 @@ jobs:
 
       - name: Run
         shell: pwsh
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
           pwsh scripts/gem_scanner_live.ps1
 
