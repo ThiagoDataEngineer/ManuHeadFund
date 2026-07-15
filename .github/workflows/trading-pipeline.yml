@@ -395,12 +395,40 @@ jobs:
           }
 
   # ============================================================================
+  # JOB 5: GEM SCANNER (a cada 5min) — DISCOVER CANDIDATES
+  # 2026-07-15: Fetch CoinEx gainers/losers → Insert gems_candidates Supabase
+  # Alimenta gem-executor com candidatos
+  # ============================================================================
+  gem-scanner:
+    name: Gem Scanner (Discovery)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run
+        shell: pwsh
+        run: |
+          pwsh scripts/gem_scanner_live.ps1
+
+  # ============================================================================
   # JOB 6: GEM EXECUTOR (a cada 5min) — EXECUTA TRADES REAIS!
   # 2026-07-15: Wire das 3 gates (breadth + pump + timing) + real trade execution
   # SPOT LONG, FUTURES LONG/SHORT com capital real
   # ============================================================================
   gem-executor:
     name: Gem Executor (Trade Execution)
+    needs: gem-scanner
     runs-on: ubuntu-latest
 
     steps:
