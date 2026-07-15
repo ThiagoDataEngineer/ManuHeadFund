@@ -70,14 +70,21 @@ function Get-MarketScenario {
     param([int]$CacheMinutes = 10)
     try {
         if ($script:__scenCache -and ((Get-Date) - $script:__scenCacheAt).TotalMinutes -lt $CacheMinutes) { return $script:__scenCache }
-        $r = Invoke-RestMethod "https://api.coinex.com/v2/futures/kline?market=BTCUSDT&period=1day&limit=60" -TimeoutSec 12 -ErrorAction Stop
+        # 2026-07-15 fix: 60 -> 250 candles. O proxy antigo (media simples de 60)
+        # dizia dist=-2.5% quando a SMA200 REAL dava -12.2% (medido ao vivo em
+        # 2026-07-15 01:55 UTC) -- distorcia bear_severity e a fronteira
+        # BULL/NEUTRO/CAPITULACAO. 250 candles = SMA200 verdadeira + folga.
+        $r = Invoke-RestMethod "https://api.coinex.com/v2/futures/kline?market=BTCUSDT&period=1day&limit=250" -TimeoutSec 12 -ErrorAction Stop
         $cs = @($r.data | ForEach-Object { [pscustomobject]@{ c=[double]$_.close; v=[double]$_.volume } })
         $closes = @($cs | ForEach-Object { $_.c })
         if ($closes.Count -lt 31) { return (Resolve-MarketScenario -Price 0 -Ema20 0 -Ema50 0 -Ema200 0 -Rsi 0 -Momentum30dPct 0 -VolRatio 0) }
         $price=$closes[-1]
         $k20=2/21.0;$e20=$closes[0];foreach($c in $closes[1..($closes.Count-1)]){$e20=$c*$k20+$e20*(1-$k20)}
         $k50=2/51.0;$e50=$closes[0];foreach($c in $closes[1..($closes.Count-1)]){$e50=$c*$k50+$e50*(1-$k50)}
-        $e200=($closes|Measure-Object -Average).Average  # proxy (60 candles); aproxima EMA200
+        # SMA200 real quando ha 200+ candles; senao media do que houver (fallback
+        # gracioso p/ mercados novos -- BTCUSDT sempre tem 250).
+        $smaWin=[math]::Min(200,$closes.Count)
+        $e200=($closes[($closes.Count-$smaWin)..($closes.Count-1)]|Measure-Object -Average).Average
         $g=0;$l=0;for($i=$closes.Count-14;$i -lt $closes.Count;$i++){$d=$closes[$i]-$closes[$i-1];if($d -gt 0){$g+=$d}else{$l+=[math]::Abs($d)}}
         $rsi=if($l -eq 0){100}else{[math]::Round(100-100/(1+($g/14)/($l/14)),1)}
         $mom30=($price-$closes[-31])/$closes[-31]*100
@@ -89,10 +96,8 @@ function Get-MarketScenario {
         # backtest/regime_change_monitor.py:45-50 (dist=SMA200, mom20=20d),
         # replicada aqui pra nao depender de $global:CURRENT_REGIME (nunca
         # atribuido em producao) nem de journal/regime_state.json (gitignored,
-        # inacessivel no runner efemero da nuvem). e200 aqui e proxy de 60
-        # candles (nao 200 reais, mesma limitacao ja documentada na funcao),
-        # dist fica mais sensivel que o monitor original -- aceitavel pra um
-        # sinal binario WEAK/STRONG, nao pra precisao fina.
+        # inacessivel no runner efemero da nuvem). 2026-07-15: e200 agora e
+        # SMA200 REAL (250 candles), mesma janela do monitor original.
         $mom20 = if ($closes.Count -ge 21 -and $closes[-21] -gt 0) { ($price - $closes[-21]) / $closes[-21] } else { 0 }
         $distSma = if ($e200 -gt 0) { ($price - $e200) / $e200 } else { 0 }
         $bearSeverity = "NONE"
