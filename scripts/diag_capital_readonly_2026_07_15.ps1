@@ -5,8 +5,13 @@
 # NAO envia nenhuma ordem. Remover job apos uso.
 
 $agentsDir = Join-Path $PSScriptRoot ".." "agents"
-$configPath = Join-Path $agentsDir "config.local.ps1"
-if (Test-Path $configPath) { . $configPath }
+$configLocalPath = Join-Path $agentsDir "config.local.ps1"
+if (Test-Path $configLocalPath) { . $configLocalPath }
+# config.ps1 copia $env:COINEX_ACCESS_ID -> $COINEX_ACCESS_ID (variavel de
+# script, sem $env:) -- lib_coinex.ps1 le a variavel de script, nao a env var
+# diretamente. Sem este dot-source, credenciais ficam "ausentes" mesmo com
+# config.local.ps1 carregado.
+. (Join-Path $agentsDir "config.ps1")
 . (Join-Path $agentsDir "lib_coinex.ps1")
 
 Write-Host "=== DIAG CAPITAL (READ-ONLY) ===" -ForegroundColor Cyan
