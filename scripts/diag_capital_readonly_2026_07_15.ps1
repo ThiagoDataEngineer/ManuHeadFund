@@ -5,6 +5,8 @@
 # NAO envia nenhuma ordem. Remover job apos uso.
 
 $agentsDir = Join-Path $PSScriptRoot ".." "agents"
+$configPath = Join-Path $agentsDir "config.local.ps1"
+if (Test-Path $configPath) { . $configPath }
 . (Join-Path $agentsDir "lib_coinex.ps1")
 
 Write-Host "=== DIAG CAPITAL (READ-ONLY) ===" -ForegroundColor Cyan
