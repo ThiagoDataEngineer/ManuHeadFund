@@ -135,9 +135,17 @@ try {
 } catch { }
 
 # Governance: Circuit breaker ONLY (no human approval — see TRADING_AUTONOMY.md)
+# 2026-07-16 FIX (auditoria agent a395f05e): lib_state_store precisa carregar
+# ANTES do circuit breaker -- Get-DailyPnL agora consulta Supabase via
+# Get-StateRecords (fix de fail-open, arquivo local nao sobrevive entre jobs
+# efemeros). Antes lib_state_store so carregava na linha ~196 (depois de
+# gem_executor.ps1 ja ter rodado o circuit breaker check), entao o fix
+# silenciosamente caia no fallback local mesmo assim. Dot-source adiantado
+# aqui, idempotente (mesmo arquivo recarregado depois nao quebra nada).
 try {
+    . (Join-Path $agentsDir "lib_state_store.ps1") -ErrorAction SilentlyContinue
     . (Join-Path $agentsDir "lib_circuit_breaker_simple.ps1") -ErrorAction SilentlyContinue
-    Write-GemLog "DEBUG" "Governance libs carregadas (circuit breaker, no human approval)"
+    Write-GemLog "DEBUG" "Governance libs carregadas (circuit breaker c/ Supabase, no human approval)"
 } catch { }
 
 # Macro + Halving aware (2026-06-09 — WIRE halving cycle + DCA strategy)

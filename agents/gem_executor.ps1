@@ -1315,6 +1315,28 @@ function Invoke-GemExecute {
     }
     $direction = if ($direction -in @("LONG","SHORT")) { $direction } else { "LONG" }  # safety check
 
+    # 2026-07-16 FIX (auditoria agent a395f05e): SHORT so existe via FUTURES
+    # (venda a descoberto nao existe em SPOT sem margem). A rota (linha ~558,
+    # Get-GemRouteForMarket) e decidida ANTES da direcao final ser conhecida
+    # aqui -- modo GEM prefere SPOT por padrao (Get-RouteForMode, intencional
+    # p/ LONG pequeno sem leverage), entao se a direcao resolvida via
+    # conviction ensemble for SHORT mas a rota ja escolheu spot, o codigo
+    # tentaria Invoke-OrderRouted -Route spot -Side sell -- venda a descoberto
+    # invalida (a CoinEx rejeitaria por saldo insuficiente, mas nao e um
+    # bloqueio limpo/intencional, so falha externa). Fix: reforcar rota pra
+    # futures se SHORT e futures disponivel; bloquear explicitamente (fail
+    # -closed) se SHORT e SOMENTE spot disponivel.
+    if ($direction -eq "SHORT" -and $marketType -ne "FUTURES") {
+        if ($hasFutures) {
+            Write-Host "  [ROUTE OVERRIDE] ${mkt}: SHORT exige futures -- corrigindo rota de spot para futures" -ForegroundColor DarkYellow
+            $marketType = "FUTURES"
+            $hasFutures = $true
+        } else {
+            Write-Host "  BLOQUEADO: SHORT requer futures, mas $mkt so tem SPOT disponivel" -ForegroundColor Red
+            return [PSCustomObject]@{ blocked = $true; blocked_by = @("short_requires_futures_spot_only"); market = $mkt }
+        }
+    }
+
     # 2026-06-17 fix: gems TRIGGER tem sizing sem stop_pct/target_pct -> StopPct=0 lancava.
     # Resolve-StopTargetPct devolve fracoes validas (default R:R 1:5) se ausentes/invalidas.
     $__stp = if (Get-Command Resolve-StopTargetPct -ErrorAction SilentlyContinue) {
@@ -1623,12 +1645,35 @@ function Invoke-GemExecute {
 
     if (-not $hasFutures) {
 
-        # Stop condicional para spot
-        try {
-            CoinEx-PlaceSpotStopOrder -Market $mkt -Side "sell" -TriggerPrice $stop_price -Amount $filled_qty | Out-Null
-            Write-Host "  Stop condicional colocado em $stop_price" -ForegroundColor Yellow
-        } catch {
-            Write-Host "  AVISO: stop order falhou -- monitore manualmente. $_" -ForegroundColor Red
+        # 2026-07-16 FIX (auditoria agent a395f05e): stop condicional SPOT era
+        # fire-and-forget puro -- try/catch so logava em Write-Host (console
+        # do runner efemero, ninguem ve), sem retry, sem alerta Telegram, sem
+        # bloqueio/reversao. Se falhasse (rate limit, erro de precisao, rede),
+        # a posicao ficava aberta SEM protecao e ninguem sabia. Diferente do
+        # caminho FUTURES (Set-PositionProtection: retry 3x + valida via API
+        # + alerta Telegram explicito se falhar apos retries). Fix: mesmo
+        # padrao de retry+alerta pro SPOT, adaptado (CoinEx-PlaceSpotStopOrder
+        # nao tem MaxRetries embutido como Set-PositionProtection).
+        $spotStopOk = $false
+        $spotStopLastErr = ""
+        for ($__i = 1; $__i -le 3; $__i++) {
+            try {
+                CoinEx-PlaceSpotStopOrder -Market $mkt -Side "sell" -TriggerPrice $stop_price -Amount $filled_qty | Out-Null
+                Write-Host "  Stop condicional colocado em $stop_price (tentativa $__i)" -ForegroundColor Yellow
+                $spotStopOk = $true
+                break
+            } catch {
+                $spotStopLastErr = $_.Exception.Message
+                Write-Host "  AVISO: stop order falhou (tentativa $__i/3): $spotStopLastErr" -ForegroundColor Red
+                if ($__i -lt 3) { Start-Sleep -Seconds 2 }
+            }
+        }
+        if (-not $spotStopOk) {
+            $__critMsg = "CRITICO: SPOT SL FALHOU apos 3 tentativas -- ${mkt} posicao ABERTA SEM PROTECAO. Ultimo erro: $spotStopLastErr"
+            Write-Host "  $__critMsg" -ForegroundColor Red
+            if (Get-Command Send-TelegramAlert -ErrorAction SilentlyContinue) {
+                try { Send-TelegramAlert -Message "🚨 $__critMsg" | Out-Null } catch {}
+            }
         }
     }
 
