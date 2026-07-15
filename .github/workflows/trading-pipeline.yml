@@ -416,6 +416,36 @@ jobs:
           $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
           $content | Out-File "agents/config.local.ps1" -Encoding UTF8
 
+      # 2026-07-15: PGRST205 confirmado em producao -- public.gems_candidates
+      # nunca foi criada (nem no Dashboard). Tenta criar via rpc/exec_sql se
+      # essa funcao existir no projeto (padrao comum em setups Supabase).
+      # continue-on-error: se a RPC nao existir, so loga e segue -- nao
+      # bloqueia o resto do pipeline. Idempotente (CREATE TABLE IF NOT EXISTS).
+      - name: Ensure gems_candidates table exists
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $url = "${{ secrets.SUPABASE_URL }}"
+          $key = "${{ secrets.SUPABASE_SERVICE_KEY }}"
+          if (-not $url -or -not $key) { Write-Host "sem credenciais, skip"; exit 0 }
+
+          $headers = @{
+            "Authorization" = "Bearer $key"
+            "apikey" = $key
+            "Content-Type" = "application/json"
+          }
+
+          $ddl = Get-Content "docs/SETUP_SUPABASE_GEMS_CANDIDATES.sql" -Raw
+
+          try {
+            $body = @{ query = $ddl } | ConvertTo-Json
+            Invoke-RestMethod -Uri "$url/rest/v1/rpc/exec_sql" -Method POST -Headers $headers -Body $body -ErrorAction Stop | Out-Null
+            Write-Host "OK: gems_candidates criada/confirmada via rpc/exec_sql" -ForegroundColor Green
+          } catch {
+            Write-Host "AVISO: rpc/exec_sql nao disponivel ou falhou -- tabela precisa ser criada manualmente no Supabase Dashboard com docs/SETUP_SUPABASE_GEMS_CANDIDATES.sql" -ForegroundColor Yellow
+            Write-Host "Detalhe: $($_.Exception.Message)" -ForegroundColor DarkYellow
+          }
+
       - name: Run
         shell: pwsh
         env:
