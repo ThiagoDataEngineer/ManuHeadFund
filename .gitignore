@@ -60,6 +60,10 @@ Thumbs.db
 logs/
 journal/promotion_cron.log
 pester_baseline.log
+# 2026-07-15: artefatos de output (nao codigo) -- Oracle detector + dumps de teste
+oracle_complete.json
+pester_after.txt
+pester_baseline.txt
 
 # ============================================================
 # Outputs voluminosos (regenerados via backtest)
