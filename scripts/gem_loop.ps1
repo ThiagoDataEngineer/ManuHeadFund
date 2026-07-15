@@ -371,7 +371,60 @@ function Invoke-GemCycle-Once {
             }
         }
 
-        $gems = @($triggerGems) + @($gemsFromScan) + @($toriShortGems)
+        # ── TORI LONG SWEEP (2026-07-15): 4a fonte de candidatos ───────────────
+        # Espelho do SHORT sweep acima, para o lado LONG. Regime-aware: so roda
+        # quando Get-MarketScenario permite LONG (allow_long=true: BULL/
+        # CAPITULACAO/UNKNOWN) -- mesmo criterio do gate 1c do executor, entao
+        # nenhum candidato e gerado apenas para ser bloqueado no cenario.
+        # Universo: config/long_universe.json (git-tracked, acessivel na nuvem),
+        # tier A_LIVE. Cap 3/ciclo. Executor re-roda TODOS os gates.
+        $toriLongGems = @()
+        if (-not (Get-Command Get-MarketScenario -ErrorAction SilentlyContinue)) {
+            $projRoot2 = Split-Path $global:JOURNAL_DIR -Parent
+            $msPath = Join-Path (Join-Path $projRoot2 "agents") "lib_market_scenario.ps1"
+            if (Test-Path $msPath) { . $msPath }
+        }
+        if ((Get-Command Test-ToriConfluence -ErrorAction SilentlyContinue) -and
+            (Get-Command Get-MarketScenario -ErrorAction SilentlyContinue)) {
+            try {
+                $scenSweep = Get-MarketScenario
+                if ($scenSweep -and $scenSweep.allow_long) {
+                    $luPath = Join-Path (Split-Path $global:JOURNAL_DIR -Parent) "config/long_universe.json"
+                    if (Test-Path $luPath) {
+                        $lu = Get-Content $luPath -Raw | ConvertFrom-Json
+                        $luMarkets = @($lu.markets | Where-Object { $_.tier -eq "A_LIVE" } | ForEach-Object { $_.market })
+                        foreach ($m in $luMarkets) {
+                            $tc = $null
+                            try { $tc = Test-ToriConfluence -Market $m -SetupType "LONG" -TimeframeMinutes 60 -TimeoutSeconds 6 } catch {}
+                            if ($tc -and $tc.allows) {
+                                $toriLongGems += [PSCustomObject]@{
+                                    market     = $m
+                                    score      = [int]$tc.confluence_score
+                                    mode       = "TORI_LONG"
+                                    direction  = "LONG"
+                                    conviction = [int]$tc.confluence_score
+                                    signal     = ("tori:" + (@($tc.signals_fired) -join '+'))
+                                    sizing     = [PSCustomObject]@{ sizing_pct = 0.02 }
+                                }
+                                Write-GemLog "TORI_LONG" "$m confluence=$($tc.confluence_score) signals=$(@($tc.signals_fired) -join '+')"
+                            }
+                        }
+                        if ($toriLongGems.Count -gt 3) {
+                            $toriLongGems = @($toriLongGems | Sort-Object { [int]$_.score } -Descending | Select-Object -First 3)
+                        }
+                        if ($toriLongGems.Count -gt 0) {
+                            Write-GemLog "INFO" "Tori LONG sweep: $($toriLongGems.Count) candidato(s) >=80 no A_LIVE (cenario=$($scenSweep.scenario))"
+                        }
+                    }
+                } else {
+                    Write-GemLog "INFO" "Tori LONG sweep: skip (cenario=$($scenSweep.scenario) allow_long=false)"
+                }
+            } catch {
+                Write-GemLog "WARN" "tori long sweep failed (non-critical): $($_.Exception.Message)"
+            }
+        }
+
+        $gems = @($triggerGems) + @($gemsFromScan) + @($toriShortGems) + @($toriLongGems)
         # R4 fix 2026-05-21: cache check ANTES do log "encontrados" + Invoke-GemExecute.
         # Resolve PEAQ/PROVE re-detection spam.
         if (Get-Command Test-GemRecentlyRejected -ErrorAction SilentlyContinue -and $gems.Count -gt 0) {
