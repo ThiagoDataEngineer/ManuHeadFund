@@ -11,6 +11,13 @@
 . (Join-Path $PSScriptRoot "lib_gem_safety.ps1")
 . (Join-Path $PSScriptRoot "lib_btc_regime_gate.ps1")  # 2026-06-24: BTC-core gate (bloqueia LONG alt em bear)
 . (Join-Path $PSScriptRoot "lib_market_scenario.ps1")  # 2026-06-24: motor de cenario (capitulacao/bear/bull -> estrategia)
+# 2026-07-15 GATES PARALELAS: altcoin breadth + pump classifier + entry timing (3-camada decisao)
+$__gate1Path = Join-Path $PSScriptRoot "lib_breadth_monitor.ps1"
+if (Test-Path $__gate1Path) { . $__gate1Path }
+$__gate3Path = Join-Path $PSScriptRoot "lib_pump_dump_classifier.ps1"
+if (Test-Path $__gate3Path) { . $__gate3Path }
+$__gate2Path = Join-Path $PSScriptRoot "lib_entry_timing_15m.ps1"
+if (Test-Path $__gate2Path) { . $__gate2Path }
 . (Join-Path $PSScriptRoot "lib_regime_surf_executor.ps1")  # 2026-06-30: surf SHORT no bear (shadow-first)
 . (Join-Path $PSScriptRoot "lib_market_router.ps1")
 # 2026-06-08: Multi-TF alignment validation before execution
@@ -428,6 +435,69 @@ function Invoke-GemExecute {
         # B fix 2026-05-21: retornar PSCustomObject blocked com reason explicit pra caller
         return [PSCustomObject]@{ blocked = $true; blocked_by = @("score_below_min_$($Gem.score)_lt_$scoreMin"); market = $mkt }
     }
+
+    # ── 2026-07-15: PARALLEL GATES (Breadth + Pump + Timing) ────────────────────
+    # Gate #1: Breadth Monitor (destranca altcoins em BTC chop)
+    # Gate #3: Pump-Dump Classifier (bloqueia pump near peak, permite SHORT)
+    # Gate #2: Entry Timing 15M (timing via RSI em daily confirmado)
+    $direction = if ($Gem.direction) { [string]$Gem.direction.ToUpper() } else { "LONG" }
+
+    # Get BTC scenario
+    $btcScenario = Get-MarketScenario
+
+    # Gate #1: Breadth check
+    $breadthGate = if (Get-Command Test-ParallelBreadthGate -ErrorAction SilentlyContinue) {
+        try {
+            Test-ParallelBreadthGate -BtcScenario $btcScenario.scenario -BtcAllowLong $btcScenario.allow_long -BtcAllowShort $btcScenario.allow_short
+        } catch {
+            @{ allow_long = $btcScenario.allow_long; allow_short = $btcScenario.allow_short; breadth_trend = "error" }
+        }
+    } else {
+        @{ allow_long = $btcScenario.allow_long; allow_short = $btcScenario.allow_short; breadth_trend = "unknown" }
+    }
+
+    # Gate #3: Pump-Dump classifier
+    $metadata = @{ mcap = if ($Gem.mcap) { [double]$Gem.mcap } else { 50000000 }; listing_date_days = if ($Gem.days_listed) { [int]$Gem.days_listed } else { 100 } }
+    $pumpGate = if (Get-Command Test-PumpDumpGate -ErrorAction SilentlyContinue) {
+        try {
+            Test-PumpDumpGate -Market $mkt -Metadata $metadata
+        } catch {
+            @{ allow_long = $true; allow_short = $false; pump_class = "error"; reason = "pump_classifier_error" }
+        }
+    } else {
+        @{ allow_long = $true; allow_short = $false; pump_class = "unknown"; reason = "pump_classifier_missing" }
+    }
+
+    # Gate #2: Entry timing (RSI 15M)
+    $entryTiming = if (Get-Command Test-EntryTimingGate -ErrorAction SilentlyContinue -and $Gem.trendline_score -and [double]$Gem.trendline_score -ge 70) {
+        try {
+            Test-EntryTimingGate -Market $mkt -DailyTrendlineScore [double]$Gem.trendline_score -ToriScore [int]$Gem.score
+        } catch {
+            @{ signal = "error"; confidence = 0; effective_tori_score = [int]$Gem.score; passes_gate = $true; reason = "entry_timing_error" }
+        }
+    } else {
+        @{ signal = "unknown"; confidence = 0; effective_tori_score = [int]$Gem.score; passes_gate = $true; reason = "trendline_weak_or_missing" }
+    }
+
+    # Aplicar gates conforme direcao
+    $gatesBlocked = @()
+    if ($direction -eq "LONG") {
+        if (-not $breadthGate.allow_long) { $gatesBlocked += "breadth_long_blocked" }
+        if (-not $pumpGate.allow_long) { $gatesBlocked += "pump_long_blocked" }
+        if ($entryTiming.signal -eq "skip") { $gatesBlocked += "entry_timing_skip" }
+    } elseif ($direction -eq "SHORT") {
+        if (-not $breadthGate.allow_short) { $gatesBlocked += "breadth_short_blocked" }
+        if (-not $pumpGate.allow_short) { $gatesBlocked += "pump_short_blocked" }
+    }
+
+    if ($gatesBlocked.Count -gt 0) {
+        Write-Host "BLOQUEADO GATES: $($gatesBlocked -join ', ') | Breadth=$($breadthGate.breadth_trend) Pump=$($pumpGate.pump_class) Entry=$($entryTiming.signal)" -ForegroundColor Yellow
+        return [PSCustomObject]@{ blocked = $true; blocked_by = $gatesBlocked; market = $mkt; gates_info = @{ breadth = $breadthGate; pump = $pumpGate; entry = $entryTiming } }
+    }
+
+    # Log gates aprovado
+    $gatesLog = "GATES APROVADO | Breadth=$($breadthGate.breadth_trend) ($($breadthGate.breadth_pct)%) Pump=$($pumpGate.pump_class) ($($pumpGate.pump_score)) Entry=$($entryTiming.signal) (eff_tori=$($entryTiming.effective_tori_score))"
+    Write-Host $gatesLog -ForegroundColor Green
 
     # ── 2026-06-30: PUMP SCALP EARLY DETECTION ────────────────────────────────────
     # Executa LIVE se pump detectado (confidence >=70). Sem shadow, sempre live.
