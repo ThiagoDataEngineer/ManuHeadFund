@@ -173,6 +173,32 @@ $topMovers = @($tickers | Where-Object { [Math]::Abs($_.change24h) -ge $MinAbsCh
 
 Write-Host "  Top movers (|change24h| >= $MinAbsChangePct%): $($topMovers.Count) encontrados" -ForegroundColor White
 
+# 2026-07-16: BTC sempre entra no estudo, independente de bater o filtro de
+# top mover -- BTC raramente move >=5%/24h (baixa vol relativa a altcoin),
+# entao o filtro acima o exclui quase sempre e ele nunca seria estudado.
+# Motivo de incluir: BTC e o proprio "pai" do regime (Get-MarketScenario) e
+# raramente entra em trade real (confluence Tori 1h quase nunca bate 80 --
+# ver commit 9e30422); precisamos medir se scalps de 15m que o sweep live
+# passou a testar realmente teriam dado lucro, com dado real, nao so
+# opiniao. Nao usa MinAbsChangePct: BTC entra sempre que ainda nao foi
+# medido nesta janela (dedup abaixo evita spam a cada ciclo de 5min).
+$btcTicker = $tickers | Where-Object { $_.market -eq "BTCUSDT" } | Select-Object -First 1
+if ($btcTicker -and -not ($topMovers | Where-Object { $_.market -eq "BTCUSDT" })) {
+    $btcAlreadyRecent = $false
+    try {
+        $recentBtc = @(Get-StateRecords -Table "gate_replay_study" -ErrorAction Stop |
+            Where-Object { $_.market -eq "BTCUSDT" })
+        foreach ($rb in $recentBtc) {
+            $rbTs = [datetime]::Parse($rb.ts).ToUniversalTime()
+            if (($nowUtc - $rbTs).TotalMinutes -lt 15) { $btcAlreadyRecent = $true; break }
+        }
+    } catch {}
+    if (-not $btcAlreadyRecent) {
+        $topMovers += $btcTicker
+        Write-Host "  + BTCUSDT incluido manualmente (fixo no estudo, fora do filtro de top mover)" -ForegroundColor Cyan
+    }
+}
+
 if ($topMovers.Count -eq 0) {
     Write-Host "  Nenhum candidato novo neste ciclo." -ForegroundColor Yellow
 } else {
