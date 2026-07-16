@@ -593,6 +593,59 @@ jobs:
           }
 
   # ============================================================================
+  # JOB: GATE REPLAY STUDY (a cada ciclo, sem cron_guard) -- estudo ativo
+  # 2026-07-16: Complementa mce-counterfactual (que so mede sinais que JA
+  # passaram pelo gem_executor real). Este pega top movers da CoinEx AGORA
+  # (nao depende do scanner ja ter avaliado), simula os thresholds/gates
+  # ATUAIS via Invoke-GemExecute -DryRun (fiel, breadth+pump+tori+quality
+  # reais, incluindo LLM), grava snapshot, e revisita snapshots antigos em
+  # horizontes curtos (10min/30min/1h/4h) pra scalp/gema -- avaliando os
+  # DOIS sentidos: threshold bloqueou e teria dado certo (falso negativo)
+  # vs threshold bloqueou e teria dado errado (acerto). Simula LONG e
+  # SHORT em cada candidato (nao so a direcao "obvia" do movimento).
+  # Sem cron_guard: roda todo ciclo pra maximizar chance de pegar cada
+  # horizonte curto perto do alvo (revisita e idempotente -- so preenche
+  # o que ainda esta null). Requer manuheadfund.gate_replay_study existir
+  # (docs/SETUP_SUPABASE_GATE_REPLAY_STUDY_2026_07_16.sql).
+  # ============================================================================
+  gate-replay-study:
+    name: Gate Replay Study (scalp/gema, LONG+SHORT, 10m-4h)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
+          $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
+          $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content += "`$env:ANTHROPIC_API_KEY = '${{ secrets.ANTHROPIC_API_KEY }}'" + "`n"
+          $content += "`$env:GROQ_API_KEY = '${{ secrets.GROQ_API_KEY }}'" + "`n"
+          $content += "`$env:GROQ_API_KEY_2 = '${{ secrets.GROQ_API_KEY_2 }}'" + "`n"
+          $content += "`$env:MISTRAL_API_KEY = '${{ secrets.MISTRAL_API_KEY }}'" + "`n"
+          $content += "`$env:CEREBRAS_API_KEY = '${{ secrets.CEREBRAS_API_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          try {
+            & ./scripts/gate_replay_study.ps1 -NewCandidatesPerRun 2 -MinAbsChangePct 5.0
+          } catch {
+            Write-Host "WARN: $_" -ForegroundColor Yellow
+          }
+          exit 0
+
+  # ============================================================================
   # JOB: MCE COUNTERFACTUAL (a cada 6h) -- edge dos sinais pulados
   # 2026-07-16: Usuario perguntou se vale estudar movimentos que o sistema
   # nao entrou. Write-SignalSkip ja grava rejeicoes em Supabase
