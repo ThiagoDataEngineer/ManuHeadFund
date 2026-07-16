@@ -66,10 +66,19 @@ jobs:
 
           if (-not $url -or -not $key) { exit 0 }
 
+          # 2026-07-16 FIX: teste original inseria sem Content-Profile header,
+          # entao mirava public.trade_rejections implicitamente e sempre
+          # reportava OK -- mas lib_state_store.ps1 (Write-SignalSkip, MCE
+          # Counterfactual job) usa schema manuheadfund por padrao (desde
+          # 2026-06-28), via Content-Profile: manuheadfund. Tabela foi movida
+          # pra manuheadfund (docs/SETUP_SUPABASE_FIX_TRADE_REJECTIONS_SCHEMA_
+          # 2026_07_16.sql) -- teste agora mira o mesmo lugar que o resto do
+          # sistema realmente usa.
           $headers = @{
             "Authorization" = "Bearer $key"
             "apikey" = $key
             "Content-Type" = "application/json"
+            "Content-Profile" = "manuheadfund"
           }
 
           # Test if table exists by trying to insert
@@ -85,9 +94,9 @@ jobs:
             } | ConvertTo-Json
 
             $response = Invoke-RestMethod -Uri "$url/rest/v1/trade_rejections" -Method POST -Headers $headers -Body $record -ErrorAction Stop
-            Write-Host "✓ trade_rejections table OK" -ForegroundColor Green
+            Write-Host "✓ manuheadfund.trade_rejections table OK" -ForegroundColor Green
           } catch {
-            Write-Host "⚠ trade_rejections table criar manualmente no Supabase Dashboard" -ForegroundColor Yellow
+            Write-Host "⚠ manuheadfund.trade_rejections ainda ausente -- rodar docs/SETUP_SUPABASE_FIX_TRADE_REJECTIONS_SCHEMA_2026_07_16.sql no Supabase Dashboard" -ForegroundColor Yellow
           }
 
       - name: Initialize Supabase Data
