@@ -94,8 +94,6 @@ function Get-AltcoinBreadth {
 
         # === Calculate vol_ratio proxy ===
         # Since we don't have 7d average in single call, use volatility magnitude as proxy:
-        # - High volatility + high breadth = bullish (vol_ratio > 1.5)
-        # - High volatility + low breadth = bearish dump (vol_ratio > 1.8)
         $vol_ratio = if ($avgVolatility -gt 0) {
             if ($avgVolatility -gt 10) { 2.0 }      # Extreme volatility
             elseif ($avgVolatility -gt 5) { 1.8 }   # High volatility
@@ -106,14 +104,31 @@ function Get-AltcoinBreadth {
         }
 
         # === Classification: breadth + volatility ===
+        # 2026-07-16 FIX: bearish exigia vol_ratio>1.8 enquanto bullish so
+        # exigia >1.5 -- assimetria sem justificativa de mercado documentada,
+        # presente desde o commit original (f3fc329). Grid search confirmou:
+        # bullish disparava ~2.1x mais facil que bearish em condicoes
+        # espelhadas de breadth. Dado real (gate_replay_study, 22 pares SHORT
+        # bloqueados por este gate em 2026-07-16): 54.5% teriam dado retorno
+        # positivo, media +0.99% -- indicativo de que o SHORT estava
+        # estruturalmente mais dificil de liberar do que deveria. Alinhado
+        # pro mesmo threshold (1.5) dos dois lados.
+        #
+        # 2026-07-16 FIX 2: bug de fronteira pre-existente nos dois lados --
+        # vol_ratio=1.5 (faixa "moderada", volatilidade 2-5%) e um valor
+        # EXATO, nunca "> 1.5". So volatilidade alta (>5%->1.8) ou extrema
+        # (>10%->2.0) conseguiam passar; a faixa moderada era uma zona morta
+        # que nunca liberava breadth em nenhum sentido. Confirmado ao vivo:
+        # breadth=35.9% (bateria SHORT) + vol_ratio=1.5 (nao batia, igual nao
+        # e maior) = ainda "neutral". Trocado -gt por -ge nos dois lados.
         $trend = "neutral"
         $confidence = 0.50
 
-        if ($breadth_pct -gt 60 -and $vol_ratio -gt 1.5) {
+        if ($breadth_pct -gt 60 -and $vol_ratio -ge 1.5) {
             $trend = "bullish"
             $confidence = 0.75 + ($breadth_pct - 60) / 40 * 0.15  # up to 0.90 at 100%
             $confidence = [Math]::Min($confidence, 0.90)
-        } elseif ($breadth_pct -lt 40 -and $vol_ratio -gt 1.8) {
+        } elseif ($breadth_pct -lt 40 -and $vol_ratio -ge 1.5) {
             $trend = "bearish"
             $confidence = 0.70 + ((40 - $breadth_pct) / 40) * 0.15  # up to 0.85 at 0%
             $confidence = [Math]::Min($confidence, 0.85)
