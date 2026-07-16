@@ -503,6 +503,25 @@ function Invoke-GemExecute {
 
     if ($gatesBlocked.Count -gt 0) {
         Write-Host "BLOQUEADO GATES: $($gatesBlocked -join ', ') | Breadth=$($breadthGate.breadth_trend) Pump=$($pumpGate.pump_class) Entry=$($entryTiming.signal)" -ForegroundColor Yellow
+
+        # 2026-07-16: registra skip pra counterfactual (Write-SignalSkip ja
+        # tenta Supabase trade_rejections primeiro, fallback local so se
+        # Supabase falhar -- usuario perguntou se vale estudar sinais
+        # pulados, mas o gate de breadth/pump (que mais bloqueia hoje) nunca
+        # registrava nada aqui, so score/tori/quality_gate registravam.
+        # Preco buscado de forma leve/tolerante -- nao trava o fluxo se falhar.
+        if (Get-Command Write-SignalSkip -ErrorAction SilentlyContinue) {
+            try {
+                $skipPrice = 0.0
+                try {
+                    $skipTicker = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/spot/ticker?market=$mkt" -Method GET -TimeoutSec 5
+                    if ($skipTicker.code -eq 0 -and $skipTicker.data) { $skipPrice = [double]$skipTicker.data[0].last }
+                } catch { }
+                $skipRegime = if ($global:MARKET_REGIME) { "$($global:MARKET_REGIME)" } else { "$($btcScenario.scenario)" }
+                Write-SignalSkip -Market $mkt -Direction $direction -Gate ($gatesBlocked -join "+") -EntryPrice $skipPrice -Regime $skipRegime -Source "parallel_gates" | Out-Null
+            } catch { }
+        }
+
         return [PSCustomObject]@{ blocked = $true; blocked_by = $gatesBlocked; market = $mkt; gates_info = @{ breadth = $breadthGate; pump = $pumpGate; entry = $entryTiming } }
     }
 

@@ -584,6 +584,52 @@ jobs:
           }
 
   # ============================================================================
+  # JOB: MCE COUNTERFACTUAL (a cada 6h) -- edge dos sinais pulados
+  # 2026-07-16: Usuario perguntou se vale estudar movimentos que o sistema
+  # nao entrou. Write-SignalSkip ja grava rejeicoes em Supabase
+  # trade_rejections (score/tori/quality_gate desde antes; breadth/pump
+  # gate adicionado hoje, ver gem_executor.ps1 linha ~505). Este job mede
+  # forward-return 24h/72h de cada rejeicao madura e agrega por
+  # regime|direction em manuheadfund.mce_counterfactual_agg -- responde se
+  # os thresholds atuais sao caros demais (media positiva nos bloqueados)
+  # ou justificados (media negativa/neutra). Requer tabela trade_rejections
+  # existir no Supabase (docs/SETUP_SUPABASE_SIGNAL_SKIPS.sql, nao criavel
+  # via codigo -- rpc/exec_sql nao exposta nesse projeto).
+  # ============================================================================
+  mce-counterfactual:
+    name: MCE Counterfactual (edge dos sinais pulados)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          & ./scripts/cron_guard.ps1 -JobId "mce_counterfactual" -Schedule "interval:360"
+          if ($LASTEXITCODE -eq 0) {
+            try {
+              & ./scripts/mce_counterfactual_from_supabase.ps1
+            } catch {
+              Write-Host "WARN: $_" -ForegroundColor Yellow
+            }
+          }
+          exit 0
+
+  # ============================================================================
   # JOB 8: STALENESS AUDIT (a cada 6h)
   # ============================================================================
   staleness-audit:
