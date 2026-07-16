@@ -108,6 +108,8 @@ foreach ($row in $existing) {
             $signed = if ($row.direction -eq "SHORT") { -$ret } else { $ret }
             Add-Member -InputObject $returns -MemberType NoteProperty -Name $h.label -Value $signed -Force
             $changed = $true
+            $passLabel = if ($row.would_pass) { "PASSARIA" } else { "bloqueado:$($row.blocked_by)" }
+            Write-Host "    [$($h.label)] $($row.market) $($row.direction) ($passLabel): $signed%" -ForegroundColor $(if ($signed -gt 0) { "Green" } else { "Red" })
         }
     }
 
