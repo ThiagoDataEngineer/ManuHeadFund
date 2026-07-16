@@ -322,10 +322,20 @@ function _Supabase-Save {
 
     # PostgREST exige keys uniformes em batch (PGRST102 "All object keys must match").
     # Normalizar: colhe union de todas as keys, preenche null nas faltantes.
+    # 2026-07-16 FIX: $r -is [hashtable] e $false pra [ordered]@{} (tipo real e
+    # System.Collections.Specialized.OrderedDictionary, NAO [hashtable]) -- caia
+    # no ramo PSObject.Properties, que pra OrderedDictionary reflete propriedades
+    # do PROPRIO objeto .NET (Count, Keys, Values, IsReadOnly...) em vez das
+    # entries do dicionario. Payload saia com colunas "Count"/"Keys"/"Values" em
+    # vez de ts/market/direction/etc -- confirmado real: Write-SignalSkip (usa
+    # [ordered]@{}) gerava erro PGRST204 "Could not find the 'Count' column of
+    # 'trade_rejections'" toda vez que um gate bloqueava um candidato. Fix:
+    # checar a interface comum [System.Collections.IDictionary], que cobre
+    # Hashtable E OrderedDictionary.
     $allKeys = New-Object System.Collections.Generic.HashSet[string]
     foreach ($r in $Records) {
         if ($null -eq $r) { continue }
-        if ($r -is [hashtable]) {
+        if ($r -is [System.Collections.IDictionary]) {
             foreach ($k in $r.Keys) { [void]$allKeys.Add([string]$k) }
         } else {
             foreach ($p in $r.PSObject.Properties) { [void]$allKeys.Add([string]$p.Name) }
@@ -338,8 +348,8 @@ function _Supabase-Save {
         $h = @{}
         foreach ($k in $allKeys) {
             $val = $null
-            if ($r -is [hashtable]) {
-                if ($r.ContainsKey($k)) { $val = $r[$k] }
+            if ($r -is [System.Collections.IDictionary]) {
+                if ($r.Contains($k)) { $val = $r[$k] }
             } else {
                 if ($r.PSObject.Properties[$k]) { $val = $r.$k }
             }
