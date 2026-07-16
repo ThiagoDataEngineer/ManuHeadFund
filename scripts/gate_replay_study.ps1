@@ -168,10 +168,52 @@ try {
     Write-Host "  ERRO ao buscar tickers: $($_.Exception.Message)" -ForegroundColor Red
 }
 
-$topMovers = @($tickers | Where-Object { [Math]::Abs($_.change24h) -ge $MinAbsChangePct } |
-    Sort-Object { [Math]::Abs($_.change24h) } -Descending | Select-Object -First $NewCandidatesPerRun)
+# 2026-07-16: dedup contra o que ja foi medido nos ultimos 60min -- sem isso,
+# o topN por |change24h| absoluto tende a repetir os MESMOS 1-2 pares (o pump
+# mais forte do momento) ciclo apos ciclo ate ele esfriar, sub-representando
+# o resto do mercado. Ideia do usuario: precisamos de amostra alem de sempre
+# AKE/ARG.
+$recentMarkets = New-Object System.Collections.Generic.HashSet[string]
+try {
+    $recentAll = @(Get-StateRecords -Table "gate_replay_study" -ErrorAction Stop)
+    foreach ($ra in $recentAll) {
+        $raTs = [datetime]::Parse($ra.ts).ToUniversalTime()
+        if (($nowUtc - $raTs).TotalMinutes -lt 60) { [void]$recentMarkets.Add([string]$ra.market) }
+    }
+} catch {}
 
-Write-Host "  Top movers (|change24h| >= $MinAbsChangePct%): $($topMovers.Count) encontrados" -ForegroundColor White
+$topMoversPool = @($tickers | Where-Object { [Math]::Abs($_.change24h) -ge $MinAbsChangePct -and -not $recentMarkets.Contains($_.market) } |
+    Sort-Object { [Math]::Abs($_.change24h) } -Descending)
+$topMovers = @($topMoversPool | Select-Object -First $NewCandidatesPerRun)
+
+Write-Host "  Top movers (|change24h| >= $MinAbsChangePct%, nao medidos na ultima 1h): $($topMovers.Count) encontrados" -ForegroundColor White
+
+# 2026-07-16: 2a fonte -- pares "normais" do universo LIVE real (tier_a_live +
+# A_LIVE), independente de bater o filtro de top-mover. Cobre o caso comum
+# (SPOT LONG e FUTURES LONG/SHORT com change24h moderado) que o filtro de
+# extremos nunca captura, ja que esses pares raramente sao top-mover.
+$universePool = @()
+try {
+    $suPath2 = Join-Path $root "config\short_universe.json"
+    $luPath2 = Join-Path $root "config\long_universe.json"
+    $universeMarkets = New-Object System.Collections.Generic.HashSet[string]
+    if (Test-Path $suPath2) {
+        $su2 = Get-Content $suPath2 -Raw | ConvertFrom-Json
+        foreach ($m in @($su2.tier_a_live)) { [void]$universeMarkets.Add([string]$m) }
+    }
+    if (Test-Path $luPath2) {
+        $lu2 = Get-Content $luPath2 -Raw | ConvertFrom-Json
+        foreach ($m in @($lu2.markets | Where-Object { $_.tier -eq "A_LIVE" } | ForEach-Object { $_.market })) { [void]$universeMarkets.Add([string]$m) }
+    }
+    $universePool = @($tickers | Where-Object { $universeMarkets.Contains($_.market) -and -not $recentMarkets.Contains($_.market) -and $_.market -ne "BTCUSDT" } |
+        Sort-Object { Get-Random })
+} catch {}
+
+$universePick = @($universePool | Select-Object -First $NewCandidatesPerRun)
+if ($universePick.Count -gt 0) {
+    $topMovers += $universePick
+    Write-Host "  + $($universePick.Count) par(es) do universo LIVE (nao-extremo): $(($universePick | ForEach-Object { $_.market }) -join ', ')" -ForegroundColor Cyan
+}
 
 # 2026-07-16: BTC sempre entra no estudo, independente de bater o filtro de
 # top mover -- BTC raramente move >=5%/24h (baixa vol relativa a altcoin),
