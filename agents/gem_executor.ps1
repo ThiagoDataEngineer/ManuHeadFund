@@ -965,6 +965,26 @@ function Invoke-GemExecute {
                 Write-Host "  [CENARIO LONG-EXCECAO] ${mkt}: flag ALLOW_LONG_IN_BEAR_WEAK + bear_severity=WEAK libera LONG (cenario=$($scen.scenario))" -ForegroundColor DarkYellow
             }
 
+            # 2026-07-16 PUMP EXTREMO: cenario mede SO o BTC (EMA20/50 + momentum
+            # 30d) -- irrelevante pra um evento isolado tipo AKEUSDT +300%/24h, que
+            # nao tem nada a ver com o regime macro. Achado real: AKE/ARG foram
+            # descobertos e simulados pelo gate_replay_study, mas ficaram sempre
+            # bloqueados por "cenario=NEUTRO" mesmo com sinal extremo. Exigir
+            # momentum recente confirmado (1h+4h na MESMA direcao do pump, reusa
+            # Test-RecentMomentumConfirmed do breadth gate) evita comprar o topo
+            # de um pump ja exaurido -- so libera se o movimento ainda esta "vivo"
+            # agora, nao so historico das ultimas 24h.
+            $pumpExtremeThresholdPct = 100.0
+            if ($effectiveBlockLong -and $dirForGate -eq "LONG" -and $gemChange24h -ge $pumpExtremeThresholdPct -and
+                (Get-Command Test-RecentMomentumConfirmed -ErrorAction SilentlyContinue)) {
+                $pumpMomentumOk = $false
+                try { $pumpMomentumOk = Test-RecentMomentumConfirmed -Market $mkt -Direction "gt" } catch {}
+                if ($pumpMomentumOk) {
+                    $effectiveBlockLong = $false
+                    Write-Host "  [CENARIO PUMP-EXCECAO] ${mkt}: change24h=+$([math]::Round($gemChange24h,1))% >= $pumpExtremeThresholdPct% + momentum 1h/4h confirmado -> libera LONG apesar de cenario=$($scen.scenario)" -ForegroundColor DarkYellow
+                }
+            }
+
             if ($effectiveBlockLong -or $blockShort) {
                 $reason = if ($effectiveBlockLong -and $blockShort) { "ambas" } elseif ($effectiveBlockLong) { "LONG" } else { "SHORT" }
                 Write-Host "  [CENARIO BLOCK] ${mkt}: cenario=$($scen.scenario) bloqueia $reason ($($scen.reason))" -ForegroundColor Red
