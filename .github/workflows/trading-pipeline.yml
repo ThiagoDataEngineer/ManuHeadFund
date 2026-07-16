@@ -1736,7 +1736,7 @@ jobs:
             try {
               & ./scripts/faro_v3_engine.ps1
               Write-Host "=== FARO V3 ENTRY ===" -ForegroundColor Cyan
-              & ./scripts/faro_v3_entry.ps1 -DryRun $false -CapitalPercent 0.01 -MaxPositions 3
+              & ./scripts/faro_v3_entry.ps1 -DryRun $false -CapitalPercent 0.01 -MaxPositions 7
               Write-Host "OK" -ForegroundColor Green
             } catch {
               Write-Host "WARN: $_" -ForegroundColor Yellow
