@@ -186,21 +186,58 @@ function Test-ParallelBreadthGate {
         [int] $BreadthBullishThreshold = 60,
         [int] $BreadthBearishThreshold = 40,
         [double] $ConfidenceMinBullish = 0.70,
-        [double] $ConfidenceMinBearish = 0.65
+        [double] $ConfidenceMinBearish = 0.65,
+        # 2026-07-16: breadth mede saude do MERCADO INTEIRO (~1300 pares),
+        # nao da moeda candidata -- ficava ~47-50% (neutro) o dia inteiro
+        # e bloqueava candidatos com sinal PROPRIO forte (ex: ARGUSDT
+        # +51%/24h + mais 2.5% em 10min, confirmado via gate_replay_study,
+        # bloqueado so pq o mercado geral estava parado). Change24h e
+        # StrongMoveThresholdPct sao opcionais (default 0/30, comportamento
+        # identico ao anterior se o caller nao passar) -- so ativa o desvio
+        # quando o candidato tem movimento isolado extremo. Nao remove as
+        # gates seguintes (pump-dump, Tori/LLM, quality) que continuam
+        # filtrando pump artificial vs movimento real.
+        #
+        # 2026-07-16 (rodada 2, apos feedback do usuario): change_24h
+        # sozinho pode estar "velho" -- moeda que fez todo o movimento ha
+        # 20h e ja perdeu forca/reverteu continua com change_24h alto
+        # enganosamente. Market (opcional) ativa confirmacao via
+        # Test-RecentMomentumConfirmed: exige que 1h E 4h estejam na MESMA
+        # direcao do change_24h antes de liberar por movimento individual.
+        # Sem Market informado, cai fail-closed (nao libera por movimento
+        # individual -- precisa do dado de confirmacao pra ativar o desvio).
+        [double] $Change24h = 0,
+        [double] $StrongMoveThresholdPct = 30,
+        [string] $Market = ""
     )
 
     $breadth = Get-AltcoinBreadth -UseCache $true
+    $strongIndividualMove = [Math]::Abs($Change24h) -ge $StrongMoveThresholdPct
+
+    $momentumConfirmedUp = $false
+    $momentumConfirmedDown = $false
+    if ($strongIndividualMove -and $Market) {
+        if ($Change24h -gt 0) {
+            $momentumConfirmedUp = Test-RecentMomentumConfirmed -Market $Market -Direction "gt"
+        } else {
+            $momentumConfirmedDown = Test-RecentMomentumConfirmed -Market $Market -Direction "lt"
+        }
+    }
 
     # === OR logic: Parallel gates ===
-    # LONG: allowed if BTC allows OR (breadth bullish AND confidence ok)
+    # LONG: allowed if BTC allows OR (breadth bullish AND confidence ok) OR
+    #       (movimento isolado forte E positivo E confirmado em 1h+4h)
     $allowLong = $BtcAllowLong -or `
                  ($breadth.trend -eq "bullish" -and $breadth.breadth_pct -gt $BreadthBullishThreshold -and `
-                  $breadth.confidence -gt $ConfidenceMinBullish)
+                  $breadth.confidence -gt $ConfidenceMinBullish) -or `
+                 $momentumConfirmedUp
 
-    # SHORT: allowed if BTC allows OR (breadth bearish AND confidence ok)
+    # SHORT: allowed if BTC allows OR (breadth bearish AND confidence ok) OR
+    #        (movimento isolado forte E negativo E confirmado em 1h+4h)
     $allowShort = $BtcAllowShort -or `
                   ($breadth.trend -eq "bearish" -and $breadth.breadth_pct -lt $BreadthBearishThreshold -and `
-                   $breadth.confidence -gt $ConfidenceMinBearish)
+                   $breadth.confidence -gt $ConfidenceMinBearish) -or `
+                  $momentumConfirmedDown
 
     return [PSCustomObject]@{
         allow_long = $allowLong
@@ -214,8 +251,53 @@ function Test-ParallelBreadthGate {
         btc_scenario = $BtcScenario
         btc_allow_long = $BtcAllowLong
         btc_allow_short = $BtcAllowShort
+        strong_individual_move = $strongIndividualMove
+        change_24h = $Change24h
         source = "parallel_breadth_gate"
-        reason = "or_logic: breadth_${($breadth.trend)}_${($breadth.breadth_pct)}pct_conf${($breadth.confidence)}"
+        reason = "or_logic: breadth_${($breadth.trend)}_${($breadth.breadth_pct)}pct_conf${($breadth.confidence)}$(if ($strongIndividualMove) { "_OR_strong_move_${Change24h}pct" })"
+    }
+}
+
+function Test-RecentMomentumConfirmed {
+    <#
+    .SYNOPSIS
+        Confirma se o movimento de 24h ainda esta "quente" AGORA, nao so
+        historico. change_24h e janela movel de 24h -- uma moeda que subiu
+        tudo ha 20h e ja reverteu/lateralizou continua mostrando change_24h
+        alto, enganosamente. Busca candles de 1h e exige que TANTO o
+        momentum de 1h QUANTO o de 4h estejam na MESMA direcao do
+        change_24h antes de considerar o sinal individual ainda valido.
+    .PARAMETER Market
+        Symbol (ex: ARGUSDT)
+    .PARAMETER Direction
+        "gt" (positivo, LONG) ou "lt" (negativo, SHORT) -- direcao esperada
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)] [string] $Market,
+        [Parameter(Mandatory)] [ValidateSet("gt", "lt")] [string] $Direction
+    )
+
+    if (-not (Get-Command Get-CoinExCandles -ErrorAction SilentlyContinue)) {
+        return $false   # fail-closed: sem dado de confirmacao, nao libera
+    }
+
+    try {
+        # 5 candles de 1h cobre a janela de 4h + 1 de folga
+        $candles = @(Get-CoinExCandles -Market $Market -Period "1hour" -Limit 5 -IsFutures $false)
+        if ($candles.Count -lt 5) { return $false }
+
+        $last = $candles[-1].close
+        $mom1h = (($last - $candles[-2].close) / $candles[-2].close) * 100
+        $mom4h = (($last - $candles[0].close) / $candles[0].close) * 100
+
+        if ($Direction -eq "gt") {
+            return ($mom1h -gt 0 -and $mom4h -gt 0)
+        } else {
+            return ($mom1h -lt 0 -and $mom4h -lt 0)
+        }
+    } catch {
+        return $false   # fail-closed
     }
 }
 

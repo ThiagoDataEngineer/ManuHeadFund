@@ -446,9 +446,15 @@ function Invoke-GemExecute {
     $btcScenario = Get-MarketScenario
 
     # Gate #1: Breadth check
+    # 2026-07-16: passa Market+Change24h pra Test-ParallelBreadthGate poder
+    # liberar por sinal individual forte (confirmado em 1h+4h) quando o
+    # mercado geral esta neutro -- ver lib_breadth_monitor.ps1 pra contexto
+    # completo (achado real via gate_replay_study: ARGUSDT +51%/24h
+    # bloqueado so pq breadth do mercado geral estava ~50%).
+    $gemChange24h = if ($null -ne $Gem.change_24h) { [double]$Gem.change_24h } else { 0 }
     $breadthGate = if (Get-Command Test-ParallelBreadthGate -ErrorAction SilentlyContinue) {
         try {
-            Test-ParallelBreadthGate -BtcScenario $btcScenario.scenario -BtcAllowLong $btcScenario.allow_long -BtcAllowShort $btcScenario.allow_short
+            Test-ParallelBreadthGate -BtcScenario $btcScenario.scenario -BtcAllowLong $btcScenario.allow_long -BtcAllowShort $btcScenario.allow_short -Market $mkt -Change24h $gemChange24h
         } catch {
             @{ allow_long = $btcScenario.allow_long; allow_short = $btcScenario.allow_short; breadth_trend = "error" }
         }
