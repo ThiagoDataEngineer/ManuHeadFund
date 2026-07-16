@@ -432,6 +432,57 @@ function Invoke-GemCycle-Once {
             }
         }
 
+        # ── BTC MULTI-TIMEFRAME (2026-07-16): scalp em 15m alem do 1h ───────────
+        # BTC e a referencia de regime (Get-MarketScenario) e passa pelos sweeps
+        # acima como qualquer outro par do tier_a_live/A_LIVE -- so que so no 1h,
+        # onde a menor volatilidade relativa de BTC faz sinais de fractal/volume
+        # climax (calibrados pra altcoin) dispararem raramente (confirmado:
+        # DOGE/ADA/OP/INJ/TIA/UNI batem confluence>=80 quase todo ciclo, BTC
+        # nunca aparece nos logs TORI_SHORT/TORI_LONG). Nao e caso especial de
+        # regra -- mesmo threshold 80, mesmos gates depois -- so mais uma chance
+        # de timeframe pra capturar scalp que o 1h nao ve. A partir de 15m (nao
+        # 5m, pra nao acrescentar ruido sobre o que ja funciona). SHORT sempre
+        # tentado (BTC tem futures); LONG so quando cenario permite (mesmo criterio
+        # do sweep LONG acima).
+        try {
+            if (Get-Command Test-ToriConfluence -ErrorAction SilentlyContinue) {
+                $btcTc15Short = $null
+                try { $btcTc15Short = Test-ToriConfluence -Market "BTCUSDT" -SetupType "SHORT" -TimeframeMinutes 15 -TimeoutSeconds 6 } catch {}
+                if ($btcTc15Short -and $btcTc15Short.allows) {
+                    $toriShortGems += [PSCustomObject]@{
+                        market     = "BTCUSDT"
+                        score      = [int]$btcTc15Short.confluence_score
+                        mode       = "TORI_SHORT_15M"
+                        direction  = "SHORT"
+                        conviction = [int]$btcTc15Short.confluence_score
+                        signal     = ("tori15m:" + (@($btcTc15Short.signals_fired) -join '+'))
+                        sizing     = [PSCustomObject]@{ sizing_pct = 0.02 }
+                    }
+                    Write-GemLog "TORI_SHORT_15M" "BTCUSDT confluence=$($btcTc15Short.confluence_score) signals=$(@($btcTc15Short.signals_fired) -join '+')"
+                }
+
+                $btcScenForLong = if ($scenSweep) { $scenSweep } else { Get-MarketScenario }
+                if ($btcScenForLong -and $btcScenForLong.allow_long) {
+                    $btcTc15Long = $null
+                    try { $btcTc15Long = Test-ToriConfluence -Market "BTCUSDT" -SetupType "LONG" -TimeframeMinutes 15 -TimeoutSeconds 6 } catch {}
+                    if ($btcTc15Long -and $btcTc15Long.allows) {
+                        $toriLongGems += [PSCustomObject]@{
+                            market     = "BTCUSDT"
+                            score      = [int]$btcTc15Long.confluence_score
+                            mode       = "TORI_LONG_15M"
+                            direction  = "LONG"
+                            conviction = [int]$btcTc15Long.confluence_score
+                            signal     = ("tori15m:" + (@($btcTc15Long.signals_fired) -join '+'))
+                            sizing     = [PSCustomObject]@{ sizing_pct = 0.02 }
+                        }
+                        Write-GemLog "TORI_LONG_15M" "BTCUSDT confluence=$($btcTc15Long.confluence_score) signals=$(@($btcTc15Long.signals_fired) -join '+')"
+                    }
+                }
+            }
+        } catch {
+            Write-GemLog "WARN" "btc multi-tf sweep failed (non-critical): $($_.Exception.Message)"
+        }
+
         $gems = @($triggerGems) + @($gemsFromScan) + @($toriShortGems) + @($toriLongGems)
         # R4 fix 2026-05-21: cache check ANTES do log "encontrados" + Invoke-GemExecute.
         # Resolve PEAQ/PROVE re-detection spam.
