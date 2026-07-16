@@ -35,7 +35,7 @@ try {
 }
 
 $positionSize = $totalCap * $CapitalPercent
-Write-Host "📊 Capital: \$$totalCap | Position size: \$$positionSize" -ForegroundColor Yellow
+Write-Host "📊 Capital: `$$totalCap | Position size: `$$positionSize" -ForegroundColor Yellow
 
 # Check active position count
 # 2026-07-15 cloud fix: journal/faro_v3_positions.jsonl e local e NAO persiste
@@ -102,11 +102,23 @@ if ($entries.Count -eq 0) {
 
 Write-Host "🎯 Found $($entries.Count) entry signals" -ForegroundColor Green
 
+# 2026-07-16 FIX: $activePositions nunca era definida neste arquivo -- guard
+# de MaxPositions comparava contra $null.Count (=0 em PowerShell), ignorando
+# silenciosamente o $activeCount real ja calculado acima (via API da exchange).
+# Corrigido pra usar $activeCount (a fonte de verdade real) + $entered.Count
+# (posicoes abertas NESTE ciclo, ainda nao refletidas na exchange).
 $entered = @()
 foreach ($entry in $entries) {
-    if ($activePositions.Count + $entered.Count -ge $MaxPositions) { break }
+    if ($activeCount + $entered.Count -ge $MaxPositions) { break }
 
     $market = $entry.market
+    # 2026-07-16: direction-aware. Antes SEMPRE side="buy" (LONG) -- um sinal
+    # SHORT do engine (adicionado no mesmo commit) seria executado como COMPRA,
+    # o oposto do que o sinal detectou. CoinEx-PlaceOrder ja manda pro book de
+    # FUTURES (market_type="FUTURES" fixo na lib) mesmo pra LONG -- side "sell"
+    # sem posicao previa abre short nativo, sem lib adicional necessaria.
+    $direction = if ($entry.PSObject.Properties['direction'] -and $entry.direction -eq "SHORT") { "SHORT" } else { "LONG" }
+    $orderSide = if ($direction -eq "SHORT") { "sell" } else { "buy" }
     try {
         # Fetch current price + volatility
         $ticker = CoinEx-GetTicker -market $market
@@ -121,10 +133,17 @@ foreach ($entry in $entries) {
         $sizeMultiplier = if ($vol_pct -gt 20) { 0.8 } elseif ($vol_pct -gt 15) { 1.0 } else { 1.2 }
         $quantity = ($positionSize * $sizeMultiplier) / $currentPrice
 
-        # Calculate stops + targets
-        $stop = $currentPrice * 0.92  # -8% stop
-        $target1 = $currentPrice * 1.50  # +50%
-        $target2 = $currentPrice * 2.50  # +150%
+        # Calculate stops + targets -- SHORT espelha LONG (stop ACIMA, alvo
+        # ABAIXO do preco de entrada; mesmas distancias percentuais).
+        if ($direction -eq "SHORT") {
+            $stop = $currentPrice * 1.08     # +8% stop (preco subiu contra a posicao)
+            $target1 = $currentPrice * 0.50  # -50%
+            $target2 = $currentPrice * 0.10  # -90% (equivalente simetrico ao 2.50x LONG em retorno, cap logico em 0)
+        } else {
+            $stop = $currentPrice * 0.92     # -8% stop
+            $target1 = $currentPrice * 1.50  # +50%
+            $target2 = $currentPrice * 2.50  # +150%
+        }
 
         # Check idempotency (no duplicate entry for this market today)
         if (Test-Path $posFile) {
@@ -137,15 +156,16 @@ foreach ($entry in $entries) {
         }
 
         # Place order
-        Write-Host "📍 Entering $market | price=$([Math]::Round($currentPrice,6)) | size=$([Math]::Round($quantity,4)) | stop=$([Math]::Round($stop,6)) | t1=$([Math]::Round($target1,6)) | t2=$([Math]::Round($target2,6))" -ForegroundColor Cyan
+        Write-Host "📍 Entering $market $direction | price=$([Math]::Round($currentPrice,6)) | size=$([Math]::Round($quantity,4)) | stop=$([Math]::Round($stop,6)) | t1=$([Math]::Round($target1,6)) | t2=$([Math]::Round($target2,6))" -ForegroundColor Cyan
 
         if (-not $DryRun) {
             try {
-                $result = CoinEx-PlaceOrder -market $market -side "buy" -type "market" -amount $quantity -stopLoss $stop -takeProfit $target2
+                $result = CoinEx-PlaceOrder -market $market -side $orderSide -type "market" -amount $quantity -stopLoss $stop -takeProfit $target2
                 if ($result) {
                     $position = [PSCustomObject]@{
                         ts = $timestamp
                         market = $market
+                        direction = $direction
                         entry_price = $currentPrice
                         quantity = $quantity
                         stop = $stop
@@ -161,7 +181,7 @@ foreach ($entry in $entries) {
                     }
                     Add-Content -Path $posFile -Value ($position | ConvertTo-Json -Compress) -ErrorAction SilentlyContinue
                     $entered += $position
-                    Write-Host "✅ Order placed: $market" -ForegroundColor Green
+                    Write-Host "✅ Order placed: $market $direction" -ForegroundColor Green
                 } else {
                     Write-Warning "WARN: PlaceOrder failed for $market"
                 }
@@ -169,7 +189,7 @@ foreach ($entry in $entries) {
                 Write-Warning "WARN: Exception in ${market}: $_"
             }
         } else {
-            Write-Host "✅ [DRY RUN] Would enter $market" -ForegroundColor Cyan
+            Write-Host "✅ [DRY RUN] Would enter $market $direction" -ForegroundColor Cyan
         }
     } catch {
         Write-Warning "WARN: Error processing ${market}: $_"

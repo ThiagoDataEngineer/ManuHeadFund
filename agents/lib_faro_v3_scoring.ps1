@@ -1,5 +1,15 @@
 ﻿# lib_faro_v3_scoring.ps1 — 7-signal scoring (5/7 threshold)
-
+#
+# 2026-07-16: sinal "whale" removido do calculo -- pesquisa confirmou que nao
+# existe fonte gratis viavel de whale-flow POR MOEDA (Etherscan/BscScan/Solscan
+# exigem endereco de contrato por chain, nao ticker; Whale Alert/Nansen sao
+# pagos). O engine alimentava esse sinal com Get-Random ha meses -- ruido puro
+# contando como "confirmacao" no threshold 5/7, sem o operador saber. Melhor
+# reconhecer a lacuna (6 sinais reais) do que fingir ter 7. Substituido por
+# "compression" (squeeze de volatilidade via Bollinger bandwidth real,
+# lib_auto_market_analysis.ps1 Get-BollingerBands) -- pega o momento ANTES do
+# volume explodir, nao so depois (motivado por autopsia real: ZEC comprimiu a
+# 0.15x vol, 6h depois igniu a 3.7x, nao detectado na epoca).
 function Get-FaroConviction {
     # Mapeia FARO -> conviccao 0-100 para o trigger-bus. So ENTRA (5/7) e
     # URGENTE (6+/7) disparam; conviccao = score normalizado. WATCH/SKIP = 0.
@@ -12,11 +22,11 @@ function Get-FaroConviction {
 }
 
 function Get-FaroScoreV3 {
-    param([decimal] $VolScore = 0, [decimal] $PatternScore = 0, [decimal] $SentimentScore = 0, [decimal] $WhaleScore = 0, [decimal] $MomentumScore = 0, [decimal] $FingerprintScore = 0, [decimal] $TimingScore = 0)
+    param([decimal] $VolScore = 0, [decimal] $PatternScore = 0, [decimal] $SentimentScore = 0, [decimal] $CompressionScore = 0, [decimal] $MomentumScore = 0, [decimal] $FingerprintScore = 0, [decimal] $TimingScore = 0)
     $vol = $VolScore
     $pat = $PatternScore
     $sent = $SentimentScore
-    $whale = $WhaleScore
+    $comp = $CompressionScore
     $mom = $MomentumScore
     $fp = $FingerprintScore
     $timing = $TimingScore
@@ -24,12 +34,12 @@ function Get-FaroScoreV3 {
     if ($vol -gt 0) { $signalCount++ }
     if ($pat -gt 0) { $signalCount++ }
     if ($sent -gt 0) { $signalCount++ }
-    if ($whale -gt 0) { $signalCount++ }
+    if ($comp -gt 0) { $signalCount++ }
     if ($mom -gt 0) { $signalCount++ }
     if ($fp -gt 0) { $signalCount++ }
     if ($timing -gt 0) { $signalCount++ }
-    $totalRaw = $vol + $pat + $sent + $whale + $mom + $fp + $timing
-    $totalNormalized = if ($totalRaw -gt 0) { [int](($totalRaw / 175) * 100) } else { 0 }
+    $totalRaw = $vol + $pat + $sent + $comp + $mom + $fp + $timing
+    $totalNormalized = if ($totalRaw -gt 0) { [int](($totalRaw / 165) * 100) } else { 0 }
     $totalNormalized = [Math]::Min($totalNormalized, 100)
     # 2026-07-09 EVOLUTION WIRE: signals_needed tunavel (registry 4-6; clamp local bound 2/2)
     $needed = 5
@@ -57,7 +67,7 @@ function Get-FaroScoreV3 {
             volume = [int]$vol
             pattern = [int]$pat
             sentiment = [int]$sent
-            whale = [int]$whale
+            compression = [int]$comp
             momentum = [int]$mom
             fingerprint = [int]$fp
             timing = [int]$timing
