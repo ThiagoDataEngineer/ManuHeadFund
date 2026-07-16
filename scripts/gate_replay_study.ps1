@@ -48,7 +48,28 @@ $candleCache = @{}
 function Get-CandleReturn {
     param([string]$Market, [datetime]$BaseTs, [double]$BasePrice, [int]$Minutes)
     if (-not $candleCache.ContainsKey($Market)) {
-        try { $candleCache[$Market] = @(CoinEx-GetCandles $Market "1min" 250) } catch { $candleCache[$Market] = @() }
+        # 2026-07-16 FIX (achado real, nao teorico): CoinEx-GetCandles
+        # (lib_coinex.ps1:120) roteia "futures" pra qualquer market que
+        # termine em USDT e nao contenha literalmente "SPOT" no nome --
+        # ou seja, quase TODO par vira futures por default. Gemas pequenas
+        # (AKEUSDT, ARGUSDT) frequentemente so existem em SPOT -- chamada
+        # ia pro endpoint futures errado, API retornava code=4004 "invalid
+        # argument" (confirmado via curl direto), try/catch engolia
+        # silenciosamente, candleCache ficava vazio, Revisitados sempre
+        # 0/N mesmo com horizonte ja maturado. Fix: candidatos deste
+        # estudo vem de /v2/spot/ticker (sempre spot) -- busca direto no
+        # endpoint spot, sem depender da heuristica ambigua da lib
+        # compartilhada.
+        try {
+            $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/spot/kline?market=$Market&period=1min&limit=250" -Method GET -TimeoutSec 15 -ErrorAction Stop
+            if ($r.code -eq 0 -and $r.data) {
+                $candleCache[$Market] = @($r.data | ForEach-Object {
+                    [PSCustomObject]@{ ts = [long]$_.created_at; close = [double]$_.close }
+                })
+            } else {
+                $candleCache[$Market] = @()
+            }
+        } catch { $candleCache[$Market] = @() }
     }
     $candles = $candleCache[$Market]
     if ($candles.Count -eq 0) { return $null }
