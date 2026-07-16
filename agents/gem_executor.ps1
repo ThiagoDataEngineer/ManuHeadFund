@@ -542,8 +542,15 @@ function Invoke-GemExecute {
             try {
                 # 2026-07-02 FIX: operador ?? e PS7-only; em PS 5.1 quebra o PARSE do
                 # arquivo INTEIRO -> Invoke-GemExecute nunca existia -> nada entrava.
+                # 2026-07-16 FIX: $Gem.vol_data.volume_ratio NUNCA existiu -- o campo
+                # real que Get-CoinExVolSpike retorna e "spike_ratio" (confirmado em
+                # gem_agent.ps1). Fallback silencioso pra 1.0 travava o confidence de
+                # Detect-EarlyPump no teto de 45 (sinais 1+4 nunca somavam, so 2+3),
+                # nunca alcancando o >=70 necessario pra disparar -- pump scalp
+                # tecnicamente "ligado" (funcao existe, e chamada) mas estruturalmente
+                # nunca executava nenhum trade, mesmo com pump real acontecendo.
                 $pdChange = if ($null -ne $Gem.change_24h) { $Gem.change_24h } else { 0 }
-                $pdVolR   = if ($null -ne $Gem.vol_data.volume_ratio) { $Gem.vol_data.volume_ratio } else { 1.0 }
+                $pdVolR   = if ($null -ne $Gem.vol_data.spike_ratio) { $Gem.vol_data.spike_ratio } else { 1.0 }
                 $pdRsi    = if ($null -ne $Gem.rsi_14) { $Gem.rsi_14 } else { 50 }
                 $pdPrice  = if ($null -ne $Gem.current_price) { $Gem.current_price } else { 0 }
                 $pumpDetect = Detect-EarlyPump -Market $mkt -ChangePercent24h $pdChange -VolumeRatio $pdVolR -RSI $pdRsi -CurrentPrice $pdPrice
@@ -874,10 +881,17 @@ function Invoke-GemExecute {
             if (Get-Command Detect-EarlyPump -ErrorAction SilentlyContinue) {
                 try {
                     $pdChangePre = if ($null -ne $Gem.change_24h) { [double]$Gem.change_24h } else { 0 }
-                    $pdVolRPre = if ($null -ne $Gem.vol_data.volume_ratio) { [double]$Gem.vol_data.volume_ratio } else { 1.0 }
+                    # 2026-07-16 FIX: campo real e "spike_ratio", nao "volume_ratio" (ver
+                    # fix acima na 1a ocorrencia deste padrao)
+                    $pdVolRPre = if ($null -ne $Gem.vol_data.spike_ratio) { [double]$Gem.vol_data.spike_ratio } else { 1.0 }
                     $pdRsiPre = if ($null -ne $Gem.rsi_14) { [double]$Gem.rsi_14 } else { 50 }
                     $pumpDetectPre = Detect-EarlyPump -Market $mkt -ChangePercent24h $pdChangePre -VolumeRatio $pdVolRPre -RSI $pdRsiPre -CurrentPrice $price
-                    if ($pumpDetectPre.is_pump -and $pumpDetectPre.pump_stage -match "FADE|TOP") {
+                    if ($pumpDetectPre.is_pump -and # 2026-07-16 FIX: Detect-EarlyPump NUNCA retorna "FADE"/"TOP" -- so
+                    # "early"|"mid"|"late"|"none" (ver lib_pump_scalper.ps1). "late"
+                    # (movimento >=50% acumulado) e o equivalente semantico do estagio
+                    # de exaustao que esta condicao pretendia capturar -- alinhado pra
+                    # a logica de dump/SHORT-em-topo-de-pump disparar de verdade.
+                    $pumpDetectPre.pump_stage -match "late") {
                         $convShortPre = [math]::Min(100, [int]$pumpDetectPre.confidence + 20)
                         $convLongPre = [math]::Max(0, 50 - [int]$pumpDetectPre.confidence)
                     }
@@ -1295,10 +1309,13 @@ function Invoke-GemExecute {
         if (Get-Command Detect-EarlyPump -ErrorAction SilentlyContinue) {
             try {
                 $pdChange = if ($null -ne $Gem.change_24h) { [double]$Gem.change_24h } else { 0 }
-                $pdVolR   = if ($null -ne $Gem.vol_data.volume_ratio) { [double]$Gem.vol_data.volume_ratio } else { 1.0 }
+                # 2026-07-16 FIX: campo real e "spike_ratio", nao "volume_ratio"
+                $pdVolR   = if ($null -ne $Gem.vol_data.spike_ratio) { [double]$Gem.vol_data.spike_ratio } else { 1.0 }
                 $pdRsi    = if ($null -ne $Gem.rsi_14) { [double]$Gem.rsi_14 } else { 50 }
                 $pumpDetect = Detect-EarlyPump -Market $mkt -ChangePercent24h $pdChange -VolumeRatio $pdVolR -RSI $pdRsi -CurrentPrice $price
-                if ($pumpDetect.is_pump -and $pumpDetect.pump_stage -match "FADE|TOP") {
+                # 2026-07-16 FIX: "late" e o equivalente real de "FADE|TOP" (ver fix
+                # acima na 1a ocorrencia deste padrao)
+                if ($pumpDetect.is_pump -and $pumpDetect.pump_stage -match "late") {
                     $isPumpFade = $true
                     $pumpDetectScore = [int]$pumpDetect.confidence
                     $shortConv = [math]::Min(100, $pumpDetectScore + 20)  # pump-fade = SHORT favorecido
