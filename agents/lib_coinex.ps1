@@ -116,55 +116,64 @@ function CoinEx-Headers($method, $path, $body, $accessId, $secretKey) {
 
 # ── Endpoints Publicos ────────────────────────────────────────────────────────
 
-function CoinEx-GetCandles($market, $period, $limit=100) {
-    $type = if ($market -match "USDT$" -and $market -notmatch "SPOT") { "futures" } else { "spot" }
-    # 2026-07-09 FIX: callers passam "1h"/"4h" mas API v2 exige "1hour"/"4hour"
-    # -> code=3639 Invalid Parameter em TODA posicao do trailing (Errors: 6 na nuvem).
-    # Normaliza aqui ("1hour" ja correto passa intacto pelo anchor ^...$).
+# 2026-07-16: helper compartilhado -- normaliza period ("1h"->"1hour" etc) e
+# busca kline com FALLBACK automatico entre spot/futures. Raiz do bug: a
+# heuristica antiga (regex de sufixo USDT) e ambigua -- quase todo par termina
+# em USDT independente de ter mercado futures ou nao. Fallback elimina a
+# ambiguidade sem quebrar callers existentes: tenta o tipo preferido primeiro,
+# se a API retornar code!=0 (market nao existe nesse tipo), tenta o outro
+# automaticamente antes de desistir. Nunca lanca por escolha errada de tipo,
+# so por indisponibilidade real dos dois.
+function _CoinEx-GetKlineWithFallback($market, $period, $limit, $preferFutures) {
     if ($period -match '^(\d+)(m|h|d|w)$') {
         $unit = switch ($Matches[2]) { 'm' { 'min' } 'h' { 'hour' } 'd' { 'day' } 'w' { 'week' } }
         $period = "$($Matches[1])$unit"
     }
-    $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/$type/kline?market=$market&period=$period&limit=$limit" -Method GET -TimeoutSec 15 -ErrorAction Stop
-    if ($r.code -ne 0) { throw "CoinEx candles error: $($r.message)" }
-    return $r.data | ForEach-Object {
-        [PSCustomObject]@{
-            ts     = [long]$_.created_at
-            open   = [double]$_.open
-            high   = [double]$_.high
-            low    = [double]$_.low
-            close  = [double]$_.close
-            volume = [double]$_.volume
+    $order = if ($preferFutures) { @("futures", "spot") } else { @("spot", "futures") }
+    $lastErr = $null
+    foreach ($type in $order) {
+        try {
+            $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/$type/kline?market=$market&period=$period&limit=$limit" -Method GET -TimeoutSec 15 -ErrorAction Stop
+            if ($r.code -eq 0) {
+                return $r.data | ForEach-Object {
+                    [PSCustomObject]@{
+                        ts     = [long]$_.created_at
+                        open   = [double]$_.open
+                        high   = [double]$_.high
+                        low    = [double]$_.low
+                        close  = [double]$_.close
+                        volume = [double]$_.volume
+                    }
+                }
+            }
+            $lastErr = "code=$($r.code) $($r.message)"
+        } catch {
+            $lastErr = $_.Exception.Message
         }
     }
+    throw "CoinEx candles error (spot+futures tentados): $lastErr"
 }
 
-function CoinEx-GetFuturesCandles($market, $period, $limit=100) {
-    # Convert period format: 1h -> 1hour, 4h -> 4hour, 1d -> 1day, etc.
-    # 2026-07-09 FIX: 'm' mapeava p/ 'minute' mas API v2 exige 'min' ("15min");
-    # regex ancorada ^...$ p/ nao re-mapear formato ja correto ("1hour").
-    $periodFormatted = if ($period -match '^(\d+)(h|d|m|w)$') {
-        $num = $Matches[1]
-        $unit = switch($Matches[2]) {
-            'h' { 'hour' }
-            'd' { 'day' }
-            'w' { 'week' }
-            'm' { 'min' }
-            default { 'hour' }
-        }
-        "$num$unit"
-    } else {
-        $period
-    }
+# 2026-07-16 FIX: heuristica antiga (regex sufixo USDT) roteava quase todo par
+# pra futures por padrao, mesmo gemas spot-only (ex: AKEUSDT -> code=4004
+# invalid argument, confirmado via teste real). Agora tenta futures primeiro
+# (comportamento historico p/ callers que dependiam disso) com fallback pra
+# spot se o mercado nao existir em futures -- nunca mais falha silenciosa por
+# escolha de tipo errada.
+function CoinEx-GetCandles($market, $period, $limit=100) {
+    return _CoinEx-GetKlineWithFallback $market $period $limit $true
+}
 
-    $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/spot/kline?market=$market&period=$periodFormatted&limit=$limit" -Method GET -TimeoutSec 15 -ErrorAction Stop
-    if ($r.code -ne 0) { throw "CoinEx candles error: $($r.message)" }
-    return $r.data | ForEach-Object {
-        [PSCustomObject]@{
-            ts=$([long]$_.created_at); open=[double]$_.open; high=[double]$_.high
-            low=[double]$_.low; close=[double]$_.close; volume=[double]$_.volume
-        }
-    }
+# 2026-07-16 FIX: nome prometia futures mas SEMPRE chamava /v2/spot/kline
+# (achado ao investigar o bug irmao de CoinEx-GetCandles) -- usada por
+# trailing_stop_adaptive/intelligent + position_risk_manager (gestao de risco
+# de posicoes REAIS abertas). Preco spot vs futures diverge pouco em condicoes
+# normais (~0.02-0.12% testado BTC/DOGE), mas o nome deve entregar o que
+# promete. Agora tenta futures primeiro de verdade, cai pra spot so se o
+# mercado nao existir em futures (mesma logica de fallback, ordem invertida
+# do CoinEx-GetCandles por simetria de nome/intencao).
+function CoinEx-GetFuturesCandles($market, $period, $limit=100) {
+    return _CoinEx-GetKlineWithFallback $market $period $limit $true
 }
 
 function CoinEx-GetTicker($market) {
