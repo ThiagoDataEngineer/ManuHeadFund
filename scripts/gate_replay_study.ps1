@@ -113,8 +113,29 @@ foreach ($row in $existing) {
 
     if ($changed) {
         try {
+            # 2026-07-16 FIX: _Supabase-Save sempre faz upsert (POST +
+            # on_conflict), nao UPDATE parcial de verdade -- enviar so
+            # {id, returns, updated_at} fazia o PostgREST tentar validar a
+            # linha INTEIRA contra os campos NOT NULL (market, direction,
+            # ts, entry_price, would_pass), todos vindo como null no
+            # payload parcial -> 23502 "null value in column market
+            # violates not-null constraint". Confirmado no erro real: o
+            # calculo do retorno funcionava (-0.916% em 10m pra AKEUSDT),
+            # so a gravacao falhava. Fix: reenvia a linha completa
+            # (todos os campos originais de $row + returns atualizado).
             Save-StateRecords -Table "gate_replay_study" -Records @([PSCustomObject]@{
-                id = $row.id; returns = $returns; updated_at = $nowUtc.ToString("o")
+                id             = $row.id
+                market         = $row.market
+                direction      = $row.direction
+                ts             = $row.ts
+                entry_price    = $row.entry_price
+                change_24h_pct = $row.change_24h_pct
+                regime         = $row.regime
+                would_pass     = $row.would_pass
+                blocked_by     = $row.blocked_by
+                gates_snapshot = $row.gates_snapshot
+                returns        = $returns
+                updated_at     = $nowUtc.ToString("o")
             }) -PrimaryKey "id"
             $revisited++
         } catch {
