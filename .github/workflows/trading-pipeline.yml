@@ -1650,38 +1650,6 @@ jobs:
           & ./scripts/diag_counterfactual_readonly_2026_07_16.ps1
 
   # ============================================================================
-  # JOB (one-shot): DIAG PUMP GATE CONFLUENCE 80 vs 90 (2026-07-17)
-  # So roda via workflow_dispatch manual. Responde: candidatos TORI_SHORT com
-  # confluence 80-89 bloqueados por pump_short_blocked (pump_class=
-  # natural_uptrend) teriam dado edge positivo? O [PUMP GATE OVERRIDE]
-  # (commit 16bbfb2) so libera confluence>=90 -- essa consulta mede se vale
-  # baixar o piso pra 80 usando gate_replay_study (returns realizados).
-  # NAO envia nenhuma ordem, so leitura. Remover job apos uso.
-  # ============================================================================
-  diag-pump-gate-confluence80-readonly:
-    name: Diag Pump Gate Confluence 80 vs 90 (one-shot)
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
-          $content = "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
-          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
-          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
-          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
-
-      - name: Run diagnostic
-        shell: pwsh
-        run: |
-          & ./scripts/diag_pump_gate_confluence80_readonly_2026_07_17.ps1
-
-  # ============================================================================
   # JOB (one-shot): APPLY CLOSE_REASON SCHEMA FIX (2026-07-14)
   # So roda via workflow_dispatch manual -- nunca no schedule automatico.
   # Aplica docs/SETUP_SUPABASE_FIX_CLOSE_REASON_2026_07_14.sql via RPC exec_sql.
