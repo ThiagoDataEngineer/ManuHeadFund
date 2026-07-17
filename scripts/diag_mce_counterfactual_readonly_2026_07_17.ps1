@@ -43,15 +43,45 @@ Write-Host ""
 Write-Host "[2] Query direta ORDER BY ts ASC (pra achar as entradas REALMENTE mais antigas)" -ForegroundColor Yellow
 try {
     $cfg = Get-SupabaseRequestHeaders -Method "GET"
-    $uri = "$($cfg.url)/rest/v1/trade_rejections?select=ts,market,gate&order=ts.asc&limit=5"
-    $oldest5 = Invoke-RestMethod -Uri $uri -Method GET -Headers $cfg.headers -TimeoutSec 30
-    Write-Host "  5 entradas mais antigas da tabela (ORDER BY ts ASC de verdade):" -ForegroundColor White
-    foreach ($e in $oldest5) {
+    $uri = "$($cfg.url)/rest/v1/trade_rejections?select=ts,market,gate&order=ts.asc&limit=10"
+    $oldest10 = Invoke-RestMethod -Uri $uri -Method GET -Headers $cfg.headers -TimeoutSec 30
+    Write-Host "  10 entradas mais antigas da tabela (ORDER BY ts ASC de verdade):" -ForegroundColor White
+    foreach ($e in $oldest10) {
         $age = ((Get-Date).ToUniversalTime() - [datetime]::Parse($e.ts).ToUniversalTime()).TotalHours
         Write-Host "    ts=$($e.ts) market=$($e.market) gate=$($e.gate) idade=$([Math]::Round($age,1))h" -ForegroundColor $(if ($age -ge 24) { "Green" } else { "Yellow" })
     }
 } catch {
     Write-Host "  ERRO: $($_.Exception.Message)" -ForegroundColor Red
+}
+Write-Host ""
+
+# [2b] Das 1000 linhas retornadas por [1], quantas NAO sao INIT e tem 24h+?
+# Isola se o problema e (a) INIT poluindo o topo mas resto tudo recente
+# (tabela so comecou a crescer de verdade ha pouco), ou (b) existem MUITAS
+# rejeicoes reais com 24h+ que deveriam ter maturado e nao aparecem no
+# "Medidas: X/1000" do script real -- aponta pra falha na busca de candle
+# (Get-FwdReturn) em vez de problema de leitura/paginacao.
+Write-Host "[2b] Das 1000 linhas de [1]: distribuicao real market != INIT" -ForegroundColor Yellow
+$nonInit = @($entries | Where-Object { $_.market -ne "INIT" })
+Write-Host "  Total nao-INIT: $($nonInit.Count) / $($entries.Count)" -ForegroundColor White
+if ($nonInit.Count -gt 0) {
+    $agesNonInit = @($nonInit | ForEach-Object {
+        try { ((Get-Date).ToUniversalTime() - [datetime]::Parse($_.ts).ToUniversalTime()).TotalHours } catch { $null }
+    } | Where-Object { $null -ne $_ })
+    $over24h = @($agesNonInit | Where-Object { $_ -ge 24 })
+    Write-Host "  Nao-INIT com idade >= 24h: $($over24h.Count) / $($nonInit.Count)" -ForegroundColor $(if ($over24h.Count -gt 0) { "Red" } else { "Green" })
+    if ($over24h.Count -gt 0) {
+        Write-Host "  Exemplo (3 primeiras nao-INIT >=24h):" -ForegroundColor White
+        $sample = @($nonInit | Where-Object {
+            try { ((Get-Date).ToUniversalTime() - [datetime]::Parse($_.ts).ToUniversalTime()).TotalHours -ge 24 } catch { $false }
+        } | Select-Object -First 3)
+        foreach ($s in $sample) {
+            Write-Host "    ts=$($s.ts) market=$($s.market) gate=$($s.gate) entry_price=$($s.entry_price)" -ForegroundColor Gray
+        }
+    }
+    $oldestNonInit = ($agesNonInit | Measure-Object -Maximum).Maximum
+    $newestNonInit = ($agesNonInit | Measure-Object -Minimum).Minimum
+    Write-Host "  Idade nao-INIT: min=$([Math]::Round($newestNonInit,1))h max=$([Math]::Round($oldestNonInit,1))h" -ForegroundColor White
 }
 Write-Host ""
 
@@ -61,7 +91,6 @@ try {
     $cfg2 = Get-SupabaseRequestHeaders -Method "GET"
     $headers2 = @{} + $cfg2.headers
     $headers2["Prefer"] = "count=exact"
-    $headers2["Range"] = "0-0"
     $uri2 = "$($cfg2.url)/rest/v1/trade_rejections?select=id&limit=1"
     $resp = Invoke-WebRequest -Uri $uri2 -Method GET -Headers $headers2 -TimeoutSec 30
     $contentRange = $resp.Headers["Content-Range"]
