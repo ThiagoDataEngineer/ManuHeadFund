@@ -176,6 +176,45 @@ if ($missingCoinexJobs.Count -gt 0) {
     Write-Host "  [SKIP] Bug #14: All CoinEx-calling jobs have COINEX_ACCESS_ID wired" -ForegroundColor Green
 }
 
+# ── Detector 15: FUTURES order sem controle de leverage (Bug #15) ───────────
+# 2026-07-17: SUIUSDT abriu a 50x via gem_executor.ps1 (corrigido commit
+# 5de3a73), e no MESMO DIA ADAUSDT+XRPUSDT abriram a 50x via faro_v3_entry.ps1
+# -- um SEGUNDO caminho de execucao de FUTURES real, totalmente independente,
+# que o fix anterior nao cobria (corrigido separadamente commit 1f05d04).
+# Causa raiz: POST /futures/order (CoinEx-PlaceOrder) NAO carrega leverage no
+# payload -- a corretora usa o que ja estiver configurado NA CONTA pro par.
+# O UNICO jeito de fixar leverage e' CoinEx-AdjustPositionLeverage ANTES da
+# ordem (knowledge/COINEX_REFERENCE.md secao 4.4). Deteccao generica: QUALQUER
+# script que chame CoinEx-PlaceOrder ou Invoke-OrderRouted -Route futures
+# precisa ter CoinEx-AdjustPositionLeverage no MESMO arquivo -- senao herda
+# leverage desconhecida/perigosa da conta. Padrao classico deste projeto:
+# helper de seguranca existe (as vezes ha MAIS de um -- Get-SafeLeverage
+# tambem existia desde 2026-06-18 e tambem nao era chamado), mas cada NOVO
+# caminho de execucao esquece de wire-lo -- auditar TODOS os pontos de
+# entrada, nao so o mais recente.
+Write-Host "[RUN] Detector 15: FUTURES order sem controle de leverage (Bug #15)" -ForegroundColor Cyan
+
+$futuresOrderCallers = @()
+$scanPaths = @("$RootPath\agents\*.ps1", "$RootPath\scripts\*.ps1")
+foreach ($file in (Get-ChildItem $scanPaths -ErrorAction SilentlyContinue)) {
+    if ($file.Name -eq "lib_coinex.ps1" -or $file.Name -eq "lib_coinex_position_management.ps1" -or $file.Name -eq "lib_order_routed.ps1") { continue }
+    $content = Get-Content $file.FullName -Raw -ErrorAction SilentlyContinue
+    if (-not $content) { continue }
+    $callsFuturesOrder = ($content -match 'CoinEx-PlaceOrder\b') -or ($content -match 'Invoke-OrderRouted\s+-Route\s+["\'']futures["\'']') -or ($content -match 'CoinEx-PlaceFuturesOrder\b')
+    if (-not $callsFuturesOrder) { continue }
+    $hasLeverageControl = ($content -match 'CoinEx-AdjustPositionLeverage\b') -or ($content -match 'Get-SafeLeverage\b')
+    if (-not $hasLeverageControl) {
+        $futuresOrderCallers += $file.Name
+    }
+}
+
+if ($futuresOrderCallers.Count -gt 0) {
+    $findings += @{ bug = "bug_15"; pattern = "uncontrolled_futures_leverage"; confidence = 0.85; status = "Script(s) abrem FUTURES real sem chamar CoinEx-AdjustPositionLeverage/Get-SafeLeverage no mesmo arquivo -- posicao herda leverage da conta, pode abrir a 50x sem intencao"; scripts = $futuresOrderCallers }
+    Write-Host "  [WARN] Bug #15: script(s) sem controle de leverage: $($futuresOrderCallers -join ', ')" -ForegroundColor Red
+} else {
+    Write-Host "  [SKIP] Bug #15: todos os callers de FUTURES order tem leverage control no mesmo arquivo" -ForegroundColor Green
+}
+
 $uniqueBugs = @($findings | Group-Object -Property bug | Select-Object -ExpandProperty Name)
 
 $export = @{
@@ -183,9 +222,9 @@ $export = @{
     summary = @{
         total_findings = $findings.Count
         bugs_detected = $uniqueBugs.Count
-        coverage = "$($uniqueBugs.Count)/12"
+        coverage = "$($uniqueBugs.Count)/15"
         confidence_avg = [Math]::Round(($findings | Measure-Object -Property confidence -Average).Average, 2)
-        status = if ($uniqueBugs.Count -ge 12) { "COMPLETE" } else { "COMPLETE_DETECTED_$($uniqueBugs.Count)_OF_12" }
+        status = if ($uniqueBugs.Count -ge 15) { "COMPLETE" } else { "COMPLETE_DETECTED_$($uniqueBugs.Count)_OF_15" }
     }
     findings = $findings
     query_engine = @{
@@ -207,7 +246,7 @@ Write-Host ""
 Write-Host "SUCCESS: ROOT CAUSE ORACLE COMPLETE" -ForegroundColor Green
 Write-Host ""
 Write-Host "Results:" -ForegroundColor Cyan
-Write-Host "  Bugs detected: $($export.summary.bugs_detected)/12" -ForegroundColor Green
+Write-Host "  Bugs detected: $($export.summary.bugs_detected)/15" -ForegroundColor Green
 Write-Host "  Coverage: $($export.summary.coverage)" -ForegroundColor Green
 Write-Host "  Avg confidence: $($export.summary.confidence_avg)" -ForegroundColor Green
 Write-Host "  Status: $($export.summary.status)" -ForegroundColor Green

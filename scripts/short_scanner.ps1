@@ -330,10 +330,27 @@ try {
                             Log "  [SHORT $liveTag] $mkt plan: entry=$entryPx stop=$($plan.stop) target=$($plan.target) size=$usd_size cs_pass=$($cs.passes) pos=$hasPos -> ready=$($ready.ready) ($($ready.reason))"
 
                             if ($ready.ready -and $capital -gt 0 -and $usd_size -gt 0) {
-                                $amount = [math]::Round($usd_size / $entryPx, 6)
-                                $order = CoinEx-PlaceOrder $mkt "sell" "market" $amount $null $plan.stop $plan.target
-                                Log "  [SHORT LIVE] $mkt ORDEM SHORT ENVIADA amount=$amount (~$usd_size USDT) stop=$($plan.stop) target=$($plan.target)"
-                                try { Send-TelegramAlert -Message "[SHORT LIVE EXECUTADO] $mkt`namount=$amount (~$usd_size USDT)`nstop=$($plan.stop) target=$($plan.target)`nWSS=$wssScore Tier S (rollout BTC/ETH)" | Out-Null } catch {}
+                                # 2026-07-17 FIX (mesmo achado de gem_executor.ps1/faro_v3_entry.ps1:
+                                # CoinEx-PlaceOrder abre FUTURES sem controle de leverage -- herda o
+                                # que ja estiver configurado NA CONTA pro par). Terceiro caminho de
+                                # execucao real achado pelo Oracle Detector 15. Fail-closed: se o
+                                # ajuste falhar, pula a ordem.
+                                . (Join-Path $agentsDir "lib_coinex_position_management.ps1") 2>$null
+                                . (Join-Path $agentsDir "lib_leverage_cap.ps1") 2>$null
+                                $__safeLeverage = if (Get-Command Get-SafeLeverage -ErrorAction SilentlyContinue) {
+                                    [int](Get-SafeLeverage -ConvictionPercent ([int]$wssScore) -Mode "STANDARD")
+                                } else { 2 }
+                                $__levResult = if (Get-Command CoinEx-AdjustPositionLeverage -ErrorAction SilentlyContinue) {
+                                    CoinEx-AdjustPositionLeverage -Market $mkt -Leverage $__safeLeverage -MarginMode "isolated"
+                                } else { [PSCustomObject]@{ success = $false; error_msg = "CoinEx-AdjustPositionLeverage indisponivel" } }
+                                if ($__levResult.success) {
+                                    $amount = [math]::Round($usd_size / $entryPx, 6)
+                                    $order = CoinEx-PlaceOrder $mkt "sell" "market" $amount $null $plan.stop $plan.target
+                                    Log "  [SHORT LIVE] $mkt ORDEM SHORT ENVIADA amount=$amount (~$usd_size USDT) stop=$($plan.stop) target=$($plan.target) leverage=${__safeLeverage}x"
+                                    try { Send-TelegramAlert -Message "[SHORT LIVE EXECUTADO] $mkt`namount=$amount (~$usd_size USDT)`nstop=$($plan.stop) target=$($plan.target)`nleverage=${__safeLeverage}x isolated`nWSS=$wssScore Tier S (rollout BTC/ETH)" | Out-Null } catch {}
+                                } else {
+                                    Log "  [SHORT LIVE] $mkt BLOQUEADO -- falha ao fixar leverage segura (${__safeLeverage}x): $($__levResult.error_msg)"
+                                }
                             }
                         }
                     } catch { Log "  [SHORT LIVE] erro ${mkt}: $($_.Exception.Message)" }
