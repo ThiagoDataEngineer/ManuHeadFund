@@ -62,6 +62,17 @@ function Get-FwdReturn {
     return [Math]::Round($signed, 2)
 }
 
+# 2026-07-17: gate_base normaliza o valor cru de $e.gate (ex: "tori_confluence_
+# 65_lt_80" -> "tori_confluence", "breadth_long_blocked" -> "breadth_long_blocked"
+# ja e estavel). Sufixos numericos variam por chamada (score real embutido no
+# texto) -- sem normalizar, cada rejeicao vira seu proprio grupo de n=1,
+# impossivel agregar. So corta o padrao "_<numero>_lt_<numero>" quando presente.
+function _Get-GateBase {
+    param([string]$Gate)
+    if (-not $Gate) { return "unknown" }
+    return ($Gate -replace '_\d+(\.\d+)?_lt_\d+(\.\d+)?$', '')
+}
+
 $measured = @()
 foreach ($e in $entries) {
     $r24 = Get-FwdReturn -Entry $e -Hours 24
@@ -69,6 +80,7 @@ foreach ($e in $entries) {
     if ($null -ne $r24) {
         $measured += [PSCustomObject]@{
             market = $e.market; direction = $e.direction; regime = $e.regime
+            gate = _Get-GateBase ([string]$e.gate)
             fwd_return_24h = $r24; fwd_return_72h = $r72
         }
     }
@@ -82,10 +94,17 @@ if ($measured.Count -eq 0) {
     exit 0
 }
 
-$groups = $measured | Group-Object { "$($_.regime)|$($_.direction)" }
+# 2026-07-17: agrupamento ganhou "gate" (antes so regime|direction) -- misturava
+# TODOS os gates que bloquearam (breadth, pump, tori_confluence) no mesmo grupo,
+# impossivel usar como evidencia pra calibrar UM gate especifico (ex: motor de
+# evolucao ajustando so o tori_confluence_threshold). "group" (chave primaria do
+# upsert) ganha o 3o segmento -- registros antigos com "regime|direction" ficam
+# orfaos na tabela (nao removidos, so param de nao serem mais atualizados por
+# este script; aceitavel, tabela e cache derivado, nao fonte de verdade).
+$groups = $measured | Group-Object { "$($_.regime)|$($_.direction)|$($_.gate)" }
 
 Write-Host "RESUMO -- forward return dos setups bloqueados (sign-adjusted p/ SHORT)" -ForegroundColor Cyan
-Write-Host ("{0,-28} {1,5} {2,10} {3,10} {4,8}" -f "regime|direcao","n","avg24h%","avg72h%","hit_rate") -ForegroundColor Gray
+Write-Host ("{0,-40} {1,5} {2,10} {3,10} {4,8}" -f "regime|direcao|gate","n","avg24h%","avg72h%","hit_rate") -ForegroundColor Gray
 
 $aggRows = @()
 foreach ($g in ($groups | Sort-Object Name)) {
@@ -94,13 +113,14 @@ foreach ($g in ($groups | Sort-Object Name)) {
     $avg24 = [Math]::Round(($r24 | Measure-Object -Average).Average, 2)
     $avg72 = if ($r72.Count -gt 0) { [Math]::Round(($r72 | Measure-Object -Average).Average, 2) } else { 0 }
     $hitRate = [Math]::Round((@($r24 | Where-Object { $_ -gt 0 }).Count / $r24.Count), 4)
-    Write-Host ("{0,-28} {1,5} {2,10} {3,10} {4,7}%" -f $g.Name, $r24.Count, $avg24, $avg72, [Math]::Round($hitRate * 100, 0))
+    Write-Host ("{0,-40} {1,5} {2,10} {3,10} {4,7}%" -f $g.Name, $r24.Count, $avg24, $avg72, [Math]::Round($hitRate * 100, 0))
 
     $parts = "$($g.Name)".Split("|")
     $aggRows += [PSCustomObject]@{
         group       = $g.Name
         regime      = if ($parts.Count -gt 0) { $parts[0] } else { "" }
         direction   = if ($parts.Count -gt 1) { $parts[1] } else { "" }
+        gate        = if ($parts.Count -gt 2) { $parts[2] } else { "" }
         n           = $r24.Count
         hit_rate    = $hitRate
         avg_fwd_24h = $avg24

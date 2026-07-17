@@ -1445,6 +1445,37 @@ jobs:
           } catch {
             Write-Host "WARN: Learning cycle failed: $_" -ForegroundColor Yellow
           }
+          # 2026-07-17: Evolution Engine existia desde 2026-06-04/07-09
+          # (agents/lib_evolution_engine.ps1, TDD 21/21, bounds duplos +
+          # anti-oscilacao + auditoria completa) mas Invoke-EvolutionCycle so
+          # estava wired em scripts/self_heal_guardian.ps1 -- que so roda via
+          # start_fleet.ps1 (BOOT LOCAL), nunca na nuvem. Mesmo padrao de
+          # peca-de-seguranca-nunca-ligada achado 3x hoje (leverage). Cron
+          # proprio (nao o mesmo guard do Learning Cycle) pra nao acoplar
+          # falha de um ao outro; roda a cada 6h (parametros de deteccao
+          # mudam devagar por design, ver Get-TunableRegistry).
+          try {
+            & ./scripts/cron_guard.ps1 -JobId "evolution_cycle" -Schedule "interval:360"
+            if ($LASTEXITCODE -eq 0) {
+              Write-Host "=== EVOLUTION CYCLE ===" -ForegroundColor Cyan
+              . agents/lib_evolution_engine.ps1
+              . agents/lib_direction_learning.ps1 2>$null
+              $evoResult = Invoke-EvolutionCycle -JournalDir "journal" -LogsDir "logs"
+              if ($evoResult.applied.Count -gt 0) {
+                Write-Host "  Aplicadas: $($evoResult.applied.Count)" -ForegroundColor Green
+                $evoResult.applied | ForEach-Object { Write-Host "    $($_.param): $($_.before) -> $($_.after) ($($_.reason))" -ForegroundColor Yellow }
+              }
+              if ($evoResult.frozen.Count -gt 0) {
+                Write-Host "  Congeladas (anti-oscilacao): $($evoResult.frozen.Count)" -ForegroundColor DarkYellow
+              }
+              if ($evoResult.owner_pending.Count -gt 0) {
+                Write-Host "  Pendentes de aprovacao (risk): $($evoResult.owner_pending.Count)" -ForegroundColor Magenta
+              }
+              Write-Host "✓ Evolution cycle complete" -ForegroundColor Green
+            }
+          } catch {
+            Write-Host "WARN: Evolution cycle failed: $_" -ForegroundColor Yellow
+          }
           exit 0
 
   # ============================================================================

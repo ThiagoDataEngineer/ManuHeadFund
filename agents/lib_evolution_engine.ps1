@@ -125,6 +125,35 @@ function Get-EvolutionProposals {
         }
     }
 
+    # C) tori_confluence_threshold (2026-07-17: fecha o loop desenhado em
+    # 2026-07-09 -- registro existia, nunca teve regra). Evidencia = MCE
+    # Counterfactual filtrado por gate=tori_confluence (scripts/
+    # mce_counterfactual_from_supabase.ps1, coluna "gate" nova no agrupamento):
+    # hit_rate = fracao de rejeicoes POR BAIXA CONFLUENCIA que teriam dado lucro
+    # (forward_return_24h > 0) se tivessem entrado. n minimo 20 (amostra pequena
+    # nao move parametro real). Hit rate alto = threshold rejeitando setups bons
+    # demais -> desce (mais permissivo). Hit rate baixo = threshold correto/ainda
+    # frouxo -> sobe (mais rigoroso). Zona neutra 35%-65% -- sem proposta (nao
+    # move parametro sem sinal claro).
+    $p = $reg["tori_confluence_threshold"]; $cur = [double]$Current.tori_confluence_threshold
+    $toriN = [int]$Evidence.tori_confluence_rejected_n
+    $toriHitRate = [double]$Evidence.tori_confluence_rejected_hit_rate
+    if ($toriN -ge 20) {
+        if ($toriHitRate -ge 0.65) {
+            $new = [math]::Max($p.min, $cur - $p.step)
+            if ($new -ne $cur) {
+                $proposals += [PSCustomObject]@{ param=$p.name; class=$p.class; before=$cur; after=$new
+                    reason="$toriN rejeicoes por baixa confluencia, hit_rate=$([math]::Round($toriHitRate*100,0))% teriam dado lucro -> threshold rejeitando setups bons, desce" }
+            }
+        } elseif ($toriHitRate -le 0.35) {
+            $new = [math]::Min($p.max, $cur + $p.step)
+            if ($new -ne $cur) {
+                $proposals += [PSCustomObject]@{ param=$p.name; class=$p.class; before=$cur; after=$new
+                    reason="$toriN rejeicoes por baixa confluencia, hit_rate=$([math]::Round($toriHitRate*100,0))% -> filtro ainda correto/frouxo, sobe" }
+            }
+        }
+    }
+
     return @($proposals)
 }
 
@@ -156,7 +185,8 @@ function Invoke-EvolutionCycle {
 
     # ── Coleta evidencia ──
     $ev = @{ pumpfade_days_zero_match=0; pumpfade_dumpers_seen=0; pumpfade_matches_per_day=0.0
-             sentinel_triggers_24h=0; sentinel_triggers_48h=0 }
+             sentinel_triggers_24h=0; sentinel_triggers_48h=0
+             tori_confluence_rejected_n=0; tori_confluence_rejected_hit_rate=0.0 }
     # pump-fade: ultimos 3 dias de master logs
     $zeroDays = 0; $dumpers = 0; $matches = 0; $daysWithData = 0
     for ($d = 0; $d -lt 3; $d++) {
@@ -185,6 +215,27 @@ function Invoke-EvolutionCycle {
                 if (($now - $t).TotalHours -le 48) { $ev.sentinel_triggers_48h++ }
             } catch { }
         }
+    }
+
+    # tori_confluence: le manuheadfund.mce_counterfactual_agg (ja gravado por
+    # scripts/mce_counterfactual_from_supabase.ps1, coluna "gate" adicionada
+    # 2026-07-17) e agrega TODOS os grupos regime|direction com gate=tori_
+    # confluence -- a regra C em Get-EvolutionProposals e global (nao por
+    # regime), entao pondera por n em vez de decidir por regime isolado.
+    # Guard por Get-Command mantem o engine agnostico (principio #1) -- so
+    # roda se o helper de leitura do Supabase estiver carregado.
+    if (Get-Command _Get-LearningFromSupabase -ErrorAction SilentlyContinue) {
+        try {
+            $toriRows = @(_Get-LearningFromSupabase -Table "mce_counterfactual_agg" -Filter @{ gate = "tori_confluence" })
+            if ($toriRows.Count -gt 0) {
+                $totalN = ($toriRows | Measure-Object -Property n -Sum).Sum
+                if ($totalN -gt 0) {
+                    $weightedHits = ($toriRows | ForEach-Object { [double]$_.n * [double]$_.hit_rate } | Measure-Object -Sum).Sum
+                    $ev.tori_confluence_rejected_n = [int]$totalN
+                    $ev.tori_confluence_rejected_hit_rate = [math]::Round($weightedHits / $totalN, 4)
+                }
+            }
+        } catch {}
     }
 
     # ── Propostas ──

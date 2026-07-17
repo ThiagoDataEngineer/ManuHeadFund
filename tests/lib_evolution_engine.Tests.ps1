@@ -82,6 +82,45 @@ Describe "Get-EvolutionProposals (regras deterministicas)" {
         $props = @(Get-EvolutionProposals -Current $atMin -Evidence $ev)
         @($props | Where-Object { $_.param -eq 'pumpfade_min_pump_pct' }).Count | Should Be 0
     }
+
+    # 2026-07-17: regra C -- tori_confluence_threshold. Evidencia vem de
+    # manuheadfund.mce_counterfactual_agg filtrado por gate=tori_confluence
+    # (scripts/mce_counterfactual_from_supabase.ps1). n minimo 20 (amostra
+    # pequena nao move parametro real).
+    It "hit_rate alto (>=65%) com n>=20 -> desce threshold (rejeitando setups bons)" {
+        $ev = @{ pumpfade_days_zero_match=0; pumpfade_dumpers_seen=0; pumpfade_matches_per_day=1.0; sentinel_triggers_24h=5; sentinel_triggers_48h=8
+                 tori_confluence_rejected_n=24; tori_confluence_rejected_hit_rate=0.88 }
+        $props = @(Get-EvolutionProposals -Current $base -Evidence $ev)
+        $t = @($props | Where-Object { $_.param -eq 'tori_confluence_threshold' })
+        $t.Count | Should Be 1
+        $t[0].after | Should Be 78
+    }
+    It "hit_rate baixo (<=35%) com n>=20 -> sobe threshold (filtro ainda frouxo)" {
+        $ev = @{ pumpfade_days_zero_match=0; pumpfade_dumpers_seen=0; pumpfade_matches_per_day=1.0; sentinel_triggers_24h=5; sentinel_triggers_48h=8
+                 tori_confluence_rejected_n=25; tori_confluence_rejected_hit_rate=0.20 }
+        $props = @(Get-EvolutionProposals -Current $base -Evidence $ev)
+        $t = @($props | Where-Object { $_.param -eq 'tori_confluence_threshold' })
+        $t[0].after | Should Be 82
+    }
+    It "zona neutra (35%-65%) -> nenhuma proposta (nao move sem sinal claro)" {
+        $ev = @{ pumpfade_days_zero_match=0; pumpfade_dumpers_seen=0; pumpfade_matches_per_day=1.0; sentinel_triggers_24h=5; sentinel_triggers_48h=8
+                 tori_confluence_rejected_n=30; tori_confluence_rejected_hit_rate=0.50 }
+        $props = @(Get-EvolutionProposals -Current $base -Evidence $ev)
+        @($props | Where-Object { $_.param -eq 'tori_confluence_threshold' }).Count | Should Be 0
+    }
+    It "n < 20 -> nenhuma proposta mesmo com hit_rate extremo (amostra pequena demais)" {
+        $ev = @{ pumpfade_days_zero_match=0; pumpfade_dumpers_seen=0; pumpfade_matches_per_day=1.0; sentinel_triggers_24h=5; sentinel_triggers_48h=8
+                 tori_confluence_rejected_n=5; tori_confluence_rejected_hit_rate=1.0 }
+        $props = @(Get-EvolutionProposals -Current $base -Evidence $ev)
+        @($props | Where-Object { $_.param -eq 'tori_confluence_threshold' }).Count | Should Be 0
+    }
+    It "proposta de tori_confluence_threshold nunca ultrapassa bound (min 70)" {
+        $atMin = [PSCustomObject]@{ pumpfade_min_pump_pct=15.0; sentinel_move_pct=2.5; sentinel_ignition_pct=12; pumpfade_dump_pct=-10; gem_sizing_pct=0.5; tori_confluence_threshold=70 }
+        $ev = @{ pumpfade_days_zero_match=0; pumpfade_dumpers_seen=0; pumpfade_matches_per_day=1.0; sentinel_triggers_24h=5; sentinel_triggers_48h=8
+                 tori_confluence_rejected_n=50; tori_confluence_rejected_hit_rate=0.90 }
+        $props = @(Get-EvolutionProposals -Current $atMin -Evidence $ev)
+        @($props | Where-Object { $_.param -eq 'tori_confluence_threshold' }).Count | Should Be 0
+    }
 }
 
 Describe "Anti-oscilacao (congela flip-flop <72h)" {
