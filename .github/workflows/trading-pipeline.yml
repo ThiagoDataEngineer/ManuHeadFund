@@ -1404,25 +1404,48 @@ jobs:
         shell: pwsh
         run: |
           New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          # 2026-07-17 FIX: sem credenciais Supabase, cron_guard nao consegue
+          # persistir last_run_utc -- pra schedule "interval" (nao daily/weekly)
+          # isso faz TODO ciclo ser considerado "due" (sem historico pra
+          # comparar), perdendo o dedup real de 30min. Invoke-LearningCycle
+          # tambem precisa de Supabase pra ler trade_rejections (Parte 2 do
+          # ciclo, aprendizado de skips). Mesmo padrao de credenciais que
+          # layer2_mentor/mce_counterfactual ja usam.
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
 
       - name: Run Learning Cycle (a cada 30min)
         shell: pwsh
-        continue-on-error: true
+        continue-on-error: true  # cron_guard SKIP sai exit 1 -- sem isso o job falha falso
         run: |
-          $minute = (Get-Date).Minute
-          # Roda a cada 30min (0, 30)
-          if ($minute -in @(0, 30)) {
-            Write-Host "=== LEARNING CYCLE ===" -ForegroundColor Cyan
-            try {
+          # 2026-07-17 FIX: gate de minuto exato ($minute -in @(0,30)) e
+          # estruturalmente quase impossivel de bater -- o cron real do GH
+          # Actions tem throttle de ~5-35min (nunca minuto redondo) mais o
+          # delay real de setup (~15-60s) entre trigger e execucao do step.
+          # Confirmado em 100 runs recentes: so 2% bateram o minuto exato, e
+          # mesmo esses as vezes nao executavam por causa do delay. Resultado
+          # pratico: Invoke-LearningCycle (consolidador de aprendizado de
+          # trades+skips) quase NUNCA rodava o corpo real -- mesmo padrao de
+          # bug ja corrigido em layer2_mentor/mce_counterfactual (commit
+          # historico "cron_guard 30min robusto a throttle"). Trocado pro
+          # mesmo cron_guard robusto (baseado em timestamp real via Supabase,
+          # nao minuto do relogio).
+          try {
+            & ./scripts/cron_guard.ps1 -JobId "learning_cycle" -Schedule "interval:30"
+            if ($LASTEXITCODE -eq 0) {
+              Write-Host "=== LEARNING CYCLE ===" -ForegroundColor Cyan
               . agents/lib_learning_scheduler.ps1
               Invoke-LearningCycle -JournalDir "journal"
               Write-Host "✓ Learning cycle complete" -ForegroundColor Green
-            } catch {
-              Write-Host "WARN: Learning cycle failed: $_" -ForegroundColor Yellow
             }
-          } else {
-            Write-Host "Skipped (runs every 30min)" -ForegroundColor DarkGray
+          } catch {
+            Write-Host "WARN: Learning cycle failed: $_" -ForegroundColor Yellow
           }
+          exit 0
 
   # ============================================================================
   # JOB 24: TELEGRAM CLOUD (listener -Once - respond comandos, a cada 5min)
