@@ -474,6 +474,47 @@ function Invoke-GemExecute {
         @{ allow_long = $true; allow_short = $false; pump_class = "unknown"; reason = "pump_classifier_missing" }
     }
 
+    # 2026-07-16 FIX: classificador de pump foi calibrado so pra gemas
+    # pump-and-dump (mcap<$100M, preco<$0.01, queda>30%) -- majors/blue-chips
+    # (ARBUSDT, AVAXUSDT) raramente pontuam essas features mesmo em reversao
+    # tecnica real, caindo em "natural_uptrend" por eliminacao (bloqueia SHORT
+    # sempre). O sweep TORI_SHORT ja carrega o confluence real em $Gem.score.
+    #
+    # 2026-07-16 REFINAMENTO (pos-validacao com gate_replay_study, ~9h/17
+    # pares unicos): confluence alto sozinho NAO basta -- caso real ARBUSDT
+    # (confluence=100 persistente por horas: RSI_EXTREME 71-78 overbought +
+    # FRACTAL_BEARISH + CHOCH + VOLUME_PROFILE) teve preco LATERAL de fato
+    # (0.088-0.090 por 10h), SHORT teria dado leve prejuizo (-1.3% medido).
+    # Investigado a fundo: ARB tinha retracement real (-13% em 7d, ja
+    # comecado ha DIAS), mas nas ultimas horas o momentum tinha revertido
+    # pra CIMA (mom1h=+0.46%, mom4h=-0.60% -- nao confirmava queda ativa) --
+    # o sinal tecnico era real mas o movimento ja tinha "gasto" a maior
+    # parte do trajeto antes do confluence aparecer. dist_from_peak sozinho
+    # (retracement HISTORICO) nao capturava isso -- so olha se JA caiu, nao
+    # se AINDA esta caindo. Fix: reusa Test-RecentMomentumConfirmed (mesma
+    # funcao criada hoje pro breadth gate) -- exige momentum de 1h E 4h
+    # confirmando queda ATIVA agora, nao so historico de dias.
+    $toriConfluenceExtreme = ($Gem.mode -match "TORI_SHORT") -and ($null -ne $Gem.score) -and ([int]$Gem.score -ge 90)
+    $hasActiveMomentum = $false
+    if ($toriConfluenceExtreme -and (Get-Command Test-RecentMomentumConfirmed -ErrorAction SilentlyContinue)) {
+        try { $hasActiveMomentum = Test-RecentMomentumConfirmed -Market $mkt -Direction "lt" } catch { $hasActiveMomentum = $false }
+    }
+    if (-not $pumpGate.allow_short -and $toriConfluenceExtreme -and $hasActiveMomentum) {
+        $origReason = $pumpGate.reason
+        $pumpGate = [PSCustomObject]@{
+            allow_long          = $pumpGate.allow_long
+            allow_short         = $true
+            pump_class          = $pumpGate.pump_class
+            pump_score          = $pumpGate.pump_score
+            pump_confidence     = $pumpGate.pump_confidence
+            dist_from_peak_pct  = $pumpGate.dist_from_peak_pct
+            vol_ratio           = $pumpGate.vol_ratio
+            reason              = "tori_confluence_override_$($Gem.score)_momentum_ativo (era: $origReason)"
+            source              = $pumpGate.source
+        }
+        Write-Host "  [PUMP GATE OVERRIDE] ${mkt}: Tori confluence=$($Gem.score) >=90 + momentum 1h/4h confirmando queda ativa -> libera SHORT apesar de pump_class=$($pumpGate.pump_class)" -ForegroundColor DarkYellow
+    }
+
     # Gate #2: Entry timing (RSI 15M)
     # 2026-07-15 FIX (achado P6, auditoria agent a8499866): condicao original
     # misturava -ErrorAction (parametro nomeado de Get-Command) com -and na

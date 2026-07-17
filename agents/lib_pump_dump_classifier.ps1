@@ -115,14 +115,30 @@ function Get-PumpDumpClass {
         }
 
         # Feature 5: Retracement from peak (fast drop = dump signature)
-        # If dropped >30% from peak in <6H (1D candle): +25
+        # 2026-07-16 FIX: threshold fixo de -30% foi calibrado so pra gemas
+        # pump-and-dump (volatilidade nativa alta) -- majors/blue-chips (ARBUSDT,
+        # AVAXUSDT) raramente caem 30% em 7d mesmo em reversao tecnica real
+        # confirmada (achado real: ARBUSDT -13% do pico + Tori confluence=100
+        # RSI_EXTREME+FRACTAL_BEARISH+CHOCH+VOLUME_PROFILE ainda classificava
+        # "natural_uptrend" por eliminacao, bloqueando 2/2 SHORTs no dia com
+        # confluence tecnica maxima). Fix: threshold RELATIVO a volatilidade
+        # normal do proprio par (ATR% medio dos candles 1D), nao fixo -- retracement
+        # de 2x a volatilidade normal do ativo e proporcionalmente tao significativo
+        # quanto -30% numa gema, seja o ativo qual for.
+        $atrPct = ($candles | ForEach-Object {
+            $h = [double]$_.high; $l = [double]$_.low; $c = [double]$_.close
+            if ($c -gt 0) { (($h - $l) / $c) * 100 } else { 0 }
+        } | Measure-Object -Average).Average
+        if ($atrPct -le 0) { $atrPct = 5.0 }  # fallback conservador se sem dado
+        $retracementThreshold = [Math]::Max(-30, -2.5 * $atrPct)  # nunca mais restritivo que -30% fixo original
+
         $distFromPeak = (($price - $peak7d) / $peak7d) * 100
-        if ($distFromPeak -lt -30) {
-            # Check if recent drop (last candle) is dramatic
+        if ($distFromPeak -lt $retracementThreshold) {
+            # Check if recent drop (last candle) is dramatic (relativo ao ATR tambem)
             if ($candles.Count -gt 1) {
                 $prevClose = [double]$candles[-2].close
                 $todayReturn = (($price - $prevClose) / $prevClose) * 100
-                if ($todayReturn -lt -15) {
+                if ($todayReturn -lt (-1.5 * $atrPct)) {
                     $score += 25
                     $details["retracement_score"] = 25
                 } else {
@@ -136,6 +152,8 @@ function Get-PumpDumpClass {
         } else {
             $details["retracement_score"] = 0
         }
+        $details["atr_pct"] = [Math]::Round($atrPct, 2)
+        $details["retracement_threshold"] = [Math]::Round($retracementThreshold, 2)
 
         # Feature 6: Candle strength (body vs wick = distribution signal)
         # Strong close (body > 70% of range): -5 (good sign)

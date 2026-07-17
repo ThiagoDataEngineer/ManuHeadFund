@@ -91,18 +91,38 @@ Describe "lib_pump_dump_classifier" {
     }
 
     Context "Feature Scoring - Retracement" {
-        It "awards +25 for retracement > 30pct with recent dump" {
+        # 2026-07-16: threshold fixo de -30% substituido por threshold RELATIVO
+        # a volatilidade do proprio par (-2.5x ATR%, nunca mais restritivo que
+        # -30%) -- achado real: majors (ARBUSDT -13%, AVAXUSDT -4.6% do pico)
+        # nunca pontuavam aqui mesmo com reversao tecnica confirmada pelo Tori
+        # (confluence=100), porque -30% e calibrado pra volatilidade de gema,
+        # nao de blue-chip. Ver lib_pump_dump_classifier.ps1 Feature 5.
+        It "awards +25 for retracement > 30pct with recent dump (caso extremo, sempre pontua)" {
             $distFromPeak = -50
-            $score = if ($distFromPeak -lt -30) { 25 } else { 0 }
+            $atrPct = 5.0
+            $threshold = [Math]::Max(-30, -2.5 * $atrPct)
+            $score = if ($distFromPeak -lt $threshold) { 25 } else { 0 }
 
             ($score -eq 25) | Should -Be $true
         }
 
-        It "awards 0 for retracement < 30pct" {
-            $distFromPeak = -15
-            $score = if ($distFromPeak -lt -30) { 25 } else { 0 }
+        It "awards 0 for retracement dentro da volatilidade normal do par" {
+            $distFromPeak = -5
+            $atrPct = 5.0
+            $threshold = [Math]::Max(-30, -2.5 * $atrPct)
+            $score = if ($distFromPeak -lt $threshold) { 25 } else { 0 }
 
             ($score -eq 0) | Should -Be $true
+        }
+
+        It "threshold relativo fica mais sensivel que -30pct fixo pra major de baixa volatilidade (caso que motivou o fix)" {
+            # ARBUSDT real: ATR 7d ~6.83% -> threshold relativo -17.08%, mais
+            # sensivel que o -30% fixo antigo (nunca bateria pra queda de -13%)
+            $atrPct = 6.83
+            $thresholdRelative = [Math]::Max(-30, -2.5 * $atrPct)
+            $thresholdOld = -30
+
+            ($thresholdRelative -gt $thresholdOld) | Should -Be $true
         }
     }
 
