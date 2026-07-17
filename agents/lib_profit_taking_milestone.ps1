@@ -14,6 +14,14 @@
     Check-MilestoneAndResgate -CurrentCapital 1050 -JournalPath "journal"
 #>
 
+# ATENCAO 2026-07-17: NAO CONECTAR sem antes implementar o TODO da linha ~78
+# (Invoke-CoinExWithdrawal real). Ate la, "resgate" nao move nenhum fundo --
+# so grava log. Zero callers hoje (confirmado via grep) -- arquivo mantido
+# como referencia de design, nao como peca pronta pra wire. Ver tambem: meta
+# de longo prazo do usuario e reinvestir enquanto o sistema calibra (6/10
+# trades reais, win rate 33% no momento desta nota) -- auto-saque prematuro
+# nao faz sentido antes de historico solido, independente do saque ser real.
+
 function Check-MilestoneAndResgate {
     param(
         [decimal]$CurrentCapital,
@@ -59,7 +67,7 @@ function Check-MilestoneAndResgate {
                 ganho_acumulado = [math]::Round($ganho, 2)
                 resgate_10_percent = [math]::Round($resgate_amount, 2)
                 reinvest_90_percent = [math]::Round($reinvest_amount, 2)
-                status = if($SimulateOnly) {"SIMULATED"} else {"EXECUTED"}
+                status = if($SimulateOnly) {"SIMULATED"} else {"SIMULATED_NOT_IMPLEMENTED"}
             }
 
             # Salvar histórico
@@ -69,10 +77,12 @@ function Check-MilestoneAndResgate {
 
             if (-not $SimulateOnly) {
                 Write-Host "[MILESTONE] Atingido: $$$milestone" -ForegroundColor Green
-                Write-Host "            Resgatando: $($record.resgate_10_percent) USDT" -ForegroundColor Cyan
-                Write-Host "            Reinvestindo: $($record.reinvest_90_percent) USDT" -ForegroundColor Cyan
+                Write-Host "            Resgate calculado (NAO EXECUTADO -- saque real nao implementado): $($record.resgate_10_percent) USDT" -ForegroundColor Yellow
+                Write-Host "            Reinvestindo (nocional): $($record.reinvest_90_percent) USDT" -ForegroundColor Cyan
 
                 # TODO: Implementar resgate real para wallet (via Supabase ou API)
+                # antes de conectar este arquivo em qualquer job -- sem isso,
+                # status fica SIMULATED_NOT_IMPLEMENTED mesmo fora de -SimulateOnly.
                 # . lib_coinex.ps1
                 # Invoke-CoinExWithdrawal -Amount $resgate_amount -Token "USDT"
             } else {
