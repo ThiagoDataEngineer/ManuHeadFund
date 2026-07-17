@@ -697,6 +697,17 @@ function Invoke-GemExecute {
     $usd_size = $null
     $sizingMethod = "legacy"
 
+    # 2026-07-17 FIX (achado #2 do audit, continuacao): dynamic_feedback e o
+    # metodo PRIMARIO (roda antes de kelly_adaptive/legacy_pct) mas usava
+    # StopLossPct=0.02 CRAVADO em Get-SizePerTrade, ignorando se o trade e
+    # DISCOVERY (-50%) ou MOMENTUM (-30%) -- mesma classe de bug do achado #1,
+    # so que no caminho que tem prioridade de execucao. Resolve aqui (precisa
+    # so de $Gem, nao depende de price/gates) pra reusar no calc abaixo.
+    $__stpEarly = if (Get-Command Resolve-StopTargetPct -ErrorAction SilentlyContinue) {
+        $__sizingSrcEarly = if ($Gem.PSObject.Properties['sizing'] -and $Gem.sizing) { $Gem.sizing } else { $Gem }
+        Resolve-StopTargetPct -Sizing $__sizingSrcEarly
+    } else { @{ stop_pct = 0.02 } }
+
     try {
         if (Get-Command Get-DynamicCapitalAllocation -ErrorAction SilentlyContinue) {
             $regime = if ($null -ne $global:MARKET_REGIME) { $global:MARKET_REGIME } else { "BEAR_WEAK" }
@@ -717,7 +728,7 @@ function Invoke-GemExecute {
                 $riskPct = if ($regime -eq "BULL_STRONG" -or $isScalp) { 0.03 } else { 0.01 }
                 $allocForTrade = $allocForTrade * $riskPct / 0.01  # normalize para o calc
 
-                $dynamicSize = Get-SizePerTrade -AllocatedCapital $allocForTrade -MaxConcurrentTrades 5 -StopLossPct 0.02
+                $dynamicSize = Get-SizePerTrade -AllocatedCapital $allocForTrade -MaxConcurrentTrades 5 -StopLossPct ([double]$__stpEarly.stop_pct)
 
                 if ($dynamicSize -gt 0) {
                     $usd_size = $dynamicSize
