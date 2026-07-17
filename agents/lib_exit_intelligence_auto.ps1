@@ -26,9 +26,20 @@
 #     em dia com a corretora). Fracionado nao precisa: o proximo ciclo le o saldo
 #     fresco e a quantidade ja reflete a venda anterior (auto-reconciliado).
 #
-# LAYER 2: RSI >=70 (sobrecomprado) + ganho -> vende 25%
-# LAYER 3: reversal 3 candles + ganho     -> vende 70%
-# LAYER 4: perto do SL (<=2.5%) + ganho   -> vende 100%
+# LAYER 2: RSI >=70 (sobrecomprado) + ganho >= MinGainPctL2 -> vende 25%
+# LAYER 3: reversal 3 candles + ganho >= MinGainPctL3        -> vende 70%
+# LAYER 4: perto do SL (<=2.5%) + ganho > 0                  -> vende 100%
+#
+# 2026-07-17 FIX (causa raiz achado #3/#4 do audit): L2 e L3 exigiam so
+# "gain > 0" -- SEM piso minimo. RSI>=70 dispara com QUALQUER ganho positivo
+# (ate +0.01%), vendendo 25% da posicao em ruido, contra alvos configurados
+# de +90% a +200% (agents/config.ps1 GEM_TARGET_*). L3 (reversal, 70% da
+# posicao!) tinha o MESMO buraco. L4 (perto do SL) e L5 (climax do dia) NAO
+# mudam -- sao protetores (realizam o que ja existe antes de reverter/bater
+# o stop), nao cortadores de alvo, entao "gain > 0" continua correto ali.
+# Defaults calibrados pra nao cortar o trade antes dele respirar: L2 (RSI e
+# ruidoso, pode bater 70 cedo) exige +8%; L3 (reversal 3-candle, sinal mais
+# forte, e vende 70% do bag) exige +15%.
 # ============================================================================
 
 # --- NUCLEO PURO (TDD, sem I/O) -------------------------------------------------
@@ -55,7 +66,9 @@ function Resolve-ExitAutoDecision {
         [double]  $RealQty = 0,       # saldo REAL disponivel na corretora (base)
         [double]  $MinNotionalUsd = 5.0,
         [double]  $DayOpen = 0,       # open do DIA atual. <=0 => Layer 5 (climax) inativa
-        [double]  $ClimaxThresholdPct = 25.0  # pump do dia que dispara o harvest de climax
+        [double]  $ClimaxThresholdPct = 25.0, # pump do dia que dispara o harvest de climax
+        [double]  $MinGainPctL2 = 8.0,  # piso de ganho p/ L2 (RSI) disparar -- ver nota 2026-07-17
+        [double]  $MinGainPctL3 = 15.0  # piso de ganho p/ L3 (reversal) disparar
     )
 
     $mk = { param($a,$p,$q,$r) [pscustomobject]@{
@@ -121,10 +134,10 @@ function Resolve-ExitAutoDecision {
     if (($distToSL -le 2.5) -and ($gain -gt 0)) {
         return (& $decide 'SELL' 4 100 0.997 'perto_SL_com_ganho')
     }
-    if ($isReversal -and ($gain -gt 0)) {
+    if ($isReversal -and ($gain -ge $MinGainPctL3)) {
         return (& $decide 'SELL' 3 70 0.70 'reversal_detectado')
     }
-    if (($rsi -ge 70) -and ($gain -gt 0)) {
+    if (($rsi -ge 70) -and ($gain -ge $MinGainPctL2)) {
         return (& $decide 'SELL' 2 25 0.25 'rsi_sobrecomprado')
     }
 

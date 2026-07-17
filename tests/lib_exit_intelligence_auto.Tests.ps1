@@ -70,15 +70,45 @@ Describe "Resolve-ExitAutoDecision (Exit Intelligence Auto - nucleo puro)" {
             $d = Resolve-ExitAutoDecision -Closes $closesRev -Current 1.12 -Entry 2.00 -Sl 0.50 -RealQty 1000
             $d.action | Should Not Be 'SELL'
         }
+
+        # 2026-07-17: mesmo buraco do L2 -- L3 vende 70% do bag (bem mais agressivo
+        # que L2), entao o piso e maior (default +15%) pra so realizar num reversal
+        # que ja tem lucro real em jogo, nao no primeiro tique negativo.
+        It "NAO dispara L3 com ganho positivo mas abaixo do piso" {
+            # entry 1.11 -> current 1.12 = +0.9% de ganho, reversal presente mas abaixo do piso 15%
+            $d = Resolve-ExitAutoDecision -Closes $closesRev -Current 1.12 -Entry 1.11 -Sl 0.50 -RealQty 1000
+            $d.action | Should Not Be 'SELL'
+        }
+
+        It "piso de L3 e configuravel via MinGainPctL3" {
+            $d = Resolve-ExitAutoDecision -Closes $closesRev -Current 1.12 -Entry 1.11 -Sl 0.50 -RealQty 1000 -MinGainPctL3 0.5
+            $d.action | Should Be 'SELL'
+            $d.layer  | Should Be 3
+        }
     }
 
     Context "Layer 2 - RSI sobrecomprado com ganho -> vende 25%" {
-        It "dispara SELL 25% quando RSI>=70 e ganho>0 (sem reversal, longe do SL)" {
+        It "dispara SELL 25% quando RSI>=70 e ganho>=piso (sem reversal, longe do SL)" {
             # closes so de alta -> RSI = 100 (avgLoss=0). entry baixo, SL longe, sem reversal.
             $d = Resolve-ExitAutoDecision -Closes $closesUp -Current 1.05 -Entry 0.80 -Sl 0.50 -RealQty 1000
             $d.action | Should Be 'SELL'
             $d.layer  | Should Be 2
             $d.pct    | Should Be 25
+        }
+
+        # 2026-07-17: causa raiz achado #3/#4 -- antes L2 disparava com QUALQUER
+        # gain>0 (ate +0.01%), vendendo 25% contra alvos de +90-200%. Agora exige
+        # piso minimo (default +8%) pra RSI ruidoso nao cortar o trade cedo demais.
+        It "NAO dispara L2 com ganho positivo mas abaixo do piso (RSI ruido cedo)" {
+            # entry 1.04 -> current 1.05 = +0.96% de ganho, RSI=100 (so alta) mas abaixo do piso 8%
+            $d = Resolve-ExitAutoDecision -Closes $closesUp -Current 1.05 -Entry 1.04 -Sl 0.50 -RealQty 1000
+            $d.action | Should Not Be 'SELL'
+        }
+
+        It "piso de L2 e configuravel via MinGainPctL2" {
+            $d = Resolve-ExitAutoDecision -Closes $closesUp -Current 1.05 -Entry 1.04 -Sl 0.50 -RealQty 1000 -MinGainPctL2 0.5
+            $d.action | Should Be 'SELL'
+            $d.layer  | Should Be 2
         }
     }
 
