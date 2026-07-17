@@ -11,7 +11,9 @@ $libs = @(
     "constants_loader.ps1",
     "config.ps1",
     "lib_coinex.ps1",
-    "lib_order_idempotency.ps1"
+    "lib_order_idempotency.ps1",
+    "lib_coinex_position_management.ps1",
+    "lib_leverage_cap.ps1"
 )
 foreach ($l in $libs) {
     $p = Join-Path $agentsDir $l
@@ -159,6 +161,24 @@ foreach ($entry in $entries) {
         Write-Host "📍 Entering $market $direction | price=$([Math]::Round($currentPrice,6)) | size=$([Math]::Round($quantity,4)) | stop=$([Math]::Round($stop,6)) | t1=$([Math]::Round($target1,6)) | t2=$([Math]::Round($target2,6))" -ForegroundColor Cyan
 
         if (-not $DryRun) {
+            # 2026-07-17 FIX (achado real: ADAUSDT/XRPUSDT abriram a 50x via FARO
+            # V3, mesmo dia do fix identico em gem_executor.ps1 -- caminho de
+            # execucao SEPARADO, nunca recebeu a correcao). CoinEx-PlaceOrder
+            # (market_type="FUTURES" fixo, sem campo leverage no payload) usa a
+            # leverage que ja estiver configurada NA CONTA pro par, nao decidida
+            # pelo sistema. Fail-closed: se o ajuste falhar, pula esse par (nao
+            # abre com leverage desconhecida/herdada).
+            $__safeLeverage = if (Get-Command Get-SafeLeverage -ErrorAction SilentlyContinue) {
+                [int](Get-SafeLeverage -ConvictionPercent ([int]$entry.score) -Mode "PUMP_RIDE")
+            } else { 2 }
+            $__levResult = if (Get-Command CoinEx-AdjustPositionLeverage -ErrorAction SilentlyContinue) {
+                CoinEx-AdjustPositionLeverage -Market $market -Leverage $__safeLeverage -MarginMode "isolated"
+            } else { [PSCustomObject]@{ success = $false; error_msg = "CoinEx-AdjustPositionLeverage indisponivel" } }
+            if (-not $__levResult.success) {
+                Write-Host "⛔ ${market}: falha ao fixar leverage segura (${__safeLeverage}x) -- $($__levResult.error_msg) -- pulando" -ForegroundColor Red
+                continue
+            }
+            Write-Host "🔒 ${market} fixado em ${__safeLeverage}x isolated" -ForegroundColor DarkCyan
             try {
                 $result = CoinEx-PlaceOrder -market $market -side $orderSide -type "market" -amount $quantity -stopLoss $stop -takeProfit $target2
                 if ($result) {
