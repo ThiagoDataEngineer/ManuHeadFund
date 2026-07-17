@@ -4,6 +4,7 @@
 
 . (Join-Path $PSScriptRoot "config.ps1")
 . (Join-Path $PSScriptRoot "lib_claude.ps1")
+. (Join-Path $PSScriptRoot "lib_trendline_geometry.ps1")
 
 $TECH_SYSTEM_PROMPT = @'
 Voce e um analista tecnico de elite com 20 anos de experiencia em mercados financeiros,
@@ -31,11 +32,22 @@ Alem dos indicadores acima, voce tambem e especialista em estrutura de trendline
 Voce recebera os swing highs e swing lows do 4H e o bias do 1W/1D.
 Sua tarefa adicional: identificar se existe uma trendline de qualidade para ancorar a entrada.
 
+2026-07-17: o ANGULO das melhores candidatas de trendline JA VEM CALCULADO
+(normalizado -- mesma proporcao visual que apareceria numa tela de grafico,
+nao graus de preco absoluto vs tempo em candles, que sempre da ~90 graus
+sem sentido pra qualquer par de pontos). Trate o angulo fornecido como FATO,
+nao precisa recalcular -- sua tarefa e avaliar contexto (rejeicao ao toque,
+HTF, gap de candles) sobre essa geometria ja pronta.
+
 Criterios inegociaveis para uma trendline ser valida:
 - Minimo 2 toques (ideal 3+) nos swing points fornecidos
-- Minimo 6 candles de distancia entre toques
-- Inclinacao moderada (nao vertical)
-- Cada toque gerou rejeicao real (fechamento longe da linha)
+- Minimo 6 candles de distancia entre toques (candidatas com gap menor ja
+  foram excluidas do calculo -- se nao aparecer nenhuma candidata, e porque
+  nenhum par atende esse minimo)
+- Inclinacao moderada: 20-35 graus normalizados e o ideal (marcado explicitamente
+  como "DENTRO da faixa ideal" no resumo abaixo)
+- Cada toque gerou rejeicao real (fechamento longe da linha) -- isso o angulo
+  NAO calcula, precisa avaliar pelos candles fornecidos
 
 Classificacao:
 A+  = 3+ toques, dados de 3+ semanas, inclinacao ideal, rejeicoes limpas
@@ -209,13 +221,35 @@ function Invoke-TechAgent {
     $tf1w = $data.tf1w
     $swings4h = $data.swings4h
 
-    # Formata swing points para o contexto
+    # Formata swing points para o contexto (dado cru, mantido pro LLM avaliar
+    # rejeicao ao toque -- isso a geometria pre-calculada abaixo nao cobre)
     $swingHighsStr = if ($swings4h -and $swings4h.highs) {
         ($swings4h.highs | ForEach-Object { "$($_.price) ($($_.barsAgo) candles atras)" }) -join " | "
     } else { "N/A" }
     $swingLowsStr = if ($swings4h -and $swings4h.lows) {
         ($swings4h.lows | ForEach-Object { "$($_.price) ($($_.barsAgo) candles atras)" }) -join " | "
     } else { "N/A" }
+
+    # 2026-07-17: geometria PRE-CALCULADA (angulo normalizado real) -- ver
+    # lib_trendline_geometry.ps1 pro achado que motivou isso (angulo sem
+    # normalizar da ~90 graus pra qualquer par, matematicamente sem sentido).
+    # Resistencia = highs conectados, Suporte = lows conectados.
+    $resistanceGeomStr = "N/A"
+    $supportGeomStr = "N/A"
+    if (Get-Command Get-TrendlineGeometry -ErrorAction SilentlyContinue) {
+        try {
+            if ($swings4h -and $swings4h.highs) {
+                $resistCandidates = @(Get-TrendlineGeometry -Points $swings4h.highs -MinGapCandles 6)
+                $resistanceGeomStr = Format-TrendlineGeometrySummary -Candidates $resistCandidates -TopN 3
+            }
+        } catch { $resistanceGeomStr = "N/A (erro no calculo: $($_.Exception.Message))" }
+        try {
+            if ($swings4h -and $swings4h.lows) {
+                $supportCandidates = @(Get-TrendlineGeometry -Points $swings4h.lows -MinGapCandles 6)
+                $supportGeomStr = Format-TrendlineGeometrySummary -Candidates $supportCandidates -TopN 3
+            }
+        } catch { $supportGeomStr = "N/A (erro no calculo: $($_.Exception.Message))" }
+    }
 
     $context = @"
 PAR: $Market
@@ -275,7 +309,13 @@ Score tecnico hardcoded: $($data.totalScore) -> $($data.consensus)
 === SWING POINTS 4H (para analise de trendlines — camada Tori) ===
 Swing Highs recentes: $swingHighsStr
 Swing Lows recentes:  $swingLowsStr
-(Use esses pontos para identificar trendlines validas. Conecte highs para resistencia/downtrend, lows para suporte/uptrend.)
+(Pontos crus, use pra avaliar rejeicao ao toque -- a geometria de angulo ja vem calculada abaixo.)
+
+=== GEOMETRIA PRE-CALCULADA (angulo normalizado real -- ver system prompt) ===
+Candidatas RESISTENCIA (conecta highs, uso em downtrend/BREAK/SHORT):
+$resistanceGeomStr
+Candidatas SUPORTE (conecta lows, uso em uptrend/BOUNCE/LONG):
+$supportGeomStr
 "@
 
     $question = @"
