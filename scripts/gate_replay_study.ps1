@@ -135,6 +135,7 @@ foreach ($row in $existing) {
                 regime         = $row.regime
                 would_pass     = $row.would_pass
                 blocked_by     = $row.blocked_by
+                tori_score     = $row.tori_score
                 gates_snapshot = $row.gates_snapshot
                 returns        = $returns
                 updated_at     = $nowUtc.ToString("o")
@@ -241,7 +242,59 @@ if ($btcTicker -and -not ($topMovers | Where-Object { $_.market -eq "BTCUSDT" })
     }
 }
 
-if ($topMovers.Count -eq 0) {
+# 2026-07-17: 3a fonte -- candidatos TORI_SHORT REAIS do tier_a_live, com
+# confluence de verdade (Test-ToriConfluence, MESMA funcao que scripts/
+# gem_loop.ps1 usa no sweep ao vivo). Antes o estudo so simulava um perfil
+# SINTETICO fixo (score=65 mode=DISCOVERY sempre, no loop de $topMovers
+# abaixo) -- nunca media se os candidatos 80-89 que ficam presos em
+# pump_short_blocked
+# (pump_class=natural_uptrend, [PUMP GATE OVERRIDE] so libera >=90) teriam
+# dado edge. gates_snapshot de Invoke-GemExecute nao carrega score/confluence
+# (so blocked/blocked_by/market) -- por isso tori_score agora e campo
+# PROPRIO na linha salva, nao depende de vasculhar o snapshot depois.
+$toriShortCandidates = @()
+try {
+    if (-not (Get-Command Test-ToriConfluence -ErrorAction SilentlyContinue)) {
+        foreach ($tl in @("lib_tori_confluence_detector.ps1","lib_tori_gate_wrapper.ps1")) {
+            $tlp = Join-Path $root "agents" $tl
+            if (Test-Path $tlp) { . $tlp }
+        }
+    }
+    if (Get-Command Test-ToriConfluence -ErrorAction SilentlyContinue) {
+        $suPath3 = Join-Path $root "config\short_universe.json"
+        if (Test-Path $suPath3) {
+            $su3 = Get-Content $suPath3 -Raw | ConvertFrom-Json
+            if ($su3.live_enabled -and $su3.tier_a_live) {
+                foreach ($m in @($su3.tier_a_live)) {
+                    if ($recentMarkets.Contains($m)) { continue }
+                    $tc = $null
+                    try { $tc = Test-ToriConfluence -Market $m -SetupType "SHORT" -TimeframeMinutes 60 -TimeoutSeconds 6 } catch {}
+                    if ($tc -and $null -ne $tc.confluence_score -and [int]$tc.confluence_score -ge 60) {
+                        $tk = $tickers | Where-Object { $_.market -eq $m } | Select-Object -First 1
+                        if (-not $tk) { continue }
+                        $toriShortCandidates += [PSCustomObject]@{
+                            market = $m; price = $tk.price; change24h = $tk.change24h
+                            tori_score = [int]$tc.confluence_score
+                            tori_signals = (@($tc.signals_fired) -join '+')
+                        }
+                    }
+                }
+                # cap 5/ciclo -- mesma logica de custo do sweep live (evita
+                # estourar rate-limit varrendo tier_a_live inteiro toda vez)
+                if ($toriShortCandidates.Count -gt 5) {
+                    $toriShortCandidates = @($toriShortCandidates | Sort-Object { [int]$_.tori_score } -Descending | Select-Object -First 5)
+                }
+                if ($toriShortCandidates.Count -gt 0) {
+                    Write-Host "  + $($toriShortCandidates.Count) candidato(s) TORI_SHORT real(is) (confluence>=60): $(($toriShortCandidates | ForEach-Object { "$($_.market)=$($_.tori_score)" }) -join ', ')" -ForegroundColor Cyan
+                }
+            }
+        }
+    }
+} catch {
+    Write-Host "  AVISO: tori short sweep no gate_replay_study falhou (non-critical): $($_.Exception.Message)" -ForegroundColor Yellow
+}
+
+if ($topMovers.Count -eq 0 -and $toriShortCandidates.Count -eq 0) {
     Write-Host "  Nenhum candidato novo neste ciclo." -ForegroundColor Yellow
 } else {
     $btcScenario = Get-MarketScenario
@@ -281,6 +334,7 @@ if ($topMovers.Count -eq 0) {
                 regime         = "$($btcScenario.scenario)"
                 would_pass     = $wouldPass
                 blocked_by     = $blockedBy
+                tori_score     = $null
                 gates_snapshot = ($result | Select-Object -ExcludeProperty market)
                 returns        = [PSCustomObject]@{}
             }
@@ -288,6 +342,51 @@ if ($topMovers.Count -eq 0) {
             $verdict = if ($wouldPass) { "PASSARIA" } else { "BLOQUEADO: $blockedBy" }
             Write-Host "    -> $verdict" -ForegroundColor $(if ($wouldPass) { "Green" } else { "DarkYellow" })
         }
+    }
+
+    foreach ($tsc in $toriShortCandidates) {
+        # SHORT com o score/mode reais do sweep -- reproduz fielmente o que
+        # gem_loop.ps1 monta em producao (mesmo shape: score, mode=TORI_SHORT,
+        # direction=SHORT, sizing.sizing_pct=0.02), pra Invoke-GemExecute
+        # tomar a MESMA decisao que tomaria ao vivo (inclui o [PUMP GATE
+        # OVERRIDE] real, que so libera confluence>=90).
+        $gem = [PSCustomObject]@{
+            market = $tsc.market; direction = "SHORT"
+            score = $tsc.tori_score; mode = "TORI_SHORT"
+            conviction = $tsc.tori_score
+            signal = ("tori:" + $tsc.tori_signals)
+            sizing = [PSCustomObject]@{ sizing_pct = 0.02 }
+            change_24h = $tsc.change24h
+        }
+
+        Write-Host "  Simulando $($tsc.market) SHORT (TORI_SHORT confluence=$($tsc.tori_score))..." -ForegroundColor Gray
+        $result = $null
+        try {
+            $result = Invoke-GemExecute -Gem $gem -DryRun
+        } catch {
+            Write-Host "    ERRO na simulacao: $($_.Exception.Message)" -ForegroundColor Yellow
+            continue
+        }
+
+        $wouldPass = -not [bool]$result.blocked
+        $blockedBy = if ($result.blocked_by) { ($result.blocked_by -join ", ") } else { $null }
+
+        $newRows += [PSCustomObject]@{
+            market         = $tsc.market
+            direction      = "SHORT"
+            ts             = $nowUtc.ToString("o")
+            entry_price    = $tsc.price
+            change_24h_pct = [Math]::Round($tsc.change24h, 3)
+            regime         = "$($btcScenario.scenario)"
+            would_pass     = $wouldPass
+            blocked_by     = $blockedBy
+            tori_score     = $tsc.tori_score
+            gates_snapshot = ($result | Select-Object -ExcludeProperty market)
+            returns        = [PSCustomObject]@{}
+        }
+
+        $verdict = if ($wouldPass) { "PASSARIA" } else { "BLOQUEADO: $blockedBy" }
+        Write-Host "    -> $verdict" -ForegroundColor $(if ($wouldPass) { "Green" } else { "DarkYellow" })
     }
 
     if ($newRows.Count -gt 0) {
