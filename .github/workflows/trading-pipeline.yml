@@ -1650,6 +1650,39 @@ jobs:
           & ./scripts/diag_counterfactual_readonly_2026_07_16.ps1
 
   # ============================================================================
+  # JOB (one-shot): DIAG MCE COUNTERFACTUAL (2026-07-17)
+  # So roda via workflow_dispatch manual. Responde: mce_counterfactual_from_
+  # supabase.ps1 le trade_rejections sem order=/limit -- com a tabela crescendo
+  # ~1000-1600 linhas/dia (41 rejeicoes/ciclo) e o default de 1000 linhas do
+  # PostgREST, suspeita e que o script nunca ve as entradas MAIS ANTIGAS
+  # (as unicas que ja teriam 24h pra medir forward-return), explicando
+  # "0/1000 maturadas" visto hoje. NAO envia nenhuma ordem, so leitura.
+  # Remover job apos uso.
+  # ============================================================================
+  diag-mce-counterfactual-readonly:
+    name: Diag MCE Counterfactual Read-Only (one-shot)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run diagnostic
+        shell: pwsh
+        run: |
+          & ./scripts/diag_mce_counterfactual_readonly_2026_07_17.ps1
+
+  # ============================================================================
   # JOB (one-shot): APPLY CLOSE_REASON SCHEMA FIX (2026-07-14)
   # So roda via workflow_dispatch manual -- nunca no schedule automatico.
   # Aplica docs/SETUP_SUPABASE_FIX_CLOSE_REASON_2026_07_14.sql via RPC exec_sql.
