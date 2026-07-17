@@ -889,12 +889,23 @@ function Invoke-GemScan {
     Write-Host "        $($pre_filtered.Count) pares com range suficiente" -ForegroundColor Gray
 
     # ── Fase 3: Candles diarios + spike ratio (G1 real) ──────────────────────
+    # 2026-07-17: descarte era 100% silencioso -- "continue" nos 3 pontos
+    # (kline falhou, vol-spike insuficiente, excecao) sem nenhum log, ao
+    # contrario do G4 (narrativa) que loga cada par bloqueado. Investigacao
+    # real (USELESSUSDT nao aparecia em ~10h de log apesar de range=15.15%
+    # dentro do pre-filtro) so foi possivel puxando API publica na mao e
+    # calculando vol_spike a mao (achado: 0.67x, bem abaixo do minimo 2.0x --
+    # gate correto, so nao auditavel pelos logs). Contadores agregados abaixo
+    # (sem 1 linha por par, informativo o bastante pra auditar o funil).
     Write-Host "  [3/5] Calculando vol spike (4 candles diarios por par)..." -ForegroundColor Gray
     $spike_candidates = @()
+    $__klineFailCount = 0
+    $__volSpikeRejectCount = 0
+    $__exceptionCount = 0
     foreach ($t in $pre_filtered) {
         try {
             $kr = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/spot/kline?market=$($t.market)&period=1day&limit=4" -Method GET
-            if ($kr.code -ne 0) { continue }
+            if ($kr.code -ne 0) { $__klineFailCount++; continue }
             $daily = $kr.data | ForEach-Object {
                 [PSCustomObject]@{ open=[double]$_.open; high=[double]$_.high; low=[double]$_.low; close=[double]$_.close; volume=[double]$_.volume; ts=$_.created_at }
             }
@@ -912,7 +923,7 @@ function Invoke-GemScan {
                 }
             }
 
-            if (-not $vol_data.passed -and -not $vol_climax_pass) { continue }
+            if (-not $vol_data.passed -and -not $vol_climax_pass) { $__volSpikeRejectCount++; continue }
 
             $pct_range = if ($daily[-1].open -gt 0) { ([double]$daily[-1].high - [double]$daily[-1].low) / [double]$daily[-1].open } else { 0 }
             $spike_candidates += [PSCustomObject]@{
@@ -922,9 +933,10 @@ function Invoke-GemScan {
                 pct_range = $pct_range
                 vol_climax_flag = $vol_climax_pass
             }
-        } catch { }
+        } catch { $__exceptionCount++ }
     }
     Write-Host "        $($spike_candidates.Count) pares com vol spike >= $($global:GEM_VOL_SPIKE_MIN)x" -ForegroundColor Gray
+    Write-Host "        descartados: $__volSpikeRejectCount vol-spike insuficiente, $__klineFailCount kline indisponivel, $__exceptionCount excecao" -ForegroundColor DarkGray
     if ($spike_candidates.Count -eq 0) {
         Write-Host "`n  Nenhum candidato encontrado hoje." -ForegroundColor Yellow
         return @()
