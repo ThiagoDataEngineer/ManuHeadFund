@@ -239,3 +239,97 @@ Describe "Invoke-GemExecute -- Tori gate integration" {
         ($header -match "tori_signal") | Should Be $true
     }
 }
+
+# ── 2026-07-17: FIX leverage real (achado SUIUSDT 50x) ────────────────────────
+# gem_executor.ps1 nunca chamava CoinEx-AdjustPositionLeverage antes de abrir
+# FUTURES -- posicao herdava a leverage ja configurada NA CONTA pro par (foi
+# assim que SUIUSDT abriu a 50x). Fix: forca leverage segura (Get-SafeLeverage,
+# hard cap 5x) via CoinEx-AdjustPositionLeverage ANTES do Invoke-OrderRouted.
+# Mesmo padrao de spy usado em Calculate-StopTarget (linha ~116): sobrescreve
+# a funcao REAL apos o dot-source, unico jeito de interceptar em Pester 3
+# dentro deste arquivo (mocks locais nao bastam pra funcoes ja resolvidas).
+Describe "Invoke-GemExecute -- Leverage real antes de FUTURES (achado SUIUSDT 50x)" {
+
+    $global:__adjustLev_calls = @()
+
+    function CoinEx-AdjustPositionLeverage {
+        param([string]$Market, [int]$Leverage, [string]$MarginMode = "isolated")
+        $global:__adjustLev_calls += [PSCustomObject]@{ market=$Market; leverage=$Leverage; margin_mode=$MarginMode }
+        return [PSCustomObject]@{ success = $true; leverage = $Leverage; margin_mode = $MarginMode; market = $Market }
+    }
+
+    # Gates de pump/breadth chamam APIs reais de mercado (indisponiveis em
+    # teste) -- sem spy, todo gem bloqueia em pump_long_blocked/breadth_long_
+    # blocked ANTES de chegar no codigo de leverage (mesmo problema que ja
+    # derruba os testes 1/2/6/8 pre-existentes deste arquivo). Libera tudo
+    # aqui pra exercitar de fato o trecho de leverage.
+    function Test-PumpDumpGate {
+        param([string]$Market, [hashtable]$Metadata = @{}, [double]$DistFromPeakThreshold = -5.0)
+        return [PSCustomObject]@{ allow_long = $true; allow_short = $true; pump_class = "natural_uptrend"; reason = "test_stub" }
+    }
+    function Test-ParallelBreadthGate {
+        param([string]$BtcScenario = "UNKNOWN", [bool]$BtcAllowLong = $true, [bool]$BtcAllowShort = $true)
+        return [PSCustomObject]@{ allow_long = $true; allow_short = $true; breadth_trend = "neutral"; breadth_pct = 50 }
+    }
+    # Gate real adicional (distinto do Get-ToriTrendlineSignal ja mockado no
+    # topo do arquivo) -- busca candles reais via CoinEx, indisponivel em
+    # teste (fail_closed:insufficient_candle_data). Libera aqui tambem.
+    function Test-ToriConfluence {
+        param([string]$Market, [string]$SetupType = "LONG", [int]$TimeframeMinutes = 60, [double]$Price = 0, [int]$TimeoutSeconds = 8)
+        return [PSCustomObject]@{ allows = $true; confluence_score = 85; signals_fired = @("test_stub"); reason = "pass" }
+    }
+    # GEM prefere SPOT por padrao mesmo com futures disponivel (Get-RouteForMode,
+    # decisao de produto intencional). Forca FUTURES aqui pra exercitar o branch
+    # que precisa da leverage fixada -- e exatamente o branch que abriu SUIUSDT.
+    function Get-GemRouteForMarket {
+        param([string]$Market, [switch]$PreferFutures)
+        return [PSCustomObject]@{ market=$Market; route="futures"; market_type="FUTURES"; wallet="futures"; spot_available=$true; futures_available=$true; reason="test_stub_force_futures" }
+    }
+    function Invoke-OrderRouted {
+        param([string]$Route, [string]$Market, [string]$Side, [string]$Type, [double]$Amount, [double]$StopLoss = 0, [double]$QuoteAmountUsd = 0)
+        $global:__placeorder_called = $true
+        $global:__placeorder_market = $Market
+        return [PSCustomObject]@{ order_id="TORI_TEST_FUT"; filled_amount="100"; avg_deal_price="1.00" }
+    }
+    # Gate de seguranca real (CoinEx-GetMarketInfo -> isSafe) -- sem mock, o
+    # Invoke-RestMethod generico do arquivo (retorna so ticker) nao bate o
+    # shape esperado, isSafe cai indefinido -> tratado como unsafe -> bloqueia
+    # antes do trecho de leverage.
+    function CoinEx-GetMarketInfo {
+        param([string]$Market)
+        return [PSCustomObject]@{ isSafe = $true; status = "active"; notices = @() }
+    }
+
+    It "9. chama CoinEx-AdjustPositionLeverage ANTES de PlaceOrder em FUTURES, capado a 5x" {
+        Reset-ToriState
+        $global:__adjustLev_calls = @()
+        $gem = New-MockGem "LEVTESTUSDT"
+        $r = Invoke-GemExecute -Gem $gem
+        ($global:__adjustLev_calls.Count -ge 1) | Should Be $true
+        ($global:__adjustLev_calls[0].market) | Should Be "LEVTESTUSDT"
+        ($global:__adjustLev_calls[0].leverage -le 5) | Should Be $true
+        ($global:__adjustLev_calls[0].margin_mode) | Should Be "isolated"
+        ($global:__placeorder_called) | Should Be $true
+    }
+
+    It "10. se ajuste de leverage falhar, BLOQUEIA a ordem (fail-closed, nao abre com leverage desconhecida)" {
+        Reset-ToriState
+        $global:__adjustLev_calls = @()
+        function CoinEx-AdjustPositionLeverage {
+            param([string]$Market, [int]$Leverage, [string]$MarginMode = "isolated")
+            return [PSCustomObject]@{ success = $false; error_msg = "simulated_api_failure" }
+        }
+        $gem = New-MockGem "LEVFAILUSDT"
+        $r = Invoke-GemExecute -Gem $gem
+        ($global:__placeorder_called) | Should Be $false
+        ($r.blocked -eq $true) | Should Be $true
+        ($r.blocked_by -match "leverage_adjust_failed") | Should Be $true
+
+        # restaura o spy padrao (sucesso) pro resto da suite
+        function CoinEx-AdjustPositionLeverage {
+            param([string]$Market, [int]$Leverage, [string]$MarginMode = "isolated")
+            $global:__adjustLev_calls += [PSCustomObject]@{ market=$Market; leverage=$Leverage; margin_mode=$MarginMode }
+            return [PSCustomObject]@{ success = $true; leverage = $Leverage; margin_mode = $MarginMode; market = $Market }
+        }
+    }
+}

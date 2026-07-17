@@ -1796,6 +1796,31 @@ function Invoke-GemExecute {
     $orderTypeLabel = if ($hasFutures) { "FUTURES" } else { "SPOT (fallback)" }
     Write-Host "  Enviando ordem $orderTypeLabel [$direction]..." -ForegroundColor Cyan
     if ($hasFutures) {
+        # 2026-07-17 FIX (achado real: SUIUSDT abriu a 50x, fechou madrugada
+        # de 17/07): POST /futures/order (place order) NAO carrega leverage no
+        # payload -- a corretora usa o que ja estiver configurado NA CONTA pro
+        # par, herdado de qualquer config manual anterior (nunca decidido pelo
+        # sistema). O UNICO jeito de fixar leverage e' POST /futures/adjust-
+        # position-leverage ANTES da ordem (knowledge/COINEX_REFERENCE.md
+        # secao 4.4, [confirmado]). CoinEx-AdjustPositionLeverage ja existia
+        # (lib_coinex_position_management.ps1) e Get-SafeLeverage ja existia
+        # com hard cap 5x (lib_leverage_cap.ps1, criada 2026-06-18 pro MESMO
+        # bug -- "Found 50x BNB, 20x XMR") -- nenhuma das duas era chamada
+        # aqui, unico lugar onde FUTURES real abre. Fail-closed: se o ajuste
+        # falhar, bloqueia a ordem em vez de abrir com leverage desconhecida.
+        $__convictionForLev = if ($Gem.PSObject.Properties['conviction'] -and $null -ne $Gem.conviction) { [int]$Gem.conviction } else { 0 }
+        $__leverageMode = if ($Gem.mode -match "TORI_SHORT|PUMP") { "PUMP_RIDE" } elseif ($Gem.mode -eq "MOMENTUM") { "SCALP" } else { "STANDARD" }
+        $__safeLeverage = if (Get-Command Get-SafeLeverage -ErrorAction SilentlyContinue) {
+            [int](Get-SafeLeverage -ConvictionPercent $__convictionForLev -Mode $__leverageMode)
+        } else { 2 }
+        $__levResult = if (Get-Command CoinEx-AdjustPositionLeverage -ErrorAction SilentlyContinue) {
+            CoinEx-AdjustPositionLeverage -Market $mkt -Leverage $__safeLeverage -MarginMode "isolated"
+        } else { [PSCustomObject]@{ success = $false; error_msg = "CoinEx-AdjustPositionLeverage indisponivel" } }
+        if (-not $__levResult.success) {
+            Write-Host "  BLOQUEADO: falha ao fixar leverage segura em $mkt (${__safeLeverage}x) -- $($__levResult.error_msg)" -ForegroundColor Red
+            return [PSCustomObject]@{ blocked = $true; blocked_by = @("leverage_adjust_failed:$($__levResult.error_msg)"); market = $mkt }
+        }
+        Write-Host "  [LEVERAGE] $mkt fixado em ${__safeLeverage}x isolated (mode=$__leverageMode conviction=$__convictionForLev)" -ForegroundColor DarkCyan
         $order = Invoke-OrderRouted -Route "futures" -Market $mkt -Side $side -Type "market" `
                                      -Amount $qty -StopLoss $stop_price
     } else {
