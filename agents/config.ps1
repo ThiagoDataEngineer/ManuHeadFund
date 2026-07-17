@@ -213,19 +213,32 @@ $global:GEM_MCAP_DISCOVERY   = 2000000.0   # mcap <= $2M: modo DISCOVERY
 $global:GEM_MCAP_MOMENTUM    = 20000000.0  # mcap <= $20M: modo MOMENTUM (acima: ignorar)
 $global:GEM_LISTING_DAYS_MAX = 10          # Gate 5: max dias desde listagem (novidade)
 
-# Sizing por modo (% do capital total)
-# 2026-07-08: aumentado para 3% MOMENTUM (agressivo scalping)
-#   Math: $165/trade MOMENTUM @ $5.5k capital = EV ~$400/mes (10 trades), foco escalping
-#   Drawdown max 10 stops seguidos = 30% capital (aggressive, precisa win rate alto)
-#   DISCOVERY mantém 3% também (altissimo risco)
-$global:GEM_CAPITAL_DISCOVERY = 0.03   # 3% para DISCOVERY (agressivo)
-$global:GEM_CAPITAL_MOMENTUM  = 0.03   # 3% para MOMENTUM (agressivo escalp)
+# ── Stop/Target/Sizing por modo -- DERIVADOS de formula, nao chumbados ────────
+# 2026-07-17 FIX (achado #1+#2 do audit de R:R e sizing): antes GEM_TARGET_* e
+# GEM_CAPITAL_* eram constantes independentes do stop -- cada ajuste manual em
+# um lado (ex: mudar GEM_STOP_DISCOVERY) desalinhava R:R e risco por trade sem
+# nenhum aviso (mesma classe do bug de nesting achado em Resolve-StopTargetPct:
+# gem_executor.ps1 lia $Gem.stop_pct em vez de $Gem.sizing.stop_pct, entao todo
+# trade real usava silenciosamente stop=2%/target=10%, nunca os valores daqui).
+# Unicas 2 constantes "chumbadas" de verdade agora sao a politica de risco
+# (Regra de Ouro #2/#3): RISK_MAX_PCT_PER_TRADE (1%) e GEM_MIN_RR (1:5). Stop
+# por modo continua calibrado por ativo (micro-cap = stop largo, natureza do
+# instrumento -- ver knowledge/RISK_MANAGEMENT.md secao 6, "stop baseado na
+# estrutura, nao em quanto quer perder"). Target e Sizing SEMPRE derivam do
+# stop, entao qualquer mudanca de stop realinha os dois automaticamente:
+#   target_pct = stop_pct * GEM_MIN_RR          (R:R sempre >= minimo)
+#   sizing_pct = RISK_MAX_PCT_PER_TRADE / stop_pct  (risco sempre = teto, nao mais)
+$global:RISK_MAX_PCT_PER_TRADE = 0.01   # Regra de Ouro #2: risco max 1% do capital por trade
+$global:GEM_MIN_RR             = 5.0    # Regra de Ouro #3: R:R minimo 1:5
 
-# Stop e target por modo (fracao do preco de entrada)
-$global:GEM_STOP_DISCOVERY   = 0.50   # -50% DISCOVERY
+$global:GEM_STOP_DISCOVERY   = 0.50   # -50% DISCOVERY (micro-cap: stop largo por natureza)
 $global:GEM_STOP_MOMENTUM    = 0.30   # -30% MOMENTUM
-$global:GEM_TARGET_DISCOVERY = 2.00   # +200% DISCOVERY (R:R implicito 1:4)
-$global:GEM_TARGET_MOMENTUM  = 0.90   # +90%  MOMENTUM
+
+$global:GEM_TARGET_DISCOVERY = $global:GEM_STOP_DISCOVERY * $global:GEM_MIN_RR   # 250% (R:R 1:5)
+$global:GEM_TARGET_MOMENTUM  = $global:GEM_STOP_MOMENTUM  * $global:GEM_MIN_RR   # 150% (R:R 1:5)
+
+$global:GEM_CAPITAL_DISCOVERY = $global:RISK_MAX_PCT_PER_TRADE / $global:GEM_STOP_DISCOVERY  # 2%
+$global:GEM_CAPITAL_MOMENTUM  = $global:RISK_MAX_PCT_PER_TRADE / $global:GEM_STOP_MOMENTUM   # 3.33%
 
 # Duracao maxima de posicao (dias corridos)
 $global:GEM_MAX_DAYS_DISC    = 30

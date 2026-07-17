@@ -1465,11 +1465,23 @@ function Invoke-GemExecute {
 
     # 2026-06-17 fix: gems TRIGGER tem sizing sem stop_pct/target_pct -> StopPct=0 lancava.
     # Resolve-StopTargetPct devolve fracoes validas (default R:R 1:5) se ausentes/invalidas.
+    #
+    # 2026-07-17 FIX (achado #1 do audit de R:R): passava -Sizing $Gem (objeto TOPO),
+    # mas stop_pct/target_pct SEMPRE vivem em $Gem.sizing.stop_pct (Get-GemSizing em
+    # gem_agent.ps1 linha ~1055: Add-Member -NotePropertyName sizing -NotePropertyValue $sz).
+    # $Gem.stop_pct no nivel raiz nunca existiu -- nem em TRIGGER (scripts/gem_loop.ps1
+    # linha 315: sizing=@{sizing_pct=0.02}, tambem aninhado). Resultado real: TODO trade
+    # DISCOVERY/MOMENTUM caia no default (stop=2%, target=10%) e IGNORAVA silenciosamente
+    # os -50%/+200% e -30%/+90% configurados em config.ps1 GEM_STOP_*/GEM_TARGET_*.
+    # Reproduzido localmente: Resolve-StopTargetPct -Sizing $gem (com .sizing.stop_pct=0.50)
+    # devolvia stop_pct=0.02 antes deste fix. Fix: ler $Gem.sizing (fallback pro proprio
+    # $Gem se .sizing nao existir, cobre formatos antigos/desconhecidos).
+    $__sizingSrc = if ($Gem.PSObject.Properties['sizing'] -and $Gem.sizing) { $Gem.sizing } else { $Gem }
     $__stp = if (Get-Command Resolve-StopTargetPct -ErrorAction SilentlyContinue) {
-        Resolve-StopTargetPct -Sizing $Gem
+        Resolve-StopTargetPct -Sizing $__sizingSrc
     } else {
-        @{ stop_pct = (&{ if ([double]$Gem.stop_pct -gt 0 -and [double]$Gem.stop_pct -lt 1) { [double]$Gem.stop_pct } else { 0.02 } });
-           target_pct = (&{ if ([double]$Gem.target_pct -gt 0) { [double]$Gem.target_pct } else { 0.10 } }) }
+        @{ stop_pct = (&{ if ([double]$__sizingSrc.stop_pct -gt 0 -and [double]$__sizingSrc.stop_pct -lt 1) { [double]$__sizingSrc.stop_pct } else { 0.02 } });
+           target_pct = (&{ if ([double]$__sizingSrc.target_pct -gt 0) { [double]$__sizingSrc.target_pct } else { 0.10 } }) }
     }
     try {
         $st = Calculate-StopTarget `

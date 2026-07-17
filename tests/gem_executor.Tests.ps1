@@ -246,18 +246,37 @@ Describe "GemAgent capital source" {
     # 2026-07-16 FIX: testes assumiam GEM_CAPITAL_DISCOVERY=0.002 (0.2%) e
     # GEM_CAPITAL_MOMENTUM=0.004 (0.4%), globals locais do teste (linhas
     # 13-14). Mas agents/config.ps1 (dot-sourced via gem_executor.ps1 ->
-    # lib_coinex.ps1) redefine ambos pra 0.03 (3%, "agressivo") -- ultimo
-    # dot-source vence, sobrescreve o override do teste. 1000*0.03=30, nao
-    # 2/4. Sizing real de producao evoluiu pra 3% fixo em ambos os modos;
-    # ajustado pra refletir o valor real.
-    It "sizing DISCOVERY com capital futures 1000 = 30.0 USD (3pct real de producao)" {
+    # lib_coinex.ps1) redefine ambos -- ultimo dot-source vence, sobrescreve
+    # o override do teste.
+    #
+    # 2026-07-17 FIX (achado #1+#2 do audit de R:R/sizing): GEM_CAPITAL_* nao
+    # e mais 3% chumbado -- agora deriva de RISK_MAX_PCT_PER_TRADE / stop_pct
+    # (formula, config.ps1), pra risco real por trade ser SEMPRE 1% do capital
+    # (Regra de Ouro #2), nao importa o stop do modo. DISCOVERY (stop 50%):
+    # 0.01/0.50=0.02 (2%, 1000*0.02=20). MOMENTUM (stop 30%): 0.01/0.30=0.0333
+    # (3.33%, 1000*0.0333=33.33... arredondado a 2 casas em Get-GemSizing).
+    It "sizing DISCOVERY com capital futures 1000 = 20.0 USD (1pct risco / 50pct stop)" {
         $sz = Get-GemSizing -Mode "DISCOVERY" -Capital 1000.0 -BtcDominance 0
-        $sz.sizing_usd | Should Be 30.0
+        $sz.sizing_usd | Should Be 20.0
     }
 
-    It "sizing MOMENTUM com capital futures 1000 = 30.0 USD (3pct real de producao)" {
+    It "sizing MOMENTUM com capital futures 1000 = 33.33 USD (1pct risco / 30pct stop)" {
         $sz = Get-GemSizing -Mode "MOMENTUM" -Capital 1000.0 -BtcDominance 0
-        $sz.sizing_usd | Should Be 30.0
+        $sz.sizing_usd | Should Be 33.33
+    }
+
+    It "risco real (sizing_pct x stop_pct) e sempre 1pct em ambos os modos" {
+        $szDisc = Get-GemSizing -Mode "DISCOVERY" -Capital 1000.0 -BtcDominance 0
+        $szMom  = Get-GemSizing -Mode "MOMENTUM"  -Capital 1000.0 -BtcDominance 0
+        ([math]::Round($szDisc.sizing_pct * $szDisc.stop_pct, 4)) | Should Be 0.01
+        ([math]::Round($szMom.sizing_pct  * $szMom.stop_pct, 4))  | Should Be 0.01
+    }
+
+    It "R:R (target_pct / stop_pct) e sempre >= 5 em ambos os modos" {
+        $szDisc = Get-GemSizing -Mode "DISCOVERY" -Capital 1000.0 -BtcDominance 0
+        $szMom  = Get-GemSizing -Mode "MOMENTUM"  -Capital 1000.0 -BtcDominance 0
+        ($szDisc.target_pct / $szDisc.stop_pct) | Should Be 5
+        ($szMom.target_pct  / $szMom.stop_pct)  | Should Be 5
     }
 }
 

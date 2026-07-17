@@ -10,12 +10,18 @@ $global:GEM_VOL_SPIKE_MIN    = if ($GEM_VOL_SPIKE_MIN)    { $GEM_VOL_SPIKE_MIN  
 $global:GEM_MCAP_DISCOVERY   = if ($GEM_MCAP_DISCOVERY)   { $GEM_MCAP_DISCOVERY   } else { 2000000.0 }
 $global:GEM_MCAP_MOMENTUM    = if ($GEM_MCAP_MOMENTUM)    { $GEM_MCAP_MOMENTUM    } else { 20000000.0 }
 $global:GEM_LISTING_DAYS_MAX = if ($GEM_LISTING_DAYS_MAX) { $GEM_LISTING_DAYS_MAX } else { 10 }
-$global:GEM_CAPITAL_DISCOVERY= if ($GEM_CAPITAL_DISCOVERY){ $GEM_CAPITAL_DISCOVERY} else { 0.002 }
-$global:GEM_CAPITAL_MOMENTUM = if ($GEM_CAPITAL_MOMENTUM) { $GEM_CAPITAL_MOMENTUM } else { 0.004 }
+# 2026-07-17: fallback de stop/target/sizing tambem derivado por formula (nao
+# chumbado) -- mesma politica de config.ps1 (risco max 1%, R:R min 1:5), so
+# entra em jogo se config.ps1 nao tiver carregado antes (nao deveria acontecer
+# em producao, mas nao pode silenciosamente divergir da politica real se acontecer).
+$global:RISK_MAX_PCT_PER_TRADE = if ($RISK_MAX_PCT_PER_TRADE) { $RISK_MAX_PCT_PER_TRADE } else { 0.01 }
+$global:GEM_MIN_RR             = if ($GEM_MIN_RR)             { $GEM_MIN_RR             } else { 5.0 }
 $global:GEM_STOP_DISCOVERY   = if ($GEM_STOP_DISCOVERY)   { $GEM_STOP_DISCOVERY   } else { 0.50 }
 $global:GEM_STOP_MOMENTUM    = if ($GEM_STOP_MOMENTUM)    { $GEM_STOP_MOMENTUM    } else { 0.30 }
-$global:GEM_TARGET_DISCOVERY = if ($GEM_TARGET_DISCOVERY) { $GEM_TARGET_DISCOVERY } else { 2.00 }
-$global:GEM_TARGET_MOMENTUM  = if ($GEM_TARGET_MOMENTUM)  { $GEM_TARGET_MOMENTUM  } else { 0.90 }
+$global:GEM_TARGET_DISCOVERY = if ($GEM_TARGET_DISCOVERY) { $GEM_TARGET_DISCOVERY } else { $global:GEM_STOP_DISCOVERY * $global:GEM_MIN_RR }
+$global:GEM_TARGET_MOMENTUM  = if ($GEM_TARGET_MOMENTUM)  { $GEM_TARGET_MOMENTUM  } else { $global:GEM_STOP_MOMENTUM  * $global:GEM_MIN_RR }
+$global:GEM_CAPITAL_DISCOVERY= if ($GEM_CAPITAL_DISCOVERY){ $GEM_CAPITAL_DISCOVERY} else { $global:RISK_MAX_PCT_PER_TRADE / $global:GEM_STOP_DISCOVERY }
+$global:GEM_CAPITAL_MOMENTUM = if ($GEM_CAPITAL_MOMENTUM) { $GEM_CAPITAL_MOMENTUM } else { $global:RISK_MAX_PCT_PER_TRADE / $global:GEM_STOP_MOMENTUM }
 $global:GEM_MAX_DAYS_DISC    = if ($GEM_MAX_DAYS_DISC)    { $GEM_MAX_DAYS_DISC    } else { 30 }
 $global:GEM_MAX_DAYS_MOM     = if ($GEM_MAX_DAYS_MOM)     { $GEM_MAX_DAYS_MOM     } else { 21 }
 $global:GEM_TRAILING_PCT     = if ($GEM_TRAILING_PCT)     { $GEM_TRAILING_PCT     } else { 0.30 }
