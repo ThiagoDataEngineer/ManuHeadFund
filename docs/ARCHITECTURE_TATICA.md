@@ -9,36 +9,46 @@
 **O viés real deste fundo nunca foi "achar o que mais subiu" — é achar o
 estágio certo de um movimento que ainda tem corrida pela frente.**
 
-Prova rápida, com dado real do dia (CoinEx, 18/07): comparamos 4 mercados —
-AKEUSDT (+712% em 5 dias), LRCUSDT (+37% em 5 dias), ZECUSDT (+4.9%) e
-ADAUSDT (+4.5%). Pela magnitude bruta, AKE e LRC pareciam as oportunidades
-óbvias. Olhando o candle **diário** dos últimos 7-10 dias (não só as últimas
-horas), o quadro virou:
+Prova rápida, com dado real (CoinEx, 18/07): comparamos 4 mercados — AKEUSDT,
+LRCUSDT, ZECUSDT, ADAUSDT. Pela magnitude bruta do dia, AKE e LRC pareciam
+as oportunidades óbvias (topo do ranking de "% subiu hoje").
 
-| Mercado | Var. 5d | Volume 24h vs. média 5d | Leitura |
-|---|---|---|---|
-| AKEUSDT | +712% | 0.82x (caindo) | Cauda de movimento velho — exaustão |
-| LRCUSDT | +37% | pico foi ontem, hoje já esfriou ~97% | Também já acabou — comprar aqui é comprar o topo |
-| ZECUSDT | +4.9% | volume alto e **estável** ($2.5M/dia) | Trend real, dinheiro constante, não pico-e-morre |
-| ADAUSDT | +4.5% | subindo devagar | Acumulação lenta, sem euforia |
+**Correção metodológica registrada 2026-07-18 (mesmo dia, poucas horas
+depois):** a primeira leitura usou o candle do **dia em andamento** (parcial,
+poucas horas de dado) para julgar volume "esfriando" — conclusão errada por
+comparar um dia incompleto contra a média de dias completos. Refeito usando
+só **dias fechados** (trajetória diária 13→17/07), o quadro real é:
+
+| Mercado | Trajetória de volume diário (13→17/07) | Leitura correta |
+|---|---|---|
+| AKEUSDT | $4k → $4k → $134k → $87k → $110k | Alto mas **oscilante**, não exaustão clara nem aceleração limpa — ambíguo |
+| LRCUSDT | $21k → $12k → $14k → $290k → $747k | **Acelerando de verdade**, 3 dias seguidos subindo — oposto da leitura inicial |
+| ZECUSDT | volume alto e estável (~$2-2.6M/dia) | Trend real, dinheiro constante, não pico-e-morre |
+| ADAUSDT | subindo devagar | Acumulação lenta, sem euforia |
+
+A lição real não é "AKE/LRC eram ruins" (a leitura específica de ontem
+estava errada) — é que **julgar por um candle parcial engana tanto quanto
+julgar só pela magnitude**. O princípio central sobrevive à correção porque
+ele já dizia isso: é preciso olhar a *trajetória* completa de dias fechados,
+não um recorte curto (nem "últimas horas", nem "dia ainda em andamento").
 
 **A fórmula (não é matemática, é o filtro mental antes de qualquer gate técnico):**
-`ACELERAÇÃO de volume + ESTÁGIO do movimento`, nunca volume ou variação % isolados.
+`ACELERAÇÃO de volume (sobre dias FECHADOS) + ESTÁGIO do movimento`, nunca
+volume ou variação % isolados, e nunca com candle parcial no cálculo.
 "Subindo forte agora" e "começando a subir agora" são coisas opostas — a
-primeira é clímax (hora de sair ou ficar de fora), a segunda é entrada. O erro
-mais fácil de cometer é olhar só as últimas horas/velas de 4h e confundir uma
-com a outra — o candle diário de 7-10 dias é o que revela em que ponto do
-ciclo o movimento está.
+primeira é clímax (hora de sair ou ficar de fora), a segunda é entrada. Mas
+diferenciar as duas exige trajetória de vários dias **completos**, não um
+snapshot — inclusive o snapshot de "agora mesmo".
 
 **Por que isso já é o "coração" do sistema, não uma ideia nova:** é a mesma
 tese que motiva o threshold de confluência Tori (80, ver
 `agents/lib_evolution_engine.ps1`), a exigência de geometria normalizada de
 trendline (`agents/lib_trendline_geometry.ps1`, 2026-07-17) e o achado
 empírico já registrado abaixo em v3.1 — **"vol_exhaustion beats trendline
-projection"** e **"confluence não eleva edge sozinha"**. A maioria do que
-"parece" oportunidade num scanner bruto (como AKE e LRC no exemplo acima) já
-é cauda, não início — é por isso que o sistema bloqueia tanto, e por que
-threshold alto não é timidez, é o próprio produto.
+projection"** e **"confluence não eleva edge sozinha"**. O erro de metodologia
+documentado acima é, ele mesmo, uma instância do mesmo princípio: confiar em
+dado incompleto (candle parcial) é o mesmo tipo de armadilha que confiar em
+magnitude sem estágio.
 
 **Próximo passo desta tese** (não implementado ainda, ver conversa
 2026-07-18): trailing inteligente que reavalia a *estrutura* do movimento
