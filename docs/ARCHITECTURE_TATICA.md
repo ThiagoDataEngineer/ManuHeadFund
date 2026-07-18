@@ -56,6 +56,83 @@ magnitude sem estágio.
 correr enquanto o estágio ainda é "início/meio", apertar/sair quando os sinais
 apontam clímax. Vale para LONG, SHORT, scalp e spot como hedge de futures.
 
+### 📊 Pesquisa ampla de validação (2026-07-18) — o que tem edge real e o que não tem
+
+> Continuação direta da correção acima. Depois de corrigir o erro de candle
+> parcial, testamos a hipótese de "aceleração de volume" com rigor
+> estatístico em amostra grande (16.458+ pontos, 51-183 mercados conforme o
+> teste, múltiplos horizontes de tempo). Registro **cientificamente honesto**
+> — inclui o que não deu em nada, porque isso também tem valor (evita
+> redescobrir o mesmo beco sem saída numa sessão futura).
+
+**✅ Edge confirmado e forte — o único da rodada:** o regime do BTC domina o
+retorno esperado de qualquer altcoin, muito mais que qualquer sinal
+individual de volume/preço da própria moeda. Testado em 13.542 pontos
+classificados por regime (SMA20 + momentum 10d do BTC):
+
+| Regime | n | Retorno médio D+5 | IC 95% | %positivos |
+|---|---|---|---|---|
+| BEAR_WEAK | 2.379 | **-2.90%** | `[-3.49%, -2.31%]` (não cruza zero) | 21.4% |
+| BULL | 3.111 | +0.18% | `[-0.44%, +0.80%]` | 41.1% |
+
+Isso **não é uma tese nova** — é a prova numérica, com dado real e grande, de
+uma regra que o sistema já implementa (Golden Rule #7, BTC-core; gate de
+`bear_severity` em `Get-MarketScenario`). Contexto macro que reforça isso:
+**80.8% dos 182 mercados líquidos da CoinEx estão em queda nos últimos 3
+meses** (mediana -18.7%) — bear amplo, não isolado do BTC, coerente com
+`bear_severity` calibrado corretamente e com a priorização recente de
+destravar SHORT no sistema.
+
+**❌ Hipóteses testadas sem edge confirmado (becos sem saída documentados):**
+
+1. **"Aceleração de volume prevê continuação"** (a hipótese original de
+   ontem, inspirada pelos 2 casos AKE/LRC) — refutada em 16.458 pontos, 183
+   mercados. Bucket de aceleração forte (5x+) tem IC `[-2.08%, +6.86%]`
+   (n=30, não conclusivo); removendo os 2 outliers que geravam o resultado
+   aparente, o efeito vira negativo. Testado em 3 horizontes (D+1/D+3/D+5) —
+   nenhum supera o baseline neutro.
+2. **Scalp 15min-4h (momentum de curto prazo)** — 5.400 pontos, 60 mercados.
+   Nenhum bucket de "movimento forte de 4h" tem IC que não cruza zero.
+   Consistente com literatura (reversão à média domina em timeframes curtos;
+   momentum só aparece em janelas de semanas/meses). Sinal fraco-mas-
+   consistente de "dead cat bounce" após queda forte de 4h (%positivos sobe
+   de 52.6% pra 57.6% conforme a queda é mais extrema) — direção plausível,
+   mas nenhum threshold testado cruzou significância. **Hipótese aberta**,
+   não regra.
+3. **Lead-lag BTC → altcoin (1h)** — 1.746 pontos, 18 altcoins líquidas.
+   Correlação **simultânea** é forte (+0.71% médio, 85.2% de acerto quando
+   BTC sobe forte, mesma hora) mas o poder **preditivo** de uma hora pra
+   próxima é zero (IC `[-0.03%, +0.14%]`). O mercado precifica quase
+   instantaneamente — não há atraso explorável nessa granularidade.
+4. **Lead-lag dentro de cluster memecoin (DOGE→SHIB/PEPE/BONK)** — ~700h de
+   histórico real. Achado curioso: correlação intra-cluster (0.66-0.80)
+   supera a correlação de cada moeda com BTC individualmente — sugere
+   narrativa/setor coeso, diferente de L2/AI/DeFi (que correlacionam mais
+   com BTC que entre si). Mas sem lead-lag: DOGE subir não prevê
+   SHIB/PEPE/BONK na hora seguinte (todos os IC cruzam zero).
+5. **Divergência de preço multi-exchange** (`/v2/spot/index` da CoinEx vs.
+   preço local) — divergência máxima observada foi +1.63% em 172 mercados
+   líquidos. Exchanges líquidas ficam coladas por arbitragem; não sobra
+   margem útil de trading nesse sinal.
+6. **Order book imbalance** (desequilíbrio bid/ask) — teste preliminar com
+   1 único snapshot real (182 mercados, horizonte ~13.4h por limitação de
+   agendamento, não os ~1h planejados). Padrão **contrário** ao intuitivo:
+   imbalance fortemente positivo (mais compra no livro) teve retorno **pior**
+   (-2.49%, apenas 27.3% de acerto) que imbalance neutro ou negativo — mas
+   n=11-31 por bucket, um único momento no tempo, correlação linear direta
+   praticamente zero (+0.048, n=182). **Não é edge confirmado**, é hipótese
+   com um data point intrigante — precisaria de múltiplos snapshots em
+   momentos diferentes pra validar.
+
+**Conclusão honesta da rodada:** em praticamente toda frente de sinal
+técnico de curto prazo testada, o mercado cripto líquido se mostrou
+eficiente o suficiente pra não deixar edge simples sobrando — correlação
+simultânea forte, previsibilidade fraca ou nula. O que *tem* edge real e
+forte é estrutural (regime), não timing técnico de curto prazo. Isso não
+enfraquece a tese central — **reforça** por que o sistema aposta em
+confluência (Tori 80) e gates de regime em vez de sinais isolados de
+momentum/volume: sinal isolado, testado com rigor, não segura sozinho.
+
 ---
 
 **v3.3 — 2026-06-02 06:00 BRT** (FARO V3 LIVE + GitHub Actions 24/7 + Supabase state store + Trailing L1-5 + Mistral cascade; 11 FARO libs + 5 daemon layers + 4 GA jobs + 65 Mentor TDD + 22 smoke; $500 deployed)
