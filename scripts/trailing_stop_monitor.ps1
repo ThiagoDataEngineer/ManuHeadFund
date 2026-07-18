@@ -59,6 +59,11 @@ try {
     . (Join-Path $agentsDir "lib_feedback_loop.ps1")
     . (Join-Path $agentsDir "lib_trailing_stop_intelligent.ps1")
     . (Join-Path $agentsDir "lib_trailing_orphan_detection.ps1")
+    # 2026-07-18: motor unico de trailing (shadow mode -- so loga, nao executa
+    # ainda). Ver "2.6 TRAILING UNIFIED (shadow)" abaixo.
+    . (Join-Path $agentsDir "lib_trailing_exhaustion.ps1")
+    . (Join-Path $agentsDir "lib_multiframe_analysis.ps1")
+    . (Join-Path $agentsDir "lib_trailing_unified.ps1")
     # 2026-05-29: auto-reparo de protecao (SL+TP reais na corretora)
     . (Join-Path $agentsDir "lib_coinex_position_management.ps1")
     . (Join-Path $agentsDir "lib_order_validation.ps1")
@@ -181,6 +186,43 @@ try {
         }
     }
     
+    # 2.55c TRAILING UNIFIED -- SHADOW MODE (2026-07-18, motor unico de trailing)
+    # So LOGA a decisao de Resolve-TrailingDecision (lib_trailing_unified.ps1) ao
+    # lado da decisao real (Update-AllTrailingStops acima), pra comparar N ciclos
+    # antes de promover. NAO escreve na exchange, NAO altera stopCurrent -- 100%
+    # observacional. Gated por journal/TRAILING_UNIFIED_SHADOW.flag (mesmo padrao
+    # de TRAILING_POLICY_ENABLED.flag). Posicao sem origin gravado (registros
+    # antigos, pre-2026-07-18) usa fallback UNKNOWN -- Resolve-TrailingDecision
+    # lanca excecao nesse caso, capturada e logada como skip (nao quebra o ciclo).
+    $tuJournalDir = Join-Path (Split-Path $agentsDir -Parent) "journal"
+    $tuFlag = Join-Path $tuJournalDir "TRAILING_UNIFIED_SHADOW.flag"
+    if ((Test-Path $tuFlag) -and (Get-Command Resolve-TrailingDecision -ErrorAction SilentlyContinue)) {
+        Write-CrossPlatformLog "--- TRAILING UNIFIED (shadow, so log) ---" -LogFile "trailing_stop_monitor.log"
+        try {
+            $tuPositions = @(Get-TrailingPositions | Where-Object { $_.active })
+            foreach ($tuPos in $tuPositions) {
+                $tuMarket = [string]$tuPos.market
+                try {
+                    $tuTicker = CoinEx-GetTicker -Market $tuMarket -ErrorAction SilentlyContinue
+                    $tuPrice = if ($tuTicker) { [double]$tuTicker.last } else { 0 }
+                    if ($tuPrice -le 0) { continue }
+
+                    $tuIsFutures = ($tuPos.origin -and "$($tuPos.origin.asset_class)".ToUpper() -eq "FUTURES")
+                    $tuCandles = @(Get-CoinExCandles -Market $tuMarket -Period "4hour" -Limit 30 -IsFutures $tuIsFutures)
+
+                    $tuDecision = Resolve-TrailingDecision -Position $tuPos -CurrentPrice $tuPrice -Candles $tuCandles
+                    if ($tuDecision.action -eq "UPDATE") {
+                        Write-CrossPlatformLog "  SHADOW $tuMarket [$($tuPos.side)]: real_stop=$($tuPos.stopCurrent) unified_sugere=$($tuDecision.new_stop) (exhaustion=$($tuDecision.exhaustion_score) reason=$($tuDecision.reason))" -LogFile "trailing_stop_monitor.log"
+                    } else {
+                        Write-CrossPlatformLog "  SHADOW $tuMarket [$($tuPos.side)]: HOLD ($($tuDecision.reason))" -LogFile "trailing_stop_monitor.log"
+                    }
+                } catch {
+                    Write-CrossPlatformLog "  SHADOW ${tuMarket}: skip ($_)" -Level WARN -LogFile "trailing_stop_monitor.log"
+                }
+            }
+        } catch { Write-CrossPlatformLog "TRAILING UNIFIED shadow erro: $_" -Level WARN -LogFile "trailing_stop_monitor.log" }
+    }
+
     # 2.5 PEAK UPDATE FINO + EXECUTOR DE SL (2026-06-18 Fase 1 online)
     # Atualiza peak/phase com lock fino (+2.5% breakeven) e EMPURRA a SL pra corretora.
     # Sync-TrailingToExchange tem trava propria: nunca empurra SL que ja dispararia.
