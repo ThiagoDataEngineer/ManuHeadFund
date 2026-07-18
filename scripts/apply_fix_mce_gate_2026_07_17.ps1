@@ -57,11 +57,17 @@ if (-not ($ok1 -and $ok2 -and $ok3)) {
     Write-Host "`nWARNING: verification inconclusive (exec_sql RPC may not return rows for SELECT). Check Supabase Dashboard manually if in doubt." -ForegroundColor Yellow
 }
 
-# Teste real: repete as leituras que estavam falhando (42703 / PGRST204)
+# Teste real: repete as leituras que estavam falhando (42703 / PGRST204).
+# Accept-Profile e obrigatorio -- sem ele o PostgREST assume schema "public"
+# (onde essas tabelas NAO existem) e retorna PGRST205 mesmo com o ALTER TABLE
+# aplicado com sucesso em manuheadfund. Mesmo header usado por
+# agents/lib_state_store.ps1 (Get-StateRecords/Save-StateRecords) para todo
+# acesso real do sistema a essas tabelas.
 Write-Host "`nRe-testing the original failing reads:" -ForegroundColor Cyan
 $restHeaders = @{
-    "Authorization" = "Bearer $ServiceKey"
-    "apikey"        = $ServiceKey
+    "Authorization"  = "Bearer $ServiceKey"
+    "apikey"         = $ServiceKey
+    "Accept-Profile" = "manuheadfund"
 }
 try {
     $testUrl = "$SupabaseUrl/rest/v1/mce_counterfactual_agg?select=gate&limit=1"
