@@ -163,7 +163,13 @@ function Add-TrailingPosition {
         [int]   $MentorConfidence = 0,
         [string]$MentorMensagem = "",
         [string]$MesaSinal = "",
-        [string]$Tier = ""
+        [string]$Tier = "",
+        # 2026-07-18: origem explicita do trade p/ lib_trailing_unified.ps1
+        # (Resolve-TrailingDecision exige Position.origin -- nunca adivinha).
+        # Opt-in: callers legados (ex: lib_trailing_orphan_detection.ps1, que
+        # reconstroi a posicao a partir da exchange e nao sabe a origem real)
+        # continuam funcionando, caem no fallback UNKNOWN abaixo.
+        [hashtable]$Origin = $null
     )
 
     $positions = @(Get-TrailingPositions)
@@ -191,6 +197,16 @@ function Add-TrailingPosition {
         }
     }
 
+    # Fallback UNKNOWN quando o caller nao informa origem (nunca deixa o
+    # campo ausente -- Resolve-TrailingDecision de lib_trailing_unified.ps1
+    # falha explicito em origin ausente/vazio, entao "UNKNOWN" e um sinal
+    # claro de "precisa auditar este caller" em vez de erro silencioso).
+    $originResolved = if ($Origin -and $Origin.asset_class -and $Origin.trade_style) {
+        @{ asset_class = [string]$Origin.asset_class; trade_style = [string]$Origin.trade_style }
+    } else {
+        @{ asset_class = "UNKNOWN"; trade_style = "UNKNOWN" }
+    }
+
     $pos = [PSCustomObject]@{
         market         = $Market
         side           = $Side
@@ -202,6 +218,7 @@ function Add-TrailingPosition {
         mode           = $Mode
         max_days       = $MaxDays
         dd_threshold_pct = $DdThresholdPct
+        origin         = $originResolved
         phase          = 0          # 0=inicial 1=BE 2=lock1 3=trailing
         peak           = $Entry     # maior preco visto (LONG) ou menor (SHORT)
         stopCurrent    = $Stop

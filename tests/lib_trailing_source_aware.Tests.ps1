@@ -58,6 +58,38 @@ Describe "Add-TrailingPosition - source-aware fields" {
 }
 
 
+Describe "Add-TrailingPosition - Origin (2026-07-18, motor unico de trailing)" {
+    # lib_trailing_unified.ps1 (Resolve-TrailingDecision) exige
+    # Position.origin.{asset_class,trade_style} -- este e o ponto onde a
+    # origem do trade e conhecida (quem chama Add-TrailingPosition sabe se e
+    # SPOT/FUTURES, SCALP/SWING) e precisa ser gravada, nao redescoberta
+    # depois. Callers existentes (lib_trailing_orphan_detection.ps1) nao
+    # passam -Origin -- precisa fallback seguro, nao quebra retrocompat.
+    It "Origin explicito e gravado como esta" {
+        Remove-Item "$script:tmpDir\trailing_positions.json" -ErrorAction SilentlyContinue
+        Add-TrailingPosition -Market "ORIGUSDT" -Side "LONG" -Entry 100 -Stop 90 -Target 130 -Source "gem" `
+            -Origin @{ asset_class = "SPOT"; trade_style = "SWING" }
+        $p = (Get-TrailingPositions | Where-Object { $_.market -eq "ORIGUSDT" })
+        $p.origin.asset_class | Should Be "SPOT"
+        $p.origin.trade_style | Should Be "SWING"
+    }
+    It "Origin ausente (caller legado) grava fallback UNKNOWN, nao quebra" {
+        Remove-Item "$script:tmpDir\trailing_positions.json" -ErrorAction SilentlyContinue
+        Add-TrailingPosition -Market "LEGACYUSDT" -Side "LONG" -Entry 100 -Stop 90 -Target 130 -Source "gem"
+        $p = (Get-TrailingPositions | Where-Object { $_.market -eq "LEGACYUSDT" })
+        $p.origin.asset_class | Should Be "UNKNOWN"
+        $p.origin.trade_style | Should Be "UNKNOWN"
+    }
+    It "Origin FUTURES+SCALP gravado corretamente (caso short scalp)" {
+        Remove-Item "$script:tmpDir\trailing_positions.json" -ErrorAction SilentlyContinue
+        Add-TrailingPosition -Market "SCALPUSDT" -Side "SHORT" -Entry 100 -Stop 105 -Target 80 -Source "tier_a" `
+            -Origin @{ asset_class = "FUTURES"; trade_style = "SCALP" }
+        $p = (Get-TrailingPositions | Where-Object { $_.market -eq "SCALPUSDT" })
+        $p.origin.asset_class | Should Be "FUTURES"
+        $p.origin.trade_style | Should Be "SCALP"
+    }
+}
+
 Describe "Test-MaxDaysExceeded" {
     It "posicao com max_days=0 retorna false (sem limite)" {
         $pos = [PSCustomObject]@{ openedAt = "2026-01-01 00:00:00"; max_days = 0 }
