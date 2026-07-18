@@ -1705,6 +1705,32 @@ jobs:
         run: |
           & ./scripts/apply_fix_close_reason_2026_07_14.ps1
 
+  # ============================================================================
+  # JOB (one-shot): APPLY MCE_COUNTERFACTUAL_AGG.GATE SCHEMA FIX (2026-07-17)
+  # So roda via workflow_dispatch manual -- nunca no schedule automatico.
+  # Aplica docs/SETUP_SUPABASE_FIX_MCE_GATE_2026_07_17.sql via RPC exec_sql.
+  # Corrige 42703 "column mce_counterfactual_agg.gate does not exist" que
+  # bloqueava silenciosamente a Regra C do Evolution Engine (auto-ajuste do
+  # tori_confluence_threshold com base em hit_rate real dos setups rejeitados).
+  # Remover job apos confirmar aplicado.
+  # ============================================================================
+  apply-mce-gate-fix:
+    name: Apply mce_counterfactual_agg.gate Schema Fix (one-shot)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply migration
+        shell: pwsh
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          & ./scripts/apply_fix_mce_gate_2026_07_17.ps1
+
 
   # ============================================================================
   # JOB (one-shot): DIAGNOSTIC -- confirma de verdade se close_reason existe
