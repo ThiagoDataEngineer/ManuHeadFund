@@ -1970,6 +1970,19 @@ function Invoke-GemExecute {
         try {
             $env:STATE_STORE_SCHEMA = "manuheadfund"  # FORCE schema correto (CRITICO!)
             $__orderId = if ($order -and $order.order_id) { [string]$order.order_id } else { "" }
+            # 2026-07-18: origem explicita p/ lib_trailing_unified.ps1 (motor
+            # unico de trailing). $hasFutures ja esta no escopo (usado 3 linhas
+            # abaixo); recalcula isScalp aqui (nao reusa $isScalp de linha ~716
+            # -- fica dentro de um try/if condicional, pode nao ter sido
+            # atribuida neste ciclo, e mais seguro recalcular local que confiar
+            # em variavel de escopo distante).
+            $__isScalpAtReg = if (Get-Command Test-IsScalp -ErrorAction SilentlyContinue) {
+                Test-IsScalp -Strategy $Signal.strategy -PlannedDurationMinutes $PlannedDurationMin
+            } else { $false }
+            $__origin = @{
+                asset_class = if ($hasFutures) { "FUTURES" } else { "SPOT" }
+                trade_style = if ($__isScalpAtReg) { "SCALP" } else { "SWING" }
+            }
             Add-TrailingPosition `
                 -Market  $mkt `
                 -Side    "LONG" `
@@ -1978,8 +1991,9 @@ function Invoke-GemExecute {
                 -Target  $tgt_price `
                 -OrderId $__orderId `
                 -Source  "gem" `
-                -Mode    "GEM"
-            Write-Host "  [TRAILING] Registrado: $mkt entry=$avg_price stop=$stop_price target=$tgt_price" -ForegroundColor Green
+                -Mode    "GEM" `
+                -Origin  $__origin
+            Write-Host "  [TRAILING] Registrado: $mkt entry=$avg_price stop=$stop_price target=$tgt_price origin=$($__origin.asset_class)/$($__origin.trade_style)" -ForegroundColor Green
         } catch {
             Write-Host "  [TRAILING WARN] Falha ao registrar trailing: $_" -ForegroundColor Yellow
         }

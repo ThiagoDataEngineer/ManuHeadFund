@@ -94,13 +94,18 @@ Describe "gem_executor: registro trailing pos-EXEC (Bug-A + Bug-B)" {
             Apply-TestStubs -TestDir $script:testDir
 
             # Spy definido diretamente no BeforeEach para garantir escopo correto
+            # 2026-07-18: -Origin adicionado ao real Add-TrailingPosition (motor
+            # unico de trailing) -- stub precisa aceitar o parametro novo, senao
+            # o caller real (gem_executor.ps1) passa -Origin e o PowerShell
+            # rejeita a chamada com parametro desconhecido (cai no catch,
+            # silenciosamente nunca popula $_testTrailingCalls).
             function global:Add-TrailingPosition {
                 param([string]$Market, [string]$Side, [double]$Entry,
                       [double]$Stop,   [double]$Target, [string]$OrderId,
-                      [string]$Source, [string]$Mode)
+                      [string]$Source, [string]$Mode, [hashtable]$Origin)
                 $global:_testTrailingCalls += [PSCustomObject]@{
                     Market=$Market; Side=$Side; Entry=$Entry
-                    Stop=$Stop; Target=$Target; OrderId=$OrderId; Mode=$Mode }
+                    Stop=$Stop; Target=$Target; OrderId=$OrderId; Mode=$Mode; Origin=$Origin }
             }
         }
 
@@ -181,9 +186,9 @@ Describe "gem_executor: registro trailing pos-EXEC (Bug-A + Bug-B)" {
             function global:Add-TrailingPosition {
                 param([string]$Market, [string]$Side, [double]$Entry,
                       [double]$Stop,   [double]$Target, [string]$OrderId,
-                      [string]$Source, [string]$Mode)
+                      [string]$Source, [string]$Mode, [hashtable]$Origin)
                 $global:_testTrailingCalls += [PSCustomObject]@{
-                    Market=$Market; OrderId=$OrderId; Mode=$Mode }
+                    Market=$Market; OrderId=$OrderId; Mode=$Mode; Origin=$Origin }
             }
         }
 
@@ -229,7 +234,7 @@ Describe "gem_executor: registro trailing pos-EXEC (Bug-A + Bug-B)" {
             function global:Add-TrailingPosition {
                 param([string]$Market, [string]$Side, [double]$Entry,
                       [double]$Stop, [double]$Target, [string]$OrderId,
-                      [string]$Source, [string]$Mode)
+                      [string]$Source, [string]$Mode, [hashtable]$Origin)
                 $global:_testTrailingCalls += @{ Market=$Market }
             }
         }
