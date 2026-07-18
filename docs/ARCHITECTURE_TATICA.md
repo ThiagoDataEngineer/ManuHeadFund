@@ -1,4 +1,53 @@
 # 🎖️ MAPA TÁTICO — Pipeline ManuHeadFund
+
+## 🧭 Tese Central do Fundo (seção permanente — não é changelog, não arquivar)
+
+> Registrado 2026-07-18, a partir de uma sessão de estudo do mercado CoinEx
+> "de fora" (sem os gates do sistema), pra testar se o viés do fundo se
+> sustenta olhando dado cru. Ver memória `project_tese_central_estudo_externo_2026_07_18`.
+
+**O viés real deste fundo nunca foi "achar o que mais subiu" — é achar o
+estágio certo de um movimento que ainda tem corrida pela frente.**
+
+Prova rápida, com dado real do dia (CoinEx, 18/07): comparamos 4 mercados —
+AKEUSDT (+712% em 5 dias), LRCUSDT (+37% em 5 dias), ZECUSDT (+4.9%) e
+ADAUSDT (+4.5%). Pela magnitude bruta, AKE e LRC pareciam as oportunidades
+óbvias. Olhando o candle **diário** dos últimos 7-10 dias (não só as últimas
+horas), o quadro virou:
+
+| Mercado | Var. 5d | Volume 24h vs. média 5d | Leitura |
+|---|---|---|---|
+| AKEUSDT | +712% | 0.82x (caindo) | Cauda de movimento velho — exaustão |
+| LRCUSDT | +37% | pico foi ontem, hoje já esfriou ~97% | Também já acabou — comprar aqui é comprar o topo |
+| ZECUSDT | +4.9% | volume alto e **estável** ($2.5M/dia) | Trend real, dinheiro constante, não pico-e-morre |
+| ADAUSDT | +4.5% | subindo devagar | Acumulação lenta, sem euforia |
+
+**A fórmula (não é matemática, é o filtro mental antes de qualquer gate técnico):**
+`ACELERAÇÃO de volume + ESTÁGIO do movimento`, nunca volume ou variação % isolados.
+"Subindo forte agora" e "começando a subir agora" são coisas opostas — a
+primeira é clímax (hora de sair ou ficar de fora), a segunda é entrada. O erro
+mais fácil de cometer é olhar só as últimas horas/velas de 4h e confundir uma
+com a outra — o candle diário de 7-10 dias é o que revela em que ponto do
+ciclo o movimento está.
+
+**Por que isso já é o "coração" do sistema, não uma ideia nova:** é a mesma
+tese que motiva o threshold de confluência Tori (80, ver
+`agents/lib_evolution_engine.ps1`), a exigência de geometria normalizada de
+trendline (`agents/lib_trendline_geometry.ps1`, 2026-07-17) e o achado
+empírico já registrado abaixo em v3.1 — **"vol_exhaustion beats trendline
+projection"** e **"confluence não eleva edge sozinha"**. A maioria do que
+"parece" oportunidade num scanner bruto (como AKE e LRC no exemplo acima) já
+é cauda, não início — é por isso que o sistema bloqueia tanto, e por que
+threshold alto não é timidez, é o próprio produto.
+
+**Próximo passo desta tese** (não implementado ainda, ver conversa
+2026-07-18): trailing inteligente que reavalia a *estrutura* do movimento
+(cruzamento de tendência, ponto de exaustão) em vez de só % fixo — deixar
+correr enquanto o estágio ainda é "início/meio", apertar/sair quando os sinais
+apontam clímax. Vale para LONG, SHORT, scalp e spot como hedge de futures.
+
+---
+
 **v3.3 — 2026-06-02 06:00 BRT** (FARO V3 LIVE + GitHub Actions 24/7 + Supabase state store + Trailing L1-5 + Mistral cascade; 11 FARO libs + 5 daemon layers + 4 GA jobs + 65 Mentor TDD + 22 smoke; $500 deployed)
 
 > ## 🎯 v3.2 — Mentor pipeline reforçado (Tauric-inspired)
