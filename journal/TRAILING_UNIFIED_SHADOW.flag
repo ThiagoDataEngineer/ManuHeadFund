@@ -1,0 +1,6 @@
+ATIVO 2026-07-18 -- motor unico de trailing (lib_trailing_unified.ps1) em SHADOW MODE.
+So LOGA a decisao que Resolve-TrailingDecision sugeriria por posicao (ATR por trade_style +
+leverage se FUTURES + exhaustion score) lado a lado com a decisao real ja em producao
+(Update-AllTrailingStops). NAO escreve na exchange, NAO altera stopCurrent -- 100% observacional.
+Objetivo: acumular N ciclos de comparacao real antes de decidir promover o motor novo pra
+substituir a decisao real. Kill-switch: deletar este arquivo + commit (volta a zero custo/log).
