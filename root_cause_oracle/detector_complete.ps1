@@ -215,6 +215,56 @@ if ($futuresOrderCallers.Count -gt 0) {
     Write-Host "  [SKIP] Bug #15: todos os callers de FUTURES order tem leverage control no mesmo arquivo" -ForegroundColor Green
 }
 
+# ── Detector 16: Multiplos motores de trailing/exit escrevendo o mesmo recurso
+# sem coordenacao (Bug #16) ──────────────────────────────────────────────────
+# 2026-07-18: investigando o pedido do usuario por trailing "inteligente"
+# (stop+TP se movendo junto por estrutura, nao % fixo), descobri que ISSO JA
+# EXISTE e roda de verdade -- mas espalhado em 20+ arquivos lib_trailing_*.ps1
+# +lib_position_*.ps1+lib_mentor_reflection.ps1, cada um chamando
+# CoinEx-SetStopLoss/CoinEx-ModifyPositionStopLoss por conta propria. Achados
+# reais no dia: (1) "Trailing Stop Monitor" (trailing_stop_monitor.ps1) e
+# "Layer 1 - Adaptive Trailing" (layers_review_runner.ps1 -Layer 1) rodam
+# AMBOS a cada 5min na nuvem, movendo a MESMA stop-loss de forma independente
+# -- Layer 1 usa lib_trailing_adaptive.ps1, cujo $currentAtr=100.0 e um
+# placeholder NUNCA preenchido (comentario propriedo do arquivo diz "em prod
+# usaria ultimas barras" -- nunca usou); (2) Invoke-ExitIntelligence (camada
+# 2.7, "nao-auto") so LOGA recomendacao de venda, nunca executa -- redundante
+# com Invoke-ExitIntelligenceAuto (camada 2.8, "auto") que executa de verdade
+# via CoinEx-PlaceSpotOrder. Nao ha corrupcao de dado hoje (guards
+# monotonicos evitam o stop recuar, e so 1 ponto -- Sync-TrailingToExchange --
+# de fato escreve dentro da pilha coordenada), mas a fragmentacao e real: o
+# mesmo problema (mover SL/TP com inteligencia) foi resolvido 3-4 vezes em
+# arquivos diferentes que nao sabem uns dos outros, aumentando o risco de um
+# futuro fix so cobrir 1 caminho (mesma classe do Bug #15 -- helper de
+# seguranca existe, mas cada NOVO caminho de execucao esquece de usa-lo).
+Write-Host "[RUN] Detector 16: Multiplos motores de trailing/exit sem coordenacao (Bug #16)" -ForegroundColor Cyan
+
+$stopWriterFns = @('CoinEx-SetStopLoss\b', 'CoinEx-ModifyPositionStopLoss\b')
+$stopWriterCallers = @()
+$scanPathsD16 = @("$RootPath\agents\*.ps1", "$RootPath\scripts\*.ps1")
+foreach ($file in (Get-ChildItem $scanPathsD16 -ErrorAction SilentlyContinue)) {
+    # Excluir os proprios wrappers de API (definem a funcao, nao a chamam pra decidir).
+    if ($file.Name -in @("lib_coinex.ps1", "lib_coinex_position_management.ps1")) { continue }
+    $content = Get-Content $file.FullName -Raw -ErrorAction SilentlyContinue
+    if (-not $content) { continue }
+    $callsStopWriter = $false
+    foreach ($fn in $stopWriterFns) {
+        # So conta CHAMADA real, nao a definicao de function nem string em comentario.
+        if ($content -match "(?<!function )$fn" -and $content -notmatch "^\s*#.*$fn") {
+            $callsStopWriter = $true
+            break
+        }
+    }
+    if ($callsStopWriter) { $stopWriterCallers += $file.Name }
+}
+
+if ($stopWriterCallers.Count -ge 3) {
+    $findings += @{ bug = "bug_16"; pattern = "uncoordinated_concurrent_stop_writers"; confidence = 0.70; status = "$($stopWriterCallers.Count) arquivos chamam CoinEx-SetStopLoss/ModifyPositionStopLoss de forma independente -- verificar manualmente quais estao wired ao mesmo cron/ciclo (colisao real) vs. caminhos mutuamente exclusivos (nao e bug automatico, e candidato -- requer confirmacao)"; scripts = $stopWriterCallers }
+    Write-Host "  [WARN] Bug #16 (candidato, confianca $([math]::Round(0.70*100))%): $($stopWriterCallers.Count) escritores de stop-loss encontrados: $($stopWriterCallers -join ', ')" -ForegroundColor Yellow
+} else {
+    Write-Host "  [SKIP] Bug #16: menos de 3 escritores de stop-loss (fragmentacao normal)" -ForegroundColor Green
+}
+
 $uniqueBugs = @($findings | Group-Object -Property bug | Select-Object -ExpandProperty Name)
 
 $export = @{

@@ -1,6 +1,6 @@
 # Root Cause Oracle — Diagnostic System
 
-**Status**: 9-10/14 bugs detected (varia por confiança), ~25s de execução.
+**Status**: 9-11/16 bugs detected (varia por confiança), ~25s de execução.
 
 **O que isto realmente é (honestamente):** um scanner de padrões conhecidos via `grep`/regex sobre o código-fonte, não um analisador semântico nem um sistema que entende intenção. Ele encontra a **recorrência de bugs já vistos antes** — não descobre bugs novos por conta própria. Cada detector foi escrito *depois* de um incidente real, como uma checagem de regressão. Isso tem valor real (evita que o mesmo erro reapareça sem ninguém notar), mas não substitui investigação humana/agente para problemas inéditos.
 
@@ -34,7 +34,7 @@ Output: `oracle_complete.json`
 
 ---
 
-## Detectores (14 total)
+## Detectores (16 total)
 
 | # | O que detecta | Confiança | Como age |
 |---|---|---|---|
@@ -51,6 +51,8 @@ Output: `oracle_complete.json`
 | 12 | Regex de whitelist do Telegram não bate | 0.93 | Alerta |
 | **13** | **Daemon de loop infinito não registrado em nenhum orquestrador** | **0.55 (candidato)** | **Requer confirmação manual** |
 | **14** | **Job de GitHub Actions chama CoinEx sem `COINEX_API_KEY` no mesmo job** | **0.80** | **Alerta** |
+| **15** | **FUTURES order sem `CoinEx-AdjustPositionLeverage`/`Get-SafeLeverage` no mesmo arquivo** | **0.85** | **Alerta** |
+| **16** | **≥3 arquivos independentes chamando `CoinEx-SetStopLoss`/`ModifyPositionStopLoss` (motores de trailing/exit concorrentes, sem coordenação)** | **0.70 (candidato)** | **Requer confirmação manual** |
 
 ---
 
@@ -58,6 +60,7 @@ Output: `oracle_complete.json`
 
 - **Regex-based, não semântico.** Não entende fluxo de dados nem contexto além de padrões textuais.
 - **Bugs #13/#14 podem ter falsos positivos.** Scripts dot-sourced como libs, ou orquestradores não mapeados (ex: Scheduled Tasks do Windows não versionados), podem ser sinalizados incorretamente. Sempre confirmar manualmente antes de agir sobre um achado do Detector 13.
+- **Bug #16 é um candidato amplo por design.** Ele encontra TODOS os arquivos que chamam funções de escrita de stop-loss, sem saber se dois deles rodam no mesmo ciclo/cron (colisão real) ou são caminhos mutuamente exclusivos (local vs. cloud, scan_master manual-approval vs. trailing_stop_monitor automático). Descoberto 2026-07-18 investigando um pedido de "trailing inteligente": o sistema já tinha ~20 arquivos `lib_trailing_*`/`lib_position_*` resolvendo o mesmo problema de formas diferentes, incluindo `lib_trailing_adaptive.ps1` (Layer 1, roda a cada 5min na nuvem) com um placeholder de ATR (`$currentAtr = 100.0`) nunca preenchido, rodando em paralelo com `trailing_stop_monitor.ps1` (que usa ATR real). 11 arquivos flagados na primeira execução — confirmar manualmente quais coexistem no mesmo cron antes de assumir colisão.
 - **Debt pré-existente conhecido, não corrigido nesta sessão:** Detector 12 (`empty_global`) tem um erro de sintaxe PowerShell na linha do `Select-String` (parâmetro posicional ambíguo) e o cálculo de tempo total no final do script (`[Math]::Round` com overload ambíguo) — ambos falham silenciosamente sem impedir o restante do scan, mas produzem mensagens de erro no console. Não bloqueiam o uso, mas deveriam ser corrigidos.
 - **Não roda automaticamente.** Precisa ser invocado manualmente ou via `query_engine.ps1` — não está agendado em nenhum cron/workflow. Isso significa que ele só ajuda se alguém lembrar de rodá-lo.
 
