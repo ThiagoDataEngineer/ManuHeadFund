@@ -111,9 +111,16 @@ if (-not $FuturesOnly) {
                 if ($r.code -eq 0 -and $r.data.Count -gt 0) {
                     $totalFound += $r.data.Count
                     Write-Host "  [$mkt] $($r.data.Count) ordem(ns):" -ForegroundColor Green
-                    foreach ($trade in $r.data | Sort-Object { [datetime]$_.create_time } -Descending | Select-Object -First 10) {
+                    # 2026-07-19: nome real do campo de timestamp nao confirmado
+                    # previamente (causava "Cannot convert null to DateTime" e
+                    # perdia a lista, so a contagem sobrevivia). Sem sort (ordem
+                    # da API preservada) + dump do shape bruto do 1o item uma vez
+                    # por mercado, pra descobrir o campo certo sem adivinhar.
+                    $first = $r.data | Select-Object -First 1
+                    Write-Host "    [DEBUG shape] $($first | ConvertTo-Json -Compress -Depth 2)" -ForegroundColor DarkGray
+                    foreach ($trade in ($r.data | Select-Object -First 10)) {
                         $type = if ($trade.side -eq "buy") { "BUY" } else { "SELL" }
-                        Write-Host "    $type @ $($trade.price) | Filled: $($trade.filled_amount) | Compl: $($trade.create_time)"
+                        Write-Host "    $type @ $($trade.price) | Filled: $($trade.filled_amount)"
                     }
                 } elseif ($r.code -ne 0) {
                     Write-Host "  [$mkt] erro: $($r.message)" -ForegroundColor Red
@@ -157,10 +164,12 @@ if (-not $SpotOnly) {
                 if ($r.code -eq 0 -and $r.data.Count -gt 0) {
                     $totalFoundF += $r.data.Count
                     Write-Host "  [$mkt] $($r.data.Count) ordem(ns):" -ForegroundColor Green
-                    foreach ($trade in $r.data | Sort-Object { [datetime]$_.create_time } -Descending | Select-Object -First 10) {
+                    $firstF = $r.data | Select-Object -First 1
+                    Write-Host "    [DEBUG shape] $($firstF | ConvertTo-Json -Compress -Depth 2)" -ForegroundColor DarkGray
+                    foreach ($trade in ($r.data | Select-Object -First 10)) {
                         $type = if ($trade.side -eq "buy") { "BUY" } else { "SELL" }
                         $leverage = if ($trade.PSObject.Properties['leverage'] -and [double]$trade.leverage -gt 0) { "$($trade.leverage)x" } else { "N/A" }
-                        Write-Host "    $type ($leverage) @ $($trade.price) | Filled: $($trade.filled_amount) | Compl: $($trade.create_time)"
+                        Write-Host "    $type ($leverage) @ $($trade.price) | Filled: $($trade.filled_amount)"
                     }
                 } elseif ($r.code -ne 0) {
                     Write-Host "  [$mkt] erro: $($r.message)" -ForegroundColor Red
