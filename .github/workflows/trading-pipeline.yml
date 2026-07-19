@@ -1776,6 +1776,37 @@ jobs:
           & ./scripts/diag_closed_position_shape_readonly_2026_07_19.ps1
 
   # ============================================================================
+  # JOB (one-shot): DIAG SHORT-EM-NEUTRO CASOS INDIVIDUAIS (2026-07-19)
+  # So roda via workflow_dispatch manual. Continuacao do diag_real_edge:
+  # mce_counterfactual_agg mostrou NEUTRO|SHORT|breadth_short_blocked com
+  # hit_rate 94.4% (n=18) -- este job puxa os casos individuais de
+  # trade_rejections pra ver quais mercados/condicoes geram isso, antes de
+  # considerar qualquer mudanca de gate. Read-only.
+  # ============================================================================
+  diag-short-neutro-cases-readonly:
+    name: Diag Short-Neutro Cases Read-Only (one-shot)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run diagnostic
+        shell: pwsh
+        run: |
+          & ./scripts/diag_short_neutro_cases_readonly_2026_07_19.ps1
+
+  # ============================================================================
   # JOB (one-shot): APPLY CLOSE_REASON SCHEMA FIX (2026-07-14)
   # So roda via workflow_dispatch manual -- nunca no schedule automatico.
   # Aplica docs/SETUP_SUPABASE_FIX_CLOSE_REASON_2026_07_14.sql via RPC exec_sql.
