@@ -1743,6 +1743,39 @@ jobs:
           & ./scripts/diag_real_edge_readonly_2026_07_19.ps1
 
   # ============================================================================
+  # JOB (one-shot): DIAG CLOSED POSITION SHAPE (2026-07-19)
+  # So roda via workflow_dispatch manual. Reconcile-AppToJournal (lib_position_
+  # sync_live.ps1) esta "wired" desde 2026-07-07 mas sempre falha silencioso:
+  # CoinEx-GetClosedPositions nunca existiu, e _Convert-ClosedTradeToOutcome
+  # espera campos (entryPrice, exitPrice, orderId) que parecem inventados
+  # (camelCase nao bate com o padrao real ja confirmado em uso, ex:
+  # audit_coinex_state.ps1 usa pos.side/pos.realized_pnl). Este job so
+  # imprime o shape bruto real de finished-position/finished-order antes de
+  # implementar CoinEx-GetClosedPositions de verdade, sem adivinhar.
+  # ============================================================================
+  diag-closed-position-shape-readonly:
+    name: Diag Closed Position Shape Read-Only (one-shot)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run diagnostic
+        shell: pwsh
+        run: |
+          & ./scripts/diag_closed_position_shape_readonly_2026_07_19.ps1
+
+  # ============================================================================
   # JOB (one-shot): APPLY CLOSE_REASON SCHEMA FIX (2026-07-14)
   # So roda via workflow_dispatch manual -- nunca no schedule automatico.
   # Aplica docs/SETUP_SUPABASE_FIX_CLOSE_REASON_2026_07_14.sql via RPC exec_sql.

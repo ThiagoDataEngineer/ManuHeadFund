@@ -52,6 +52,23 @@ Describe "ConvertTo-SupabaseOutcome (pura)" {
         $row.r_multiple   | Should Be 1.5
         $row.closed_at    | Should Be "2026-06-20T12:00:00Z"
         $row.close_reason | Should Be "trail_stop"
+        # 2026-07-19: pnl_percent/pnl_realized nunca eram mapeados -- coluna
+        # dedicada ficava sempre em DEFAULT 0 do Postgres (dado real preso
+        # so dentro de payload, nunca consultavel via SELECT direto).
+        $row.pnl_realized | Should Be 100
+        $row.pnl_percent  | Should Be 4  # LONG: (52000-50000)/50000*100 = 4%
+    }
+
+    It "pnl_percent inverte o sinal para SHORT (ganho quando exit < entry)" {
+        $obj = [ordered]@{
+            ts = "2026-06-20T12:00:00Z"; market = "ETHUSDT"; side = "SHORT"; mode = "GEM"
+            entry_price = 100; exit_price = 90; stop_price = 110; target_price = 80
+            r = 1; pnl_usd = 42.5; duration_days = 2; exit_reason = "target"
+            regime = "BEAR_WEAK"; score = 60
+        }
+        $row = ConvertTo-SupabaseOutcome -Outcome $obj
+        $row.pnl_realized | Should Be 42.5
+        $row.pnl_percent  | Should Be 10  # SHORT: -((90-100)/100*100) = +10%
     }
 
     It "Preserva o objeto integral no payload (lossless, inclui pnl_usd)" {

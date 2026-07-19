@@ -133,6 +133,22 @@ function ConvertTo-SupabaseOutcome {
     $idMarket = (& $get "market")
     $genId = "{0}|{1}|feedback_loop|{2}" -f $ticks, $idMarket, ([guid]::NewGuid().ToString().Substring(0,8))
 
+    # 2026-07-19: pnl_percent/pnl_realized nunca eram mapeados aqui -- coluna
+    # dedicada ficava sempre no DEFAULT 0 do Postgres (dado real preso so
+    # dentro de payload JSONB, nunca consultavel via SELECT direto). Achado
+    # investigando por que trade_outcomes tinha 19 linhas e zero com PnL.
+    # pnl_usd (calculado corretamente por quem chama Add-TradeOutcome) vira
+    # pnl_realized direto; pnl_percent e' derivado de entry/exit/side (LONG:
+    # ganho quando exit>entry; SHORT: ganho quando exit<entry -- sinal invertido).
+    $entryPrice = [double](& $get "entry_price")
+    $exitPrice  = [double](& $get "exit_price")
+    $side       = [string](& $get "side")
+    $pnlUsd     = & $get "pnl_usd"
+    $pnlPercent = if ($entryPrice -ne 0) {
+        $rawPct = (($exitPrice - $entryPrice) / $entryPrice) * 100
+        if ($side.ToUpper() -eq "SHORT") { -$rawPct } else { $rawPct }
+    } else { 0.0 }
+
     return @{
         id           = $genId
         market       = [string](& $get "market")
@@ -143,6 +159,8 @@ function ConvertTo-SupabaseOutcome {
         stop         = (& $get "stop_price")
         target       = (& $get "target_price")
         r_multiple   = (& $get "r")
+        pnl_realized = if ($null -ne $pnlUsd) { [double]$pnlUsd } else { 0.0 }
+        pnl_percent  = [Math]::Round($pnlPercent, 4)
         closed_at    = [string](& $get "ts")
         close_reason = [string](& $get "exit_reason")
         source       = "feedback_loop"
