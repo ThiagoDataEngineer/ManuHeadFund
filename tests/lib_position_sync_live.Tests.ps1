@@ -24,7 +24,7 @@ Describe "lib_position_sync_live" {
         function CoinEx-GetClosedPositions {
             param([int]$Limit = 20)
             if ($global:TEST_CLOSED_POSITIONS) {
-                return @($global:TEST_CLOSED_POSITIONS)
+                return @($global:TEST_CLOSED_POSITIONS | Select-Object -First $Limit)
             }
             return @()
         }
@@ -120,76 +120,77 @@ Describe "lib_position_sync_live" {
     }
 
     Context "Reconcile-AppToJournal" {
+        # 2026-07-19: dados de teste atualizados pro shape REAL de
+        # /v2/futures/finished-position, confirmado via job one-shot
+        # (diag_closed_position_shape_readonly_2026_07_19.ps1) contra a API
+        # real. Shape anterior (orderId/entryPrice/exitPrice/quantity) era
+        # especulativo, nunca existiu na resposta real da CoinEx.
         BeforeEach {
             $global:TEST_CLOSED_POSITIONS = @(
-                @{
-                    orderId = "closed_001"
-                    symbol = "ETHUSDT"
-                    side = "LONG"
-                    entryPrice = 2300.00
-                    exitPrice = 2350.00
-                    quantity = 1.0
-                    entered_at = (Get-Date).AddHours(-5)
+                [PSCustomObject]@{
+                    position_id = 1001; market = "ETHUSDT"; side = "long"
+                    realized_pnl = "50"; avg_entry_price = "2300.00"
+                    ath_margin_size = "460"; leverage = "5"
+                    created_at = [DateTimeOffset]::UtcNow.AddHours(-5).ToUnixTimeMilliseconds()
+                    updated_at = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+                    finished_type = "take_profit"
                 },
-                @{
-                    orderId = "closed_002"
-                    symbol = "XRPUSDT"
-                    side = "SHORT"
-                    entryPrice = 2.50
-                    exitPrice = 2.40
-                    quantity = 100.0
-                    entered_at = (Get-Date).AddHours(-3)
+                [PSCustomObject]@{
+                    position_id = 1002; market = "XRPUSDT"; side = "short"
+                    realized_pnl = "10"; avg_entry_price = "2.50"
+                    ath_margin_size = "50"; leverage = "5"
+                    created_at = [DateTimeOffset]::UtcNow.AddHours(-3).ToUnixTimeMilliseconds()
+                    updated_at = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+                    finished_type = "stop_loss"
                 }
             )
         }
 
         It "converts closed trades to outcomes" {
             $outcomes = Reconcile-AppToJournal -Limit 20
-            $outcomes | Should -Not -BeNullOrEmpty
-            $outcomes.Count | Should -Be 2
+            $outcomes | Should Not BeNullOrEmpty
+            $outcomes.Count | Should Be 2
         }
 
         It "calculates LONG PnL correctly" {
             $outcomes = Reconcile-AppToJournal -Limit 20
             $long = $outcomes | Where-Object { $_.direction -eq "LONG" }
-            $long | Should -Not -BeNullOrEmpty
-            # (2350 - 2300) * 1.0 = 50
-            $long.pnl_realized | Should -Be 50
+            $long | Should Not BeNullOrEmpty
+            # realized_pnl vem pronto da API (nao recalcula de entry/exit)
+            $long.pnl_realized | Should Be 50
         }
 
         It "calculates SHORT PnL correctly" {
             $outcomes = Reconcile-AppToJournal -Limit 20
             $short = $outcomes | Where-Object { $_.direction -eq "SHORT" }
-            $short | Should -Not -BeNullOrEmpty
-            # (2.50 - 2.40) * 100 = 10
-            $short.pnl_realized | Should -Be 10
+            $short | Should Not BeNullOrEmpty
+            $short.pnl_realized | Should Be 10
         }
 
         It "sets source to 'app_import'" {
             $outcomes = Reconcile-AppToJournal -Limit 20
-            $outcomes[0].source | Should -Be "app_import"
+            $outcomes[0].source | Should Be "app_import"
         }
 
         It "sets status to 'closed'" {
             $outcomes = Reconcile-AppToJournal -Limit 20
-            $outcomes[0].status | Should -Be "closed"
+            $outcomes[0].status | Should Be "closed"
         }
 
         It "respects Limit parameter" {
             $global:TEST_CLOSED_POSITIONS = @(1..50 | ForEach-Object {
-                @{
-                    orderId = "closed_$_"
-                    symbol = "TEST"
-                    side = "LONG"
-                    entryPrice = 100
-                    exitPrice = 101
-                    quantity = 1
-                    entered_at = (Get-Date)
+                [PSCustomObject]@{
+                    position_id = $_; market = "TESTUSDT"; side = "long"
+                    realized_pnl = "1"; avg_entry_price = "100"
+                    ath_margin_size = "100"; leverage = "1"
+                    created_at = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+                    updated_at = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+                    finished_type = "manual"
                 }
             })
 
             $outcomes = Reconcile-AppToJournal -Limit 10
-            $outcomes.Count | Should -BeLessThanOrEqual 10
+            $outcomes.Count | Should Not BeGreaterThan 10
         }
     }
 

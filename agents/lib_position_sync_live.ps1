@@ -209,35 +209,108 @@ function _Normalize-ExchangePosition {
 }
 
 function _Convert-ClosedTradeToOutcome {
+    # 2026-07-19: campos reais confirmados via job one-shot contra API real
+    # (diag_closed_position_shape_readonly_2026_07_19.ps1) -- versao anterior
+    # esperava entryPrice/exitPrice/quantity/orderId (camelCase), que NUNCA
+    # existiram na resposta real da CoinEx (era especulacao nunca validada).
+    # Shape real de /v2/futures/finished-position: position_id, market,
+    # side ("long"|"short" minusculo), realized_pnl (STRING, ja calculado
+    # pela corretora -- nao precisa recalcular de entry/exit), avg_entry_price,
+    # leverage, created_at/updated_at (epoch MILLISECONDS), finished_type
+    # (motivo do fechamento: stop_loss, take_profit, etc).
     param([PSCustomObject]$ClosedTrade)
 
-    $entry = [double]$ClosedTrade.entryPrice
-    $exit = [double]$ClosedTrade.exitPrice
-    $qty = [double]$ClosedTrade.quantity
-    $side = [string]$ClosedTrade.side
+    $sideRaw = [string]$ClosedTrade.side
+    $side = if ($sideRaw -eq "long") { "LONG" } elseif ($sideRaw -eq "short") { "SHORT" } else { $sideRaw.ToUpper() }
+    $entry = [double]$ClosedTrade.avg_entry_price
+    $pnlUsd = [double]$ClosedTrade.realized_pnl
+    $margin = [double]$ClosedTrade.ath_margin_size
 
-    # Calculate realized PnL (accounting for direction)
-    $pnl = if ($side -eq "LONG") {
-        ($exit - $entry) * $qty
-    } else {
-        ($entry - $exit) * $qty
-    }
+    # pnl_percent: realized_pnl (USD) sobre a margem inicial usada (ath_margin_size
+    # -- "all-time-high" margin, valor de margem no pico da posicao, unico dado de
+    # capital alocado disponivel neste shape). Fallback pra 0 se margem ausente/zero
+    # (nao adivinha, so nao calcula).
+    $pnlPct = if ($margin -ne 0) { ($pnlUsd / $margin) * 100 } else { 0.0 }
 
-    $pnlPct = if ($entry -ne 0) { ($pnl / ($entry * $qty)) * 100 } else { 0 }
+    $entryTs = try { [datetimeoffset]::FromUnixTimeMilliseconds([long]$ClosedTrade.created_at).UtcDateTime } catch { [datetime]::UtcNow }
+    $closedTs = try { [datetimeoffset]::FromUnixTimeMilliseconds([long]$ClosedTrade.updated_at).UtcDateTime } catch { [datetime]::UtcNow }
+
+    # id: PRIMARY KEY NOT NULL em manuheadfund.trade_outcomes (mesmo achado ja
+    # documentado em ConvertTo-SupabaseOutcome -- toda gravacao sem id viola a
+    # constraint). position_id da CoinEx e' unico por posicao fechada, entao
+    # usa direto (mais estavel que gerar guid novo a cada reconciliacao).
+    $genId = "{0}|{1}|position_sync|{2}" -f $ClosedTrade.market, $side, [string]$ClosedTrade.position_id
 
     @{
-        entry_ts = if ($ClosedTrade.entered_at -is [datetime]) { $ClosedTrade.entered_at.ToUniversalTime() } else { [datetime]::Parse([string]$ClosedTrade.entered_at).ToUniversalTime() }
-        symbol = [string]$ClosedTrade.symbol
+        id = $genId
+        entry_ts = $entryTs
+        symbol = [string]$ClosedTrade.market
+        market = [string]$ClosedTrade.market
+        side = $side
         direction = $side
         source = "app_import"
         entry_price = $entry
-        exit_price = $exit
-        quantity = $qty
-        pnl_realized = $pnl
-        pnl_percent = $pnlPct
+        pnl_realized = $pnlUsd
+        pnl_percent = [Math]::Round($pnlPct, 4)
+        closed_at = $closedTs.ToString("o")
+        close_reason = [string]$ClosedTrade.finished_type
         status = "closed"
-        regime = if (Test-Command -Name "Get-CurrentRegime") { Get-CurrentRegime -ErrorAction SilentlyContinue } else { "UNKNOWN" }
+        regime = "UNKNOWN"
     }
+}
+
+function CoinEx-GetClosedPositions {
+    <#
+    .SYNOPSIS
+    Busca posicoes FUTURES fechadas recentemente, via /v2/futures/finished-position.
+    2026-07-19: implementada apos confirmar o shape real da API (job one-shot
+    diag_closed_position_shape_readonly_2026_07_19.ps1) -- versao anterior desta
+    funcao nunca existiu, causando falha silenciosa em Reconcile-AppToJournal
+    desde que foi "wired" em trailing_stop_monitor.ps1 (2026-07-07).
+
+    .DESCRIPTION
+    A API exige -market explicito (nao aceita "todos os mercados de uma vez",
+    confirmado em audit_coinex_state.ps1 2026-07-19). Descobre mercados
+    candidatos via posicoes FUTURES abertas agora (pending-position) --
+    cobertura pratica, nao teoricamente completa: uma posicao fechada num
+    mercado sem posicao aberta atual nao aparece aqui.
+
+    .PARAMETER Limit
+    Max posicoes fechadas por mercado (default 20).
+
+    .OUTPUTS
+    @(PSCustomObject com o shape bruto de finished-position: market, side,
+    realized_pnl, avg_entry_price, created_at, updated_at, finished_type, ...)
+    #>
+    [CmdletBinding()]
+    [OutputType([object[]])]
+    param([int]$Limit = 20)
+
+    $markets = @()
+    try {
+        $pending = CoinEx-Get "/v2/futures/pending-position?market_type=FUTURES" -ErrorAction SilentlyContinue
+        if ($pending.code -eq 0) {
+            $markets = @($pending.data | ForEach-Object { $_.market } | Select-Object -Unique)
+        }
+    } catch {
+        Write-Verbose "[position_sync] CoinEx-GetClosedPositions: falha ao descobrir mercados: $_"
+        return @()
+    }
+
+    if ($markets.Count -eq 0) { return @() }
+
+    $closed = @()
+    foreach ($mkt in $markets) {
+        try {
+            $r = CoinEx-Get "/v2/futures/finished-position?market=$mkt&market_type=FUTURES&page=1&limit=$Limit" -ErrorAction SilentlyContinue
+            if ($r.code -eq 0 -and $r.data.Count -gt 0) {
+                $closed += $r.data
+            }
+        } catch {
+            Write-Verbose "[position_sync] CoinEx-GetClosedPositions: falha em ${mkt}: $_"
+        }
+    }
+    return @($closed)
 }
 
 function _Log-SyncActivity {
