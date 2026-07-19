@@ -99,7 +99,9 @@ function Invoke-OrchestratorCandidatesParallel {
                 "lib_promotion_gates.ps1",
                 "lib_orchestrator_parallel.ps1",
                 "lib_llm_quota_optimizer.ps1",
-                "lib_short_execution.ps1"
+                "lib_short_execution.ps1",
+                "lib_leverage_cap.ps1",
+                "lib_coinex_position_management.ps1"
             )
             foreach ($l in $libs) {
                 $p = Join-Path $AgentsDir $l

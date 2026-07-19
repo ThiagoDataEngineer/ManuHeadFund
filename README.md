@@ -1,49 +1,48 @@
 # 🚀 ManuHeadFund — CoinEx AI Trading System
 
-Sistema automatizado multi-agente (Backend PowerShell + Mentor LLM) que executa trading em CoinEx Futures/Spot com aprendizado contínuo. **Estado**: ✅ **FROTA LOCAL 24/7 + NUVEM HÍBRIDA**.
+Sistema automatizado multi-agente (Backend PowerShell + Mentor LLM) que executa trading em CoinEx Futures/Spot com aprendizado contínuo. **Estado**: ✅ **NUVEM 24/7 (GitHub Actions) — LIVE TRADING REAL ATIVO**.
 
 ---
 
-## 🔋 Estado Atual (2026-07-04)
+## 🔋 Estado Atual (2026-07-19)
 
 | Componente | Status | Detalhe |
 |-----------|--------|---------|
-| **Frota Local** | ✅ VIVA | scan_master + sentinel + coletor + guardian (4/4 PIDs) |
-| **Guardian** | ✅ CURANDO | auto-restart, recorrência tracking, E2E diário ~06h |
-| **Nuvem** | ✅ HÍBRIDA | GitHub Actions como fallback + API research 4x/dia |
-| **Suite E2E** | ✅ 43 PASS | Supabase (12/12), beta regime-aware, gates, crowding |
-| **Mentor LLMs** | ✅ LIVE | Sonnet/Haiku + Mistral (Gemini deprecated) |
-| **Capital Real** | ✅ DINÂMICO | SPOT $2.425 + FUT $2.741 (fetch Onchain a cada ciclo) |
-| **Trades Reais** | ✅ 6/10 | Win 33%, PnL -$26, aguardando 4 mais p/ Kelly |
-| **SHORT v2.5** | ✅ LIVE | pump-fade detector: pump H-1 ≥15% + dump ≥-10% → SHORT 0.5% cap |
-| **Flags Ativas** | ✅ | LAYER4_AUTO_EXECUTE, MOON_BAG, PARALLEL_DEFAULT, GEM_AUTO_APPROVE, V6_LIVE |
-| **Regime** | 📊 | BEAR_WEAK / h24_p3_bear |
+| **Nuvem (GitHub Actions)** | ✅ LIVE | gem_loop/gem_executor a cada 5min, live trading real (SPOT + FUTURES) |
+| **Gates de Entrada** | ✅ LIVE | Breadth (parallel) + Pump/Dump classifier + Entry Timing 15m |
+| **FARO V3** | ✅ LIVE | pre-pump 7-signal detector, dado real (nao mais Get-Random), LONG+SHORT |
+| **TORI SHORT/LONG sweep** | ✅ LIVE | candidatos reais com confluence, gated por cenario (bear_severity ao vivo) |
+| **Trailing** | 🟡 CONSOLIDANDO | motor unico em SHADOW MODE (so log) — ~20 libs concorrentes identificadas (Oracle Detector 16) |
+| **Leverage FUTURES** | ✅ FIX CRITICO | hard cap 5x em todo caminho de ordem real (achado: SUIUSDT/ADA/XRP iam a 50x) |
+| **Evolution Engine** | ✅ LIVE | auto-tuning de thresholds de deteccao (tori_confluence_threshold etc), risk params sempre manual |
+| **Mentor LLMs** | ✅ LIVE | Sonnet/Haiku + Mistral (Gemini deprecated), grading diario vs mercado real |
+| **Root Cause Oracle** | ✅ 16 detectores | scanner de padroes conhecidos (regex), manual/query_engine, nao roda em cron |
+| **Regime** | 📊 | ver bear_severity calculado ao vivo em Get-MarketScenario (SMA200 real + momentum) |
 
-**Resumo**: Sistema 100% íntegro. Frota restaurada pós-reboot via `start_fleet.ps1` + guardian sentinela (commit 76d6330).
+**Resumo**: Sistema rodando 100% na nuvem via GitHub Actions (frota local descontinuada). Ciclo recente de auditoria (07-16 a 07-19) fechou bugs estruturais reais em sizing (stop real em vez de 0.02 cravado), leverage (cap 5x), e schema drift no Supabase (Evolution Engine ficou meses "fail-safe sem efeito" por colunas faltando).
 
 ---
 
 ## 🚀 Quick Start
 
-**LOCAL (Desenvolvimento / Debug)**
+**NUVEM (Production — automático, fonte de verdade)**
+- ✅ `trading-pipeline.yml` roda a cada 5min (gem-scanner-executor, trailing-stop-monitor, position-risk, short-scanner, etc — ~30 jobs no total)
+- ✅ `hourly-autocalibration.yml` + `heartbeat-monitor.yml` de hora em hora
+- ✅ `ci-verify.yml` valida contratos/invariantes em cada push
+- ✅ Estado persistido em Supabase (schema `manuheadfund`)
+
+**LOCAL (Debug/Diagnóstico — sem credenciais reais por design)**
 ```powershell
-# Inicia ou reinicia a frota (idempotente)
-.\scripts\start_fleet.ps1
-
-# Verifica saúde (43 checks)
-.\scripts\verify_system_e2e.ps1
-
-# 1 ciclo dry-run
+# 1 ciclo dry-run (sem credenciais, testa lógica)
 .\scripts\scan_master.ps1 -Once -DryRun
 
-# View logs em tempo real
-Get-Content logs/master_$(Get-Date -Format 'yyyyMMdd').log -Tail 50 -Wait
-```
+# Rodar Oracle de diagnostico (16 detectores, ~25s)
+.\root_cause_oracle\detector_complete.ps1
+.\root_cause_oracle\query_engine.ps1 -Query "Why are trades not entering?"
 
-**NUVEM (Production — automático)**
-- ✅ GitHub Actions roda a cada 15min (JOB 1, 23, 24)
-- ✅ Frota local fallback se nuvem falhar
-- ✅ Estado persistido em Supabase
+# Pester tests
+Invoke-Pester tests/ -Output Detailed
+```
 
 ---
 
@@ -76,8 +75,11 @@ Get-Content logs/master_$(Get-Date -Format 'yyyyMMdd').log -Tail 50 -Wait
         └────────────┬──────────────────────┘
                      ↓
         ┌─ PROTEÇÃO (Trailing Stops) ──────┐
-        │ • TP +2% / SL -1% (tight)         │
-        │ • Adaptive trailing daily          │
+        │ • Stop derivado do stop real       │
+        │   (nao mais 0.02 cravado)          │
+        │ • Leverage cap 5x hard (FUTURES)  │
+        │ • Motor unico em SHADOW MODE       │
+        │   (~20 libs concorrentes → 1)      │
         │ • Layer5 CLIMAX exit (bag ≥+25%) │
         └────────────┬──────────────────────┘
                      ↓
@@ -92,28 +94,31 @@ Get-Content logs/master_$(Get-Date -Format 'yyyyMMdd').log -Tail 50 -Wait
 
 ## 📋 Componentes Principais
 
-### Frota de Daemons (Local 24/7)
+### Jobs Nuvem (GitHub Actions — `trading-pipeline.yml`, cron */5min)
 
-| Daemon | Intervalo | Função | Log |
-|--------|-----------|--------|-----|
-| **scan_master** | 15min | Orquestrador full stack (triagem→mesa→mentor) | `logs/master_YYYYMMDD.log` |
-| **sentinel_movers** | 3min | Sentinela de pump-fade, crowding signal | `journal/sentinel.log` |
-| **collect_1h_klines** | 1h | Coleta 1h candles (backtest dataset) | `journal/collect_1h.log` |
-| **self_heal_guardian** | 10min | Auto-restart frota + auditar infra + API research | `journal/self_heal_guardian.log` |
+Principais (ver `.github/workflows/trading-pipeline.yml` para a lista completa, ~30 jobs):
 
-### Daemons Nuvem (GitHub Actions)
-- **JOB 1** (5min): Trailing stops (atualiza peaks, empurra SL)
-- **JOB 23** (15min): gem_loop -Once (novos sinais)
-- **JOB 24** (5min): Telegram listener (comandos /halt /resume /scan /balance)
+| Job | Função |
+|-----|--------|
+| **gem-scanner-executor** | Live trading real: triagem→gates→mentor→execução (SPOT+FUTURES) |
+| **trailing-stop-monitor** | Atualiza peaks, empurra SL (motor real; motor unificado em shadow ao lado) |
+| **position-risk** | Guarda de risco por posição aberta |
+| **short-scanner** | Sweep TORI_SHORT com confluence real |
+| **tori-scanner** / **vol-climax** | Sinais de entrada complementares |
+| **gate-replay-study** | Mede edge real de candidatos rejeitados (contrafactual) |
+| **mce-counterfactual** | Agrega contrafactual por gate/regime/direction p/ Evolution Engine |
+| **learning-cycle** | Evolution Engine (auto-tuning) + Mentor grading diário |
+| **telegram-cloud** | Comandos `/scan /halt /resume /demote /keep /idea` |
+| **health-check** / **staleness-audit** | Auditoria de saúde do pipeline |
 
 ### Sinais de Trading
 
-| Sinal | Sharpe | Win% | Status | Detecção |
-|-------|--------|------|--------|----------|
-| **vol_climax** | 8.81 | 55.4% | ✅ ELITE | Volume climax (rejections, reversão) |
-| **tori** | 6.34 | 50.4% | ✅ LIVE | Proximity logic (distância mínima de precedentes) |
-| **faro_v3** | 4.49 | 50% | ⏸️ PAUSED | Pre-pump 7-signal detector (amostra pequena) |
-| **SHORT v2.5** | (vivo) | 55-60% | ✅ LIVE | Pump-fade: pump ≥15% H-1 + dump ≥-10% |
+| Sinal | Sharpe (backtest) | Win% | Status | Detecção |
+|-------|------|------|--------|----------|
+| **vol_climax** | 8.81 | 55.4% | ✅ LIVE | Volume climax (rejections, reversão) |
+| **tori** | 6.34 | 50.4% | ✅ LIVE | Proximity logic + confluence real (LONG+SHORT sweep) |
+| **faro_v3** | 4.49 | 50% | ✅ LIVE | Pre-pump 7-signal detector, dado real, LONG+SHORT |
+| **SHORT pump-fade** | (vivo) | 55-60% | ✅ LIVE | Pump ≥15% H-1 + dump ≥-10%, leverage cap 5x |
 
 ---
 
@@ -333,12 +338,12 @@ Write-Host "API Key loaded: $($COINEX_API_KEY.Length) chars"
 
 | Problema | Causa | Solução |
 |----------|-------|---------|
-| "Frota morta" | Reboot sem restart | `start_fleet.ps1` + espera guardian restart (~10min) |
-| "CIM CommandLine vazio" | Process loading libs | Guardian retry com fallback PID check ✅ (FIXED 2026-07-04) |
+| "Job cloud falha silencioso" | Schema Supabase divergente (coluna/tabela faltando) | `root_cause_oracle` detectores 4/6/7; checar `docs/SETUP_SUPABASE_*.sql` mais recente + `NOTIFY pgrst, 'reload schema'`; se persistir, restart manual do PostgREST via Supabase Dashboard |
 | "Supabase timeout" | Rede ou credencial | Fallback JSON automático; check `$env:SUPABASE_URL` |
 | "Tests fail" | Parser PS 5.1 | Validar com `Parser::ParseFile`; sem PS 7-only syntax (`??`) |
-| "Nenhuma trade" | Gates bloqueando | Check logs para `[FQS]` `[TORI]` `[MENTOR_VETO]` |
-| "Capital hardcoded" | Config.local vazia | Reload via `Initialize-HybridConfig` (fetch Onchain) |
+| "Nenhuma trade" | Gates bloqueando | Check logs para `[FQS]` `[TORI]` `[MENTOR_VETO]`; rodar `query_engine.ps1 -Query "Why are trades not entering?"` |
+| "Leverage inesperada em FUTURES" | Caminho de ordem sem cap aplicado | Oracle Detector 15; hard cap 5x deve estar em TODO caminho real (achado 2026-07-16/17: 3 caminhos distintos tinham o mesmo bug) |
+| "Credencial CoinEx faltando no job cloud" | `config.local.ps1` gerado sem COINEX_* | Oracle Detector 14; ver Job 0 do workflow |
 
 ---
 
@@ -348,8 +353,8 @@ Veja em `docs/`:
 - **ARCHITECTURE_TATICA.md** — Deep dive: gates, signals, orchestrator
 - **STRATEGIC_ROADMAP.md** — 2026 visão: Layer 5+, multi-exchange
 - **AGENTS.md** — API reference de agents
-- **ESTADO_E_ROADMAP_2026_07_03.md** — Snapshot completo do universo
-- **DEPLOYMENT_COMPLETE_2026_06_01.md** — Histórico de milestones
+- **root_cause_oracle/README.md** — Sistema de diagnóstico (16 detectores, limitações honestas)
+- **SETUP_SUPABASE_*.sql** — Histórico de migrations do schema (aplicar sempre a mais recente por área)
 
 Histórico de commits (git log) documenta cada decisão de design.
 
@@ -358,24 +363,22 @@ Histórico de commits (git log) documenta cada decisão de design.
 ## 🎯 Status Summary
 
 ✅ **Sistema Integro**
-- Frota 4/4 viva (scan_master, sentinel, coletor, guardian)
-- E2E 43 PASS
-- Guardian auto-curando com detecção CIM fallback robusta
-- Nuvem híbrida como backup
+- Live trading real ativo 24/7 via nuvem (GitHub Actions), frota local descontinuada
+- Gates de entrada (breadth+pump/dump+timing) + FARO V3 + TORI sweep LONG/SHORT rodando com dado real
+- Leverage FUTURES com hard cap 5x em todo caminho de ordem real
+- Evolution Engine + Mentor grading auto-tunando thresholds de detecção
 
-⚠️ **Em Validação**
-- 6/10 trades reais (win 33%, -$26 PnL)
-- SHORT v2.5 historicamente 55-60% win
-- Aguardando 4 mais para Kelly criterion
+🟡 **Em Consolidação**
+- Motor único de trailing em SHADOW MODE (substituindo ~20 libs concorrentes, Oracle Detector 16)
+- Schema Supabase teve 2 incidentes de drift silencioso em 2 semanas (07-14, 07-17) — sem guard-rail de CI ainda
 
 🔮 **Roadmap Próximo**
+- Promover motor único de trailing de shadow → produção
+- CI check de schema Supabase esperado vs real (evitar 3º incidente de drift)
 - Layer 5 CLIMAX consolidar (bag ≥+25% exit)
-- Mentor grading diário (48h+ vs mercado)
-- Evolution engine hardening (risk gates)
 - Multi-exchange backbone (Binance fallback)
 
 ---
 
-**Última atualização**: 2026-07-04 23:30 BRT  
-**Commit**: 76d6330 feat: start_fleet.ps1 - frota sobrevive a reboot (causa raiz frota morta 23h)  
-**Status**: ✅ FROTA + NUVEM HÍBRIDA LIVE
+**Última atualização**: 2026-07-19 (revisão de contexto — ver `git log` para o detalhe de cada fix)  
+**Status**: ✅ NUVEM LIVE — trailing em consolidação, schema drift sob observação

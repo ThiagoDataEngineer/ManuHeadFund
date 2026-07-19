@@ -1,4 +1,14 @@
 ﻿# orchestrator_v6.ps1 -- Esquadrao V6: Triagem (Parte A) -> Mesa (Parte B) -> Mentor Debate
+#
+# 2026-07-19 (Oracle Bug #15): este arquivo chama Invoke-OrderRouted -Route
+# "futures"/CoinEx-PlaceOrder mas NAO tinha lib_leverage_cap.ps1/
+# lib_coinex_position_management.ps1 no proprio arquivo -- dependia de
+# scan_master.ps1 ja ter carregado essas libs antes (nao carrega hoje),
+# entao Get-Command falharia silencioso e o guard de leverage nunca rodaria
+# se este caminho fosse religado. Dot-source aqui torna o cap independente
+# de quem chama.
+. (Join-Path $PSScriptRoot "lib_leverage_cap.ps1")
+. (Join-Path $PSScriptRoot "lib_coinex_position_management.ps1")
 # Cascade pura (Invoke-V6Cascade) + wrapper IO (Invoke-OrchestratorV6).
 #
 # Cascata:
@@ -705,6 +715,23 @@ function Invoke-V6PostMentorExecution {
     try {
         $sl = if ($Setup -and $Setup.stop -gt 0)  { $Setup.stop }   else { 0 }
         $tp = if ($Setup -and $Setup.target -gt 0) { $Setup.target } else { 0 }
+
+        # Leverage cap (Oracle Bug #15): rota futures NAO carrega leverage no
+        # payload da ordem -- corretora usa o que ja estiver na conta. Fail-closed:
+        # se o ajuste falhar, bloqueia a ordem em vez de herdar leverage desconhecida.
+        $__convictionForLev = if ($Mentor -and $Mentor.PSObject.Properties['confianca'] -and $null -ne $Mentor.confianca) { [int]$Mentor.confianca } else { 50 }
+        $__safeLeverage = if (Get-Command Get-SafeLeverage -ErrorAction SilentlyContinue) {
+            [int](Get-SafeLeverage -ConvictionPercent $__convictionForLev -Mode "STANDARD")
+        } else { 2 }
+        $__levResult = if (Get-Command CoinEx-AdjustPositionLeverage -ErrorAction SilentlyContinue) {
+            CoinEx-AdjustPositionLeverage -Market $Market -Leverage $__safeLeverage -MarginMode "isolated"
+        } else { [PSCustomObject]@{ success = $false; error_msg = "CoinEx-AdjustPositionLeverage indisponivel" } }
+        if (-not $__levResult.success) {
+            $result.decisaoFinal = "ERRO_EXECUCAO"
+            $result.reason = "leverage_adjust_failed:$($__levResult.error_msg)"
+            return $result
+        }
+
         if (Get-Command Invoke-OrderRouted -ErrorAction SilentlyContinue) {
             $order = Invoke-OrderRouted -Route "futures" -Market $Market -Side $Side `
                 -Type "market" -Amount $Amount -StopLoss $sl -Target $tp

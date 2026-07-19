@@ -11,6 +11,8 @@
 
 . (Join-Path $PSScriptRoot "lib_regime_surf.ps1")
 . (Join-Path $PSScriptRoot "lib_market_type_detector.ps1")  # 2026-06-30: deteccao automatica FUTURES vs SPOT
+. (Join-Path $PSScriptRoot "lib_leverage_cap.ps1")  # 2026-07-19: Oracle Bug #15 -- cap 5x antes de ordem futures real
+. (Join-Path $PSScriptRoot "lib_coinex_position_management.ps1")
 
 function Invoke-RegimeSurfShort {
     [CmdletBinding()]
@@ -95,6 +97,20 @@ function Invoke-RegimeSurfShort {
     if ($amount -le 0) {
         return [pscustomobject]@{ executed=$false; dry_run=$false; market=$Market; reason="amount_zero"; decision=$d }
     }
+
+    # Leverage cap (Oracle Bug #15): POST /futures/order NAO carrega leverage no
+    # payload -- corretora usa o que ja estiver na conta. Fail-closed: se o ajuste
+    # falhar, bloqueia a ordem em vez de herdar leverage desconhecida.
+    $__safeLeverage = if (Get-Command Get-SafeLeverage -ErrorAction SilentlyContinue) {
+        [int](Get-SafeLeverage -ConvictionPercent ([int]$ShortConviction) -Mode "PUMP_RIDE")
+    } else { 2 }
+    $__levResult = if (Get-Command CoinEx-AdjustPositionLeverage -ErrorAction SilentlyContinue) {
+        CoinEx-AdjustPositionLeverage -Market $Market -Leverage $__safeLeverage -MarginMode "isolated"
+    } else { [pscustomobject]@{ success = $false; error_msg = "CoinEx-AdjustPositionLeverage indisponivel" } }
+    if (-not $__levResult.success) {
+        return [pscustomobject]@{ executed=$false; dry_run=$false; market=$Market; reason="leverage_adjust_failed:$($__levResult.error_msg)"; decision=$d }
+    }
+
     try {
         $order = CoinEx-PlaceOrder $Market "sell" "market" $amount $null $d.stop $d.target
         $orderId = if ($order -and $order.data -and $order.data.order_id) { [string]$order.data.order_id } else { "" }

@@ -40,11 +40,24 @@ function CoinEx-PlaceOrder {
 }
 function Send-TelegramAlert { param() return $true }
 
+# Mock de CoinEx-AdjustPositionLeverage (Oracle Bug #15 fix, 2026-07-19): sobrescreve
+# a versao real de lib_coinex_position_management.ps1 (dot-sourced por orchestrator_v6.ps1)
+# pra nao bater na API de verdade neste teste unitario.
+$global:STUB_LEVERAGE_ADJUST_OK = $true
+function CoinEx-AdjustPositionLeverage {
+    param($Market, $Leverage, $MarginMode)
+    if ($global:STUB_LEVERAGE_ADJUST_OK) {
+        return [PSCustomObject]@{ success = $true; leverage = $Leverage }
+    }
+    return [PSCustomObject]@{ success = $false; error_msg = "mock_leverage_adjust_failure" }
+}
+
 function Reset-Stubs {
     $global:CALLED_TG_APPROVAL = $false
     $global:CALLED_PLACEORDER  = $false
     $global:STUB_TG_APPROVAL   = $true
     $global:STUB_PLACEORDER_THROW = $false
+    $global:STUB_LEVERAGE_ADJUST_OK = $true
 }
 
 # Helper: monta tmp journal dir + opt-in flags
@@ -166,6 +179,23 @@ Describe "Invoke-V6PostMentorExecution - A (live opt-in com 2 flags)" {
             -JournalDir $dir -DryRun:$false
         $global:CALLED_PLACEORDER | Should Be $false
         $r.ordemId | Should Be $null
+        Remove-Item $dir -Recurse -Force -ErrorAction SilentlyContinue
+    }
+
+    # Oracle Bug #15 (2026-07-19): rota futures nao carrega leverage no payload da
+    # ordem -- se o ajuste de leverage falhar, a ordem NAO pode ser enviada (fail-closed),
+    # senao a posicao herda leverage desconhecida/perigosa ja configurada na conta.
+    It "Ajuste de leverage falha: NUNCA chama PlaceOrder, decisao ERRO_EXECUCAO" {
+        Reset-Stubs
+        $global:STUB_LEVERAGE_ADJUST_OK = $false
+        $dir = New-FlagsDir -LiveMode -V6Live
+        $r = Invoke-V6PostMentorExecution -Market "BTCUSDT" -Decisao "EXECUTAR" `
+            -Mentor (New-MentorApprove) -Setup (New-Setup) -Side "buy" -Amount 10 `
+            -JournalDir $dir -DryRun:$false
+        $global:CALLED_PLACEORDER | Should Be $false
+        $r.ordemId | Should Be $null
+        $r.decisaoFinal | Should Be "ERRO_EXECUCAO"
+        $r.reason | Should Match "leverage_adjust_failed"
         Remove-Item $dir -Recurse -Force -ErrorAction SilentlyContinue
     }
 }

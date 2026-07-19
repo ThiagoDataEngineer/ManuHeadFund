@@ -10,6 +10,9 @@
 # Respeita Regras de Ouro: stop ANTES da entrada, risco <=1%/trade, R:R >=1:5,
 # fail-closed (plano invalido = nao opera).
 
+. (Join-Path $PSScriptRoot "lib_leverage_cap.ps1")  # 2026-07-19: Oracle Bug #15 -- cap 5x antes de ordem futures real
+. (Join-Path $PSScriptRoot "lib_coinex_position_management.ps1")
+
 # ----------------------------------------------------------------------------
 # Build-ShortOrderPlan -- PURO. Converte candidato em plano de ordem SHORT validado.
 # SHORT: stop ACIMA da entrada; alvo ABAIXO. Loss no stop = Capital*RiskPct.
@@ -149,6 +152,20 @@ function Invoke-ShortEntry {
     if (-not (Get-Command CoinEx-PlaceOrder -ErrorAction SilentlyContinue)) {
         return [PSCustomObject]@{ placed = $false; observed = $false; reason = "no_placeorder_fn"; plan = $plan }
     }
+
+    # Leverage cap (Oracle Bug #15): POST /futures/order NAO carrega leverage no
+    # payload -- corretora usa o que ja estiver na conta. Fail-closed: se o ajuste
+    # falhar, bloqueia a ordem em vez de herdar leverage desconhecida.
+    $__safeLeverage = if (Get-Command Get-SafeLeverage -ErrorAction SilentlyContinue) {
+        [int](Get-SafeLeverage -RequestedLeverage $plan.leverage -Mode "STANDARD")
+    } else { 2 }
+    $__levResult = if (Get-Command CoinEx-AdjustPositionLeverage -ErrorAction SilentlyContinue) {
+        CoinEx-AdjustPositionLeverage -Market $Market -Leverage $__safeLeverage -MarginMode "isolated"
+    } else { [PSCustomObject]@{ success = $false; error_msg = "CoinEx-AdjustPositionLeverage indisponivel" } }
+    if (-not $__levResult.success) {
+        return [PSCustomObject]@{ placed = $false; observed = $false; reason = "leverage_adjust_failed:$($__levResult.error_msg)"; plan = $plan }
+    }
+
     $res = CoinEx-PlaceOrder $Market "sell" "market" $plan.amount $null $plan.stop $plan.target
     Write-Host "  [SHORT LIVE] ${Market}: ordem SHORT enviada (amount $($plan.amount))" -ForegroundColor Red
     return [PSCustomObject]@{ placed = $true; observed = $false; reason = "live"; plan = $plan; order = $res }

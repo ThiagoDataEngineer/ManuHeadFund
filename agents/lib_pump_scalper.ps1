@@ -2,6 +2,9 @@
 # 2026-06-30: Detecta early pump (2-5% início) + sai em +5% = $275 por $5.5k
 # Target: 4 pumps/dia = $1100/dia
 
+. (Join-Path $PSScriptRoot "lib_leverage_cap.ps1")  # 2026-07-19: Oracle Bug #15 -- cap 5x antes de ordem futures real
+. (Join-Path $PSScriptRoot "lib_coinex_position_management.ps1")
+
 function Detect-EarlyPump {
     <#
     .SYNOPSIS
@@ -161,6 +164,27 @@ function Invoke-PumpScalp {
     # ── 2. Place order LIVE (não mock) ──
     $orderId = ""
     $orderResult = $null
+
+    # Leverage cap (Oracle Bug #15): CoinEx-PlaceOrder abre FUTURES sempre
+    # (market_type hard-coded); POST /futures/order NAO carrega leverage no
+    # payload -- corretora usa o que ja estiver na conta. Fail-closed: se o
+    # ajuste falhar, bloqueia a ordem em vez de herdar leverage desconhecida.
+    $__safeLeverage = if (Get-Command Get-SafeLeverage -ErrorAction SilentlyContinue) {
+        [int](Get-SafeLeverage -Mode "PUMP_RIDE")
+    } else { 2 }
+    $__levResult = if (Get-Command CoinEx-AdjustPositionLeverage -ErrorAction SilentlyContinue) {
+        CoinEx-AdjustPositionLeverage -Market $Market -Leverage $__safeLeverage -MarginMode "isolated"
+    } else { [PSCustomObject]@{ success = $false; error_msg = "CoinEx-AdjustPositionLeverage indisponivel" } }
+    if (-not $__levResult.success) {
+        return [PSCustomObject]@{
+            executed = $false
+            market = $Market
+            reason = "leverage_adjust_failed:$($__levResult.error_msg)"
+            entry = $EntryPrice
+            target = $TargetPrice
+            stop = $StopPrice
+        }
+    }
 
     try {
         if (Get-Command CoinEx-PlaceOrder -ErrorAction SilentlyContinue) {
