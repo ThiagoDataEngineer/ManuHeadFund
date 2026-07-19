@@ -1650,6 +1650,39 @@ jobs:
           & ./scripts/diag_capital_readonly_2026_07_15.ps1
 
   # ============================================================================
+  # JOB (one-shot): AUDIT ORDER HISTORY READ-ONLY (2026-07-19)
+  # So roda via workflow_dispatch manual. Pedido do usuario: analise completa
+  # do historico REAL de todas as ordens (spot + futures), balance real e
+  # posicoes abertas -- direto da CoinEx, sem depender do journal local
+  # (trade_outcomes.jsonl confirmado MISTURADO com dado mock, 148/209 linhas
+  # com padrao entry=100/qty=1, sources explicitas "mock"/"mock_trade_test").
+  # Roda scripts/audit_coinex_state.ps1 (ja existente, 100% read-only --
+  # so CoinEx-Get, nunca chama PlaceOrder ou qualquer escrita). Remover job
+  # apos uso -- diagnostico pontual, nao faz parte do pipeline.
+  # ============================================================================
+  audit-order-history-readonly:
+    name: Audit Order History Read-Only (one-shot)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run audit
+        shell: pwsh
+        run: |
+          & ./scripts/audit_coinex_state.ps1 -Limit 200
+
+  # ============================================================================
   # JOB (one-shot): DIAG COUNTERFACTUAL READ-ONLY (2026-07-16)
   # So roda via workflow_dispatch manual. Responde: os sinais que o sistema
   # PULOU (breadth/score/tori/quality gate) teriam dado edge positivo se
