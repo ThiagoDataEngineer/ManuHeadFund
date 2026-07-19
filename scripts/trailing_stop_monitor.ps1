@@ -216,6 +216,28 @@ try {
                     } else {
                         Write-CrossPlatformLog "  SHADOW $tuMarket [$($tuPos.side)]: HOLD ($($tuDecision.reason))" -LogFile "trailing_stop_monitor.log"
                     }
+                    # 2026-07-19: persiste no Supabase (nao so log local, que o runner
+                    # efemero do GH Actions descarta a cada ciclo -- sem isso, "shadow mode"
+                    # nao produzia nenhum dado consultavel pra decidir promover ou nao).
+                    if (Get-Command Save-StateRecords -ErrorAction SilentlyContinue) {
+                        try {
+                            Save-StateRecords -Table "trailing_unified_shadow" -Records @([PSCustomObject]@{
+                                market              = $tuMarket
+                                side                = "$($tuPos.side)"
+                                ts                  = (Get-Date -Format "o")
+                                real_stop           = [double]$tuPos.stopCurrent
+                                unified_action      = $tuDecision.action
+                                unified_new_stop    = if ($tuDecision.action -eq "UPDATE") { $tuDecision.new_stop } else { $null }
+                                exhaustion_score    = $tuDecision.exhaustion_score
+                                atr_pct             = $tuDecision.atr_pct
+                                trailing_pct        = $tuDecision.trailing_pct
+                                reason              = $tuDecision.reason
+                                would_have_differed = ($tuDecision.action -eq "UPDATE") -and ($tuDecision.new_stop -ne [double]$tuPos.stopCurrent)
+                            })
+                        } catch {
+                            Write-CrossPlatformLog "  SHADOW ${tuMarket}: persist falhou ($_)" -Level WARN -LogFile "trailing_stop_monitor.log"
+                        }
+                    }
                 } catch {
                     Write-CrossPlatformLog "  SHADOW ${tuMarket}: skip ($_)" -Level WARN -LogFile "trailing_stop_monitor.log"
                 }
