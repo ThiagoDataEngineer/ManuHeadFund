@@ -6,6 +6,10 @@
 $root = Split-Path $PSScriptRoot -Parent
 
 Describe "Invariantes: cenario enum" {
+    BeforeAll {
+        $root = Split-Path $PSScriptRoot -Parent
+    }
+
     It "toda comparacao com scen.scenario usa valor valido do enum" {
         # Enum real extraido da fonte de verdade (lib_market_scenario)
         $libText = Get-Content (Join-Path $root "agents\lib_market_scenario.ps1") -Raw
@@ -31,6 +35,10 @@ Describe "Invariantes: cenario enum" {
 }
 
 Describe "Invariantes: direcao no gate de cenario (gem_executor)" {
+    BeforeAll {
+        $root = Split-Path $PSScriptRoot -Parent
+    }
+
     It "gate de cenario le a direcao do Gem, nao de variavel resolvida depois" {
         $txt = Get-Content (Join-Path $root "agents\gem_executor.ps1") -Raw
         # A secao do gate (1c CENARIO) deve conter leitura de $Gem.direction
@@ -48,6 +56,10 @@ Describe "Invariantes: direcao no gate de cenario (gem_executor)" {
 }
 
 Describe "Invariantes: flags referenciadas existem no codigo com condicao alcancavel" {
+    BeforeAll {
+        $root = Split-Path $PSScriptRoot -Parent
+    }
+
     It "ALLOW_LONG_IN_BEAR_WEAK nao usa CURRENT_REGIME nem compara scenario a BEAR_WEAK" {
         # 2026-07-03: exigia CURRENT_REGIME (fix da epoca: scen.scenario -eq
         # "BEAR_WEAK" era IMPOSSIVEL, scenario so vale UNKNOWN/CAPITULACAO/
