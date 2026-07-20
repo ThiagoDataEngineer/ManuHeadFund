@@ -41,18 +41,26 @@ jobs:
       - name: 2. Instalar Pester 3.x-compat runner
         shell: powershell
         run: |
-          # O repo usa sintaxe Pester 3.4 (Should Be). windows-latest tem Pester 3.4 embutido no Windows PowerShell.
-          Get-Module -ListAvailable Pester | Select-Object -First 1 Name, Version | Out-String
+          # O repo usa sintaxe Pester 3.4 (Should Be, sem hifen) em TODA a
+          # suite. 2026-07-20: descoberto que windows-latest passou a trazer
+          # Pester 5.9.0 tambem (Invoke-Pester sem -RequiredVersion pega a
+          # mais nova, que rejeita "Should Be" com RuntimeException). Forcar
+          # 3.4.0 explicitamente em todo Invoke-Pester deste workflow.
+          Get-Module -ListAvailable Pester | Select-Object Name, Version | Out-String
+          Import-Module Pester -RequiredVersion 3.4.0 -Force
+          (Get-Module Pester).Version
 
       - name: 3. Invariantes estaticos (classe de bugs 2026-07-03)
         shell: powershell
         run: |
+          Import-Module Pester -RequiredVersion 3.4.0 -Force
           $r = Invoke-Pester tests\gate_invariants_static.Tests.ps1 -PassThru
           if ($r.FailedCount -gt 0) { exit 1 }
 
       - name: 4. Contrato de dependencias (funcoes chamadas existem)
         shell: powershell
         run: |
+          Import-Module Pester -RequiredVersion 3.4.0 -Force
           $r = Invoke-Pester tests\contract_dependencies.Tests.ps1 -PassThru
           if ($r.FailedCount -gt 0) { exit 1 }
 
@@ -67,6 +75,7 @@ jobs:
           # 11/24 quebrada em silencio por semanas (mocks das 3 gates paralelas de
           # 2026-07-15 ausentes) sem o CI nunca acusar -- exatamente a classe de bug
           # que esta lista existe pra prevenir.
+          Import-Module Pester -RequiredVersion 3.4.0 -Force
           $suites = "tests\lib_pump_fade_detector.Tests.ps1","tests\beta_hallucination_fix.Tests.ps1","tests\lib_beta_cap_regime_aware.Tests.ps1","tests\lib_evolution_engine.Tests.ps1","tests\lib_crowding_signal.Tests.ps1","tests\libs_parse_clean.Tests.ps1","tests\capital_context_failsafe.Tests.ps1","tests\boot_integrity.Tests.ps1","tests\gem_executor.Tests.ps1"
           $failed = 0
           foreach ($s in $suites) {
