@@ -1,4 +1,4 @@
-# signal_booster_llm.Tests.ps1 — TDD para Signal Booster LLM
+﻿# signal_booster_llm.Tests.ps1 — TDD para Signal Booster LLM
 # Valida: boosts calculados corretamente, amplitudes corretas, alignment detection
 # 2026-07-09
 

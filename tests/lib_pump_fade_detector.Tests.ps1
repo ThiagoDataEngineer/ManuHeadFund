@@ -1,4 +1,4 @@
-Describe "lib_pump_fade_detector" {
+﻿Describe "lib_pump_fade_detector" {
     BeforeAll {
         . (Join-Path $PSScriptRoot "..\agents\lib_pump_fade_detector.ps1")
     }

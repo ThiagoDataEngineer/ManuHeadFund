@@ -1,4 +1,4 @@
-# funding_axis.Tests.ps1 -- TDD do eixo funding (sinal #1 de pre-dump em perpetuos)
+﻿# funding_axis.Tests.ps1 -- TDD do eixo funding (sinal #1 de pre-dump em perpetuos)
 # Funding alto positivo = longs lotados = risco de squeeze pra baixo -> favorece SHORT.
 # Funding negativo = shorts lotados = squeeze pra cima -> favorece LONG.
 # Pester 3.4 / ASCII-only.

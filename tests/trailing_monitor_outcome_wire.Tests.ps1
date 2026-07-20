@@ -1,4 +1,4 @@
-# trailing_monitor_outcome_wire.Tests.ps1 -- TDD wiring do espelho de outcomes.
+﻿# trailing_monitor_outcome_wire.Tests.ps1 -- TDD wiring do espelho de outcomes.
 #
 # Garante que scripts/trailing_stop_monitor.ps1 (caminho de FECHAMENTO de posicao
 # no cloud) carregue lib_feedback_loop.ps1, para que Add-TradeOutcome exista e a

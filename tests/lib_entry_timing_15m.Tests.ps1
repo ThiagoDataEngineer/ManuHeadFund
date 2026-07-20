@@ -1,4 +1,4 @@
-# lib_entry_timing_15m.Tests.ps1 -- TDD para entry timing gate
+﻿# lib_entry_timing_15m.Tests.ps1 -- TDD para entry timing gate
 # 2026-07-15: Pester 3.4.0 compatible
 
 $ErrorActionPreference = "Stop"

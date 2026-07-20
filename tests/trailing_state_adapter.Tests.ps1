@@ -1,4 +1,4 @@
-# trailing_state_adapter.Tests.ps1 -- Fase 2: trailing positions via state_store
+﻿# trailing_state_adapter.Tests.ps1 -- Fase 2: trailing positions via state_store
 # Bridge local-OU-supabase: a nuvem stateless le as posicoes do mesmo backend.
 # TDD com backend LOCAL forcado + dir temp (isolado). Pester 3.4 / ASCII-only.
 

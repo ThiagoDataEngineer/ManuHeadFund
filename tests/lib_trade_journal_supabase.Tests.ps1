@@ -1,4 +1,4 @@
-Describe "lib_trade_journal_supabase" {
+﻿Describe "lib_trade_journal_supabase" {
     BeforeAll {
         . "$PSScriptRoot/../agents/lib_state_store.ps1"
         . "$PSScriptRoot/../agents/lib_trade_journal_supabase.ps1"

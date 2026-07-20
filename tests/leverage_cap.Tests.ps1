@@ -1,4 +1,4 @@
-# leverage_cap.Tests.ps1 -- 2026-07-17: convertido pra sintaxe Pester 3.4.0
+﻿# leverage_cap.Tests.ps1 -- 2026-07-17: convertido pra sintaxe Pester 3.4.0
 # (ambiente local so tem Pester 3.4.0 instalado; -BeLessThanOrEqual/-BeCloseTo
 # nao existem nessa versao -- comparacoes booleanas manuais via Should Be $true)
 

@@ -1,4 +1,4 @@
-# lib_dashboard_crypto.Tests.ps1 - TDD criptografia do dashboard publico (2026-06-12)
+﻿# lib_dashboard_crypto.Tests.ps1 - TDD criptografia do dashboard publico (2026-06-12)
 
 $agentsDir = Join-Path (Split-Path -Parent $PSScriptRoot) "agents"
 . (Join-Path $agentsDir "lib_dashboard_crypto.ps1")

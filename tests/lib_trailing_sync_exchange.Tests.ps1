@@ -1,4 +1,4 @@
-# tests/lib_trailing_sync_exchange.Tests.ps1
+﻿# tests/lib_trailing_sync_exchange.Tests.ps1
 # TDD: Sync-TrailingPositionsWithExchange nao deve duplicar posicao quando
 # orderId rotaciona (stop antigo fechado -> reentrada com novo stop).
 #

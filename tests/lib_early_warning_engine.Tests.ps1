@@ -1,4 +1,4 @@
-# Tests para lib_early_warning_engine.ps1 (Pester v3.4.0 compatible)
+﻿# Tests para lib_early_warning_engine.ps1 (Pester v3.4.0 compatible)
 # TDD: Valida multi-signal scoring e detecção de setup ripening
 
 Describe "Resolve-EarlyWarningSignal (Early Warning Core)" {

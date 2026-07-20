@@ -1,4 +1,4 @@
-# conviction_gate_override.Tests.ps1 -- TDD do override do Tori pelo ensemble
+﻿# conviction_gate_override.Tests.ps1 -- TDD do override do Tori pelo ensemble
 # Destrava o "Tori veta tudo": se conviccao do ensemble e alta, override o SKIP.
 # FAIL-SAFE: so com flag; nunca overrida dados-ausentes nem gates de seguranca.
 # Pester 3.4 / ASCII-only.

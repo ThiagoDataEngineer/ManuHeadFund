@@ -1,4 +1,4 @@
-# mentor_supabase_enrichment.Tests.ps1 — TDD para enriquecimento Supabase
+﻿# mentor_supabase_enrichment.Tests.ps1 — TDD para enriquecimento Supabase
 # Padrão: Pester 5.x, mock Supabase responses, valida formato enrichment
 # 2026-07-09
 

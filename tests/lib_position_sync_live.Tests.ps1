@@ -1,4 +1,4 @@
-Describe "lib_position_sync_live" {
+﻿Describe "lib_position_sync_live" {
     BeforeAll {
         . "$PSScriptRoot/../agents/lib_state_store.ps1"
         . "$PSScriptRoot/../agents/lib_position_sync_live.ps1"

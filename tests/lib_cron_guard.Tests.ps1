@@ -1,4 +1,4 @@
-# TDD do cron guard (decisao pura robusta a throttle do GH Actions).
+﻿# TDD do cron guard (decisao pura robusta a throttle do GH Actions).
 $ErrorActionPreference = "Stop"
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"
 . (Join-Path $agentsDir "lib_cron_guard.ps1")

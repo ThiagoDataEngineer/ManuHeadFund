@@ -1,4 +1,4 @@
-# lib_feedback_loop_supabase.Tests.ps1 -- TDD espelho de trade_outcomes no Supabase.
+﻿# lib_feedback_loop_supabase.Tests.ps1 -- TDD espelho de trade_outcomes no Supabase.
 # Pester 3.x.
 #
 # Objetivo: ao fechar um trade, alem de gravar journal/trade_outcomes.jsonl (local),

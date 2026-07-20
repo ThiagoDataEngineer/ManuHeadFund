@@ -1,4 +1,4 @@
-# mce_direction_aware.Tests.ps1 -- TDD Evolucao A+B 2026-07-06
+﻿# mce_direction_aware.Tests.ps1 -- TDD Evolucao A+B 2026-07-06
 # MCE direction-aware: SHORT nao pode ser bloqueado por fatores LONG-framed.
 # Pester 3.x. UTF-8 BOM.
 

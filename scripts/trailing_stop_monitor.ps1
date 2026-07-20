@@ -51,6 +51,7 @@ try {
     # Carregar libs diretamente com Join-Path (cross-platform)
     . (Join-Path $agentsDir "config.ps1")
     . (Join-Path $agentsDir "lib_coinex.ps1")
+    . (Join-Path $agentsDir "lib_candle_fetcher.ps1")
     . (Join-Path $agentsDir "lib_telegram.ps1")
     . (Join-Path $agentsDir "lib_trailing.ps1")
     # 2026-06-20: registra trade_outcome ao fechar (JSONL local + espelho Supabase).

@@ -1,4 +1,4 @@
-# lib_market_scenario.Tests.ps1 -- Pester 3.x
+﻿# lib_market_scenario.Tests.ps1 -- Pester 3.x
 # TDD 2026-06-24: motor de CENARIO (identifica regime -> estrategia com edge).
 # "Sempre ganhar" = sempre escolher a estrategia certa pro cenario:
 #   CAPITULACAO -> comprar fundo (LONG) | BEAR -> SHORT/caixa | BULL -> LONG | NEUTRO -> esperar.

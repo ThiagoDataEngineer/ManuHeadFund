@@ -1,4 +1,4 @@
-# prediction_engine.Tests.ps1 — Temporal Analysis + Regime Forecast
+﻿# prediction_engine.Tests.ps1 — Temporal Analysis + Regime Forecast
 # TDD: 20 testes
 
 $ErrorActionPreference = "Stop"

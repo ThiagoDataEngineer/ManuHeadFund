@@ -1,4 +1,4 @@
-# trailing_blindness_fix.Tests.ps1 -- TDD do trailing cego (spot + futures + SHORT)
+﻿# trailing_blindness_fix.Tests.ps1 -- TDD do trailing cego (spot + futures + SHORT)
 # Causa raiz: peak nao atualizava no loop vivo + thresholds grossos (+5/+10)
 # matavam micro-swings (HYPE pico +3.26% travou ZERO).
 # Fix: lock fino +2.5% -> breakeven; side-aware (LONG/SHORT); monotonico.

@@ -1,4 +1,4 @@
-# Tests para lib_regime_surf_executor.ps1 (Pester 3.4.0)
+﻿# Tests para lib_regime_surf_executor.ps1 (Pester 3.4.0)
 # TDD: garante SHADOW por default (nao executa sem flag) + fail-closed.
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path

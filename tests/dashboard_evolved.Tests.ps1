@@ -1,4 +1,4 @@
-# dashboard_evolved.Tests.ps1 -- TDD para dashboard evoluido (4 fases)
+﻿# dashboard_evolved.Tests.ps1 -- TDD para dashboard evoluido (4 fases)
 # Valida a ESTRUTURA do arquivo dashboard/manu.html (contrato + features).
 # ASCII-only de proposito (PS 5.1 sem BOM nao quebra). RED -> GREEN -> REFACTOR.
 

@@ -1,4 +1,4 @@
-# capital_context_failsafe.Tests.ps1 — TDD fix cap_exposure 2026-07-09 (Pester 3.4)
+﻿# capital_context_failsafe.Tests.ps1 — TDD fix cap_exposure 2026-07-09 (Pester 3.4)
 # Trava 3 comportamentos:
 #  1. Sem fetch real -> source=fallback e NUNCA persiste (nao polui Supabase/journal)
 #  2. Cache REAL stale disponivel -> preferido sobre bootstrap (cached_stale)

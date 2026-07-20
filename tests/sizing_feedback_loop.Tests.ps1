@@ -1,4 +1,4 @@
-# sizing_feedback_loop.Tests.ps1 -- TDD para sizing dinamico + feedback loop
+﻿# sizing_feedback_loop.Tests.ps1 -- TDD para sizing dinamico + feedback loop
 # RED: sizing segue capital real (SPOT+FUTURES), regime-aware, trailing automático
 # GREEN: roda ciclos, mede PnL, calibra parametros dinamicamente
 # Objetivo: $10/dia testavel (não aposta, mensuravel)

@@ -1,4 +1,4 @@
-# lib_triple_barrier_backtest.Tests.ps1 -- Pester 3.x
+﻿# lib_triple_barrier_backtest.Tests.ps1 -- Pester 3.x
 # TDD 2026-06-24: backtest REAL (triple-barrier Lopez de Prado), substitui o fake que
 # ESTIMAVA pnl do score. Simula entrada+stop+alvo no caminho de preco REAL.
 # SHORT: stop ACIMA, alvo ABAIXO. LONG: stop ABAIXO, alvo ACIMA.

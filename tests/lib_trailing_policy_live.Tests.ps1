@@ -1,4 +1,4 @@
-# lib_trailing_policy_live.Tests.ps1 -- TDD do wire LIVE ATIVO.
+﻿# lib_trailing_policy_live.Tests.ps1 -- TDD do wire LIVE ATIVO.
 # Decisao gated por posicao + apply ratchet-only (anti-duplicata/double-sell).
 
 $ErrorActionPreference = "Stop"

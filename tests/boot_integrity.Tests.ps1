@@ -1,4 +1,4 @@
-# boot_integrity.Tests.ps1 — TDD guarda de boot (Pester 3.4) — 2026-07-09
+﻿# boot_integrity.Tests.ps1 — TDD guarda de boot (Pester 3.4) — 2026-07-09
 # NUNCA MAIS: lib com parse error carrega em silencio -> funcao some -> daemon
 # roda 20h quebrado (caso real: lib_trailing 1 parentese = SL trailing morto).
 # Contrato:

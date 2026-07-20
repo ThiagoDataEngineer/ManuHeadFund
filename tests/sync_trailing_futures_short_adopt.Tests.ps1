@@ -1,4 +1,4 @@
-# tests/sync_trailing_futures_short_adopt.Tests.ps1
+﻿# tests/sync_trailing_futures_short_adopt.Tests.ps1
 # TDD (2026-07-07): Sync-TrailingPositionsWithExchange deve adotar TODA posicao
 # FUTURES — inclusive SHORT sem stop (ex.: WLDUSDT sl=0, que ficava fora do
 # trailing pelo guard $isManaged pensado so pra holdings passivos SPOT).

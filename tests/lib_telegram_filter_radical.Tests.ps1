@@ -1,4 +1,4 @@
-# lib_telegram_filter_radical.Tests.ps1 -- TDD filtro RADICAL (apenas 6 críticos)
+﻿# lib_telegram_filter_radical.Tests.ps1 -- TDD filtro RADICAL (apenas 6 críticos)
 
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot\..

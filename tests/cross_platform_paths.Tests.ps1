@@ -1,4 +1,4 @@
-# cross_platform_paths.Tests.ps1 -- regressao: paths cross-platform no cloud-trading.
+﻿# cross_platform_paths.Tests.ps1 -- regressao: paths cross-platform no cloud-trading.
 # Bug pego na validacao: 'Join-Path $x "journal\flag"' -> no ubuntu vira nome literal
 # 'journal\flag' -> Test-Path nao acha -> trava dry furada -> live no 1o ciclo.
 # Pester 3.4 / ASCII-only.

@@ -1,4 +1,4 @@
-# tests/sizing_agg_bull_scalp.Tests.ps1
+﻿# tests/sizing_agg_bull_scalp.Tests.ps1
 # TDD (2026-07-07): estrategia de sizing agressivo — 3% em BULL_STRONG e scalps
 # Pester 3.4 compativel.
 

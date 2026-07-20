@@ -1,4 +1,4 @@
-# supabase_cloud_sync.Tests.ps1 — Validação de Supabase como backend único
+﻿# supabase_cloud_sync.Tests.ps1 — Validação de Supabase como backend único
 # Garante que state store sincroniza com Supabase, fallback funciona
 # TDD: 13 testes
 

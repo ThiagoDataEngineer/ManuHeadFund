@@ -1,4 +1,4 @@
-# short_mastery.Tests.ps1 -- TDD da maestria SHORT
+﻿# short_mastery.Tests.ps1 -- TDD da maestria SHORT
 #   Get-OverextensionScore: dumps comecam com OVEREXTENSAO (esticado+overbought),
 #     nao com downtrend confirmado. Eixo bidirecional (SHORT=esticado up; LONG=esticado down).
 #   Pesos DIRECIONAIS: SHORT pondera overextension/structure mais que LONG.

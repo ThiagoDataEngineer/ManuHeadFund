@@ -1,4 +1,4 @@
-# tests/lib_trailing_policy_live_multitf.Tests.ps1
+﻿# tests/lib_trailing_policy_live_multitf.Tests.ps1
 # TDD (2026-07-07): trailing multi-timeframe opt-in.
 # Invoke-TrailingPolicyLive/Get-PositionExitDecision aceitam HtfTrend {t1D;t4H;t1H}.
 # Quando fornecido, trend_up vem da CONFLUENCIA direcao-aware (Get-MultiTimeframeConviction),

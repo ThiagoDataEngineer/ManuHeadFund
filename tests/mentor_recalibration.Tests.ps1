@@ -1,4 +1,4 @@
-# mentor_recalibration.Tests.ps1 -- TDD mentor decision inversion
+﻿# mentor_recalibration.Tests.ps1 -- TDD mentor decision inversion
 # 12 testes: bolsos com inversão ativa vs passivo
 
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"

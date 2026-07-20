@@ -1,4 +1,4 @@
-# cloud_trading.Tests.ps1 -- "trading online": gem_loop -Once no Actions, com trava dry.
+﻿# cloud_trading.Tests.ps1 -- "trading online": gem_loop -Once no Actions, com trava dry.
 # Seguranca: enquanto CLOUD_DRY_RUN.flag existir, nenhuma ordem real dispara
 # (prova que o stack de 32 libs carrega no ubuntu antes de virar live).
 # Pester 3.4 / ASCII-only.

@@ -1,4 +1,4 @@
-# Tests para lib_exit_intelligence_auto.ps1 (nucleo puro Resolve-ExitAutoDecision)
+﻿# Tests para lib_exit_intelligence_auto.ps1 (nucleo puro Resolve-ExitAutoDecision)
 # Foco: causa raiz 2026-06-28 (qty fantasma / dust) + as 3 layers de profit-taking.
 
 Describe "Resolve-ExitAutoDecision (Exit Intelligence Auto - nucleo puro)" {

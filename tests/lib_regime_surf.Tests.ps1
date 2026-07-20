@@ -1,4 +1,4 @@
-# Tests para lib_regime_surf.ps1 (Pester 3.4.0)
+﻿# Tests para lib_regime_surf.ps1 (Pester 3.4.0)
 # TDD: cerebro do surf bidirecional -- LONG bull / SHORT bear, fail-closed.
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path

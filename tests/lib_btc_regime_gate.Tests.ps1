@@ -1,4 +1,4 @@
-# lib_btc_regime_gate.Tests.ps1 -- Pester 3.x
+﻿# lib_btc_regime_gate.Tests.ps1 -- Pester 3.x
 # TDD 2026-06-24: BTC-core gate. Causa real das perdas: sistema comprou alt LONG
 # durante BTC -20%/mes (alt sangra 2-4x BTC em bear). Bloqueia LONG de alt quando
 # BTC em downtrend confirmado. SHORT liberado (bear favorece short).

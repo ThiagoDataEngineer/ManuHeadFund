@@ -1,4 +1,4 @@
-# trailing_executor_phase2.Tests.ps1 — Smart SL + Multiple Levels
+﻿# trailing_executor_phase2.Tests.ps1 — Smart SL + Multiple Levels
 # TDD: 21 testes
 
 $ErrorActionPreference = "Stop"

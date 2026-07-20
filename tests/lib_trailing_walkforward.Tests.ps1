@@ -1,4 +1,4 @@
-# lib_trailing_walkforward.Tests.ps1 -- TDD da camada de validacao.
+﻿# lib_trailing_walkforward.Tests.ps1 -- TDD da camada de validacao.
 # Walk-forward multi-ativo + teste PAREADO (mesma entrada -> todas as politicas,
 # delta isola o efeito da SAIDA controlando qualidade da entrada) + bootstrap CI.
 # Disciplina do projeto: nada vai live sem delta robusto vs ATUAL.

@@ -1,4 +1,4 @@
-Describe "gem_executor Live Integration Test" {
+﻿Describe "gem_executor Live Integration Test" {
     BeforeAll {
         # Load gem_executor (this triggers the bug if it exists)
         . "$PSScriptRoot\..\agents\gem_executor.ps1" -ErrorAction SilentlyContinue

@@ -1,4 +1,4 @@
-# lib_learning_evolution.Tests.ps1 -- Pester 3.x
+﻿# lib_learning_evolution.Tests.ps1 -- Pester 3.x
 # TDD Fix #3 (2026-06-23): evoluir com os erros.
 # A) Get-GateKey: normaliza a FRASE de veto da LLM -> chave canonica de gate.
 #    Hoje skip_quality chaveia pela frase inteira (unica cada vez) -> 1092 chaves n~1,

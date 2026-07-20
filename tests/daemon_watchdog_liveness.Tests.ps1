@@ -1,4 +1,4 @@
-# tests/daemon_watchdog_liveness.Tests.ps1
+﻿# tests/daemon_watchdog_liveness.Tests.ps1
 # Regressao (2026-07-07): Test-DaemonHealthy tratava o lock 'ts' (START timestamp,
 # gravado 1x no boot) como heartbeat rolante -> marcava stale qualquer daemon
 # vivo > MaxAgeMinutes -> "dead/stale" eterno (Down=4) na frota religada.

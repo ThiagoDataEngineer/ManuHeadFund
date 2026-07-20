@@ -1,4 +1,4 @@
-# cloud_conviction_scan.Tests.ps1 -- Fase 3: job online de signal+conviction (OBSERVE)
+﻿# cloud_conviction_scan.Tests.ps1 -- Fase 3: job online de signal+conviction (OBSERVE)
 # Roda no Actions: varre movers, computa ensemble 7 eixos, LOGA observacoes
 # (state_store, cloud-persistente). NUNCA executa trade. Valida-se 1 semana antes de virar live.
 # Pester 3.4 / ASCII-only.

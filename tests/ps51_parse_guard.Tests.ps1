@@ -1,4 +1,4 @@
-# tests/ps51_parse_guard.Tests.ps1
+﻿# tests/ps51_parse_guard.Tests.ps1
 # GATE (2026-07-07): garante que os arquivos tocados na evolucao trailing multi-TF +
 # adocao de Futures PARSEIAM em PowerShell 5.1 (sem `??`, ternario ou sintaxe PS7-only).
 # Licao recorrente: codigo PS7-only quebra o PARSE inteiro da lib no PS 5.1 e a funcao

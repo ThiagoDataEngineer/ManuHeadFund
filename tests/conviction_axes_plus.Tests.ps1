@@ -1,4 +1,4 @@
-# conviction_axes_plus.Tests.ps1 -- TDD eixos novos (volume + estrutura) + stop default
+﻿# conviction_axes_plus.Tests.ps1 -- TDD eixos novos (volume + estrutura) + stop default
 # (c): consertar StopPct=0 + ligar mais eixos no ensemble.
 # Pester 3.4 / ASCII-only.
 

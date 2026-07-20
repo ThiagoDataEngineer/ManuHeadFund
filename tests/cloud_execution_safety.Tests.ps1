@@ -1,4 +1,4 @@
-# cloud_execution_safety.Tests.ps1 — Validação de segurança cloud-only
+﻿# cloud_execution_safety.Tests.ps1 — Validação de segurança cloud-only
 # Garante que LOOP local não roda, -Once bypassa gates, e nuvem é único executor
 # TDD: 15 testes
 

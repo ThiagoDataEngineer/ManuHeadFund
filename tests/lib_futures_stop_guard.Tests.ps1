@@ -1,4 +1,4 @@
-# lib_futures_stop_guard.Tests.ps1 -- Pester 3.x
+﻿# lib_futures_stop_guard.Tests.ps1 -- Pester 3.x
 # TDD 2026-06-23: evolui o futures (fail-closed) analogo ao spot.
 # Futures SL e exchange-side (mark-price, fecha a mercado) = solido QUANDO setado.
 # Furos: (1) posicao nua (sem SL) nao rastreada no journal; (2) sem fallback se ja furou.

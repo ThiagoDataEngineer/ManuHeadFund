@@ -1,4 +1,4 @@
-# lib_token_structural_quality.Tests.ps1 -- Pester 3.x
+﻿# lib_token_structural_quality.Tests.ps1 -- Pester 3.x
 #
 # Gate de qualidade estrutural so-CoinEx (achado 2026-07-20, BABYDOGEUSDT
 # comprado autonomo sem gate estrutural nenhum). Testa Get-SpotLiquidityNearPrice

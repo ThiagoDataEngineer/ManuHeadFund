@@ -1,4 +1,4 @@
-# calibration_snapshot.Tests.ps1 — TDD registro do momento (Pester 3.4) — 2026-07-09
+﻿# calibration_snapshot.Tests.ps1 — TDD registro do momento (Pester 3.4) — 2026-07-09
 # Gap de auditoria: 5 pecas (gem_loop, trailing, scan_master, tori, faro) operam com
 # calibracoes que NAO eram fotografadas -> grading nao consegue correlacionar
 # "parametro vigente -> outcome" -> aprendizado cego fora do tunable registry.

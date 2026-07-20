@@ -1,4 +1,4 @@
-# lib_coin_exposure_cap.Tests.ps1 -- Pester 3.x
+﻿# lib_coin_exposure_cap.Tests.ps1 -- Pester 3.x
 # TDD 2026-06-24: bloqueia trades GIGANTES / acumulacao por moeda.
 # Causa raiz: dedup olhava ledger local (gem_safety_state) que desviava da realidade ->
 # PAXG (entrou por recovery, fora do ledger) foi re-comprado ate $1023 (45% da carteira).

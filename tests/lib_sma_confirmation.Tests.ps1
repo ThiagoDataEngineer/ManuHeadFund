@@ -1,4 +1,4 @@
-# lib_sma_confirmation.Tests.ps1 -- Pester TDD for SMA confirmation filter
+﻿# lib_sma_confirmation.Tests.ps1 -- Pester TDD for SMA confirmation filter
 # Run: Invoke-Pester lib_sma_confirmation.Tests.ps1 -Verbose
 # 2026-07-09: 15 test cases
 

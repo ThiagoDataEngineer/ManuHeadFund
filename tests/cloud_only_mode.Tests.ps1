@@ -1,4 +1,4 @@
-# cloud_only_mode.Tests.ps1 — Validação CLOUD-ONLY: local desligado, nuvem ativa
+﻿# cloud_only_mode.Tests.ps1 — Validação CLOUD-ONLY: local desligado, nuvem ativa
 # Modo: local NÃO trada, GitHub Actions (24/7) é única fonte
 # State: Supabase backend, zero dependência de PC local
 # TDD: 19 testes críticos

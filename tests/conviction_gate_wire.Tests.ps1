@@ -1,4 +1,4 @@
-Describe "ConvictionGate Wire (Blocker #1 Fix)" {
+﻿Describe "ConvictionGate Wire (Blocker #1 Fix)" {
 
     BeforeAll {
         # Load libs

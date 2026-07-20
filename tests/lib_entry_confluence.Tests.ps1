@@ -1,4 +1,4 @@
-Describe "Entry Confluence Detector" {
+﻿Describe "Entry Confluence Detector" {
     BeforeAll {
         Set-Location $PSScriptRoot/..
         . agents/lib_entry_confluence.ps1

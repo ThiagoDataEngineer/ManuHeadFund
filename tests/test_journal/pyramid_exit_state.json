@@ -1,10 +1,10 @@
 [
   {
-    "exit_history": [],
-    "updated_at": "2026-06-30T10:21:38.1106384-03:00",
-    "gains_locked_usd": 4000.0,
     "positions": [
       "System.Collections.Hashtable"
-    ]
+    ],
+    "updated_at": "2026-07-20T15:12:04.6197232-03:00",
+    "gains_locked_usd": 4000.0,
+    "exit_history": []
   }
 ]

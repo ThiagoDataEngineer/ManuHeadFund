@@ -1,4 +1,4 @@
-# github_actions_workflow.Tests.ps1 — Validação de workflow Actions
+﻿# github_actions_workflow.Tests.ps1 — Validação de workflow Actions
 # Garante que JOBs estão configurados, secrets existem, order é correto
 # TDD: 12 testes
 
@@ -40,7 +40,8 @@ Describe "GitHub Actions Workflow (trading-pipeline.yml)" {
             $script:wf | Should Match "cloud-trading:"
         }
         It "telegram (JOB 24 — listener -Once)" {
-            ($script:wf | Should Match "telegram") -and ($script:wf | Should Match "listener")
+            $script:wf | Should Match "telegram"
+            $script:wf | Should Match "listener"
         }
     }
 
@@ -79,7 +80,7 @@ Describe "GitHub Actions Workflow (trading-pipeline.yml)" {
             $script:wf | Should Match "shell:\s+pwsh"
         }
         It "Nenhum cmd.exe" {
-            $script:wf | Should -Not Match "cmd\.exe|cmd /c"
+            $script:wf | Should Not Match "cmd\.exe|cmd /c"
         }
     }
 

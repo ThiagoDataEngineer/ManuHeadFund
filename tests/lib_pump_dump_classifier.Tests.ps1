@@ -1,4 +1,4 @@
-# lib_pump_dump_classifier.Tests.ps1 -- TDD para pump-dump classifier
+﻿# lib_pump_dump_classifier.Tests.ps1 -- TDD para pump-dump classifier
 # 2026-07-15: Pester 3.4.0 compatible
 
 $ErrorActionPreference = "Stop"

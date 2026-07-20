@@ -1,4 +1,4 @@
-# dashboard_telegram_buttons.Tests.ps1 -- #4: Dashboard live + Telegram botões controle
+﻿# dashboard_telegram_buttons.Tests.ps1 -- #4: Dashboard live + Telegram botões controle
 # Dashboard: pull Supabase real-time, mostra capital/posições/stops
 # Telegram: /halt /resume /balance /stops /scan (botões de controle)
 # Pester 3.4 / ASCII-only.

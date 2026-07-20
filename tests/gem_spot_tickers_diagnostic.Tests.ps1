@@ -1,4 +1,4 @@
-# gem_spot_tickers_diagnostic.Tests.ps1 -- TDD: Get-GemSpotTickers NAO pode falhar
+﻿# gem_spot_tickers_diagnostic.Tests.ps1 -- TDD: Get-GemSpotTickers NAO pode falhar
 # em silencio. Bug 2026-06-20: cloud retornava "0 pares" sem nenhuma pista da causa
 # (try/catch engolia tudo). Codigo OK local (352 tickers) mas cloud 0 -> conectividade
 # CoinEx do runner. Sem log, impossivel distinguir "0 legitimo" de "API inalcancavel".

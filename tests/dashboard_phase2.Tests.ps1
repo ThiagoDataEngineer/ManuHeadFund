@@ -1,4 +1,4 @@
-# dashboard_phase2.Tests.ps1 — WebSocket Real-Time + Control Buttons
+﻿# dashboard_phase2.Tests.ps1 — WebSocket Real-Time + Control Buttons
 # TDD: 18 testes
 
 $ErrorActionPreference = "Stop"

@@ -1,4 +1,4 @@
-# TDD do executor SHORT (dormente). Cobre o plano puro + o gate fail-closed.
+﻿# TDD do executor SHORT (dormente). Cobre o plano puro + o gate fail-closed.
 $ErrorActionPreference = "Stop"
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"
 . (Join-Path $agentsDir "lib_short_executor.ps1")

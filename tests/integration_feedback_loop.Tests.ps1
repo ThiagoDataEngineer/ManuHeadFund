@@ -1,4 +1,4 @@
-# integration_feedback_loop.Tests.ps1 -- TDD integracao: gem_executor + scan_master
+﻿# integration_feedback_loop.Tests.ps1 -- TDD integracao: gem_executor + scan_master
 # Valida que sizing dinamico e calibrador estao wired e prontos
 
 $ErrorActionPreference = "Stop"

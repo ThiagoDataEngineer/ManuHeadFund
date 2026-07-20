@@ -1,4 +1,4 @@
-Describe "Full Journey Flow (Phase 3 - End-to-End Validation)" {
+﻿Describe "Full Journey Flow (Phase 3 - End-to-End Validation)" {
 
     BeforeAll {
         # Load all critical libs

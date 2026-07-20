@@ -1,4 +1,4 @@
-# lib_heartbeat.Tests.ps1 -- TDD do nucleo puro do heartbeat.
+﻿# lib_heartbeat.Tests.ps1 -- TDD do nucleo puro do heartbeat.
 # Heartbeat agora le trade_outcomes do Supabase (cloud ground-truth), nao do JSONL
 # local que nunca existe em runner cloud. Funcoes PURAS (sem I/O) testadas aqui.
 

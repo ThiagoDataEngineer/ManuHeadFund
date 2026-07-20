@@ -1,4 +1,4 @@
-# lib_entry_quality_gate.Tests.ps1 -- TDD do gate fail-closed de entrada.
+﻿# lib_entry_quality_gate.Tests.ps1 -- TDD do gate fail-closed de entrada.
 $ErrorActionPreference = "Stop"
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"
 . (Join-Path $agentsDir "lib_entry_quality_gate.ps1")

@@ -1,4 +1,4 @@
-# lib_breadth_monitor.Tests.ps1 -- TDD para breadth monitor gate
+﻿# lib_breadth_monitor.Tests.ps1 -- TDD para breadth monitor gate
 # 2026-07-15: Pester 3.4.0 compatible (uses @() operator instead of Should)
 
 $ErrorActionPreference = "Stop"

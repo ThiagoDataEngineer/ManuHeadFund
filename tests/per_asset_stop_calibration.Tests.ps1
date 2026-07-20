@@ -1,4 +1,4 @@
-# per_asset_stop_calibration.Tests.ps1 — TDD auditor trailing (Pester 3.4) — 2026-07-09
+﻿# per_asset_stop_calibration.Tests.ps1 — TDD auditor trailing (Pester 3.4) — 2026-07-09
 # Problema (audit 2026-07-08): StopPct=0.08 hardcoded p/ TODOS os assets ->
 # wick de microcap vol alta estoura o stop (falso-positivo ~70% dos losses),
 # e blue-chip vol baixa desperdica 8% de risco sem necessidade.

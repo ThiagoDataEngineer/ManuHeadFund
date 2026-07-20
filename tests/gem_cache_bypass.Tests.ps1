@@ -1,4 +1,4 @@
-# gem_cache_bypass.Tests.ps1 -- TDD do bypass de cache p/ gate de conviction
+﻿# gem_cache_bypass.Tests.ps1 -- TDD do bypass de cache p/ gate de conviction
 # Problema: gems cacheados como tori_skip nunca re-chegam ao executor -> gate de
 # conviction (override Tori) fica decorativo. Fix: -BypassReasons deixa tori_skip
 # re-passar, mas conviction_low/sizing/etc continuam bloqueando (sem loop).

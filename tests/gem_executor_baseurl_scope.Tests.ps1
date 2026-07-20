@@ -1,4 +1,4 @@
-# gem_executor_baseurl_scope.Tests.ps1 -- TDD regressao do bug de scope COINEX_BASE_URL.
+﻿# gem_executor_baseurl_scope.Tests.ps1 -- TDD regressao do bug de scope COINEX_BASE_URL.
 #
 # Bug 2026-06-20 (cloud): gem_executor montava URIs com $global:COINEX_BASE_URL.
 # Sob invocacao via & (gem_loop.ps1 -Once no cloud), config.ps1 e dot-sourced num

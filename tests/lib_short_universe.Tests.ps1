@@ -1,4 +1,4 @@
-# TDD da resolucao do universo SHORT (whitelist journal -> fallback config git-tracked).
+﻿# TDD da resolucao do universo SHORT (whitelist journal -> fallback config git-tracked).
 $ErrorActionPreference = "Stop"
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"
 . (Join-Path $agentsDir "lib_short_universe.ps1")

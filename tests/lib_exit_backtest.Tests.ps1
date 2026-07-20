@@ -1,4 +1,4 @@
-# lib_exit_backtest.Tests.ps1 -- TDD do harness de replay de saidas.
+﻿# lib_exit_backtest.Tests.ps1 -- TDD do harness de replay de saidas.
 # Simulador PURO: dada uma entrada + candles pos-entrada + funcao de politica,
 # simula barra-a-barra e mede o desfecho (R, MFE, MAE, capture, motivo).
 # Disciplina-primeiro: mede o trailing ATUAL antes de inovar (escolha do user).

@@ -1,4 +1,4 @@
-# lib_trailing_baseline.Tests.ps1 -- TDD do baseline runner (comparar ATUAL vs NOVAS).
+﻿# lib_trailing_baseline.Tests.ps1 -- TDD do baseline runner (comparar ATUAL vs NOVAS).
 # Carrega dados reais de journal/candles_coinex/, simula entradas hipoteticas,
 # roda Invoke-ExitReplay com politica ATUAL vs NOVAS, compara metricas.
 # Disciplina: baseline ATUAL é hipótese (a política que vem rodando hoje),

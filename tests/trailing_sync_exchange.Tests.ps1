@@ -1,4 +1,4 @@
-# trailing_sync_exchange.Tests.ps1 -- TDD do sync journal->corretora (empurra SL real)
+﻿# trailing_sync_exchange.Tests.ps1 -- TDD do sync journal->corretora (empurra SL real)
 # Elo que faltava: trailing REGISTRAVA mas nao EXECUTAVA. Agora empurra a SL.
 # SEGURANCA: nunca empurra SL que ja dispararia (fecharia a mercado).
 # Pester 3.4 / ASCII-only.

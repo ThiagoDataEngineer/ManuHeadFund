@@ -1,4 +1,4 @@
-# lib_entry_direction.Tests.ps1 -- Pester 3.x
+﻿# lib_entry_direction.Tests.ps1 -- Pester 3.x
 # TDD 2026-06-24: cerebro bidirecional. "Se aparecer LONG bom atua, se SHORT bom atua."
 # Decide o LADO com edge = scenario (allow_long/short) X conviccao de cada lado.
 # Nunca opera contra o cenario. SKIP quando nenhum lado tem edge suficiente.

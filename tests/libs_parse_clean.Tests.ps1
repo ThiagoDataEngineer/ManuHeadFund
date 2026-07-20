@@ -1,4 +1,4 @@
-# libs_parse_clean.Tests.ps1 — Regressao 2026-07-09 (Pester 3.4)
+﻿# libs_parse_clean.Tests.ps1 — Regressao 2026-07-09 (Pester 3.4)
 # Classe de bug #1 do projeto: parse error em UMA lib mata o dot-source inteiro
 # (funcoes somem em silencio -> daemons quebram em runtime).
 # Caso real: lib_trailing.ps1:494 parentese extra -> 14 erros -> trailing morto,

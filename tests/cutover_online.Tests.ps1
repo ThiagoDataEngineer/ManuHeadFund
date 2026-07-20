@@ -1,4 +1,4 @@
-# cutover_online.Tests.ps1 -- cutover: local daemon para, cloud (-Once) assume.
+﻿# cutover_online.Tests.ps1 -- cutover: local daemon para, cloud (-Once) assume.
 # Gate: LOCAL_TRADING_DISABLED.flag faz gem_loop/scan_master em modo LOOP sair (exit 0),
 # mas -Once (nuvem) BYPASSA. Evita double-trade local+nuvem. CLOUD_DRY_RUN removido = live.
 # Pester 3.4 / ASCII-only.

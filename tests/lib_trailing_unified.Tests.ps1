@@ -1,4 +1,4 @@
-# lib_trailing_unified.Tests.ps1 -- TDD do motor unico de trailing
+﻿# lib_trailing_unified.Tests.ps1 -- TDD do motor unico de trailing
 # 2026-07-18: RED phase. Resolve-TrailingDecision substitui a logica
 # espalhada em Get-TrailingNewStopAdaptive / Calculate-TrailingStopPrice /
 # Get-SmartStopPrice -- um so core, resolvendo por origem do trade

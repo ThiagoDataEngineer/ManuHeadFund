@@ -1,4 +1,4 @@
-# lib_state_reconcile.Tests.ps1 -- Pester 3.x
+﻿# lib_state_reconcile.Tests.ps1 -- Pester 3.x
 # TDD Fix #2 (2026-06-23): UMA fonte de verdade.
 # Hoje 3 fontes se contradizem: gem_trades.csv diz 6 futures OPEN (fantasma),
 # trailing_positions.json diz que fecharam, e tem 4 recovery DUPLICADAS (x2).

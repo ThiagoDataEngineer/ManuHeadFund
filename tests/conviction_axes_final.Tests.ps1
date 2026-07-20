@@ -1,4 +1,4 @@
-# conviction_axes_final.Tests.ps1 -- TDD dos 2 ultimos eixos (servico completo)
+﻿# conviction_axes_final.Tests.ps1 -- TDD dos 2 ultimos eixos (servico completo)
 #   structure -> trendline/S-R real (toques) via Get-StructureFromCandles
 #   historical -> fingerprint de pre-pump (compressao+volume+higher-lows)
 # Pester 3.4 / ASCII-only.

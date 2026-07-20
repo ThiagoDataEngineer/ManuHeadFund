@@ -1,4 +1,4 @@
-# lib_spot_stop_guard.Tests.ps1 -- Pester 3.x
+﻿# lib_spot_stop_guard.Tests.ps1 -- Pester 3.x
 # TDD Fix #1 (2026-06-23): SPOT stop fail-closed.
 # Hoje position_watcher SO alerta no SL do SPOT, nunca vende. OPN foi a -69% com daemon morto.
 # Resolve-SpotStopActions decide (PURO, sem API) quais stop-orders COLOCAR na corretora

@@ -1,4 +1,4 @@
-# lib_trailing_policy.Tests.ps1 -- TDD da politica de saida por tipo de operacao.
+﻿# lib_trailing_policy.Tests.ps1 -- TDD da politica de saida por tipo de operacao.
 # PURO, sem LLM (barato): scalp/swing/short/long/runner recebem gestao propria.
 # Plugga no harness (Invoke-ExitReplay) -> mensuravel. Cada politica = hipotese.
 

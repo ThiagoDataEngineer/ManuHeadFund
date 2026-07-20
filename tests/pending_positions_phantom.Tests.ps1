@@ -1,4 +1,4 @@
-# pending_positions_phantom.Tests.ps1 -- TDD do bug "Market empty" (quebra a nuvem)
+﻿# pending_positions_phantom.Tests.ps1 -- TDD do bug "Market empty" (quebra a nuvem)
 # CoinEx-GetPendingPositions devolvia 1 posicao-fantasma vazia (market=null) quando
 # nao ha posicoes -> todo consumidor que itera .market estourava
 # ("Cannot bind argument to parameter 'Market'"). Fix: filtrar entradas sem market.

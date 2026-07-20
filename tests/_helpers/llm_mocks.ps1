@@ -1,4 +1,4 @@
-# tests/_helpers/llm_mocks.ps1 -- LLM mock infrastructure for Pester tests.
+﻿# tests/_helpers/llm_mocks.ps1 -- LLM mock infrastructure for Pester tests.
 #
 # Filosofia: testar logica dependente de LLM SEM queimar API call. Captura prompt
 # enviado pra inspecao + retorna mock response controlada. Habilita TDD de:

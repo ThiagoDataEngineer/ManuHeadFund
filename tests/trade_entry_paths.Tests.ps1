@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 # tests/trade_entry_paths.Tests.ps1
 # TDD — Validar TODOS os caminhos de entrada de trade
 # 2026-06-19

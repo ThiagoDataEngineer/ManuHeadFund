@@ -1,4 +1,4 @@
-# telegram_cloud.Tests.ps1 -- #3: telegram listener na nuvem (getUpdates, sem PC)
+﻿# telegram_cloud.Tests.ps1 -- #3: telegram listener na nuvem (getUpdates, sem PC)
 # Job Actions: roda telegram_listener.ps1 -Once a cada 5min, responde comandos
 # read-only (/status /heartbeat) + execucao (/halt /fechar). Offset persistido em Supabase.
 # Pester 3.4 / ASCII-only.

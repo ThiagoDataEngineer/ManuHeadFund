@@ -1,4 +1,4 @@
-# Tests para lib_market_type_detector.ps1 (Pester 3.4.0)
+﻿# Tests para lib_market_type_detector.ps1 (Pester 3.4.0)
 # TDD: deteccao automatica FUTURES vs SPOT, sem whitelist hardcoded.
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path

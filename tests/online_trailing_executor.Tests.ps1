@@ -1,4 +1,4 @@
-# online_trailing_executor.Tests.ps1 -- Fase 1: trailing EXECUTA online (empurra SL)
+﻿# online_trailing_executor.Tests.ps1 -- Fase 1: trailing EXECUTA online (empurra SL)
 # Valida que trailing_stop_monitor (cross-platform, roda no Actions) carrega e
 # chama o executor de SL (Sync-TrailingToExchange) + peak update fino.
 # Read-only structural + funcional. Pester 3.4 / ASCII-only.

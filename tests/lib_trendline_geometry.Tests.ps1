@@ -1,4 +1,4 @@
-# lib_trendline_geometry.Tests.ps1 -- TDD do pre-calculo geometrico de trendlines
+﻿# lib_trendline_geometry.Tests.ps1 -- TDD do pre-calculo geometrico de trendlines
 # 2026-07-17: achado real -- angulo SEM normalizar escala da ~89 graus pra
 # qualquer par (preco em milhares, tempo em unidades de candle, escalas
 # incompativeis). Testa que a normalizacao produz angulo VISUAL correto.

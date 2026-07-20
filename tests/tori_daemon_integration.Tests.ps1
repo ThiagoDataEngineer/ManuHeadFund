@@ -1,4 +1,4 @@
-# tori_daemon_integration.Tests.ps1 - Integration tests for Tori Daemon
+﻿# tori_daemon_integration.Tests.ps1 - Integration tests for Tori Daemon
 #
 # Validates complete daemon workflow:
 # 1. State persistence
@@ -41,7 +41,8 @@ function CoinEx-GetFuturesCandles {
 
     # Return realistic mock candles
     $candles = @()
-    $basePrice = @{ BTCUSDT = 63000; ETHUSDT = 3500; XRPUSDT = 0.52 }[$market] ?? 1000
+    $basePriceMap = @{ BTCUSDT = 63000; ETHUSDT = 3500; XRPUSDT = 0.52 }
+    $basePrice = if ($null -ne $basePriceMap[$market]) { $basePriceMap[$market] } else { 1000 }
 
     for ($i = 0; $i -lt $limit; $i++) {
         $candles += [PSCustomObject]@{
@@ -60,7 +61,8 @@ function CoinEx-GetFuturesCandles {
 function CoinEx-GetTicker {
     param($market)
 
-    $basePrice = @{ BTCUSDT = 63000; ETHUSDT = 3500; XRPUSDT = 0.52 }[$market] ?? 1000
+    $basePriceMap = @{ BTCUSDT = 63000; ETHUSDT = 3500; XRPUSDT = 0.52 }
+    $basePrice = if ($null -ne $basePriceMap[$market]) { $basePriceMap[$market] } else { 1000 }
     return @{ last = $basePrice * (0.99 + (Get-Random -Minimum -1 -Maximum 1) / 100) }
 }
 

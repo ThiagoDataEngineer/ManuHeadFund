@@ -1,4 +1,4 @@
-# tests/orphan_reentry_fix.Tests.ps1
+﻿# tests/orphan_reentry_fix.Tests.ps1
 # TDD (2026-07-07): FIX A + B para evitar re-entrada involuntária
 # Problema: Sync-OrphanPositions reabre posições que phantom_reconciliation fechou
 # Solução A: Flag de cooldown após phantom rodar

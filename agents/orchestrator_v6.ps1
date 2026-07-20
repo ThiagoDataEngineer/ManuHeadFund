@@ -1052,22 +1052,24 @@ function Initialize-TrailingStopForPosition {
         Write-Host "   Config salvo em: $tpslConfigPath" -ForegroundColor DarkCyan
         
         # 5. Iniciar trailing stop contínuo como background job
+        # 2026-07-20: Update-TrailingStopContinuous nunca existiu (funcao
+        # fantasma, achada no audit de CI) -- Update-PositionTrailingStop
+        # (lib_trailing_stop_intelligent.ps1) e a funcao real, mas roda uma
+        # vez por chamada. Loop no proprio job substitui o "continuous".
         $trailingStopJob = Start-Job -ScriptBlock {
-            param($Market, $Entry, $Peak, $SLBase, $ScriptRoot)
-            
+            param($Market, $ScriptRoot, $UpdateIntervalSeconds)
+
             # Carregar dependências no job
             . (Join-Path $ScriptRoot "lib_trailing_stop_intelligent.ps1")
             . (Join-Path $ScriptRoot "lib_coinex.ps1")
-            
-            # Executar trailing stop contínuo
-            Update-TrailingStopContinuous `
-                -Market $Market `
-                -Entry $Entry `
-                -Peak $Peak `
-                -SLBase $SLBase `
-                -TrailingPercent 14.5 `
-                -UpdateIntervalSeconds 60
-        } -ArgumentList $Market, $entryPrice, $high24h, $tpsl.SLBase, $PSScriptRoot
+
+            # Executar trailing stop continuamente ate a posicao fechar
+            while ($true) {
+                $result = Update-PositionTrailingStop -Market $Market
+                if (-not $result.success -and $result.error -eq "Position not found") { break }
+                Start-Sleep -Seconds $UpdateIntervalSeconds
+            }
+        } -ArgumentList $Market, $PSScriptRoot, 60
         
         # 6. Armazenar job ID para monitoramento
         $global:TRAILING_STOP_JOBS[$Market] = @{

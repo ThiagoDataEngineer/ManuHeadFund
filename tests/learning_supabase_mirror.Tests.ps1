@@ -1,4 +1,4 @@
-# tests/learning_supabase_mirror.Tests.ps1
+﻿# tests/learning_supabase_mirror.Tests.ps1
 # TDD (2026-07-07): espelho do cerebro evolutivo pro Supabase (schema manuheadfund).
 # Cobre _Mirror-LearningToSupabase (helper compartilhado), o wire de Save-LearnedStats,
 # o read-back de Get-LearnedStats, e as invariantes: best-effort (falha nao quebra

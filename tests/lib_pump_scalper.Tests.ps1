@@ -1,4 +1,4 @@
-# Tests para lib_pump_scalper.ps1 (Pester 3.4.0)
+﻿# Tests para lib_pump_scalper.ps1 (Pester 3.4.0)
 # TDD: deteccao early pump + scalp LIVE (nao shadow)
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path

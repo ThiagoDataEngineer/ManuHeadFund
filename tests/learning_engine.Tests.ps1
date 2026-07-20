@@ -1,4 +1,4 @@
-# learning_engine.Tests.ps1 — Auto-Improve Conviction Thresholds + Pattern Learning
+﻿# learning_engine.Tests.ps1 — Auto-Improve Conviction Thresholds + Pattern Learning
 # TDD: 22 testes
 
 $ErrorActionPreference = "Stop"

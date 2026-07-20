@@ -1,4 +1,4 @@
-# entry_conviction_ensemble.Tests.ps1 -- TDD ensemble de conviccao de entrada
+﻿# entry_conviction_ensemble.Tests.ps1 -- TDD ensemble de conviccao de entrada
 # Eixos: BTC relative strength + Multi-TF gradiente + ensemble + observacao
 # Pester 3.4 (Should Be / -ge via Should Be $true). ASCII-only (PS 5.1 safe).
 

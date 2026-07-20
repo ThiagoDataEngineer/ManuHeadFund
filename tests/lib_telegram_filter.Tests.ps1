@@ -1,4 +1,4 @@
-Describe "Telegram Noise Filter" {
+﻿Describe "Telegram Noise Filter" {
     BeforeAll {
         Set-Location $PSScriptRoot/..
         . agents/lib_telegram.ps1

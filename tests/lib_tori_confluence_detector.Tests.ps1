@@ -1,4 +1,4 @@
-# lib_tori_confluence_detector.Tests.ps1 - Pester test suite for confluence detection
+﻿# lib_tori_confluence_detector.Tests.ps1 - Pester test suite for confluence detection
 #
 # Tests: Volume Climax, RSI Extremes, Fractal, CHoCH, Volume Profile
 #
