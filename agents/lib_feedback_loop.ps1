@@ -170,7 +170,50 @@ function ConvertTo-SupabaseOutcome {
 
 
 function _LoadOutcomes {
-    param([string]$Path)
+    # 2026-07-20: Get-OutcomeStats (e por consequencia Get-RegimeAdjustment,
+    # Invoke-KellyGraduationAudit em lib_kelly_graduation.ps1, chamada 1x/dia
+    # pelo job cloud "Kelly Graduation Audit") sempre lia daqui -- o JSONL
+    # local. No runner efemero do GitHub Actions, journal/ nao vem do git
+    # checkout (gitignored) e comeca vazio a cada execucao -- ou seja, o
+    # Kelly Audit sempre via n=0 trades, todo dia, desde que o job existe.
+    # Mesmo padrao "wired mas sem dado real" ja corrigido 2x em 2026-07-19
+    # (trade_outcomes.pnl_percent, CoinEx-GetClosedPositions). Fix: se
+    # backend=supabase E nenhum -OutcomePath explicito foi passado pelo
+    # caller (UsedDefaultPath), le do Supabase (fonte real de producao);
+    # senao mantem o comportamento local original (usado pelos testes, que
+    # sempre passam -OutcomePath explicito).
+    param(
+        [string]$Path,
+        [bool]$UsedDefaultPath = $false
+    )
+
+    if ($UsedDefaultPath -and
+        (Get-Command Test-StateBackend -ErrorAction SilentlyContinue) -and
+        ((Test-StateBackend) -eq "supabase") -and
+        (Get-Command Get-StateRecords -ErrorAction SilentlyContinue)) {
+        try {
+            $prevSchema = $global:STATE_STORE_SCHEMA
+            $global:STATE_STORE_SCHEMA = $script:SUPABASE_OUTCOME_SCHEMA
+            $rows = @(Get-StateRecords -Table "trade_outcomes" -ErrorAction Stop)
+            $global:STATE_STORE_SCHEMA = $prevSchema
+            # Supabase usa colunas (r_multiple, pnl_realized) -- normaliza pro
+            # shape que Get-OutcomeStats/Get-RegimeAdjustment ja esperam (r, pnl_usd,
+            # mode, regime vem do payload JSONB, ver ConvertTo-SupabaseOutcome).
+            return @($rows | ForEach-Object {
+                $payload = if ($_.payload) { $_.payload } else { $null }
+                [PSCustomObject]@{
+                    market   = $_.market
+                    r        = if ($null -ne $_.r_multiple) { [double]$_.r_multiple } else { 0.0 }
+                    pnl_usd  = if ($payload -and $null -ne $payload.pnl_usd) { [double]$payload.pnl_usd } else { 0.0 }
+                    mode     = if ($payload -and $payload.mode) { [string]$payload.mode } else { [string]$_.mode }
+                    regime   = if ($payload -and $payload.regime) { [string]$payload.regime } else { "" }
+                }
+            })
+        } catch {
+            Write-Warning "[feedback_loop] _LoadOutcomes: leitura Supabase falhou, fallback local: $_"
+        }
+    }
+
     if (-not (Test-Path $Path)) { return @() }
     $out = @()
     foreach ($line in Get-Content $Path -Encoding UTF8) {
@@ -189,7 +232,11 @@ function Get-OutcomeStats {
         [string] $Regime = "",
         [string] $Market = ""
     )
-    $rows = _LoadOutcomes -Path $OutcomePath
+    # 2026-07-20: so tenta Supabase quando o caller NAO especificou -OutcomePath
+    # explicito (comportamento default de producao) -- testes que passam um
+    # arquivo temporario continuam 100% locais, sem chamar Supabase.
+    $usedDefault = -not $PSBoundParameters.ContainsKey('OutcomePath')
+    $rows = _LoadOutcomes -Path $OutcomePath -UsedDefaultPath $usedDefault
     if ($Mode) { $rows = @($rows | Where-Object { $_.mode -eq $Mode }) }
     if ($Regime) { $rows = @($rows | Where-Object { $_.regime -eq $Regime }) }
     if ($Market) { $rows = @($rows | Where-Object { $_.market -eq $Market }) }

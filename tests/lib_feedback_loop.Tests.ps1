@@ -133,4 +133,58 @@ Describe "Get-RegimeAdjustment - learning signal" {
     }
 }
 
+
+# 2026-07-20: Kelly Graduation Audit (scripts/daily_kelly_audit.ps1, job cloud
+# "Kelly Graduation Audit", roda 1x/dia) chama Get-OutcomeStats SEM -OutcomePath
+# (usa o default) -- em producao isso sempre lia journal/trade_outcomes.jsonl
+# LOCAL, que no runner efemero do GitHub Actions comeca vazio a cada execucao
+# (gitignored, nao vem do checkout). n=0 trades todo dia, silenciosamente.
+# Fix: quando -OutcomePath NAO e especificado E backend=supabase, le do
+# Supabase (fonte real). Testes acima continuam 100% locais (sempre passam
+# -OutcomePath explicito) -- este Describe cobre so o caminho novo.
+Describe "Get-OutcomeStats - le do Supabase quando OutcomePath default (2026-07-20)" {
+    AfterEach { Remove-Variable -Name STATE_STORE_BACKEND -Scope Global -ErrorAction SilentlyContinue }
+
+    It "usa Get-StateRecords quando backend=supabase e OutcomePath NAO foi passado" {
+        $global:STATE_STORE_BACKEND = "supabase"
+        Mock Get-StateRecords {
+            return @(
+                [PSCustomObject]@{ market="A"; r_multiple=1.5; mode="TIER_A"; payload=[PSCustomObject]@{ pnl_usd=20; regime="BULL_STRONG" } },
+                [PSCustomObject]@{ market="B"; r_multiple=-1.0; mode="TIER_A"; payload=[PSCustomObject]@{ pnl_usd=-5; regime="BEAR_WEAK" } }
+            )
+        } -ParameterFilter { $Table -eq "trade_outcomes" }
+
+        $s = Get-OutcomeStats
+        $s.n | Should Be 2
+        $s.win_rate | Should Be 0.5
+        Assert-MockCalled Get-StateRecords -Times 1 -Exactly -Scope It -ParameterFilter { $Table -eq "trade_outcomes" }
+    }
+
+    It "NAO chama Get-StateRecords quando -OutcomePath explicito e passado (comportamento de teste preservado)" {
+        $global:STATE_STORE_BACKEND = "supabase"
+        Mock Get-StateRecords { return @() } -ParameterFilter { $Table -eq "trade_outcomes" }
+        $f = Join-Path $tmp "explicit_path_test.jsonl"
+        Add-TradeOutcome -OutcomePath $f -Market "Z" -Side "LONG" -Mode "GEM" `
+            -EntryPrice 1 -ExitPrice 2 -StopPrice 0.5 -TargetPrice 5 -R 1 -Pnl 1 -DurationDays 1 `
+            -ExitReason "target" -Regime "BULL" -Score 60 -WarningAction SilentlyContinue
+
+        $s = Get-OutcomeStats -OutcomePath $f
+        $s.n | Should Be 1
+        Assert-MockCalled Get-StateRecords -Times 0 -Exactly -Scope It -ParameterFilter { $Table -eq "trade_outcomes" }
+    }
+
+    It "NAO chama Get-StateRecords quando backend=local (mesmo sem -OutcomePath)" {
+        $global:STATE_STORE_BACKEND = "local"
+        Mock Get-StateRecords { return @() } -ParameterFilter { $Table -eq "trade_outcomes" }
+        $s = Get-OutcomeStats
+        Assert-MockCalled Get-StateRecords -Times 0 -Exactly -Scope It -ParameterFilter { $Table -eq "trade_outcomes" }
+    }
+
+    It "fallback local se leitura Supabase falhar (fail-soft, nao quebra o audit)" {
+        $global:STATE_STORE_BACKEND = "supabase"
+        Mock Get-StateRecords { throw "simulated supabase failure" } -ParameterFilter { $Table -eq "trade_outcomes" }
+        { Get-OutcomeStats -WarningAction SilentlyContinue } | Should Not Throw
+    }
+}
+
 Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue
