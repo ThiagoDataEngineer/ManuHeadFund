@@ -6,7 +6,12 @@ if (-not $global:JOURNAL_DIR) {
     $global:JOURNAL_DIR = Join-Path $PSScriptRoot "..\journal"
 }
 
-$OVERRIDE_METADATA_FILE = Join-Path $global:JOURNAL_DIR "override_metadata.json"
+# 2026-07-20: NAO fixar em variavel top-level -- $global:JOURNAL_DIR pode mudar
+# depois do dot-source (ex: testes que trocam o journal entre casos), e um path
+# calculado uma unica vez no load do modulo ficava travado no valor antigo.
+function _Get-OverrideMetadataFile {
+    Join-Path $global:JOURNAL_DIR "override_metadata.json"
+}
 
 # Helper: converte PSCustomObject -> Hashtable (PS 5.1 nao tem ConvertFrom-Json -AsHashtable)
 function _ConvertTo-HashtableLocal {
@@ -83,9 +88,9 @@ function Add-OverrideActivation {
 
     # Carrega ou cria metadata
     $metadata = @{}
-    if (Test-Path $OVERRIDE_METADATA_FILE) {
+    if (Test-Path (_Get-OverrideMetadataFile)) {
         try {
-            $metadata = _ConvertTo-HashtableLocal (Get-Content $OVERRIDE_METADATA_FILE -Raw | ConvertFrom-Json)
+            $metadata = _ConvertTo-HashtableLocal (Get-Content (_Get-OverrideMetadataFile) -Raw | ConvertFrom-Json)
         } catch {
             $metadata = @{}
         }
@@ -100,7 +105,7 @@ function Add-OverrideActivation {
     }
 
     # Persiste metadata em JSON
-    $metadata | ConvertTo-Json | Out-File $OVERRIDE_METADATA_FILE -Encoding utf8 -Force
+    $metadata | ConvertTo-Json | Out-File (_Get-OverrideMetadataFile) -Encoding utf8 -Force
 
     # Seta variavel global
     Set-Variable -Name "OVERRIDE_$Name" -Value $Value -Scope Global -Force
@@ -134,12 +139,12 @@ function Get-OverrideMetadata {
         [Parameter()] [string] $Name
     )
 
-    if (-not (Test-Path $OVERRIDE_METADATA_FILE)) {
+    if (-not (Test-Path (_Get-OverrideMetadataFile))) {
         return $null
     }
 
     try {
-        $metadata = _ConvertTo-HashtableLocal (Get-Content $OVERRIDE_METADATA_FILE -Raw | ConvertFrom-Json)
+        $metadata = _ConvertTo-HashtableLocal (Get-Content (_Get-OverrideMetadataFile) -Raw | ConvertFrom-Json)
     } catch {
         return $null
     }
@@ -218,14 +223,14 @@ function Disable-ExpiredOverrides {
 
     # Se houve expirados, atualiza metadata removendo-os
     if ($expiredNames.Count -gt 0) {
-        $metadata = _ConvertTo-HashtableLocal (Get-Content $OVERRIDE_METADATA_FILE -Raw | ConvertFrom-Json)
+        $metadata = _ConvertTo-HashtableLocal (Get-Content (_Get-OverrideMetadataFile) -Raw | ConvertFrom-Json)
         foreach ($name in $expiredNames) {
             $metadata.Remove($name)
         }
         if ($metadata.Count -gt 0) {
-            $metadata | ConvertTo-Json | Out-File $OVERRIDE_METADATA_FILE -Encoding utf8 -Force
+            $metadata | ConvertTo-Json | Out-File (_Get-OverrideMetadataFile) -Encoding utf8 -Force
         } else {
-            Remove-Item $OVERRIDE_METADATA_FILE -Force -ErrorAction SilentlyContinue
+            Remove-Item (_Get-OverrideMetadataFile) -Force -ErrorAction SilentlyContinue
         }
     }
 }
