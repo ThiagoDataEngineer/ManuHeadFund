@@ -5,7 +5,7 @@
 
 Describe "Trade Entry Paths - Complete Suite" {
     BeforeAll {
-        $projectRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
+        $projectRoot = Split-Path -Parent $PSScriptRoot
         $agentsDir = Join-Path $projectRoot "agents"
         $scriptsDir = Join-Path $projectRoot "scripts"
         $journalDir = Join-Path $projectRoot "journal"
@@ -252,21 +252,21 @@ Describe "Trade Entry Paths - Complete Suite" {
     # =========================================================================
     Context "8. GitHub Actions Workflow" {
         It "Should have JOB 23 (gem_loop)" {
-            $workflow = Join-Path $projectRoot ".github" "workflows" "trading-pipeline.yml"
+            $workflow = Join-Path $projectRoot ".github\workflows\trading-pipeline.yml"
             $content = Get-Content $workflow -Raw
 
             $content -match 'JOB 23|cloud-trading|gem_loop' | Should -Be $true
         }
 
         It "Should have JOB 24 (telegram_listener)" {
-            $workflow = Join-Path $projectRoot ".github" "workflows" "trading-pipeline.yml"
+            $workflow = Join-Path $projectRoot ".github\workflows\trading-pipeline.yml"
             $content = Get-Content $workflow -Raw
 
             $content -match 'JOB 24|telegram-cloud|telegram_listener' | Should -Be $true
         }
 
         It "Should have JOB 1 (trailing_stop_monitor) every 5 min" {
-            $workflow = Join-Path $projectRoot ".github" "workflows" "trading-pipeline.yml"
+            $workflow = Join-Path $projectRoot ".github\workflows\trading-pipeline.yml"
             $content = Get-Content $workflow -Raw
 
             $content -match 'trailing-stop-monitor' | Should -Be $true
@@ -274,7 +274,7 @@ Describe "Trade Entry Paths - Complete Suite" {
         }
 
         It "JOB 1 should call sync_and_fix_tp" {
-            $workflow = Join-Path $projectRoot ".github" "workflows" "trading-pipeline.yml"
+            $workflow = Join-Path $projectRoot ".github\workflows\trading-pipeline.yml"
             $content = Get-Content $workflow -Raw
 
             # Verifica que trailing-stop-monitor chama sync_and_fix_tp

@@ -5,7 +5,7 @@ $ErrorActionPreference = "Stop"
 
 Describe "lib_entry_timing_15m" {
     BeforeAll {
-        . (Join-Path $PSScriptRoot ".." "agents" "lib_entry_timing_15m.ps1")
+        . (Join-Path (Join-Path $PSScriptRoot "..") "agents\lib_entry_timing_15m.ps1")
     }
 
     # =========================================================================

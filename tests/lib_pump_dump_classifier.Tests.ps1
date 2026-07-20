@@ -5,7 +5,7 @@ $ErrorActionPreference = "Stop"
 
 Describe "lib_pump_dump_classifier" {
     BeforeAll {
-        . (Join-Path $PSScriptRoot ".." "agents" "lib_pump_dump_classifier.ps1")
+        . (Join-Path (Join-Path $PSScriptRoot "..") "agents\lib_pump_dump_classifier.ps1")
     }
 
     # =========================================================================

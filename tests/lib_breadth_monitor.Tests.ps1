@@ -5,7 +5,7 @@ $ErrorActionPreference = "Stop"
 
 Describe "lib_breadth_monitor" {
     BeforeAll {
-        . (Join-Path $PSScriptRoot ".." "agents" "lib_breadth_monitor.ps1")
+        . (Join-Path (Join-Path $PSScriptRoot "..") "agents\lib_breadth_monitor.ps1")
     }
 
     # =========================================================================

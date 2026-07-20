@@ -8,7 +8,7 @@ $ErrorActionPreference = "Stop"
 $libPath = Join-Path $PSScriptRoot "lib_sma_confirmation.ps1"
 if (-not (Test-Path $libPath)) {
     # Try parent directory (tests/ subdirectory)
-    $libPath = Join-Path (Split-Path $PSScriptRoot -Parent) "agents" "lib_sma_confirmation.ps1"
+    $libPath = Join-Path (Split-Path $PSScriptRoot -Parent) "agents\lib_sma_confirmation.ps1"
 }
 
 if (Test-Path $libPath) {

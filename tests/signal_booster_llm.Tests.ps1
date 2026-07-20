@@ -5,10 +5,10 @@
 param()
 $ErrorActionPreference = "Stop"
 
-$root = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-$libPath = Join-Path $root "agents" "lib_signal_booster_llm.ps1"
-
 BeforeAll {
+    $root = Split-Path $PSScriptRoot -Parent
+    $libPath = Join-Path $root "agents\lib_signal_booster_llm.ps1"
+
     . $libPath
 
     # Mock data structures

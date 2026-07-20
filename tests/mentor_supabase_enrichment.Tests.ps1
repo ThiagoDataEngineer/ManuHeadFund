@@ -5,11 +5,11 @@
 param()
 $ErrorActionPreference = "Stop"
 
-# Setup paths
-$root = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
-$libPath = Join-Path $root "agents" "lib_mentor_supabase_enrichment.ps1"
-
 BeforeAll {
+    # Setup paths
+    $root = Split-Path $PSScriptRoot -Parent
+    $libPath = Join-Path $root "agents\lib_mentor_supabase_enrichment.ps1"
+
     . $libPath
 
     # Mock: Simulate Supabase REST API responses

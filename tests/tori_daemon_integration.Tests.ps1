@@ -13,19 +13,8 @@
 # TEST SETUP
 # ============================================================================
 
-$PSScriptRoot = if ($PSScriptRoot) { $PSScriptRoot } else { Split-Path -Parent $MyInvocation.MyCommand.Path }
-$agentsPath = Join-Path $PSScriptRoot "..\agents"
-$journalPath = Join-Path $PSScriptRoot "..\journal"
-
-# Load dependencies
-$libPath = Join-Path $agentsPath "lib_tori_confluence_detector.ps1"
-if (Test-Path $libPath) { . $libPath }
-
-$alertPath = Join-Path $agentsPath "tori_telegram_alerts.ps1"
-if (Test-Path $alertPath) { . $alertPath }
-
-$reporterPath = Join-Path $agentsPath "tori_daemon_reporter.ps1"
-if (Test-Path $reporterPath) { . $reporterPath }
+$agentsPath = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"
+$journalPath = Join-Path (Split-Path $PSScriptRoot -Parent) "journal"
 
 # Mock CoinEx functions for testing
 function CoinEx-GetFuturesMarkets {
@@ -71,6 +60,16 @@ function CoinEx-GetTicker {
 # ============================================================================
 
 Describe "Trendline Detection" {
+
+    BeforeAll {
+        $__agentsPath = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"
+        $__libPath = Join-Path $__agentsPath "lib_tori_confluence_detector.ps1"
+        if (Test-Path $__libPath) { . $__libPath }
+        $__alertPath = Join-Path $__agentsPath "tori_telegram_alerts.ps1"
+        if (Test-Path $__alertPath) { . $__alertPath }
+        $__reporterPath = Join-Path $__agentsPath "tori_daemon_reporter.ps1"
+        if (Test-Path $__reporterPath) { . $__reporterPath }
+    }
 
     It "Should detect bullish fractal pattern" {
         $closes = @(100, 102, 101, 105, 103, 104)
@@ -120,6 +119,16 @@ Describe "Trendline Detection" {
 
 Describe "Confluence Scoring" {
 
+    BeforeAll {
+        $__agentsPath = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"
+        $__libPath = Join-Path $__agentsPath "lib_tori_confluence_detector.ps1"
+        if (Test-Path $__libPath) { . $__libPath }
+        $__alertPath = Join-Path $__agentsPath "tori_telegram_alerts.ps1"
+        if (Test-Path $__alertPath) { . $__alertPath }
+        $__reporterPath = Join-Path $__agentsPath "tori_daemon_reporter.ps1"
+        if (Test-Path $__reporterPath) { . $__reporterPath }
+    }
+
     It "Should calculate high confluence score with all signals" {
         $candles = CoinEx-GetFuturesCandles -market "BTCUSDT" -period "1D" -limit 300
 
@@ -153,6 +162,16 @@ Describe "Confluence Scoring" {
 # ============================================================================
 
 Describe "Alert Formatting" {
+
+    BeforeAll {
+        $__agentsPath = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"
+        $__libPath = Join-Path $__agentsPath "lib_tori_confluence_detector.ps1"
+        if (Test-Path $__libPath) { . $__libPath }
+        $__alertPath = Join-Path $__agentsPath "tori_telegram_alerts.ps1"
+        if (Test-Path $__alertPath) { . $__alertPath }
+        $__reporterPath = Join-Path $__agentsPath "tori_daemon_reporter.ps1"
+        if (Test-Path $__reporterPath) { . $__reporterPath }
+    }
 
     It "Should format new setup alert with all fields" {
         $setup = [PSCustomObject]@{
@@ -257,6 +276,16 @@ Describe "Alert Formatting" {
 
 Describe "State Persistence" {
 
+    BeforeAll {
+        $__agentsPath = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"
+        $__libPath = Join-Path $__agentsPath "lib_tori_confluence_detector.ps1"
+        if (Test-Path $__libPath) { . $__libPath }
+        $__alertPath = Join-Path $__agentsPath "tori_telegram_alerts.ps1"
+        if (Test-Path $__alertPath) { . $__alertPath }
+        $__reporterPath = Join-Path $__agentsPath "tori_daemon_reporter.ps1"
+        if (Test-Path $__reporterPath) { . $__reporterPath }
+    }
+
     BeforeEach {
         $testStateFile = Join-Path $journalPath "test_tori_state_$(Get-Random).json"
     }
@@ -328,6 +357,16 @@ Describe "State Persistence" {
 
 Describe "Report Generation" {
 
+    BeforeAll {
+        $__agentsPath = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"
+        $__libPath = Join-Path $__agentsPath "lib_tori_confluence_detector.ps1"
+        if (Test-Path $__libPath) { . $__libPath }
+        $__alertPath = Join-Path $__agentsPath "tori_telegram_alerts.ps1"
+        if (Test-Path $__alertPath) { . $__alertPath }
+        $__reporterPath = Join-Path $__agentsPath "tori_daemon_reporter.ps1"
+        if (Test-Path $__reporterPath) { . $__reporterPath }
+    }
+
     BeforeEach {
         $testReportDir = Join-Path $journalPath "test_reports_$(Get-Random)"
         New-Item -ItemType Directory -Path $testReportDir -Force | Out-Null
@@ -391,6 +430,16 @@ Describe "Report Generation" {
 
 Describe "End-to-End Daemon Workflow" {
 
+    BeforeAll {
+        $__agentsPath = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"
+        $__libPath = Join-Path $__agentsPath "lib_tori_confluence_detector.ps1"
+        if (Test-Path $__libPath) { . $__libPath }
+        $__alertPath = Join-Path $__agentsPath "tori_telegram_alerts.ps1"
+        if (Test-Path $__alertPath) { . $__alertPath }
+        $__reporterPath = Join-Path $__agentsPath "tori_daemon_reporter.ps1"
+        if (Test-Path $__reporterPath) { . $__reporterPath }
+    }
+
     It "Should complete minimal scan cycle" {
         # This is a smoke test that verifies the components integrate
 
@@ -425,6 +474,16 @@ Describe "End-to-End Daemon Workflow" {
 # ============================================================================
 
 Describe "Performance Benchmarks" {
+
+    BeforeAll {
+        $__agentsPath = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"
+        $__libPath = Join-Path $__agentsPath "lib_tori_confluence_detector.ps1"
+        if (Test-Path $__libPath) { . $__libPath }
+        $__alertPath = Join-Path $__agentsPath "tori_telegram_alerts.ps1"
+        if (Test-Path $__alertPath) { . $__alertPath }
+        $__reporterPath = Join-Path $__agentsPath "tori_daemon_reporter.ps1"
+        if (Test-Path $__reporterPath) { . $__reporterPath }
+    }
 
     It "Should process 100 candles in < 500ms" {
         $stopwatch = [System.Diagnostics.Stopwatch]::StartNew()

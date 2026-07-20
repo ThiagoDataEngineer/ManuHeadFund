@@ -3,7 +3,6 @@
     BeforeAll {
         # Load libs
         . (Join-Path $PSScriptRoot "..\agents\lib_gates_drift_wire.ps1")
-        . (Join-Path $PSScriptRoot "..\config\gates_drift.json" | Get-Content | ConvertFrom-Json | Out-Null)
     }
 
     Context "Test-ConvictionGate with Mesa Score Override" {
