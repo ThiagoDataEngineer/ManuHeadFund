@@ -63,7 +63,14 @@ Describe "Fix1 - MENTOR_DEBATE_SYSTEM em mentor_agent.ps1 contem regra beta" {
 Describe "Fix2 - BETA_CAP_PER_PHASE_ENABLED ativo em config.local.ps1" {
 
     It "config.local.ps1 seta BETA_CAP_PER_PHASE_ENABLED=1" {
-        $src = Get-Content (Join-Path $root "agents\config.local.ps1") -Raw -Encoding UTF8
+        # config.local.ps1 e gitignored (credenciais reais) -- nao existe no
+        # checkout do CI por design. So valida quando presente (dev local).
+        $configPath = Join-Path $root "agents\config.local.ps1"
+        if (-not (Test-Path $configPath)) {
+            Write-Host "  [SKIP] config.local.ps1 nao existe neste ambiente (esperado no CI)" -ForegroundColor Yellow
+            return
+        }
+        $src = Get-Content $configPath -Raw -Encoding UTF8
         ($src -match 'BETA_CAP_PER_PHASE_ENABLED\s*=\s*"1"') | Should Be $true
     }
 }
