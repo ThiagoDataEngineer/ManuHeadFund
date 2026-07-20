@@ -1912,6 +1912,36 @@ jobs:
           & ./scripts/diag_weekly_pnl_crosscheck_2026_07_20.ps1
 
   # ============================================================================
+  # JOB (one-shot): DIAG SPOT UNREALIZED PNL (2026-07-20)
+  # So roda via workflow_dispatch manual. CoinEx /v2/assets/spot/balance nao
+  # retorna preco medio de custo -- estimativa reconstroi via historico real
+  # de ordens de compra (finished-order) + ticker atual. Nao substitui PnL
+  # realizado exato (sem FIFO/LIFO real, sem taxas) -- e' proxy do que a
+  # conta teria se liquidasse os holdings SPOT atuais agora.
+  # ============================================================================
+  diag-spot-unrealized-pnl:
+    name: Diag Spot Unrealized PnL Read-Only (one-shot)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run diagnostic
+        shell: pwsh
+        run: |
+          & ./scripts/diag_spot_unrealized_pnl_2026_07_20.ps1
+
+  # ============================================================================
   # JOB (one-shot): APPLY CLOSE_REASON SCHEMA FIX (2026-07-14)
   # So roda via workflow_dispatch manual -- nunca no schedule automatico.
   # Aplica docs/SETUP_SUPABASE_FIX_CLOSE_REASON_2026_07_14.sql via RPC exec_sql.
