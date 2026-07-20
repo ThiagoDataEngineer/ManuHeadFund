@@ -19,6 +19,10 @@
 #
 # PS 5.1. UTF-8 BOM.
 
+if (-not (Get-Command Save-StateRecords -ErrorAction SilentlyContinue)) {
+    . (Join-Path $PSScriptRoot "lib_state_store.ps1")
+}
+
 function Get-BetaMultiTF {
     <#
     .SYNOPSIS
@@ -187,11 +191,11 @@ function Publish-BetaToSupabase {
         }
 
         # Escrever em Supabase (se disponível)
-        if (Get-Command Set-StateRecord -ErrorAction SilentlyContinue) {
-            Set-StateRecord -Table "beta_history" -Record $record
+        if (Get-Command Save-StateRecords -ErrorAction SilentlyContinue) {
+            Save-StateRecords -Table "beta_history" -Records @($record)
             Write-Host "  [Beta] Published: $Market = $([math]::Round($BetaData.beta_weighted, 4))" -ForegroundColor Green
         } else {
-            Write-Host "  [Beta] WARNING: Set-StateRecord not available (Supabase offline?)" -ForegroundColor Yellow
+            Write-Host "  [Beta] WARNING: Save-StateRecords not available (Supabase offline?)" -ForegroundColor Yellow
         }
 
         return $true

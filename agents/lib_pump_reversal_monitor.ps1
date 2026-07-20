@@ -91,7 +91,8 @@ function Log-ReversalEntry {
         [PSCustomObject] $EntryData
     )
 
-    $log_file = "$(Get-JournalDir)\pump_reversal_entries.jsonl"
+    $journalDir = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { "journal" }
+    $log_file = "$journalDir\pump_reversal_entries.jsonl"
 
     # Apenas loga se entry_trigger = $true
     if ($EntryData.entry_trigger -eq $true) {

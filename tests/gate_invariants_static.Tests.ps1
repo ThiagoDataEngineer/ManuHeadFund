@@ -16,6 +16,7 @@ Describe "Invariantes: cenario enum" {
         $bad = @()
         foreach ($f in (Get-ChildItem (Join-Path $root "agents\*.ps1"), (Join-Path $root "scripts\*.ps1") -ErrorAction SilentlyContinue)) {
             $txt = Get-Content $f.FullName -Raw
+            if ($null -eq $txt) { continue }
             $comps = [regex]::Matches($txt, '\$scen\.scenario\s+-(?:eq|ne)\s+"([A-Z_]+)"')
             foreach ($c in $comps) {
                 $val = $c.Groups[1].Value

@@ -235,7 +235,8 @@ function Log-MesaVotation {
         [PSCustomObject] $VotationResult
     )
 
-    $log_file = "$(Get-JournalDir)\mesa_votations.jsonl"
+    $journalDir = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { "journal" }
+    $log_file = "$journalDir\mesa_votations.jsonl"
     $json = $VotationResult | ConvertTo-Json -Compress
     Add-Content -Path $log_file -Value $json -ErrorAction SilentlyContinue
 }

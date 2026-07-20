@@ -45,7 +45,11 @@ $script:BASELINE_DEAD_CALLS = @(
     'add-hallucinationevent','calculate-trailingstopmetrics','coinex-hasspotmarket',
     'execute-hybridsignal','get-dashboardmetrics','get-etherscanconcentration',
     'get-hybridpositionsizes','get-macroregime','invoke-safejob','send-tgmessage',
-    'test-cyclehasnews','test-mentorfqshallucination','update-trailingstopcontinuous'
+    'test-cyclehasnews','test-mentorfqshallucination','update-trailingstopcontinuous',
+    # 2026-07-20: descobertos so agora pq CI Verify estava quebrado no parse
+    # (24h+) e nunca chegou a rodar este teste. Todos guardados por
+    # Get-Command antes da chamada -- sempre caem no fallback, nunca crasham.
+    'get-coinexopenpositions','get-currentregime','get-journaldir'
 )
 
 Describe "CONTRATO: toda funcao chamada existe" {

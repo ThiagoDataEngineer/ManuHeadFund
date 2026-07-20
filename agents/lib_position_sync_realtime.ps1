@@ -16,6 +16,10 @@
 #
 # PS 5.1. UTF-8 BOM.
 
+if (-not (Get-Command Save-StateRecords -ErrorAction SilentlyContinue)) {
+    . (Join-Path $PSScriptRoot "lib_state_store.ps1")
+}
+
 function Sync-PositionsFromCoinEx {
     <#
     .SYNOPSIS
@@ -257,7 +261,7 @@ function Sync-PositionsFromCoinEx {
         }
 
         # 4. PUBLISH em Supabase (se habilitado) — Futures apenas (Spot holdings não são trades)
-        if ($PublishToSupabase -and (Get-Command Set-StateRecord -ErrorAction SilentlyContinue)) {
+        if ($PublishToSupabase -and (Get-Command Save-StateRecords -ErrorAction SilentlyContinue)) {
             Write-SyncLog "PUBLISH: Enviando posições para Supabase..."
             $futuresPositions = @($positions | Where-Object { $_._spot_indicator -ne $true })
             foreach ($pos in $futuresPositions) {
@@ -269,7 +273,7 @@ function Sync-PositionsFromCoinEx {
                     $positionValue = [double]$pos.cml_position_value
                     $pnlPct = if ($positionValue -gt 0) { ($pnlUsd / $positionValue) * 100 } else { 0 }
 
-                    Set-StateRecord -Table "open_positions" -Record @{
+                    Save-StateRecords -Table "open_positions" -Records @(@{
                         market              = $pos.market
                         direction           = $pos.side.ToUpper()
                         entry_price         = [double]$pos.avg_entry_price
@@ -279,7 +283,7 @@ function Sync-PositionsFromCoinEx {
                         leverage            = [double]$pos.leverage
                         opened_at           = $openedAtDate
                         synced_at           = Get-Date -Format "yyyy-MM-ddTHH:mm:ssZ"
-                    } -ErrorAction Stop
+                    }) -ErrorAction Stop
                 } catch {
                     Write-SyncLog "WARNING: Falha ao publicar $($pos.market) em Supabase: $_"
                 }

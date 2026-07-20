@@ -160,7 +160,8 @@ function Send-PositionsList {
             "Entry: $entry | Current: $current`n" +
             "PnL: $pnl USD ($pnl_pct%)`n" +
             "SL: $($_.stop_loss) | TP: $($_.take_profit)`n"
-        } | Join-String -Separator "---`n"
+        }
+        $pos_text = ($pos_text -join "---`n")
 
         $msg = @"
 📊 **POSIÇÕES ABERTAS** ($($futures.Count))
