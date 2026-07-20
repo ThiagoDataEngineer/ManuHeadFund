@@ -33,9 +33,11 @@ Describe "lib_capital_context: backend selection" {
     }
 
     It "Saves to local backend by default and persists" {
-        # Mock CoinEx fetch
-        function CoinEx-GetSpotCapitalUSDT { return 800.0 }
-        function CoinEx-GetFuturesCapitalUSDT { return 1200.0 }
+        # Mock CoinEx fetch. 2026-07-09: lib_capital_context so aceita o valor como
+        # "fresh" se CAPITAL_*_LAST_REFRESH mudar (anti-poluicao Supabase) -- mock
+        # precisa simular esse side effect, senao cai sempre no fallback.
+        function CoinEx-GetSpotCapitalUSDT { $global:CAPITAL_SPOT_LAST_REFRESH = Get-Date; return 800.0 }
+        function CoinEx-GetFuturesCapitalUSDT { $global:CAPITAL_FUTURES_LAST_REFRESH = Get-Date; return 1200.0 }
 
         $ctx = Get-CapitalContext -Force
         $ctx.spot | Should Be 800
@@ -46,8 +48,8 @@ Describe "lib_capital_context: backend selection" {
     }
 
     It "After save: Get-StateRecords returns 1 capital_context row" {
-        function CoinEx-GetSpotCapitalUSDT { return 500.0 }
-        function CoinEx-GetFuturesCapitalUSDT { return 700.0 }
+        function CoinEx-GetSpotCapitalUSDT { $global:CAPITAL_SPOT_LAST_REFRESH = Get-Date; return 500.0 }
+        function CoinEx-GetFuturesCapitalUSDT { $global:CAPITAL_FUTURES_LAST_REFRESH = Get-Date; return 700.0 }
 
         Get-CapitalContext -Force | Out-Null
 
@@ -59,8 +61,8 @@ Describe "lib_capital_context: backend selection" {
     }
 
     It "Cache freshness: returns source=cached on second call within MaxAge" {
-        function CoinEx-GetSpotCapitalUSDT { return 100.0 }
-        function CoinEx-GetFuturesCapitalUSDT { return 200.0 }
+        function CoinEx-GetSpotCapitalUSDT { $global:CAPITAL_SPOT_LAST_REFRESH = Get-Date; return 100.0 }
+        function CoinEx-GetFuturesCapitalUSDT { $global:CAPITAL_FUTURES_LAST_REFRESH = Get-Date; return 200.0 }
 
         $first = Get-CapitalContext -Force
         $first.source | Should Be "fresh"
@@ -73,14 +75,14 @@ Describe "lib_capital_context: backend selection" {
     }
 
     It "Force refresh ignores cache" {
-        function CoinEx-GetSpotCapitalUSDT { return 100.0 }
-        function CoinEx-GetFuturesCapitalUSDT { return 200.0 }
+        function CoinEx-GetSpotCapitalUSDT { $global:CAPITAL_SPOT_LAST_REFRESH = Get-Date; return 100.0 }
+        function CoinEx-GetFuturesCapitalUSDT { $global:CAPITAL_FUTURES_LAST_REFRESH = Get-Date; return 200.0 }
 
         Get-CapitalContext -Force | Out-Null
 
         # Update CoinEx mock
-        function CoinEx-GetSpotCapitalUSDT { return 999.0 }
-        function CoinEx-GetFuturesCapitalUSDT { return 1.0 }
+        function CoinEx-GetSpotCapitalUSDT { $global:CAPITAL_SPOT_LAST_REFRESH = Get-Date; return 999.0 }
+        function CoinEx-GetFuturesCapitalUSDT { $global:CAPITAL_FUTURES_LAST_REFRESH = Get-Date; return 1.0 }
 
         $forced = Get-CapitalContext -Force
         $forced.spot | Should Be 999
@@ -105,8 +107,8 @@ Describe "lib_capital_context: state_store integration sanity" {
     }
 
     It "capital_context table file is created in state_store dir" {
-        function CoinEx-GetSpotCapitalUSDT { return 50.0 }
-        function CoinEx-GetFuturesCapitalUSDT { return 50.0 }
+        function CoinEx-GetSpotCapitalUSDT { $global:CAPITAL_SPOT_LAST_REFRESH = Get-Date; return 50.0 }
+        function CoinEx-GetFuturesCapitalUSDT { $global:CAPITAL_FUTURES_LAST_REFRESH = Get-Date; return 50.0 }
 
         Get-CapitalContext -Force | Out-Null
 
@@ -117,8 +119,8 @@ Describe "lib_capital_context: state_store integration sanity" {
     }
 
     It "Reads back across new Get-CapitalContext call (persistence)" {
-        function CoinEx-GetSpotCapitalUSDT { return 333.0 }
-        function CoinEx-GetFuturesCapitalUSDT { return 444.0 }
+        function CoinEx-GetSpotCapitalUSDT { $global:CAPITAL_SPOT_LAST_REFRESH = Get-Date; return 333.0 }
+        function CoinEx-GetFuturesCapitalUSDT { $global:CAPITAL_FUTURES_LAST_REFRESH = Get-Date; return 444.0 }
 
         Get-CapitalContext -Force | Out-Null
 
