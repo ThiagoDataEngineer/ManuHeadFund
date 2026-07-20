@@ -7,7 +7,7 @@ $ErrorActionPreference = "Stop"
 Describe "E2E Trading Flow - SPOT LONG" {
     BeforeAll {
         # Load agents
-        $agentsDir = Join-Path $PSScriptRoot ".." "agents"
+        $agentsDir = Join-Path (Join-Path $PSScriptRoot "..") "agents"
         . (Join-Path $agentsDir "lib_breadth_monitor.ps1")
         . (Join-Path $agentsDir "lib_pump_dump_classifier.ps1")
         . (Join-Path $agentsDir "lib_entry_timing_15m.ps1")
