@@ -223,6 +223,16 @@ function CoinEx-GetDepth($market, $limit=20) {
     return $r.data
 }
 
+function CoinEx-GetSpotDepth($market, $limit=20) {
+    # 2026-07-20: achado investigando BABYDOGEUSDT (-33.8%, comprado autonomo
+    # sem gate estrutural nenhum) -- so existia CoinEx-GetDepth (FUTURES).
+    # SPOT depth e' endpoint separado (/v2/spot/depth), usado pelo gate de
+    # qualidade estrutural em lib_token_structural_quality.ps1.
+    $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/spot/depth?market=$market&limit=$limit&interval=0" -Method GET -TimeoutSec 15 -ErrorAction Stop
+    if ($r.code -ne 0) { throw "Spot depth error: $($r.message)" }
+    return $r.data
+}
+
 function CoinEx-GetFuturesMarkets() {
     $r = Invoke-RestMethod -Uri "$COINEX_BASE_URL/v2/futures/market" -Method GET -TimeoutSec 15 -ErrorAction Stop
     return $r.data

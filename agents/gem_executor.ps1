@@ -1790,6 +1790,38 @@ function Invoke-GemExecute {
         }
     }
 
+    # ── Gate de qualidade ESTRUTURAL do token (2026-07-20) ────────────────
+    # Achado: BABYDOGEUSDT comprado autonomo ($100 real, -33.8% hoje) --
+    # pipeline tinha gates de momentum/tecnico (breadth/pump-dump/entry
+    # timing acima) mas NENHUM de qualidade estrutural do token em si. FQS
+    # (lib_fundamental_quality.ps1) existe mas exige coin_registry.json
+    # curado (55 mercados) -- aplicar aqui mataria a estrategia GEM inteira
+    # (qualquer coisa nova = AVOID). Gate novo (lib_token_structural_quality.ps1)
+    # e' so-CoinEx (liquidez rasa vs tamanho da posicao + preco unitario
+    # extremo), NAO exige registry -- pesquisado 2026-07-20 (paper arXiv
+    # 2507.01963v2: liquidez rasa e' o sinal mais forte de manipulacao/
+    # memecoin-lixo, 88.1% de cobertura). BLOCK so com 2+ flags simultaneos
+    # (padrao real de lixo estrutural); 1 flag isolado (ex: moeda legitima
+    # barata) so ganha CAUTION, sizing reduzido -- nao mata a descoberta.
+    $__intendedSizeUsd = if ($usd_size -gt 0) { [double]$usd_size } else { [double]$qty * $price }
+    if (Get-Command Test-TokenStructuralQuality -ErrorAction SilentlyContinue) {
+        try {
+            $structQuality = Test-TokenStructuralQuality -Market $mkt -CurrentPrice $price -IntendedSizeUsd $__intendedSizeUsd
+            if ($structQuality.verdict -eq "BLOCK") {
+                Write-Host "  BLOQUEADO: qualidade estrutural do token $mkt -- $($structQuality.reason) (liquidez=`$$($structQuality.liquidity_usd) preco=$($structQuality.unit_price))" -ForegroundColor Red
+                if (Get-Command Write-SignalSkip -ErrorAction SilentlyContinue) {
+                    try { Write-SignalSkip -Market $mkt -Direction $direction -Gate "token_structural_quality_block" -EntryPrice $price -Regime "$($btcScenario.scenario)" -Source "structural_gate" | Out-Null } catch {}
+                }
+                return [PSCustomObject]@{ blocked = $true; blocked_by = @("token_structural_quality:$($structQuality.reason)"); market = $mkt; gates_info = @{ structural = $structQuality } }
+            } elseif ($structQuality.verdict -eq "CAUTION") {
+                $usd_size = [math]::Round($usd_size * 0.5, 2)
+                Write-Host "  [STRUCTURAL CAUTION] $mkt -- $($structQuality.reason) -- sizing reduzido pela metade (`$$usd_size)" -ForegroundColor Yellow
+            }
+        } catch {
+            Write-Host "  [STRUCTURAL GATE WARN] Test-TokenStructuralQuality falhou (nao bloqueante): $_" -ForegroundColor Yellow
+        }
+    }
+
     # ── Execucao via Invoke-OrderRouted (2026-05-20 wire) ──────────────────
     # 2026-06-08: Suporta SHORT em adicao a LONG
     $side = if ($direction -eq "SHORT") { "sell" } else { "buy" }
