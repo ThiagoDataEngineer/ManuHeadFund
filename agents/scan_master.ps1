@@ -1,4 +1,4 @@
-# scan_master.ps1 — Master scanner para 24/7 autonomous trading
+﻿# scan_master.ps1 — Master scanner para 24/7 autonomous trading
 # Roda gem_executor em loop com safeguards fail-closed
 
 param([int]$MaxPositions = 5, [bool]$AutoExecute = $true)

@@ -1,4 +1,4 @@
-# force_entry_tori_structure.ps1 — Entrada Tori-style com structure validation
+﻿# force_entry_tori_structure.ps1 — Entrada Tori-style com structure validation
 # 2026-07-05: Regime BEAR_WEAK, gates restritivos
 # Solução: Entrar com score 40-50 + structure confirmado (não score puro)
 

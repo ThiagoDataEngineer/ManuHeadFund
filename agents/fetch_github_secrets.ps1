@@ -1,4 +1,4 @@
-# fetch_github_secrets.ps1
+﻿# fetch_github_secrets.ps1
 # Busca secrets do GitHub Actions via gh CLI
 # Escreve em config.local.ps1
 
@@ -47,13 +47,13 @@ foreach ($secret in $secrets) {
     try {
         $value = gh secret view $secret --repo "$repoOwner/$repoName" 2>&1 | Select-Object -First 1
         if ($value -and $value -notmatch "error|not found") {
-            $content += "`$env:$secret = '$value'" + "`n"
+            $content += "`$env:${secret} = '$value'" + "`n"
             Write-Host "   ✅ $secret" -ForegroundColor Green
         } else {
             Write-Host "   ⚠️  $secret (não encontrado)" -ForegroundColor Yellow
         }
     } catch {
-        Write-Host "   ❌ $secret: $_" -ForegroundColor Red
+        Write-Host "   ❌ ${secret}: $_" -ForegroundColor Red
     }
 }
 

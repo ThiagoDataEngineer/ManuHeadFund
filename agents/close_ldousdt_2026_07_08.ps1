@@ -1,4 +1,4 @@
-# close_ldousdt_2026_07_08.ps1
+﻿# close_ldousdt_2026_07_08.ps1
 # Análise: LDOUSDT travada 22h, loss pequena (-$3.81), momentum perdido
 # Ação: Close posição SHORT 586 contracts @ market
 

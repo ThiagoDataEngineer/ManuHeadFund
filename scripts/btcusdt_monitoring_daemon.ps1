@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 <#
   BTCUSDT MONITORING DAEMON (24/7)
 

@@ -1,4 +1,4 @@
-# normalize_json_logs.ps1 — Normaliza trade_outcomes.jsonl e decisions_text.jsonl
+﻿# normalize_json_logs.ps1 — Normaliza trade_outcomes.jsonl e decisions_text.jsonl
 # Problema: campos inconsistentes, missing fields, múltiplas fontes com schemas diferentes
 # Solução: lê cada linha, valida, normaliza schema, reescreve
 #
@@ -41,25 +41,25 @@ if (Test-Path $tradesFile) {
 
             # Normalizar schema
             $normalized = @{
-                trade_id         = $obj.trade_id ?? "UNKNOWN"
-                market           = $obj.market ?? ""
-                direction        = $obj.direction ?? "UNKNOWN"
-                entry_price      = $obj.entry_price ?? 0
-                exit_price       = $obj.exit_price ?? $null
-                entry_date       = $obj.entry_date ?? ""
-                exit_date        = $obj.exit_date ?? $null
-                entry_time       = $obj.entry_time ?? $obj.entry_date  # Fallback a entry_date
-                exit_time        = $obj.exit_time ?? $obj.exit_date
-                size_usd         = $obj.size_usd ?? 0
-                pnl_usd          = $obj.pnl_usd ?? $null
-                pnl_pct          = $obj.pnl_pct ?? $null
-                win              = $obj.win ?? $null
-                close_reason     = $obj.close_reason ?? "unknown"
+                trade_id         = if ($null -ne $obj.trade_id) { $obj.trade_id } else { "UNKNOWN" }
+                market           = if ($null -ne $obj.market) { $obj.market } else { "" }
+                direction        = if ($null -ne $obj.direction) { $obj.direction } else { "UNKNOWN" }
+                entry_price      = if ($null -ne $obj.entry_price) { $obj.entry_price } else { 0 }
+                exit_price       = if ($null -ne $obj.exit_price) { $obj.exit_price } else { $null }
+                entry_date       = if ($null -ne $obj.entry_date) { $obj.entry_date } else { "" }
+                exit_date        = if ($null -ne $obj.exit_date) { $obj.exit_date } else { $null }
+                entry_time       = if ($null -ne $obj.entry_time) { $obj.entry_time } else { $obj.entry_date }  # Fallback a entry_date
+                exit_time        = if ($null -ne $obj.exit_time) { $obj.exit_time } else { $obj.exit_date }
+                size_usd         = if ($null -ne $obj.size_usd) { $obj.size_usd } else { 0 }
+                pnl_usd          = if ($null -ne $obj.pnl_usd) { $obj.pnl_usd } else { $null }
+                pnl_pct          = if ($null -ne $obj.pnl_pct) { $obj.pnl_pct } else { $null }
+                win              = if ($null -ne $obj.win) { $obj.win } else { $null }
+                close_reason     = if ($null -ne $obj.close_reason) { $obj.close_reason } else { "unknown" }
                 status           = if ($obj.status) { $obj.status } elseif ($obj.exit_price) { "closed" } else { "open" }
-                notes            = $obj.notes ?? ""
-                source           = $obj.source ?? "unknown"
-                alpha_vs_btc     = $obj.alpha_vs_btc ?? "N/A"
-                registered_at    = $obj.registered_at ?? (Get-Date -Format 'yyyy-MM-ddTHH:mm:ss.fffZ')
+                notes            = if ($null -ne $obj.notes) { $obj.notes } else { "" }
+                source           = if ($null -ne $obj.source) { $obj.source } else { "unknown" }
+                alpha_vs_btc     = if ($null -ne $obj.alpha_vs_btc) { $obj.alpha_vs_btc } else { "N/A" }
+                registered_at    = if ($null -ne $obj.registered_at) { $obj.registered_at } else { (Get-Date -Format 'yyyy-MM-ddTHH:mm:ss.fffZ') }
             }
 
             $trades += $normalized
@@ -115,17 +115,18 @@ if (Test-Path $decisionsFile) {
             $action = ($action -split '\s+' | Where-Object {$_}) -join ' '
 
             # Normalizar schema
+            $result = if ($null -ne $obj.result) { $obj.result } elseif ($null -ne $obj.reason) { $obj.reason } else { "" }
             $normalized = @{
-                ts               = $obj.ts ?? (Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ')
-                market           = $obj.market ?? ""
+                ts               = if ($null -ne $obj.ts) { $obj.ts } else { (Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ') }
+                market           = if ($null -ne $obj.market) { $obj.market } else { "" }
                 action           = $action
-                result           = $obj.result ?? $obj.reason ?? ""
-                reason           = $obj.reason ?? ""
-                mentor_decision  = $obj.mentor_decision ?? "UNKNOWN"
-                mesa_consensus   = $obj.mesa_consensus ?? $null
-                conviction_score = $obj.conviction_score ?? $null
-                direction        = $obj.direction ?? $null
-                status           = $obj.status ?? "pending"
+                result           = $result
+                reason           = if ($null -ne $obj.reason) { $obj.reason } else { "" }
+                mentor_decision  = if ($null -ne $obj.mentor_decision) { $obj.mentor_decision } else { "UNKNOWN" }
+                mesa_consensus   = if ($null -ne $obj.mesa_consensus) { $obj.mesa_consensus } else { $null }
+                conviction_score = if ($null -ne $obj.conviction_score) { $obj.conviction_score } else { $null }
+                direction        = if ($null -ne $obj.direction) { $obj.direction } else { $null }
+                status           = if ($null -ne $obj.status) { $obj.status } else { "pending" }
             }
 
             $decisions += $normalized

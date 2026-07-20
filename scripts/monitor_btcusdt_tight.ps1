@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 <#
   TIGHT MONITORING FOR BTCUSDT (10x Leverage)
 

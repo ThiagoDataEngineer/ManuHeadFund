@@ -1,4 +1,4 @@
-# Stop-ToriDaemon.ps1 - Graceful shutdown of Tori Daemon
+﻿# Stop-ToriDaemon.ps1 - Graceful shutdown of Tori Daemon
 #
 # Responsibilities:
 # 1. Find running daemon and watchdog

@@ -1,4 +1,4 @@
-# ACTION: Close Critical Positions — 2026-07-07 17:45
+﻿# ACTION: Close Critical Positions — 2026-07-07 17:45
 # Intenção: Liberar capital + reduzir drawdown crítico
 # Posições: CRCLXUSDT + PYTHUSDT (ambas >14% drawdown)
 

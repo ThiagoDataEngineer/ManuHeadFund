@@ -1,4 +1,4 @@
-# webhook_alerts.ps1 - Sistema de alertas com webhooks
+﻿# webhook_alerts.ps1 - Sistema de alertas com webhooks
 
 param(
   [string]$AlertType = "",

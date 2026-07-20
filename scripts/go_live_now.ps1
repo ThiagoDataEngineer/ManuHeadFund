@@ -1,4 +1,4 @@
-# go_live_now.ps1 — RESTART TRADING LIVE COM ENRIQUECIMENTO
+﻿# go_live_now.ps1 — RESTART TRADING LIVE COM ENRIQUECIMENTO
 # Simples: kill daemons + wire mentor + start fleet
 # 2026-07-09
 

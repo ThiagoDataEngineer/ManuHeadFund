@@ -1,4 +1,4 @@
-# ACTIVATE_ENRICHMENT_NOW.ps1 — Restart daemons with live enrichment
+﻿# ACTIVATE_ENRICHMENT_NOW.ps1 — Restart daemons with live enrichment
 
 Write-Host "=" * 80
 Write-Host "🚀 ACTIVATING LIVE ENRICHMENT (Commit 9c64170)" -ForegroundColor Cyan

@@ -1,4 +1,4 @@
-# deploy_mentor_enrichment_live.ps1
+﻿# deploy_mentor_enrichment_live.ps1
 # DEPLOY LIVE: Wire enrichment + restart mentor + go LIVE com sinais enriquecidos
 # 2026-07-09 - Full automation, zero manual steps
 # Integração: lib_mentor_supabase_enrichment + mentor_agent + LLM sofisticado
@@ -179,7 +179,7 @@ if ($KillExisting) {
                     Stop-Process -Id $pid -Force -ErrorAction Stop
                     Write-Log "  ✅ PID $pid parado" "SUCCESS"
                 } catch {
-                    Write-Log "  ⚠️  Erro parando PID $pid: $_" "WARN"
+                    Write-Log "  ⚠️  Erro parando PID ${pid}: $_" "WARN"
                 }
             }
         }

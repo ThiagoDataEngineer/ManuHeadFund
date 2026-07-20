@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 <#
   FETCH LIVE CHARTS — Multi-Timeframe Analysis
   Busca dados reais de TODOS os 8 trades abertos

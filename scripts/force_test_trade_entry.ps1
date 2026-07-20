@@ -1,4 +1,4 @@
-# force_test_trade_entry.ps1 — Força 1 entrada de teste para validar pipeline
+﻿# force_test_trade_entry.ps1 — Força 1 entrada de teste para validar pipeline
 # 2026-07-05: Mercado restritivo (BEAR_WEAK), gates bloqueando tudo
 # Solução: Injeta 1 candidato direto no gem_loop com FORCE_ENTRY=true
 

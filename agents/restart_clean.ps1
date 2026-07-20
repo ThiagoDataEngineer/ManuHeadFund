@@ -1,4 +1,4 @@
-# restart_clean.ps1 — Restart limpo dos daemons com validação
+﻿# restart_clean.ps1 — Restart limpo dos daemons com validação
 # Propósito: Remove jobs/locks antigos, carrega código novo, inicia frota
 # Uso: .\restart_clean.ps1
 

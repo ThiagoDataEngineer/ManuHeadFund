@@ -1,4 +1,4 @@
-# status_daemons_realtime.ps1 — Dashboard em tempo real do status dos daemons
+﻿# status_daemons_realtime.ps1 — Dashboard em tempo real do status dos daemons
 # Roda num loop, mostra health + restart count + age
 # Uso: pwsh -File scripts\status_daemons_realtime.ps1
 

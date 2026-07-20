@@ -1,4 +1,4 @@
-# watchdog_autonomous_recovery.ps1 — Auto-recovery se daemon cair
+﻿# watchdog_autonomous_recovery.ps1 — Auto-recovery se daemon cair
 # Roda a cada 5min via Scheduler, traz tudo de volta sozinho
 
 param([switch]$DryRun, [switch]$Verbose)

@@ -1,4 +1,4 @@
-# Populate dashboards com dados reais
+﻿# Populate dashboards com dados reais
 Write-Host "📊 Gerando dados para os dashboards..." -ForegroundColor Cyan
 
 # Universe data
@@ -28,8 +28,8 @@ foreach ($symbol in $symbols) {
     rsi1h = Get-Random -Minimum 20 -Maximum 80
     rsi4h = Get-Random -Minimum 20 -Maximum 80
     avgScore = Get-Random -Minimum 5 -Maximum 95
-    regime = @("BEAR_STRONG", "BEAR_WEAK", "BULL_WEAK", "BULL_STRONG")[Get-Random -Minimum 0 -Maximum 4]
-    direction = @("LONG", "SHORT", "-", "NEUTRO")[Get-Random -Minimum 0 -Maximum 4]
+    regime = @("BEAR_STRONG", "BEAR_WEAK", "BULL_WEAK", "BULL_STRONG")[(Get-Random -Minimum 0 -Maximum 4)]
+    direction = @("LONG", "SHORT", "-", "NEUTRO")[(Get-Random -Minimum 0 -Maximum 4)]
     alerts = @()
     sparkline1m = @(for ($i=0; $i -lt 100; $i++) { Get-Random -Minimum 1 -Maximum 100 })
     sparkline5m = @(for ($i=0; $i -lt 100; $i++) { Get-Random -Minimum 1 -Maximum 100 })

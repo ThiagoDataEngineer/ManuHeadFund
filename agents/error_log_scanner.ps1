@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 # error_log_scanner.ps1 — CONTINUOUS: Scans for errors every 5 minutes
 # If found: Telegram alert IMMEDIATELY + Auto-restart daemon
 # Never silent — ALWAYS alerts

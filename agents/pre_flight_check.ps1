@@ -1,4 +1,4 @@
-#!/usr/bin/env pwsh
+﻿#!/usr/bin/env pwsh
 # pre_flight_check.ps1 — CRITICAL: Blocks daemon start if any code has errors
 # Runs BEFORE every daemon startup
 # Failures: Alert Telegram + Exit 1 (daemon does NOT start)

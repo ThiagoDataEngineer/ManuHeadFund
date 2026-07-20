@@ -1,4 +1,4 @@
-# cron_learning_cycle.ps1 — Ciclo de Aprendizado Noturno
+﻿# cron_learning_cycle.ps1 — Ciclo de Aprendizado Noturno
 # Executa: 23:00 BRT diariamente (via Task Scheduler)
 # Função: Analisar trades do dia, calibrar parametros, registrar evolução
 

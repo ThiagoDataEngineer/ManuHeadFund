@@ -1,4 +1,4 @@
-# wire_mentor_supabase_enrichment.ps1
+﻿# wire_mentor_supabase_enrichment.ps1
 # Integra lib_mentor_supabase_enrichment no mentor_agent.ps1
 # Executa 1x quando career começa, valida enriquecimento, testa dados reais
 # 2026-07-09

@@ -1,4 +1,4 @@
-#requires -Version 5.1
+﻿#requires -Version 5.1
 <#
   LIVE DASHBOARD — Trades abertas + Decisões do sistema
   Mostra em tempo real: posições, PnL, próximas ações

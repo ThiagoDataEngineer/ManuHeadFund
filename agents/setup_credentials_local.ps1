@@ -1,4 +1,4 @@
-# setup_credentials_local.ps1
+﻿# setup_credentials_local.ps1
 # Carrega credenciais de GitHub Actions secrets OU pede ao usuário
 # EXATAMENTE como trading-pipeline.yml faz
 
@@ -13,13 +13,13 @@ Write-Host ""
 if ($env:GITHUB_ACTIONS -eq "true") {
     Write-Host "🔍 Rodando em GitHub Actions - credenciais via secrets" -ForegroundColor Green
 
-    $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
-    $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
-    $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
-    $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
-    $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
-    $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
-    $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+    $content = '$env:COINEX_ACCESS_ID = ''${{ secrets.COINEX_ACCESS_ID }}''' + "`n"
+    $content += '$env:COINEX_SECRET_KEY = ''${{ secrets.COINEX_SECRET_KEY }}''' + "`n"
+    $content += '$env:TELEGRAM_BOT_TOKEN = ''${{ secrets.TELEGRAM_BOT_TOKEN }}''' + "`n"
+    $content += '$env:TELEGRAM_CHAT_ID = ''${{ secrets.TELEGRAM_CHAT_ID }}''' + "`n"
+    $content += '$env:SUPABASE_URL = ''${{ secrets.SUPABASE_URL }}''' + "`n"
+    $content += '$env:SUPABASE_ANON_KEY = ''${{ secrets.SUPABASE_ANON_KEY }}''' + "`n"
+    $content += '$env:SUPABASE_SERVICE_KEY = ''${{ secrets.SUPABASE_SERVICE_KEY }}''' + "`n"
 
     $content | Out-File $configLocalPath -Encoding UTF8 -Force
     Write-Host "✅ config.local.ps1 criado com credenciais de secrets" -ForegroundColor Green

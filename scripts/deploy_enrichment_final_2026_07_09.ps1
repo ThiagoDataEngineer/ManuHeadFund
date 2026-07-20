@@ -1,4 +1,4 @@
-# deploy_enrichment_final_2026_07_09.ps1
+﻿# deploy_enrichment_final_2026_07_09.ps1
 # Orquestra deployment COMPLETO de enriquecimento Supabase
 # Timeline: 4-6 horas de desenvolvimento + deploy + monitor
 

@@ -1,4 +1,4 @@
-# phase_manager.ps1 — Fase 3: Daemon orquestrador de transição pump
+﻿# phase_manager.ps1 — Fase 3: Daemon orquestrador de transição pump
 # Loop 15min: monitora active_discoveries, classifica pump phase, dispara reversals
 
 param(

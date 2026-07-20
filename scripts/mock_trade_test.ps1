@@ -1,4 +1,4 @@
-# mock_trade_test.ps1 — Mock Trade Test (30min simulação)
+﻿# mock_trade_test.ps1 — Mock Trade Test (30min simulação)
 # 2026-07-05: Validar pipeline entrada→histórico→dashboard SEM trade real
 # Simula: gem_executor processa candidate → registra outcome → dashboard atualiza
 
