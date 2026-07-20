@@ -1879,6 +1879,39 @@ jobs:
           & ./scripts/diag_trade_outcomes_schema_readonly_2026_07_20.ps1
 
   # ============================================================================
+  # JOB (one-shot): DIAG WEEKLY PNL CROSSCHECK (2026-07-20)
+  # So roda via workflow_dispatch manual. URGENTE: cruza CoinEx direto
+  # (finished-position, fonte de verdade absoluta) com trade_outcomes
+  # filtrado (exclui residuo position_sync_realtime + e2e_test), pra
+  # responder com dado real se o pipeline ATUAL esta perdendo dinheiro,
+  # apos usuario reportar percepcao de perda de ~$100 na semana anterior.
+  # ============================================================================
+  diag-weekly-pnl-crosscheck:
+    name: Diag Weekly PnL Crosscheck Read-Only (one-shot)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run diagnostic
+        shell: pwsh
+        run: |
+          & ./scripts/diag_weekly_pnl_crosscheck_2026_07_20.ps1
+
+  # ============================================================================
   # JOB (one-shot): APPLY CLOSE_REASON SCHEMA FIX (2026-07-14)
   # So roda via workflow_dispatch manual -- nunca no schedule automatico.
   # Aplica docs/SETUP_SUPABASE_FIX_CLOSE_REASON_2026_07_14.sql via RPC exec_sql.
