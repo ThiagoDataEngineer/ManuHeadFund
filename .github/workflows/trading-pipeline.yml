@@ -1975,6 +1975,38 @@ jobs:
           & ./scripts/diag_babydoge_entry_origin_2026_07_20.ps1
 
   # ============================================================================
+  # JOB (one-shot): DIAG FULL AUDIT (2026-07-20)
+  # So roda via workflow_dispatch manual. Auditoria ampla pedida pelo owner:
+  # posicoes FUTURES reais (leverage/SL/TP), smoke test do gate estrutural
+  # novo (commit 9b4c829) contra API real, confirma live_monitor_snapshots
+  # gravando de verdade.
+  # ============================================================================
+  diag-full-audit:
+    name: Diag Full Audit Read-Only (one-shot)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run diagnostic
+        shell: pwsh
+        run: |
+          & ./scripts/diag_full_audit_2026_07_20.ps1
+
+  # ============================================================================
   # JOB (one-shot): APPLY CLOSE_REASON SCHEMA FIX (2026-07-14)
   # So roda via workflow_dispatch manual -- nunca no schedule automatico.
   # Aplica docs/SETUP_SUPABASE_FIX_CLOSE_REASON_2026_07_14.sql via RPC exec_sql.
