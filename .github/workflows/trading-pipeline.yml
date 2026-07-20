@@ -1942,6 +1942,39 @@ jobs:
           & ./scripts/diag_spot_unrealized_pnl_2026_07_20.ps1
 
   # ============================================================================
+  # JOB (one-shot): DIAG BABYDOGE ENTRY ORIGIN (2026-07-20)
+  # So roda via workflow_dispatch manual. BABYDOGEUSDT foi comprado de forma
+  # 100% autonoma (confirmado pelo usuario) mas journals LOCAIS mostram 45
+  # vetos do gate FQS entre 04-05/07 sem nenhuma aprovacao -- journals locais
+  # desatualizados desde 08/07. Busca nas fontes REAIS da nuvem (CoinEx +
+  # Supabase) qualquer rastro de como essa entrada contornou o gate FQS.
+  # ============================================================================
+  diag-babydoge-entry-origin:
+    name: Diag BABYDOGE Entry Origin Read-Only (one-shot)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run diagnostic
+        shell: pwsh
+        run: |
+          & ./scripts/diag_babydoge_entry_origin_2026_07_20.ps1
+
+  # ============================================================================
   # JOB (one-shot): APPLY CLOSE_REASON SCHEMA FIX (2026-07-14)
   # So roda via workflow_dispatch manual -- nunca no schedule automatico.
   # Aplica docs/SETUP_SUPABASE_FIX_CLOSE_REASON_2026_07_14.sql via RPC exec_sql.
