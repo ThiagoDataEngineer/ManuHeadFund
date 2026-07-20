@@ -37,14 +37,14 @@ Write-Host ""
 Write-Host "[1] trade_outcomes (trades reais fechados, capital de verdade)" -ForegroundColor Yellow
 try {
     $trades = @(Get-StateRecords -Table "trade_outcomes" -ErrorAction Stop)
-    $closed = @($trades | Where-Object { $_.PSObject.Properties['pnl_pct'] -and $null -ne $_.pnl_pct })
+    $closed = @($trades | Where-Object { $_.PSObject.Properties['pnl_percent'] -and $null -ne $_.pnl_percent })
     Write-Host "  Total registros: $($trades.Count) | Fechados com PnL: $($closed.Count)" -ForegroundColor White
     Write-SampleWarning $closed.Count
 
     if ($closed.Count -gt 0) {
-        $wins = @($closed | Where-Object { [double]$_.pnl_pct -gt 0 })
+        $wins = @($closed | Where-Object { [double]$_.pnl_percent -gt 0 })
         $winRate = [Math]::Round(($wins.Count / $closed.Count) * 100, 1)
-        $totalPnlPct = ($closed | ForEach-Object { [double]$_.pnl_pct } | Measure-Object -Sum).Sum
+        $totalPnlPct = ($closed | ForEach-Object { [double]$_.pnl_percent } | Measure-Object -Sum).Sum
         $avgPnlPct = [Math]::Round($totalPnlPct / $closed.Count, 3)
         Write-Host "  Win rate GLOBAL: $winRate% ($($wins.Count)/$($closed.Count)) | PnL medio/trade: $avgPnlPct%" -ForegroundColor White
 
@@ -52,9 +52,9 @@ try {
         Write-Host "  Por sinal/origem:" -ForegroundColor White
         $bySignal = $closed | Group-Object -Property { if ($_.PSObject.Properties['source']) { "$($_.source)" } else { "desconhecido" } }
         foreach ($g in ($bySignal | Sort-Object Count -Descending)) {
-            $gw = @($g.Group | Where-Object { [double]$_.pnl_pct -gt 0 })
+            $gw = @($g.Group | Where-Object { [double]$_.pnl_percent -gt 0 })
             $gwr = if ($g.Count -gt 0) { [Math]::Round(($gw.Count / $g.Count) * 100, 1) } else { 0 }
-            $gpnl = [Math]::Round((($g.Group | ForEach-Object { [double]$_.pnl_pct } | Measure-Object -Sum).Sum), 2)
+            $gpnl = [Math]::Round((($g.Group | ForEach-Object { [double]$_.pnl_percent } | Measure-Object -Sum).Sum), 2)
             Write-Host "    $($g.Name): n=$($g.Count) win_rate=$gwr% pnl_total=$gpnl%"
             Write-SampleWarning $g.Count
         }
@@ -63,7 +63,7 @@ try {
         Write-Host "  Por direcao:" -ForegroundColor White
         $byDir = $closed | Group-Object -Property { if ($_.PSObject.Properties['direction']) { "$($_.direction)" } else { "desconhecido" } }
         foreach ($g in ($byDir | Sort-Object Count -Descending)) {
-            $gw = @($g.Group | Where-Object { [double]$_.pnl_pct -gt 0 })
+            $gw = @($g.Group | Where-Object { [double]$_.pnl_percent -gt 0 })
             $gwr = if ($g.Count -gt 0) { [Math]::Round(($gw.Count / $g.Count) * 100, 1) } else { 0 }
             Write-Host "    $($g.Name): n=$($g.Count) win_rate=$gwr%"
         }
