@@ -21,10 +21,19 @@ function Get-PositionMetrics {
     try { $openPos = @(CoinEx-GetPendingPositions) } catch {}
 
     # Posicoes fechadas (via trade_outcomes.jsonl)
+    # 2026-07-20: schema real usa pnl_realized, nao pnl_usd -- todo o resto desta
+    # funcao (Measure-Object -Property pnl_usd, Sort-Object pnl_usd, etc.) sempre
+    # quebrava quando $trades vinha deste arquivo (o caminho primario/mais comum).
     $trades = @()
     $toPath = Join-Path $journalDir "trade_outcomes.jsonl"
     if (Test-Path $toPath) {
-        $trades = @(Get-Content $toPath -EA SilentlyContinue | ForEach-Object { $_ | ConvertFrom-Json -EA SilentlyContinue } | Where-Object { $_ })
+        $trades = @(Get-Content $toPath -EA SilentlyContinue | ForEach-Object { $_ | ConvertFrom-Json -EA SilentlyContinue } | Where-Object { $_ } | ForEach-Object {
+            [PSCustomObject]@{
+                market  = $_.symbol
+                pnl_usd = [double]$_.pnl_realized
+                win     = [double]$_.pnl_realized -gt 0
+            }
+        })
     }
 
     # Fallback: CoinEx-GetFinishedPositions se disponivel
