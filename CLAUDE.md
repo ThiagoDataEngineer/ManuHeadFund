@@ -12,19 +12,15 @@
 - Telegram bot: approval gates, comandos `/scan /halt /resume /demote /keep /idea`
 - Docs técnicos: `docs/ARCHITECTURE_TATICA.md`, `docs/STRATEGIC_ROADMAP.md`, `docs/AGENTS.md`
 
-### Estado atual (2026-06-02)
+### Estado atual (2026-07-22)
 
-- **Regime**: BEAR_WEAK / h24_p3_bear
-- **Paper calibration ativa**: `journal/PAPER_CALIBRATION_MODE.flag` → SCORE_MINIMO=55, intervalo 30min
-- **6/10 trades reais**: `journal/trade_outcomes.jsonl` — win rate 33%, PnL -$26, faltam 4 para Kelly
-- **DSR real**: bootstrap falso removido, dados reais em SOL/LINK/NEAR/UNI/BNB/TON
-- **Mentor LLMs**: Sonnet/Haiku/Groq/**Mistral** (Gemini deprecated — commit 6f6e02b)
-- **FARO V3 LIVE**: 7-signal pre-pump detection + auto-entry + 500 capital deployed (commit f4cea00)
-- **5 daemons ativos**: gem_loop / scan_master / tg_listener / watchdog / faro_scheduler
-- **Flags ativas**: LAYER4_AUTO_EXECUTE, MOON_BAG_ENABLED, PARALLEL_DEFAULT_ENABLED, GEM_AUTO_APPROVE, V6_LIVE_ENABLED
-- **Infrastructure**: GitHub Actions 24/7 (Layers 1-5) + Supabase state store (6 tabelas)
-- **Telegram visual**: Format-TgCycleSummary/EsquadraoResult/Heartbeat (17/17 testes)
-- **Bloqueios conhecidos**: SHORT BEAR_STRONG 0/4 pass (commit 2026-05-18)
+- **LIVE TRADING**: `Trading Pipeline Complete` roda 24/7 no GitHub Actions (cron `*/5 * * * *`), 100% verde nas últimas ~100 runs
+- **CI Verify**: 100% verde (era 24h+ quebrado até 2026-07-20 — parse-fail em 31 arquivos, causa raiz BOM UTF-8 ausente; ver histórico de commits `5e735ee`..`6d4ba41`)
+- **Audit amplo 2026-07-20/22**: ~15 bugs reais corrigidos em produção (não só testes) — trailing stop sem `lib_candle_fetcher`, `Set-StateRecord`→`Save-StateRecords`, `Get-FqsQualityOrDefault` ignorando Hashtable, dashboard com schema `pnl_realized` vs `pnl_usd`, path travado no dot-source em `lib_override_expiry`/`lib_trade_journal_supabase`, 15 params `-BeLessThanOrEqual`/`-BeGreaterThanOrEqual` inválidos em testes (nunca existiram no Pester)
+- **`lib_entry_direction.ps1` conectada** (commit `c9000c5`, 2026-07-22): `Resolve-EntryDirection` existia desde 06-24 com 7/7 testes mas nunca era carregada por `gem_executor.ps1` — fallback conservador sempre dava SKIP em gaps de conviction <20 pontos. Simulado e validado: mais entradas capturadas em gaps moderados (4-15 pontos), sem abrir mão do piso de conviction (45) nem da trava de cenário (agora usa `$btcScenario.allow_long/allow_short` real, corrigido de hardcode `$true/$true`)
+- **Suite de testes**: Pester 3.4.0 (motor real de produção/CI) + Pester 5.9.0 instalados; ambiente tem os dois porque parte da suite foi escrita em sintaxe Pester 5 nunca antes validada
+- **Mentor LLMs**: Sonnet/Haiku/Groq/Mistral
+- **Bloqueios conhecidos**: `sync_and_fix_tp.ps1` removido (cleanup 2026-07-09), 2 libs órfãs vazias intencionalmente (`lib_mentor_rebalancer.ps1`, `lib_realtime_position_analyzer.ps1`)
 
 ---
 
