@@ -524,6 +524,20 @@ function Sync-TrailingPositionsWithExchange {
             } | Select-Object -First 1
 
             if ($existing) {
+                # 2026-07-22 BACKFILL: registros criados antes do campo origin
+                # existir (pre-2026-07-18) ou por caminhos que nao o gravavam
+                # (exchange_sync/orphan_auto_register) ficam permanentemente
+                # fora da avaliacao do motor shadow (lib_trailing_unified.ps1
+                # exige origin.{asset_class,trade_style}, fail-closed, nunca
+                # adivinha). Sync roda todo ciclo -- oportunidade natural de
+                # corrigir o backlog sem precisar de migracao separada.
+                if (-not $existing.origin -or -not $existing.origin.asset_class -or -not $existing.origin.trade_style) {
+                    $existing | Add-Member -NotePropertyName "origin" -NotePropertyValue @{
+                        asset_class = "$($order.position_type)".ToUpper()
+                        trade_style = "SWING"
+                    } -Force
+                    $updated = $true
+                }
                 $wasInactive = -not $existing.active
                 $oldStop = $existing.stopCurrent
                 $oldTarget = $existing.target
@@ -614,6 +628,14 @@ function Sync-TrailingPositionsWithExchange {
                 # Posição nova na exchange - criar entrada
                 $adoptNote = if ($stopCalculated) { "$market (FUTURES sem stop -> stop protetivo $protStop calculado)" } else { $market }
                 Write-Host "  [Sync Trailing] Nova posição detectada: $adoptNote" -ForegroundColor Yellow
+                # 2026-07-22 FIX: origin nunca era gravado neste caminho (so
+                # gem_executor.ps1, entradas novas do bot, passava origin) --
+                # lib_trailing_unified.ps1 (motor shadow) exige origin e
+                # recusa "adivinhar", entao TODA posicao adotada via sync
+                # (SPOT holdings OU FUTURES orfas, ambos passam por aqui via
+                # CoinEx-GetOpenOrders) ficava fora da avaliacao shadow.
+                # $posType ja calculado acima (linha ~583) a partir de
+                # $order.position_type ("SPOT"|"FUTURES").
                 $newPos = [PSCustomObject]@{
                     market = $market
                     side = $newSide
@@ -631,6 +653,7 @@ function Sync-TrailingPositionsWithExchange {
                     active = $true
                     openedAt = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
                     updatedAt = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+                    origin = @{ asset_class = $posType; trade_style = "SWING" }
                 }
                 $positions += $newPos
                 $updated = $true
