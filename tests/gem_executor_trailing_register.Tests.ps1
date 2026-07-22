@@ -280,6 +280,11 @@ Describe "gem_executor: registro trailing pos-EXEC (Bug-A + Bug-B)" {
         }
 
         It "Safety blocked: Add-TrailingPosition nao chamada" {
+            # 2026-07-22: mesmo bug de escopo ja corrigido pros outros mocks --
+            # lib_gem_safety.ps1 (dot-sourced sem "global:" a cada BeforeEach)
+            # define Test-GemSafetyGuards no escopo local do BeforeEach, que
+            # tinha prioridade sobre o global: redefinido aqui dentro do It.
+            Remove-Item function:Test-GemSafetyGuards -ErrorAction SilentlyContinue
             function global:Test-GemSafetyGuards {
                 param([double]$TradeSizeUsdt, [double]$TotalCapitalUsdt,
                       [string]$Market, $StateFilePath, $Config)
