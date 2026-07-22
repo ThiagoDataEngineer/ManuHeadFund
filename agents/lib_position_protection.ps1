@@ -90,11 +90,21 @@ function Set-PositionProtection {
         } else {
             $inv = [System.Globalization.CultureInfo]::InvariantCulture
             try {
+                # 2026-07-22: 4 casas fixas zerava preco de tokens sub-centavo
+                # (mesmo bug corrigido em Repair-PositionProtection). Usa a
+                # precisao real do par quando disponivel.
+                $tpRoundPrec = 4
+                if (Get-Command Get-MarketPrecision -ErrorAction SilentlyContinue) {
+                    try {
+                        $tpPrec = Get-MarketPrecision -Market $Market -MarketType "futures"
+                        if ($tpPrec -and $tpPrec.quote_ccy_precision -gt 0) { $tpRoundPrec = [int]$tpPrec.quote_ccy_precision }
+                    } catch { }
+                }
                 $resp = CoinEx-Post "/v2/futures/set-position-take-profit" @{
                     market            = $Market
                     market_type       = "FUTURES"
                     take_profit_type  = "mark_price"
-                    take_profit_price = ([math]::Round($TakeProfit,4)).ToString($inv)
+                    take_profit_price = ([math]::Round($TakeProfit,$tpRoundPrec)).ToString($inv)
                 }
                 $tpSet = ($resp.code -eq 0)
                 if ($tpSet) { $tpPriceFinal = $TakeProfit }
@@ -263,13 +273,27 @@ function Repair-PositionProtection {
         }
     }
 
+    # 2026-07-22 FIX: arredondamento fixo em 4 casas zerava SL/TP de tokens de
+    # preco muito baixo (PEPE ~$0.0000045 -> Round(x,4) = 0). Set-PositionProtection
+    # entao via StopLoss/TakeProfit=0, tratava como "nada a fazer" e reportava
+    # success=true com posicao SEM protecao real -- silencioso, recorrente todo
+    # ciclo do trailing monitor. Usa a precisao real do par (Get-MarketPrecision,
+    # ja usado em outros pontos do sizing) em vez de "4" hardcoded.
+    $roundPrec = 4
+    if (Get-Command Get-MarketPrecision -ErrorAction SilentlyContinue) {
+        try {
+            $prec = Get-MarketPrecision -Market $Market -MarketType "futures"
+            if ($prec -and $prec.quote_ccy_precision -gt 0) { $roundPrec = [int]$prec.quote_ccy_precision }
+        } catch { }
+    }
+
     # Calcular SL/TP se nao fornecidos (direcao-aware)
     if ($side -eq "long") {
-        if ($StopLoss   -le 0) { $StopLoss   = [math]::Round($entry * (1 - $StopPct), 4) }
-        if ($TakeProfit -le 0) { $TakeProfit = [math]::Round($entry * (1 + $TargetPct), 4) }
+        if ($StopLoss   -le 0) { $StopLoss   = [math]::Round($entry * (1 - $StopPct), $roundPrec) }
+        if ($TakeProfit -le 0) { $TakeProfit = [math]::Round($entry * (1 + $TargetPct), $roundPrec) }
     } else {
-        if ($StopLoss   -le 0) { $StopLoss   = [math]::Round($entry * (1 + $StopPct), 4) }
-        if ($TakeProfit -le 0) { $TakeProfit = [math]::Round($entry * (1 - $TargetPct), 4) }
+        if ($StopLoss   -le 0) { $StopLoss   = [math]::Round($entry * (1 + $StopPct), $roundPrec) }
+        if ($TakeProfit -le 0) { $TakeProfit = [math]::Round($entry * (1 - $TargetPct), $roundPrec) }
     }
 
     $protect = Set-PositionProtection -Market $Market -StopLoss $StopLoss -TakeProfit $TakeProfit -MaxRetries 3
