@@ -163,10 +163,21 @@ function Register-OrphanPosition {
             # API falha: proceed com caution (não bloqueia registro)
         }
         
+        # 2026-07-22 FIX: Round(,4) fixo zerava stop/target calculados pra
+        # tokens sub-centavo (PEPE-like), mesma causa raiz corrigida em
+        # lib_position_protection.ps1 e lib_order_validation.ps1.
+        $orphanRoundPrec = 4
+        if (Get-Command Get-MarketPrecision -ErrorAction SilentlyContinue) {
+            try {
+                $orphanPrec = Get-MarketPrecision -Market $market -MarketType "futures"
+                if ($orphanPrec -and $orphanPrec.quote_ccy_precision -gt 0) { $orphanRoundPrec = [int]$orphanPrec.quote_ccy_precision }
+            } catch { }
+        }
+
         # 3. Extrair ou calcular stop loss
         $stopLoss = $null
         $stopCalculated = $false
-        
+
         # 2026-07-07: a API devolve stop_loss_price="0" (STRING) quando NAO ha stop —
         # e string nao-vazia e TRUTHY no PS, entao o guard antigo registrava stop=0
         # (caso WLDUSDT short sl=0). Coage p/ double e exige > 0.
@@ -181,17 +192,17 @@ function Register-OrphanPosition {
         else {
             # Calcular stop conservador: 5% abaixo (LONG) ou acima (SHORT)
             if ($side -eq "LONG") {
-                $stopLoss = [math]::Round($entry * 0.95, 4)
+                $stopLoss = [math]::Round($entry * 0.95, $orphanRoundPrec)
             }
             else {
-                $stopLoss = [math]::Round($entry * 1.05, 4)
+                $stopLoss = [math]::Round($entry * 1.05, $orphanRoundPrec)
             }
             $stopCalculated = $true
         }
-        
+
         # 4. Extrair ou calcular take profit
         $takeProfit = $null
-        
+
         $exchTp = 0.0
         if ($Position.PSObject.Properties['take_profit_price'] -and $Position.take_profit_price) {
             try { $exchTp = [double]$Position.take_profit_price } catch { $exchTp = 0.0 }
@@ -202,14 +213,20 @@ function Register-OrphanPosition {
         else {
             # Calcular TP razoÃ¡vel: 15% acima (LONG) ou abaixo (SHORT)
             if ($side -eq "LONG") {
-                $takeProfit = [math]::Round($entry * 1.15, 4)
+                $takeProfit = [math]::Round($entry * 1.15, $orphanRoundPrec)
             }
             else {
-                $takeProfit = [math]::Round($entry * 0.85, 4)
+                $takeProfit = [math]::Round($entry * 0.85, $orphanRoundPrec)
             }
         }
-        
+
         # 5. Registrar via Add-TrailingPosition
+        # 2026-07-22 FIX: origin nunca era gravado aqui -- lib_trailing_unified.ps1
+        # (motor shadow) exige origin.{asset_class,trade_style} e recusa
+        # "adivinhar" (fail-closed), entao toda posicao orfa registrada por
+        # este caminho ficava fora da avaliacao shadow. Este caminho e
+        # exclusivamente FUTURES (usa CoinEx-GetPendingPositions, endpoint
+        # /v2/futures/pending-position).
         Add-TrailingPosition `
             -Market $market `
             -Side $side `
@@ -217,7 +234,8 @@ function Register-OrphanPosition {
             -Stop $stopLoss `
             -Target $takeProfit `
             -Source "orphan_auto_register" `
-            -Mode "ORPHAN_AUTO"
+            -Mode "ORPHAN_AUTO" `
+            -Origin @{ asset_class = "FUTURES"; trade_style = "SWING" }
         
         return [PSCustomObject]@{
             success = $true
