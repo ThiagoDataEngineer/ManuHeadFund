@@ -8,6 +8,13 @@
 
 $_tradeJournalDir = Split-Path $PSScriptRoot -Parent | Join-Path -ChildPath "journal"
 
+function _Get-TradeJournalDir {
+    # Honors STATE_STORE_LOCAL_DIR override (used by tests for isolation);
+    # falls back to the real production journal dir otherwise.
+    if ($global:STATE_STORE_LOCAL_DIR) { return $global:STATE_STORE_LOCAL_DIR }
+    return $_tradeJournalDir
+}
+
 function Save-TradeOutcome {
     <#
     .SYNOPSIS
@@ -143,7 +150,7 @@ function Get-RecentTrades {
 
         # Sort + limit
         $trades = @($trades | Sort-Object entry_ts -Descending | Select-Object -First $Limit)
-        return @($trades)
+        return $trades
     } catch {
         Write-Error "[trade_journal] Get-RecentTrades failed: $_"
         return @()
@@ -249,9 +256,10 @@ function _Mirror-TradeOutcomeLocal {
     param([hashtable]$Record)
 
     try {
-        $path = Join-Path $_tradeJournalDir "trade_outcomes.jsonl"
-        if (-not (Test-Path $_tradeJournalDir)) {
-            New-Item -ItemType Directory -Path $_tradeJournalDir -Force | Out-Null
+        $journalDir = _Get-TradeJournalDir
+        $path = Join-Path $journalDir "trade_outcomes.jsonl"
+        if (-not (Test-Path $journalDir)) {
+            New-Item -ItemType Directory -Path $journalDir -Force | Out-Null
         }
 
         $line = $Record | ConvertTo-Json -Compress -Depth 4
@@ -266,7 +274,7 @@ function _Mirror-TradeOutcomeLocal {
 
 function _Read-TradeOutcomesLocal {
     try {
-        $path = Join-Path $_tradeJournalDir "trade_outcomes.jsonl"
+        $path = Join-Path (_Get-TradeJournalDir) "trade_outcomes.jsonl"
         if (-not (Test-Path $path)) { return @() }
 
         $lines = @(Get-Content $path -Encoding UTF8 -ErrorAction SilentlyContinue)

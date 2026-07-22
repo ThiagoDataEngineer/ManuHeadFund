@@ -76,7 +76,7 @@ function Get-CounterfactualBoost {
             confidence = "VERY_HIGH"
             reasoning = "Counterfactual: $($winRate * 100)% win, avg gain $avgGain% (n=$nSkip missed opportunities)"
         }
-    } elseif ($winRate -gt 0.60 -and $avgGain -gt 30) {
+    } elseif ($winRate -ge 0.60 -and $avgGain -gt 30) {
         return @{
             source = "counterfactual_strong"
             boost_pct = 12

@@ -22,7 +22,20 @@ function Get-FqsQualityOrDefault {
     )
 
     # If FQS exists and is valid
-    if ($Gem.PSObject.Properties['fqs'] -and $Gem.fqs) {
+    # 2026-07-20: $Gem tipado [PSCustomObject] NAO converte um Hashtable de
+    # verdade -- PS 5.1 mantem o objeto original como Hashtable, e
+    # .PSObject.Properties['fqs'] nao enxerga chaves de Hashtable (so as
+    # propriedades refletidas da classe .NET Hashtable). Isso fazia essa
+    # checagem retornar sempre $false p/ Gem passado como Hashtable, mesmo com
+    # fqs valido -- sempre caindo no default silenciosamente. Fix: checar
+    # presenca da chave via ContainsKey (Hashtable) OU PSObject.Properties
+    # (PSCustomObject), cobrindo os dois tipos reais que $Gem pode assumir.
+    $hasFqs = if ($Gem -is [System.Collections.IDictionary]) {
+        $Gem.ContainsKey('fqs') -and $Gem['fqs']
+    } else {
+        ($Gem.PSObject.Properties['fqs']) -and $Gem.fqs
+    }
+    if ($hasFqs) {
         $fqs = [int]$Gem.fqs
         if ($fqs -ge 0 -and $fqs -le 7) {
             return $fqs
