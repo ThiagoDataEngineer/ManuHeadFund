@@ -59,6 +59,32 @@ function Apply-TestStubs {
         param($Market)
         [PSCustomObject]@{ signal="ENTER"; conviction=75; reason="stub_test" }
     }
+    # 2026-07-21: Test-PumpDumpGate (adicionado 2026-07-15, depois deste teste)
+    # e fail-closed por design -- sem mock de Get-PumpDumpClass, o classifier
+    # real tenta usar dados de candle que o stub de Invoke-RestMethod nao
+    # fornece, cai em "error" e bloqueia LONG (allow_long=$false). Mock
+    # simples com classe conhecida evita o gate interferir num teste que nao
+    # e sobre pump/dump. Remove-Item necessario: lib_pump_dump_classifier.ps1
+    # (dot-sourced de novo a cada BeforeEach via gem_executor.ps1) define
+    # Get-PumpDumpClass sem "global:", entao fica no escopo LOCAL do
+    # BeforeEach -- Test-PumpDumpGate (mesma lib, mesmo escopo) sempre acha
+    # essa versao local primeiro, ignorando nosso global: definido depois.
+    Remove-Item function:Get-PumpDumpClass -ErrorAction SilentlyContinue
+    function global:Get-PumpDumpClass {
+        param($Market, $Metadata)
+        [PSCustomObject]@{ class="natural_uptrend"; score=10; confidence=0.55
+            metadata=@{ dist_from_peak_pct=0; vol_ratio=1.0 } }
+    }
+    # 2026-07-21: mesmo problema do Get-PumpDumpClass -- Test-ToriConfluence
+    # (lib_tori_gate_wrapper.ps1, fail-closed) tenta buscar candles reais que
+    # o stub simplificado de Invoke-RestMethod nao fornece ("insufficient
+    # candle data"), bloqueando a entrada antes do registro de trailing.
+    Remove-Item function:Test-ToriConfluence -ErrorAction SilentlyContinue
+    function global:Test-ToriConfluence {
+        param($Market, $SetupType, $TimeframeMinutes, $Price, $TimeoutSeconds)
+        [PSCustomObject]@{ allows=$true; confluence_score=85; signals_fired=@("stub_test")
+            reason="pass"; details=@{}; audit_log="" }
+    }
 }
 
 Describe "gem_executor: registro trailing pos-EXEC (Bug-A + Bug-B)" {
@@ -99,6 +125,7 @@ Describe "gem_executor: registro trailing pos-EXEC (Bug-A + Bug-B)" {
             # o caller real (gem_executor.ps1) passa -Origin e o PowerShell
             # rejeita a chamada com parametro desconhecido (cai no catch,
             # silenciosamente nunca popula $_testTrailingCalls).
+            Remove-Item function:Add-TrailingPosition -ErrorAction SilentlyContinue
             function global:Add-TrailingPosition {
                 param([string]$Market, [string]$Side, [double]$Entry,
                       [double]$Stop,   [double]$Target, [string]$OrderId,
@@ -183,6 +210,7 @@ Describe "gem_executor: registro trailing pos-EXEC (Bug-A + Bug-B)" {
 
             Apply-TestStubs -TestDir $script:testDir
 
+            Remove-Item function:Add-TrailingPosition -ErrorAction SilentlyContinue
             function global:Add-TrailingPosition {
                 param([string]$Market, [string]$Side, [double]$Entry,
                       [double]$Stop,   [double]$Target, [string]$OrderId,
@@ -231,6 +259,7 @@ Describe "gem_executor: registro trailing pos-EXEC (Bug-A + Bug-B)" {
 
             Apply-TestStubs -TestDir $script:testDir
 
+            Remove-Item function:Add-TrailingPosition -ErrorAction SilentlyContinue
             function global:Add-TrailingPosition {
                 param([string]$Market, [string]$Side, [double]$Entry,
                       [double]$Stop, [double]$Target, [string]$OrderId,
