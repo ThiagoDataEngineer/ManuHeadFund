@@ -726,15 +726,22 @@ function Invoke-GemExecute {
             if ($alloc) {
                 $allocForTrade = if ($hasFutures) { $alloc.short_alloc } else { $alloc.long_alloc }
 
-                # 3% em BULL_STRONG ou scalps; 1% default
-                $riskPct = if ($regime -eq "BULL_STRONG" -or $isScalp) { 0.03 } else { 0.01 }
+                # 2026-07-22: risco/trade evoluido de 1% (Regra de Ouro #2 original)
+                # para 3% flat, e MaxConcurrentTrades de 5 para 10 -- decisao explicita
+                # do owner apos ver sizing de trades antigos (~$30, calculado com
+                # capital menor de entao) parecer baixo frente ao capital atual
+                # ($5042). Simulado antes de aplicar: perda maxima do portfolio se
+                # as 10 posicoes baterem stop ao mesmo tempo = ~$76 (1.5% do capital
+                # total), exposicao maxima ~30% do capital -- documentado como novo
+                # baseline, nao mais 1%/5.
+                $riskPct = 0.03
                 $allocForTrade = $allocForTrade * $riskPct / 0.01  # normalize para o calc
 
-                $dynamicSize = Get-SizePerTrade -AllocatedCapital $allocForTrade -MaxConcurrentTrades 5 -StopLossPct ([double]$__stpEarly.stop_pct)
+                $dynamicSize = Get-SizePerTrade -AllocatedCapital $allocForTrade -MaxConcurrentTrades 10 -StopLossPct ([double]$__stpEarly.stop_pct)
 
                 if ($dynamicSize -gt 0) {
                     $usd_size = $dynamicSize
-                    $sizingMethod = "dynamic_feedback_${regime}_$(if ($isScalp) { 'scalp_3pct' } else { '1pct' })"
+                    $sizingMethod = "dynamic_feedback_${regime}_3pct"
                 }
             }
         }

@@ -27,7 +27,7 @@
 ## Regras de Ouro
 
 1. Stop loss antes de qualquer entrada
-2. Risco máximo por trade: 1% do capital
+2. Risco máximo por trade: 3% do capital (evoluído de 1% em 2026-07-22 — decisão explícita do owner, ver commit `gem_executor.ps1` da data; MaxConcurrentTrades também subiu de 5 para 10)
 3. R:R mínimo 1:5
 4. Confluência obrigatória: mínimo 3 fatores
 5. Fail-closed em gates: erro = BLOCK, nunca passa por default
