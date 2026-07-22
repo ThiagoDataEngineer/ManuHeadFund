@@ -18,6 +18,8 @@ $__gate3Path = Join-Path $PSScriptRoot "lib_pump_dump_classifier.ps1"
 if (Test-Path $__gate3Path) { . $__gate3Path }
 $__gate2Path = Join-Path $PSScriptRoot "lib_entry_timing_15m.ps1"
 if (Test-Path $__gate2Path) { . $__gate2Path }
+$__entryDirPath = Join-Path $PSScriptRoot "lib_entry_direction.ps1"
+if (Test-Path $__entryDirPath) { . $__entryDirPath }  # 2026-07-22: cerebro bidirecional -- ver secao [DIRECTION] abaixo
 . (Join-Path $PSScriptRoot "lib_regime_surf_executor.ps1")  # 2026-06-30: surf SHORT no bear (shadow-first)
 . (Join-Path $PSScriptRoot "lib_market_router.ps1")
 # 2026-06-08: Multi-TF alignment validation before execution
@@ -1412,7 +1414,7 @@ function Invoke-GemExecute {
         # Usar Resolve-EntryDirection (fail-closed)
         if (Get-Command Resolve-EntryDirection -ErrorAction SilentlyContinue) {
             try {
-                $dirDecision = Resolve-EntryDirection -AllowLong $true -AllowShort $true `
+                $dirDecision = Resolve-EntryDirection -AllowLong $btcScenario.allow_long -AllowShort $btcScenario.allow_short `
                     -LongConviction $longConv -ShortConviction $shortConv -MinConviction 45
                 if ($dirDecision.act) {
                     $direction = $dirDecision.direction
