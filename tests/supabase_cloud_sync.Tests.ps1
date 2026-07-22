@@ -84,7 +84,7 @@ Describe "Supabase Cloud Sync (State Backend)" {
             if (Test-Path ".\journal\trade_outcomes.jsonl") {
                 $lines = @(Get-Content ".\journal\trade_outcomes.jsonl" | Where-Object { $_ })
                 # Apenas validar que lê sem erro
-                $lines.Count | Should BeGreaterThanOrEqual 0
+                $lines.Count | Should BeGreaterOrEqual 0
             }
         }
     }

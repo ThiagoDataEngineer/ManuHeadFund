@@ -76,7 +76,7 @@
             $leverage = Get-SafeLeverage -RequestedLeverage 50 -ConvictionPercent 90
 
             # Cap applied
-            $leverage | Should -BeLessThanOrEqual 5.0
+            $leverage | Should -BeLessOrEqual 5.0
             $leverage | Should -BeGreaterThan 1.0
 
             Write-Host "Requested 50x → Applied $leverage x ✓" -ForegroundColor Green
@@ -180,7 +180,7 @@
 
             # Journey 3: LEVERAGE ✓
             $lev = Get-SafeLeverage -Mode "STANDARD"
-            $lev | Should -BeLessThanOrEqual 5.0
+            $lev | Should -BeLessOrEqual 5.0
 
             Write-Host "✓ Gate 3: Leverage capped at $lev x" -ForegroundColor Green
 

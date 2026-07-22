@@ -130,12 +130,12 @@
         It "retrieves closed trades from last 7 days" {
             $trades = Get-RecentTrades -DaysBack 7 -Status "closed"
             $trades | Should -Not -BeNullOrEmpty
-            $trades.Count | Should -Be -GreaterThan 0
+            $trades.Count | Should -BeGreaterThan 0
         }
 
         It "filters by status" {
             $pending = Get-RecentTrades -DaysBack 30 -Status "pending"
-            $pending.Count | Should -Be -GreaterThan 0
+            $pending.Count | Should -BeGreaterThan 0
             $pending[0].status | Should -Be "pending"
         }
 
@@ -149,7 +149,7 @@
 
         It "returns all statuses when Status='all'" {
             $all = Get-RecentTrades -DaysBack 30 -Status "all"
-            $all.Count | Should -Be -GreaterThan 0
+            $all.Count | Should -BeGreaterThan 0
         }
 
         It "sorts by entry_ts descending" {
@@ -174,10 +174,10 @@
         It "calculates correct win_rate" {
             $stats = Get-TradeStats -DaysBack 30
             $stats | Should -Not -BeNullOrEmpty
-            $stats.win_count | Should -Be -GreaterThan 0
-            $stats.loss_count | Should -Be -GreaterThan 0
-            $stats.win_rate | Should -BeLessThanOrEqual 1
-            $stats.win_rate | Should -BeGreaterThanOrEqual 0
+            $stats.win_count | Should -BeGreaterThan 0
+            $stats.loss_count | Should -BeGreaterThan 0
+            $stats.win_rate | Should -BeLessOrEqual 1
+            $stats.win_rate | Should -BeGreaterOrEqual 0
         }
 
         It "calculates total PnL" {
@@ -197,19 +197,35 @@
         }
 
         It "includes median PnL" {
+            # Get-TradeStats documenta [OutputType([hashtable])] -- checar chave
+            # via .PSObject.Properties nao funciona em Hashtable (so reflete
+            # propriedades da classe .NET tipo Keys/Values/Count, nao as chaves
+            # customizadas). Usar ContainsKey, que e o jeito certo pra Hashtable.
             $stats = Get-TradeStats -DaysBack 30
-            $stats.PSObject.Properties.Name | Should -Contain "pnl_median"
+            $stats.ContainsKey("pnl_median") | Should -Be $true
         }
 
         It "includes min and max PnL" {
             $stats = Get-TradeStats -DaysBack 30
-            $stats.PSObject.Properties.Name | Should -Contain "pnl_min"
-            $stats.PSObject.Properties.Name | Should -Contain "pnl_max"
+            $stats.ContainsKey("pnl_min") | Should -Be $true
+            $stats.ContainsKey("pnl_max") | Should -Be $true
         }
     }
 
     Context "Edge cases" {
         It "handles empty trade outcomes gracefully" {
+            # Isola deste caso: Context "Get-TradeStats" acima grava trades reais
+            # no mesmo STATE_STORE_LOCAL_DIR via BeforeEach, sem limpar depois --
+            # sem isolar aqui, -DaysBack 365 sempre pegava esses trades residuais.
+            # Save-TradeOutcome grava em DOIS arquivos (Save-StateRecords ->
+            # trade_outcomes.json + _Mirror-TradeOutcomeLocal -> trade_outcomes.jsonl,
+            # o fallback usado quando o primeiro falha/retorna vazio) -- limpar so
+            # um dos dois ainda deixava o outro alimentar Get-RecentTrades.
+            foreach ($ext in @("json", "jsonl")) {
+                $tableFile = Join-Path $global:STATE_STORE_LOCAL_DIR "trade_outcomes.$ext"
+                if (Test-Path $tableFile) { Remove-Item $tableFile -Force }
+            }
+
             $stats = Get-TradeStats -DaysBack 365
             $stats.total | Should -Be 0
         }
@@ -217,7 +233,10 @@
         It "ignores malformed local JSON lines" {
             # This is tested implicitly by _Read-TradeOutcomesLocal
             # which skips unparseable lines
-            $trades = Get-RecentTrades -DaysBack 30
+            # 2026-07-21: com exatamente 1 resultado o pipeline "achata" o array
+            # pra objeto unico (comportamento nativo do PS) -- @() forca o tipo,
+            # o que a asercao original nao fazia.
+            $trades = @(Get-RecentTrades -DaysBack 30)
             $trades | Should -BeOfType [object[]]
         }
 

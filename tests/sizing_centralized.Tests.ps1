@@ -35,7 +35,7 @@
             $result = Get-SafePositionSize -Capital 3645 -EntryPrice 100 -StopLossPercent 0.001  # tiny SL
 
             # Max = capital * 5x = $18,225
-            $result.size_usd | Should -BeLessThanOrEqual 18225
+            $result.size_usd | Should -BeLessOrEqual 18225
         }
     }
 

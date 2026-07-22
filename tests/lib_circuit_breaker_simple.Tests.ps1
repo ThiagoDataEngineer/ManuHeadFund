@@ -44,7 +44,7 @@ Describe "CircuitBreaker: Get-DailyPnL" {
 
         # Não deve lançar erro
         $pnl = Get-DailyPnL -JournalDir $testJournal
-        $pnl | Should BeGreaterThanOrEqual 0
+        $pnl | Should BeGreaterOrEqual 0
 
         Remove-Item $outcomeFile
     }

@@ -17,7 +17,7 @@ $agentsPath = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"
 $journalPath = Join-Path (Split-Path $PSScriptRoot -Parent) "journal"
 
 # Mock CoinEx functions for testing
-function CoinEx-GetFuturesMarkets {
+function global:CoinEx-GetFuturesMarkets {
     return @(
         @{ market = "BTCUSDT"; min_amount = 100 },
         @{ market = "ETHUSDT"; min_amount = 50 },
@@ -25,7 +25,7 @@ function CoinEx-GetFuturesMarkets {
     )
 }
 
-function CoinEx-GetFuturesCandles {
+function global:CoinEx-GetFuturesCandles {
     param($market, $period, $limit)
 
     # Return realistic mock candles
@@ -47,7 +47,7 @@ function CoinEx-GetFuturesCandles {
     return $candles | Sort-Object ts
 }
 
-function CoinEx-GetTicker {
+function global:CoinEx-GetTicker {
     param($market)
 
     $basePriceMap = @{ BTCUSDT = 63000; ETHUSDT = 3500; XRPUSDT = 0.52 }
@@ -135,7 +135,7 @@ Describe "Confluence Scoring" {
         $confluence = Get-ConfluenceScoreEnhanced -Candles $candles -SetupType "SHORT" -TrendlineStartPrice 63000 -TrendlineTouches 3
 
         $confluence.total_score | Should -BeGreaterThan 0
-        $confluence.total_score | Should -BeLessThanOrEqual 100
+        $confluence.total_score | Should -BeLessOrEqual 100
     }
 
     It "Should fire multiple signals" {
@@ -152,8 +152,8 @@ Describe "Confluence Scoring" {
 
         $confluence = Get-ConfluenceScoreEnhanced -Candles $candles -SetupType "SHORT" -TrendlineStartPrice 3500
 
-        $confluence.rsi | Should -BeGreaterThanOrEqual 0
-        $confluence.rsi | Should -BeLessThanOrEqual 100
+        $confluence.rsi | Should -BeGreaterOrEqual 0
+        $confluence.rsi | Should -BeLessOrEqual 100
     }
 }
 
@@ -284,6 +284,9 @@ Describe "State Persistence" {
         if (Test-Path $__alertPath) { . $__alertPath }
         $__reporterPath = Join-Path $__agentsPath "tori_daemon_reporter.ps1"
         if (Test-Path $__reporterPath) { . $__reporterPath }
+        # 2026-07-21: $journalPath declarado no top-level do arquivo nao
+        # sobrevive ate BeforeEach em Pester 5 (Discovery vs Run scopes).
+        $journalPath = Join-Path (Split-Path $PSScriptRoot -Parent) "journal"
     }
 
     BeforeEach {
@@ -365,6 +368,7 @@ Describe "Report Generation" {
         if (Test-Path $__alertPath) { . $__alertPath }
         $__reporterPath = Join-Path $__agentsPath "tori_daemon_reporter.ps1"
         if (Test-Path $__reporterPath) { . $__reporterPath }
+        $journalPath = Join-Path (Split-Path $PSScriptRoot -Parent) "journal"
     }
 
     BeforeEach {
@@ -449,7 +453,7 @@ Describe "End-to-End Daemon Workflow" {
         $confluence = Get-ConfluenceScoreEnhanced -Candles $candles -SetupType "SHORT" -TrendlineStartPrice 63000
 
         $confluence.total_score | Should -BeGreaterThan 0
-        $confluence.total_score | Should -BeLessThanOrEqual 100
+        $confluence.total_score | Should -BeLessOrEqual 100
 
         $setup = [PSCustomObject]@{
             pair = "BTCUSDT"

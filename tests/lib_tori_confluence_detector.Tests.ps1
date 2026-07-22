@@ -218,7 +218,7 @@ Describe "lib_tori_confluence_detector" {
                 -TrendlineStartPrice 99 -TrendlineTouches 3
 
             $result.total_score | Should -BeGreaterThan 0
-            $result.total_score | Should -BeLessThanOrEqual 100
+            $result.total_score | Should -BeLessOrEqual 100
             $result.breakdown | Should -Not -BeNullOrEmpty
         }
 
@@ -255,7 +255,7 @@ Describe "lib_tori_confluence_detector" {
             $result = Get-ConfluenceScoreEnhanced -Candles $candles -SetupType "LONG" `
                 -TrendlineStartPrice 100 -TrendlineTouches 5
 
-            $result.total_score | Should -BeLessThanOrEqual 100
+            $result.total_score | Should -BeLessOrEqual 100
         }
 
         it "returns correct properties" {
@@ -303,10 +303,10 @@ Describe "lib_tori_confluence_detector" {
 
             # Verify complete output structure
             $result.total_score | Should -BeGreaterThan 0
-            $result.total_score | Should -BeLessThanOrEqual 100
+            $result.total_score | Should -BeLessOrEqual 100
             $result.breakdown.Keys.Count | Should -BeGreaterThan 0
             $result.rsi | Should -BeGreaterThan 0
-            $result.rsi | Should -BeLessThanOrEqual 100
+            $result.rsi | Should -BeLessOrEqual 100
         }
     }
 }
