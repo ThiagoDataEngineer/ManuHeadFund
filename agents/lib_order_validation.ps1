@@ -99,29 +99,42 @@ function Set-PositionStopLossFallback {
     )
     
     $attempt = 0
-    
+
+    # 2026-07-22 FIX: Round($Price,4) fixo zerava o preco de tokens sub-centavo
+    # (PEPE ~$0.0000045) mesmo depois de Repair-PositionProtection calcular o
+    # valor correto -- o zeramento acontecia aqui, na hora de montar o corpo
+    # da requisicao pra API, nao no calculo em si. Mesma causa raiz corrigida
+    # em lib_position_protection.ps1, precisava do mesmo fix aqui tambem.
+    $slRoundPrec = 4
+    if (Get-Command Get-MarketPrecision -ErrorAction SilentlyContinue) {
+        try {
+            $slPrec = Get-MarketPrecision -Market $Market -MarketType "futures"
+            if ($slPrec -and $slPrec.quote_ccy_precision -gt 0) { $slRoundPrec = [int]$slPrec.quote_ccy_precision }
+        } catch { }
+    }
+
     while ($attempt -lt $MaxRetries) {
         $attempt++
-        
+
         try {
             # Método 1: set-position-stop-loss (preferido)
             Write-Verbose "Attempt ${attempt}: Using set-position-stop-loss"
-            
+
             $inv = [System.Globalization.CultureInfo]::InvariantCulture
             $bodyObj = @{
                 market = $Market
                 market_type = "FUTURES"
                 stop_loss_type = "mark_price"
-                stop_loss_price = ([Math]::Round($Price, 4)).ToString($inv)
+                stop_loss_price = ([Math]::Round($Price, $slRoundPrec)).ToString($inv)
             }
-            
+
             $response = CoinEx-Post -path "/v2/futures/set-position-stop-loss" -bodyObj $bodyObj
-            
+
             if ($response.code -eq 0) {
                 # Validar
                 Start-Sleep -Milliseconds 500
                 $validation = Test-PositionHasStopLoss -Market $Market
-                
+
                 if ($validation.has_stop_loss) {
                     return [PSCustomObject]@{
                         success = $true
@@ -131,15 +144,15 @@ function Set-PositionStopLossFallback {
                     }
                 }
             }
-            
+
             # Se chegou aqui, falhou - tentar método 2
             Write-Verbose "Attempt ${attempt}: Trying modify-position-stop-loss"
-            
+
             $bodyObj2 = @{
                 market = $Market
                 market_type = "FUTURES"
                 stop_loss_type = "mark_price"
-                stop_loss_price = ([Math]::Round($Price, 4)).ToString($inv)
+                stop_loss_price = ([Math]::Round($Price, $slRoundPrec)).ToString($inv)
             }
             
             $response2 = CoinEx-Post -path "/v2/futures/modify-position-stop-loss" -bodyObj $bodyObj2
@@ -216,14 +229,24 @@ function Set-PositionTakeProfitFallback {
     )
     
     $attempt = 0
-    
+
+    # 2026-07-22 FIX: mesmo bug de Set-PositionStopLossFallback -- Round(,4)
+    # fixo zerava TP de tokens sub-centavo antes de enviar pra API.
+    $tpRoundPrec = 4
+    if (Get-Command Get-MarketPrecision -ErrorAction SilentlyContinue) {
+        try {
+            $tpPrec = Get-MarketPrecision -Market $Market -MarketType "futures"
+            if ($tpPrec -and $tpPrec.quote_ccy_precision -gt 0) { $tpRoundPrec = [int]$tpPrec.quote_ccy_precision }
+        } catch { }
+    }
+
     while ($attempt -lt $MaxRetries) {
         $attempt++
-        
+
         try {
             # Método 1: set-position-take-profit
             Write-Verbose "Attempt ${attempt}: Using set-position-take-profit"
-            
+
             $inv = [System.Globalization.CultureInfo]::InvariantCulture
 
             # 2026-06-03: Validacao TP — rejeitar se TP muito perto da entrada (bug detection)
@@ -236,10 +259,10 @@ function Set-PositionTakeProfitFallback {
                 market = $Market
                 market_type = "FUTURES"
                 take_profit_type = "mark_price"
-                take_profit_price = ([Math]::Round($Price, 4)).ToString($inv)
+                take_profit_price = ([Math]::Round($Price, $tpRoundPrec)).ToString($inv)
             }
 
-            Write-Verbose "Set-PositionTakeProfitFallback: Enviando TP=$Price (arredondado=$(([Math]::Round($Price, 4)).ToString($inv)))"
+            Write-Verbose "Set-PositionTakeProfitFallback: Enviando TP=$Price (arredondado=$(([Math]::Round($Price, $tpRoundPrec)).ToString($inv)))"
 
             $response = CoinEx-Post -path "/v2/futures/set-position-take-profit" -bodyObj $bodyObj
 
@@ -252,7 +275,7 @@ function Set-PositionTakeProfitFallback {
                 # Validar
                 Start-Sleep -Milliseconds 500
                 $validation = Test-PositionHasStopLoss -Market $Market
-                
+
                 if ($validation.has_take_profit) {
                     return [PSCustomObject]@{
                         success = $true
@@ -262,15 +285,15 @@ function Set-PositionTakeProfitFallback {
                     }
                 }
             }
-            
+
             # Método 2: modify-position-take-profit
             Write-Verbose "Attempt ${attempt}: Trying modify-position-take-profit"
-            
+
             $bodyObj2 = @{
                 market = $Market
                 market_type = "FUTURES"
                 take_profit_type = "mark_price"
-                take_profit_price = ([Math]::Round($Price, 4)).ToString($inv)
+                take_profit_price = ([Math]::Round($Price, $tpRoundPrec)).ToString($inv)
             }
             
             $response2 = CoinEx-Post -path "/v2/futures/modify-position-take-profit" -bodyObj $bodyObj2

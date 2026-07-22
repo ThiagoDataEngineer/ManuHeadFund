@@ -130,11 +130,44 @@ Describe "lib_order_validation - Set-PositionStopLossFallback" {
         
         It "Deve retornar success = false apos MaxRetries" {
             $result = Set-PositionStopLossFallback -Market "TESTUSDT" -Price 1.35 -MaxRetries 2
-            
+
             $result.success | Should Be $false
             $result.error | Should Match "Failed to set stop loss"
             $result.method_used | Should Be "none"
             $result.attempts | Should Be 2
+        }
+    }
+
+    Context "Token de preco muito baixo (PEPE-like) -- regressao 2026-07-22" {
+        # Round(Price,4) fixo zerava o valor enviado pra API antes do fix
+        # (PEPEUSDT ~$0.0000045 ficava com stop_loss_price="0" no corpo da
+        # requisicao, mesmo com o Price recebido correto) -- posicao real
+        # ficava sem protecao silenciosamente. Get-MarketPrecision mockado
+        # simula a precisao real do par (10 casas).
+        $script:capturedBody = $null
+        Mock CoinEx-Post {
+            $script:capturedBody = $bodyObj
+            return [PSCustomObject]@{ code = 0; message = "Success"; data = $null }
+        }
+        Mock CoinEx-GetPendingPositions {
+            return @([PSCustomObject]@{
+                market = "PEPEUSDT"
+                stop_loss_price = "0.0000041"
+                take_profit_price = "0"
+            })
+        }
+        Mock Start-Sleep {}
+        Mock Get-MarketPrecision { return [PSCustomObject]@{ quote_ccy_precision = 10 } }
+
+        It "Nao envia stop_loss_price=0 pra API quando o preco real e sub-centavo" {
+            # Comparar como STRING (nao double): [Math]::Round em [decimal] com
+            # precisao de 4 casas fixa retorna "0.0000" (numericamente zero,
+            # mas string diferente de "0") -- a asserção certa e conferir o
+            # valor numerico real enviado, senao o teste "passa" mesmo com a
+            # regressao presente (ja aconteceu: validado via git stash).
+            $result = Set-PositionStopLossFallback -Market "PEPEUSDT" -Price ([decimal]0.0000041) -MaxRetries 1
+            ([double]$script:capturedBody.stop_loss_price) | Should Not Be 0
+            $result.success | Should Be $true
         }
     }
 }
