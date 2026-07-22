@@ -761,7 +761,13 @@ function Invoke-GemExecute {
 
     Write-Host "  Mercado    : $mkt [$($Gem.mode)] score=$($Gem.score) tipo=$marketType" -ForegroundColor White
     Write-Host "  Capital    : $capital USDT ($marketType real)" -ForegroundColor Gray
-    Write-Host "  Sizing     : $([math]::Round($sizing_pct*100,3))% = $usd_size USDT" -ForegroundColor Yellow
+    # 2026-07-22 FIX: log mostrava $sizing_pct (2%/3% legado, so usado no
+    # fallback) mesmo quando dynamic_feedback/kelly_adaptive (o caminho
+    # PRIMARIO, roda primeiro) calculava $usd_size por uma formula totalmente
+    # diferente -- % exibido nunca batia com o valor em USD ao lado,
+    # confundindo qualquer analise manual do risco real por trade.
+    $realPct = if ($capital -gt 0) { [math]::Round(($usd_size / $capital) * 100, 3) } else { 0 }
+    Write-Host "  Sizing     : $realPct% = $usd_size USDT ($sizingMethod)" -ForegroundColor Yellow
     Write-Host "  Preco      : $price  Qtd: $qty" -ForegroundColor White
     Write-Host "  Vol spike  : $($vd.spike_ratio)x $($vd.spike_type) (+${spike_pct}%)" -ForegroundColor Gray
     Write-Host "  Max dias   : $($Gem.max_days)d" -ForegroundColor Gray
