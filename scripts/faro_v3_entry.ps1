@@ -13,7 +13,9 @@ $libs = @(
     "lib_coinex.ps1",
     "lib_order_idempotency.ps1",
     "lib_coinex_position_management.ps1",
-    "lib_leverage_cap.ps1"
+    "lib_leverage_cap.ps1",
+    "lib_state_store.ps1",
+    "lib_entry_lock.ps1"
 )
 foreach ($l in $libs) {
     $p = Join-Path $agentsDir $l
@@ -177,6 +179,20 @@ foreach ($entry in $entries) {
         # Place order
         Write-Host "📍 Entering $market $direction | price=$([Math]::Round($currentPrice,6)) | size=$([Math]::Round($quantity,4)) | stop=$([Math]::Round($stop,6)) | t1=$([Math]::Round($target1,6)) | t2=$([Math]::Round($target2,6))" -ForegroundColor Cyan
 
+        # 2026-07-23 FIX (auditoria "100% integro"): ENTRY LOCK -- este motor
+        # (FARO V3) roda em paralelo com gem_scanner_executor_live/gem_loop
+        # (jobs GH Actions distintos). O dedup acima ja checa a exchange real,
+        # mas ha uma janela entre esse check e o PlaceOrder -- lock distribuido
+        # via Supabase (mesma lib usada em gem_executor.ps1) fecha essa janela.
+        $__entryLockAcquired = $false
+        if (-not $DryRun -and (Get-Command Lock-EntryMarket -ErrorAction SilentlyContinue)) {
+            if (-not (Lock-EntryMarket -Market $market -LockedBy "faro_v3")) {
+                Write-Host "⏭️  $market bloqueado por outro motor (entry lock); skipping" -ForegroundColor Gray
+                continue
+            }
+            $__entryLockAcquired = $true
+        }
+
         if (-not $DryRun) {
             # 2026-07-17 FIX (achado real: ADAUSDT/XRPUSDT abriram a 50x via FARO
             # V3, mesmo dia do fix identico em gem_executor.ps1 -- caminho de
@@ -193,6 +209,7 @@ foreach ($entry in $entries) {
             } else { [PSCustomObject]@{ success = $false; error_msg = "CoinEx-AdjustPositionLeverage indisponivel" } }
             if (-not $__levResult.success) {
                 Write-Host "⛔ ${market}: falha ao fixar leverage segura (${__safeLeverage}x) -- $($__levResult.error_msg) -- pulando" -ForegroundColor Red
+                if ($__entryLockAcquired -and (Get-Command Unlock-EntryMarket -ErrorAction SilentlyContinue)) { Unlock-EntryMarket -Market $market }
                 continue
             }
             Write-Host "🔒 ${market} fixado em ${__safeLeverage}x isolated" -ForegroundColor DarkCyan
@@ -224,6 +241,11 @@ foreach ($entry in $entries) {
                 }
             } catch {
                 Write-Warning "WARN: Exception in ${market}: $_"
+            } finally {
+                # Ordem confirmada, falhou, ou explodiu -- em qualquer caso o
+                # lock ja cumpriu seu papel (evitar 2 motores enviando ordem
+                # ao mesmo tempo); libera pro proximo ciclo poder tentar de novo.
+                if ($__entryLockAcquired -and (Get-Command Unlock-EntryMarket -ErrorAction SilentlyContinue)) { Unlock-EntryMarket -Market $market }
             }
         } else {
             Write-Host "✅ [DRY RUN] Would enter $market $direction" -ForegroundColor Cyan

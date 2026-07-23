@@ -106,6 +106,23 @@ CREATE TABLE IF NOT EXISTS manuheadfund.tori_proximity_state (
 );
 GRANT ALL ON manuheadfund.tori_proximity_state TO anon, authenticated, service_role;
 
+-- entry_locks: lock distribuido de curta duracao (TTL) pra evitar race
+-- condition entre os 3 motores de execucao real (gem_scanner_executor_live,
+-- gem_loop, faro_v3_entry) tentando abrir o MESMO market ao mesmo tempo.
+-- 2026-07-23: cada motor ja checa CoinEx-GetPendingPositions (exchange real)
+-- antes de abrir, mas ha uma janela real entre esse check e o PlaceOrder --
+-- 2 motores rodando em paralelo (jobs GH Actions distintos, sem lock
+-- compartilhado) podem ambos ver "sem posicao" e tentar abrir ao mesmo tempo.
+-- pk=market, expires_at curto (segundos) -- lock expira sozinho se o job
+-- travar/crashar, nunca fica "preso" bloqueando o market indefinidamente.
+CREATE TABLE IF NOT EXISTS manuheadfund.entry_locks (
+    market      TEXT PRIMARY KEY,
+    locked_by   TEXT NOT NULL,
+    locked_at   TEXT NOT NULL,
+    expires_at  TEXT NOT NULL
+);
+GRANT ALL ON manuheadfund.entry_locks TO anon, authenticated, service_role;
+
 -- trailing_positions: estado trailing/Moon Bag (se já existe, mantém como está)
 CREATE TABLE IF NOT EXISTS manuheadfund.trailing_positions (
     pk_id            TEXT PRIMARY KEY,

@@ -1862,6 +1862,24 @@ function Invoke-GemExecute {
         }
     }
 
+    # ── ENTRY LOCK (2026-07-23, auditoria "100% integro") ───────────────────
+    # 3 motores de execucao real (gem_scanner_executor_live/gem_loop, ambos via
+    # esta funcao, + faro_v3_entry.ps1 separado) rodam em paralelo (jobs GH
+    # Actions distintos). Cada um ja checa CoinEx-GetPendingPositions antes de
+    # chegar aqui, mas ha uma janela real entre esse check e o envio da ordem
+    # -- 2 motores podem ambos ver "sem posicao" e tentar abrir ao mesmo tempo.
+    # Lock distribuido via Supabase (INSERT puro, PK=market, TTL 30s -- exclusao
+    # mutua real garantida pelo Postgres, nao um check-then-write no cliente).
+    # Fail-open se a infra de lock nao estiver disponivel (nao adiciona um
+    # ponto de falha novo pro fluxo de trade real).
+    $__entryLockAcquired = $false
+    if (Get-Command Lock-EntryMarket -ErrorAction SilentlyContinue) {
+        if (-not (Lock-EntryMarket -Market $mkt -LockedBy "gem_executor")) {
+            return [PSCustomObject]@{ blocked = $true; blocked_by = @("entry_lock_held_by_other_engine"); market = $mkt }
+        }
+        $__entryLockAcquired = $true
+    }
+
     # ── Execucao via Invoke-OrderRouted (2026-05-20 wire) ──────────────────
     # 2026-06-08: Suporta SHORT em adicao a LONG
     $side = if ($direction -eq "SHORT") { "sell" } else { "buy" }
@@ -1890,6 +1908,7 @@ function Invoke-GemExecute {
         } else { [PSCustomObject]@{ success = $false; error_msg = "CoinEx-AdjustPositionLeverage indisponivel" } }
         if (-not $__levResult.success) {
             Write-Host "  BLOQUEADO: falha ao fixar leverage segura em $mkt (${__safeLeverage}x) -- $($__levResult.error_msg)" -ForegroundColor Red
+            if ($__entryLockAcquired -and (Get-Command Unlock-EntryMarket -ErrorAction SilentlyContinue)) { Unlock-EntryMarket -Market $mkt }
             return [PSCustomObject]@{ blocked = $true; blocked_by = @("leverage_adjust_failed:$($__levResult.error_msg)"); market = $mkt }
         }
         Write-Host "  [LEVERAGE] $mkt fixado em ${__safeLeverage}x isolated (mode=$__leverageMode conviction=$__convictionForLev)" -ForegroundColor DarkCyan
@@ -1900,6 +1919,9 @@ function Invoke-GemExecute {
                                      -Amount $qty -QuoteAmountUsd $usd_size
     }
     Write-Host "  Ordem: id=$($order.order_id)" -ForegroundColor Green
+    # Ordem ja confirmada na exchange -- posicao real existe, libera o lock
+    # (o proposito dele era so evitar 2 motores enviando ordem simultaneamente).
+    if ($__entryLockAcquired -and (Get-Command Unlock-EntryMarket -ErrorAction SilentlyContinue)) { Unlock-EntryMarket -Market $mkt }
     $filled_qty = if ($order.filled_amount) { [double]$order.filled_amount } else { $qty }
     $avg_price  = if ($order.avg_deal_price -and [double]$order.avg_deal_price -gt 0) { [double]$order.avg_deal_price } else { $price }
 
