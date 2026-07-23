@@ -25,8 +25,16 @@ function Test-KellyGraduationCriteria {
         [double] $MinWinRate = 0.40,
         [double] $MinAvgR = 0.0
     )
+    # 2026-07-23 FIX: Get-OutcomeStats so tenta Supabase quando o CALLER ORIGINAL
+    # (nao este wrapper) nao especificou -OutcomePath -- mas repassar $OutcomePath
+    # explicitamente aqui (mesmo com o valor default) fazia $PSBoundParameters
+    # de Get-OutcomeStats sempre ver "fornecido", quebrando o fallback em cascata.
+    # Resultado real confirmado em producao (2026-07-23): n=0 win_rate=0 todo dia,
+    # identico ao bug de 2026-07-20 que esse fallback deveria ter corrigido --
+    # o fix nunca chegava a ativar atraves desta cadeia de wrappers.
+    $usedDefaultOutcomePath = -not $PSBoundParameters.ContainsKey('OutcomePath')
     $stats = if (Get-Command Get-OutcomeStats -ErrorAction SilentlyContinue) {
-        Get-OutcomeStats -OutcomePath $OutcomePath
+        if ($usedDefaultOutcomePath) { Get-OutcomeStats } else { Get-OutcomeStats -OutcomePath $OutcomePath }
     } else {
         [PSCustomObject]@{ n = 0; win_rate = 0; avg_r = 0 }
     }
@@ -93,7 +101,10 @@ function Invoke-KellyGraduationAudit {
         [string] $OutcomePath = (Join-Path $global:JOURNAL_DIR "trade_outcomes.jsonl"),
         [string] $FlagPath = $script:KELLY_FLAG_PATH
     )
-    $check = Test-KellyGraduationCriteria -OutcomePath $OutcomePath
+    # 2026-07-23 FIX: mesmo motivo do fix em Test-KellyGraduationCriteria --
+    # repassar -OutcomePath explicitamente quebra o fallback Supabase em cascata.
+    $usedDefaultOutcomePath = -not $PSBoundParameters.ContainsKey('OutcomePath')
+    $check = if ($usedDefaultOutcomePath) { Test-KellyGraduationCriteria } else { Test-KellyGraduationCriteria -OutcomePath $OutcomePath }
     Write-Host "[Kelly Audit] n=$($check.n_trades) win_rate=$($check.win_rate) avg_r=$($check.avg_r) passes=$($check.passes)" -ForegroundColor Cyan
     if (-not $check.passes) {
         Write-Host "  Reason: $($check.reason)" -ForegroundColor DarkYellow

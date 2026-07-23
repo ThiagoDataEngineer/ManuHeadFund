@@ -65,6 +65,16 @@ CREATE TABLE IF NOT EXISTS manuheadfund.trailing_state (
     "entryRegime"          TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_trailing_state_market ON manuheadfund.trailing_state (market);
+
+-- 2026-07-23: coluna origin faltando -- codigo (commit a28d405, 2026-07-22)
+-- passou a gravar Position.origin = {asset_class, trade_style} pro motor de
+-- trailing unificado (lib_trailing_unified.ps1) parar de sempre dar SKIP
+-- ("Position.origin.{asset_class,trade_style} e obrigatorio"), mas a coluna
+-- nunca foi migrada aqui -- 12 erros PGRST204 por ciclo confirmados em
+-- producao ("Could not find the 'origin' column"), Save-StateRecords cai
+-- pro fallback local (perdido no proximo job, runner isolado) toda vez.
+-- JSONB pq origin e sempre objeto aninhado {asset_class, trade_style}.
+ALTER TABLE manuheadfund.trailing_state ADD COLUMN IF NOT EXISTS origin JSONB;
 GRANT ALL ON manuheadfund.trailing_state TO anon, authenticated, service_role;
 
 -- capital_context: snapshot do capital (single-row id=1) — ★ a que faltava (PGRST205)
