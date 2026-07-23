@@ -74,6 +74,12 @@ CREATE INDEX IF NOT EXISTS idx_trailing_state_market ON manuheadfund.trailing_st
 -- producao ("Could not find the 'origin' column"), Save-StateRecords cai
 -- pro fallback local (perdido no proximo job, runner isolado) toda vez.
 -- JSONB pq origin e sempre objeto aninhado {asset_class, trade_style}.
+-- IMPORTANTE: esta mesma falha de escrita tambem explica "Posicoes ativas:
+-- 1 / total 19" visto em Layer 2/4/5 -- Sync-TrailingPositionsWithExchange
+-- tenta reativar registros (active=true) toda vez que sincroniza com a
+-- exchange, mas a escrita falhava (mesmo PGRST204) e o campo active nunca
+-- persistia atualizado. Rodar este ALTER TABLE deve corrigir os dois
+-- sintomas ao mesmo tempo (mesma causa raiz, nao 2 bugs separados).
 ALTER TABLE manuheadfund.trailing_state ADD COLUMN IF NOT EXISTS origin JSONB;
 GRANT ALL ON manuheadfund.trailing_state TO anon, authenticated, service_role;
 
