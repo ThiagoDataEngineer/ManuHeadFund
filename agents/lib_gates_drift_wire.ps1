@@ -72,16 +72,31 @@ function Test-ConvictionGate {
         return $passes
     }
 
-    # Regra 3: Standard threshold 50 (but relax to 0 if conviction unavailable = mesa also unavailable)
+    # Regra 3: floor (rede de seguranca final, nao filtro agressivo)
     # If both conviction AND mesa are low/zero, assume conviction not yet calculated — allow entry
     if ($conviction -le 0 -and $mesa_score -le 0) {
         Write-Verbose "[GATES] Both conviction and mesa unavailable (conviction=$conviction mesa=$mesa_score) — allow entry (conviction calc deferred)"
         return $true
     }
 
-    $threshold = $gates.conviction_threshold  # 50
+    # 2026-07-23 (auditoria "100% integro"): $Gem.conviction/mesa_score nunca
+    # eram populados por nenhum gerador de candidato real -- esta regra 3
+    # SEMPRE tomava o caminho acima (allow incondicional). gem_executor.ps1
+    # agora calcula o ensemble real (Get-MarketConviction, 7 eixos) antes
+    # deste gate, entao o threshold de fato entra em vigor pela 1a vez.
+    # Medido com dados reais de mercado (2026-07-23): usar conviction_threshold
+    # (50, calibrado 2026-06-18 sem nunca ter rodado) cortaria 69% dos
+    # candidatos LONG que ja passaram Tori confluence>=80 -- agressivo demais
+    # pra meta de volume alto (varios trades/dia, scalp). Decisao do usuario:
+    # usar conviction_floor (40, ja existia no JSON desde 2026-06-18, nunca
+    # usado) -- atua como rede de seguranca (so filtra os genuinamente fracos,
+    # confirmado deixar passar 12/13 candidatos reais de hoje) em vez de
+    # filtro agressivo. Reavaliar threshold conforme trade_outcomes reais
+    # acumularem (Kelly graduation audit, ja corrigido hoje, vai ter dado
+    # real pra calibrar isso soon).
+    $threshold = $gates.conviction_floor  # 40
     $passes = $conviction -gt $threshold
-    Write-Verbose "[GATES] Standard conviction $conviction vs threshold $threshold = $passes"
+    Write-Verbose "[GATES] Standard conviction $conviction vs floor $threshold = $passes"
     return $passes
 }
 

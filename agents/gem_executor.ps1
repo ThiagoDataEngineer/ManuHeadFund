@@ -1192,14 +1192,37 @@ function Invoke-GemExecute {
     # Mesa score 75+ = bypass conviction entirely (elite confluence)
     # Mesa score 60-75 = use conviction threshold 40 (strong signal)
     # Mesa score <60 = use conviction threshold 50 (standard)
+    #
+    # 2026-07-23 FIX (auditoria "100% integro"): $Gem.conviction NUNCA e
+    # populado por nenhum gerador de candidato real (gem_agent.ps1,
+    # gem_scanner_executor_live.ps1, gem_loop.ps1 -- confirmado por grep,
+    # zero matches). $Gem.mesa_score idem. Consequencia: a Regra 3 de
+    # Test-ConvictionGate (ambos<=0 -> allow, "conviction calc deferred")
+    # era SEMPRE o caminho tomado -- o gate nunca bloqueou nada em producao,
+    # apesar do log [CONVICTION PASS] sugerir avaliacao real.
+    # $conviction_ensemble ja e calculado mais abaixo (secao 2026-06-17
+    # CONVICTION OVERRIDE, usa Get-MarketConviction) mas só DEPOIS deste
+    # gate e só para vencer um SKIP do Tori -- nunca alimentava esta
+    # checagem. Fix: computa o ensemble AQUI (mesmo custo de API que ja
+    # era pago mais abaixo -- reutilizado la, sem chamada duplicada) e usa
+    # o valor real em vez do sempre-zero.
+    $__mesaGemPreCalc = if ($Gem.PSObject.Properties['mesa_score']) { [int]$Gem.mesa_score } else { 0 }
+    $convictionEnsembleResult = $null
+    if ((Get-Command Get-MarketConviction -ErrorAction SilentlyContinue) -and -not $isDataAbsent) {
+        try {
+            $convictionEnsembleResult = Get-MarketConviction -Market $mkt -Direction $direction -IsFutures $hasFutures
+        } catch { }
+    }
     if (Get-Command Test-ConvictionGate -ErrorAction SilentlyContinue) {
         try {
-            $mesa_score = if ($Gem.PSObject.Properties['mesa_score']) { [int]$Gem.mesa_score } else { 0 }
-            $conviction = if ($Gem.PSObject.Properties['conviction']) { [int]$Gem.conviction } else { 0 }
-
-            # Conviction calculation deferred: too expensive to compute per-gem (3-4 API calls each)
-            # Gate logic handles this: if conviction=0 AND mesa=0, allow entry (conviction not yet ready)
-            # Otherwise: conviction must pass threshold based on mesa_score tier
+            $mesa_score = $__mesaGemPreCalc
+            $conviction = if ($convictionEnsembleResult -and $convictionEnsembleResult.PSObject.Properties['conviction']) {
+                [int]$convictionEnsembleResult.conviction
+            } elseif ($Gem.PSObject.Properties['conviction']) {
+                [int]$Gem.conviction
+            } else {
+                0
+            }
 
             if (-not (Test-ConvictionGate -conviction $conviction -mesa_score $mesa_score)) {
                 Write-Host "  [CONVICTION BLOCKED] ${mkt}: conviction=$conviction mesa=$mesa_score (fails dynamic threshold)" -ForegroundColor Yellow
@@ -1301,7 +1324,9 @@ function Invoke-GemExecute {
         $__gateFlag = Join-Path $PSScriptRoot "..\journal\CONVICTION_GATE.flag"
         if ((Test-Path $__gateFlag) -and -not $isDataAbsent -and (Get-Command Resolve-ConvictionOverride -ErrorAction SilentlyContinue)) {
             try {
-                $convM = Get-MarketConviction -Market $mkt -Direction $direction -IsFutures $hasFutures
+                # 2026-07-23: reusa o ensemble ja calculado no Conviction Gate (secao
+                # 2a acima) -- evita 4 chamadas de API duplicadas pro mesmo market/direcao.
+                $convM = if ($convictionEnsembleResult) { $convictionEnsembleResult } else { Get-MarketConviction -Market $mkt -Direction $direction -IsFutures $hasFutures }
                 if ($convM) {
                     $convictionEvaluated = $true
                     $ovr = Resolve-ConvictionOverride -ToriSignal $tori_signal -Conviction $convM.conviction -DataAbsent $false -FlagOn $true -Threshold 75
