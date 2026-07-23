@@ -1210,6 +1210,7 @@ jobs:
           $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
           $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
           $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content += "`$env:FRED_API_KEY = '${{ secrets.FRED_API_KEY }}'" + "`n"
           $content | Out-File "agents/config.local.ps1" -Encoding UTF8
 
       - name: Run Layer 1
@@ -1245,6 +1246,7 @@ jobs:
           $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
           $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
           $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content += "`$env:FRED_API_KEY = '${{ secrets.FRED_API_KEY }}'" + "`n"
           $content | Out-File "agents/config.local.ps1" -Encoding UTF8
 
       - name: Run Layer 2 (every 30min)
@@ -1287,6 +1289,7 @@ jobs:
           $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
           $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
           $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content += "`$env:FRED_API_KEY = '${{ secrets.FRED_API_KEY }}'" + "`n"
           $content | Out-File "agents/config.local.ps1" -Encoding UTF8
 
       - name: Run Layer 4
@@ -1322,6 +1325,7 @@ jobs:
           $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
           $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
           $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content += "`$env:FRED_API_KEY = '${{ secrets.FRED_API_KEY }}'" + "`n"
           $content | Out-File "agents/config.local.ps1" -Encoding UTF8
 
       - name: Run Layer 5
