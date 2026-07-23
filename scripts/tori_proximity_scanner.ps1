@@ -71,6 +71,33 @@ if (-not $Markets -or @($Markets).Count -eq 0) {
         exit 1
     }
 }
+
+# 2026-07-23: journal/per_asset_whitelist_*.json vem de um pipeline de backtest
+# 100% manual (build_per_asset_whitelist.py, rodado local, nunca versionado --
+# ultima execucao real 2026-06-17) e nunca chega no cloud (gitignored). Sem
+# isso, Get-QuantWhitelistMarkets sempre retorna vazio e o scanner nunca roda
+# ("Nenhum market resolvido"), deixando conviction sempre 0 pro executor.
+# Fallback pros universos git-tracked (config/long_universe.json + short_universe.json)
+# -- mesmo padrao ja adotado em 2026-06-22 pro vol_climax scanner com o
+# identico problema (ver nota dentro dos proprios arquivos de universo).
+if (@($Markets).Count -eq 0) {
+    Write-ProxLog "WARN" "Whitelist quant vazia -- fallback pra config/long+short_universe.json"
+    try {
+        $longPath  = Join-Path $projectRoot "config\long_universe.json"
+        $shortPath = Join-Path $projectRoot "config\short_universe.json"
+        $fallback  = @()
+        if (Test-Path $longPath) {
+            $fallback += @((Get-Content $longPath -Raw | ConvertFrom-Json).markets | ForEach-Object { $_.market })
+        }
+        if (Test-Path $shortPath) {
+            $fallback += @((Get-Content $shortPath -Raw | ConvertFrom-Json).markets | ForEach-Object { $_.market })
+        }
+        $Markets = @($fallback)
+    } catch {
+        Write-ProxLog "ERROR" "Falha ao ler fallback de universo: $($_.Exception.Message)"
+    }
+}
+
 $Markets = @($Markets | Where-Object { $_ -and $_.Trim() } | Select-Object -Unique)
 
 if (@($Markets).Count -eq 0) {
