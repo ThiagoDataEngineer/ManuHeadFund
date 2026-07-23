@@ -41,7 +41,7 @@
             }
 
             $result = Save-TradeOutcome -TradeRecord $record
-            $result | Should -Be $true
+            $result | Should Be $true
         }
 
         It "saves minimal record with defaults" {
@@ -55,7 +55,7 @@
             }
 
             $result = Save-TradeOutcome -TradeRecord $record
-            $result | Should -Be $true
+            $result | Should Be $true
         }
 
         It "handles PnL correctly for SHORT trades" {
@@ -71,7 +71,7 @@
                 status = "closed"
             }
 
-            { Save-TradeOutcome -TradeRecord $record } | Should -Not -Throw
+            { Save-TradeOutcome -TradeRecord $record } | Should Not Throw
         }
 
         It "coerces string dates to datetime" {
@@ -85,7 +85,7 @@
             }
 
             $result = Save-TradeOutcome -TradeRecord $record
-            $result | Should -Be $true
+            $result | Should Be $true
         }
     }
 
@@ -129,33 +129,33 @@
 
         It "retrieves closed trades from last 7 days" {
             $trades = Get-RecentTrades -DaysBack 7 -Status "closed"
-            $trades | Should -Not -BeNullOrEmpty
-            $trades.Count | Should -BeGreaterThan 0
+            $trades | Should Not BeNullOrEmpty
+            $trades.Count | Should BeGreaterThan 0
         }
 
         It "filters by status" {
             $pending = Get-RecentTrades -DaysBack 30 -Status "pending"
-            $pending.Count | Should -BeGreaterThan 0
-            $pending[0].status | Should -Be "pending"
+            $pending.Count | Should BeGreaterThan 0
+            $pending[0].status | Should Be "pending"
         }
 
         It "respects DaysBack parameter" {
             $recent = Get-RecentTrades -DaysBack 3 -Status "closed"
             foreach ($trade in $recent) {
                 $age = (Get-Date) - $trade.entry_ts
-                $age.TotalDays | Should -BeLessThan 4
+                $age.TotalDays | Should BeLessThan 4
             }
         }
 
         It "returns all statuses when Status='all'" {
             $all = Get-RecentTrades -DaysBack 30 -Status "all"
-            $all.Count | Should -BeGreaterThan 0
+            $all.Count | Should BeGreaterThan 0
         }
 
         It "sorts by entry_ts descending" {
             $trades = Get-RecentTrades -DaysBack 30 -Status "closed" -Limit 100
             if ($trades.Count -gt 1) {
-                $trades[0].entry_ts | Should -BeGreaterThan $trades[-1].entry_ts
+                $trades[0].entry_ts | Should BeGreaterThan $trades[-1].entry_ts
             }
         }
     }
@@ -173,27 +173,27 @@
 
         It "calculates correct win_rate" {
             $stats = Get-TradeStats -DaysBack 30
-            $stats | Should -Not -BeNullOrEmpty
-            $stats.win_count | Should -BeGreaterThan 0
-            $stats.loss_count | Should -BeGreaterThan 0
-            $stats.win_rate | Should -BeLessOrEqual 1
-            $stats.win_rate | Should -BeGreaterOrEqual 0
+            $stats | Should Not BeNullOrEmpty
+            $stats.win_count | Should BeGreaterThan 0
+            $stats.loss_count | Should BeGreaterThan 0
+            ($stats.win_rate -le 1) | Should Be $true
+            ($stats.win_rate -ge 0) | Should Be $true
         }
 
         It "calculates total PnL" {
             $stats = Get-TradeStats -DaysBack 30
-            $stats.pnl_total | Should -Not -BeNullOrEmpty
+            $stats.pnl_total | Should Not BeNullOrEmpty
         }
 
         It "filters by regime" {
             $bullStats = Get-TradeStats -Regime "BULL" -DaysBack 30
-            $bullStats | Should -Not -BeNullOrEmpty
+            $bullStats | Should Not BeNullOrEmpty
         }
 
         It "returns zero stats for no trades" {
             $stats = Get-TradeStats -DaysBack 1 -Regime "NONEXISTENT"
-            $stats.total | Should -Be 0
-            $stats.win_rate | Should -Be 0
+            $stats.total | Should Be 0
+            $stats.win_rate | Should Be 0
         }
 
         It "includes median PnL" {
@@ -202,13 +202,13 @@
             # propriedades da classe .NET tipo Keys/Values/Count, nao as chaves
             # customizadas). Usar ContainsKey, que e o jeito certo pra Hashtable.
             $stats = Get-TradeStats -DaysBack 30
-            $stats.ContainsKey("pnl_median") | Should -Be $true
+            $stats.ContainsKey("pnl_median") | Should Be $true
         }
 
         It "includes min and max PnL" {
             $stats = Get-TradeStats -DaysBack 30
-            $stats.ContainsKey("pnl_min") | Should -Be $true
-            $stats.ContainsKey("pnl_max") | Should -Be $true
+            $stats.ContainsKey("pnl_min") | Should Be $true
+            $stats.ContainsKey("pnl_max") | Should Be $true
         }
     }
 
@@ -227,7 +227,7 @@
             }
 
             $stats = Get-TradeStats -DaysBack 365
-            $stats.total | Should -Be 0
+            $stats.total | Should Be 0
         }
 
         It "ignores malformed local JSON lines" {
@@ -236,8 +236,10 @@
             # 2026-07-21: com exatamente 1 resultado o pipeline "achata" o array
             # pra objeto unico (comportamento nativo do PS) -- @() forca o tipo,
             # o que a asercao original nao fazia.
+            # 2026-07-23 FIX: "Should BeOfType [object[]]" nao funciona no
+            # Pester 3.4.0 para tipos array -- checagem direta com -is.
             $trades = @(Get-RecentTrades -DaysBack 30)
-            $trades | Should -BeOfType [object[]]
+            ($trades -is [array]) | Should Be $true
         }
 
         It "coerces PnL fields to double" {
@@ -251,7 +253,7 @@
                 pnl_realized = "25.75"  # string
             }
 
-            { Save-TradeOutcome -TradeRecord $record } | Should -Not -Throw
+            { Save-TradeOutcome -TradeRecord $record } | Should Not Throw
         }
     }
 }
