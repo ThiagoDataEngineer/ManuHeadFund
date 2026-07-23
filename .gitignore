@@ -129,6 +129,23 @@ dashboard/dashboard_data.json
 TEST_*.ps1
 *_FIXED.ps1
 *_TEMP.ps1
+# 2026-07-23 FIX: TEST_*.ps1 e case-insensitive no Windows e descartava
+# silenciosamente arquivos legitimos de teste Pester (com bloco Describe)
+# em tests/test_*.ps1 (nunca commitados, nunca rodaram no CI real). Libera
+# so os confirmados como testes reais -- demais tests/test_*.ps1 sem
+# bloco Describe continuam ignorados (scripts scratch de verdade).
+!tests/test_distribution_short.Tests.ps1
+!tests/test_pullback_recovery.Tests.ps1
+!tests/test_e2e_trade_journey_simple.ps1
+!tests/test_end_to_end_single_trade_journey.ps1
+!tests/test_github_actions_health.ps1
+!tests/test_master_1_cloud_health_diagnostic.ps1
+!tests/test_master_2_scanner_activation.ps1
+!tests/test_master_2_scanner_fix.ps1
+!tests/test_master_3_e2e_complete_journey.ps1
+!tests/test_master_3_e2e_fix.ps1
+!tests/test_scanner_local_activation.ps1
+!tests/test_scanner_local_activation_simple.ps1
 
 # ============================================================
 # Scripts temporarios de dashboard
