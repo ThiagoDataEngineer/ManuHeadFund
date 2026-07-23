@@ -77,6 +77,19 @@ CREATE TABLE IF NOT EXISTS manuheadfund.capital_context (
     source      TEXT NOT NULL
 );
 
+-- tori_proximity_state: snapshot single-row (id=1) do scanner de proximidade.
+-- 2026-07-23: cada job GitHub Actions e um runner isolado (checkout proprio) --
+-- o arquivo local journal/tori_proximity_state.json escrito pelo job "Tori
+-- Proximity Scanner" nunca chegava no job "Gem Scanner+Executor", que por
+-- isso sempre lia conviction=0 e travava no quality gate (blind_entry).
+-- Mesmo padrao de capital_context: single-row, upsert por id, TTL no consumer.
+CREATE TABLE IF NOT EXISTS manuheadfund.tori_proximity_state (
+    id      INTEGER PRIMARY KEY DEFAULT 1,
+    ts_utc  TEXT NOT NULL,
+    markets TEXT NOT NULL
+);
+GRANT ALL ON manuheadfund.tori_proximity_state TO anon, authenticated, service_role;
+
 -- trailing_positions: estado trailing/Moon Bag (se já existe, mantém como está)
 CREATE TABLE IF NOT EXISTS manuheadfund.trailing_positions (
     pk_id            TEXT PRIMARY KEY,

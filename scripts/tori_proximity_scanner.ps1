@@ -56,6 +56,7 @@ try {
     . (Join-Path $agentsDir "lib_quant_whitelist.ps1") -ErrorAction Stop
     . (Join-Path $agentsDir "lib_tori_proximity.ps1") -ErrorAction Stop
     . (Join-Path $agentsDir "lib_signal_trigger_bus.ps1") -ErrorAction SilentlyContinue  # fast-path: enfileira trigger tori_ripe
+    . (Join-Path $agentsDir "lib_state_store.ps1") -ErrorAction SilentlyContinue  # 2026-07-23: snapshot cross-job via Supabase
 } catch {
     Write-ProxLog "ERROR" "Falha libs: $($_.Exception.Message)"
     exit 1
@@ -193,6 +194,23 @@ try {
     Write-ProxLog "SNAPSHOT" "Persistido state ($($snapshot.Keys.Count) markets) -> $statePath"
 } catch {
     Write-ProxLog "ERROR" "Falha ao persistir snapshot: $($_.Exception.Message)"
+}
+
+# 2026-07-23: cada job GitHub Actions e um runner isolado -- o arquivo local acima
+# nunca chega no job Gem Scanner+Executor (checkout proprio, sem filesystem
+# compartilhado). Grava tambem no Supabase (mesmo padrao de capital_context/
+# trade_outcomes) pra o executor conseguir ler conviction real cross-job.
+if (Get-Command Save-StateRecords -ErrorAction SilentlyContinue) {
+    try {
+        Save-StateRecords -Table "tori_proximity_state" -PrimaryKey "id" -Records @([ordered]@{
+            id      = 1
+            ts_utc  = $payload.ts_utc
+            markets = ($snapshot | ConvertTo-Json -Depth 6 -Compress)
+        })
+        Write-ProxLog "SNAPSHOT" "Persistido state tambem no Supabase (tori_proximity_state)"
+    } catch {
+        Write-ProxLog "WARN" "Falha ao persistir snapshot no Supabase: $($_.Exception.Message)"
+    }
 }
 
 Write-ProxLog "DONE" "Cycle completo -- markets=$(@($Markets).Count) ripening=$ripening alerts_sent=$alertsSent invalid=$invalid"

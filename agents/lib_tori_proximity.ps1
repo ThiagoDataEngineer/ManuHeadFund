@@ -586,25 +586,12 @@ function Add-ProximityAlert {
 #   Consumers leem com TTL guard (default 30min = 2x ciclo) -- snapshot stale
 #   eh ignorado, fail-safe (consumer recebe array vazio / market=$null).
 
-function Get-ToriProximitySnapshot {
-    [CmdletBinding()]
-    param(
-        [Parameter(Mandatory)] [string] $StatePath,
-        [int] $MaxAgeMinutes = 30    # fresco se ts_utc dentro deste range
-    )
-    if (-not (Test-Path $StatePath)) {
-        return [PSCustomObject]@{ fresh = $false; reason = "missing"; markets = @{} }
-    }
-    try {
-        $raw = Get-Content $StatePath -Raw -Encoding UTF8 -ErrorAction Stop
-        if (-not $raw -or -not $raw.Trim()) {
-            return [PSCustomObject]@{ fresh = $false; reason = "empty"; markets = @{} }
-        }
-        $j = $raw | ConvertFrom-Json
-    } catch {
-        return [PSCustomObject]@{ fresh = $false; reason = "parse_error"; markets = @{} }
-    }
-    if (-not $j.ts_utc) {
+# Parseia o payload {ts_utc, markets} ja deserializado (de arquivo local ou
+# Supabase) e aplica o guard de TTL. Extraido pra ser reaproveitado pelos 2
+# backends sem duplicar a logica de staleness.
+function _Parse-ToriProximityPayload {
+    param([Parameter(Mandatory)] $j, [int] $MaxAgeMinutes)
+    if (-not $j -or -not $j.ts_utc) {
         return [PSCustomObject]@{ fresh = $false; reason = "no_timestamp"; markets = @{} }
     }
     # PS 5.1: [datetime]::Parse retorna Kind=Local pra string com 'Z' -> bug TZ.
@@ -630,6 +617,53 @@ function Get-ToriProximitySnapshot {
         age_min  = [math]::Round($ageMin, 1)
         markets  = $markets
     }
+}
+
+function Get-ToriProximitySnapshot {
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)] [string] $StatePath,
+        [int] $MaxAgeMinutes = 30    # fresco se ts_utc dentro deste range
+    )
+    # Local primeiro (mais rapido, sem round-trip de rede). So o I/O/parse de
+    # baixo nivel fica em try/catch aqui -- _Parse-ToriProximityPayload ja
+    # devolve {fresh=false; reason=...} pros seus proprios casos de erro, e
+    # precisa propagar esse resultado (nao ser engolida por um catch externo).
+    if (Test-Path $StatePath) {
+        $raw = $null
+        try { $raw = Get-Content $StatePath -Raw -Encoding UTF8 -ErrorAction Stop } catch { }
+        if ($raw -and $raw.Trim()) {
+            $j = $null
+            try { $j = $raw | ConvertFrom-Json } catch { }
+            if ($j) {
+                # Local existe e parseou -- essa e a fonte de verdade. Retorna
+                # sempre (fresh ou stale), nao cai pro Supabase: um snapshot
+                # local presente e explicitamente stale ainda diz mais que
+                # "sem dado nenhum" (evita mascarar staleness com outro job).
+                return (_Parse-ToriProximityPayload -j $j -MaxAgeMinutes $MaxAgeMinutes)
+            } else {
+                return [PSCustomObject]@{ fresh = $false; reason = "parse_error"; markets = @{} }
+            }
+        }
+    }
+
+    # 2026-07-23: cada job GitHub Actions e um runner isolado (checkout proprio) --
+    # o arquivo local so existe no job que rodou o scanner. Fallback pro Supabase
+    # (mesmo padrao de capital_context) pra ler o snapshot escrito por OUTRO job.
+    if (Get-Command Get-StateRecords -ErrorAction SilentlyContinue) {
+        try {
+            $rows = @(Get-StateRecords -Table "tori_proximity_state" -Filter @{ id = 1 })
+            if ($rows.Count -gt 0 -and $rows[0].markets) {
+                $j = [PSCustomObject]@{
+                    ts_utc  = $rows[0].ts_utc
+                    markets = ($rows[0].markets | ConvertFrom-Json)
+                }
+                return (_Parse-ToriProximityPayload -j $j -MaxAgeMinutes $MaxAgeMinutes)
+            }
+        } catch { }
+    }
+
+    return [PSCustomObject]@{ fresh = $false; reason = "missing"; markets = @{} }
 }
 
 
