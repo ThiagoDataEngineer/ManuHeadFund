@@ -45,11 +45,19 @@ Write-Host "📊 Capital: `$$totalCap | Position size: `$$positionSize" -Foregro
 # limitava na nuvem. Fonte de verdade: posicoes reais abertas na exchange.
 $activeCount = 0
 $exchangeCountOk = $false
+$exchangeActiveMarkets = @()
 if (Get-Command CoinEx-GetPendingPositions -ErrorAction SilentlyContinue) {
     try {
         $exchangePos = @(CoinEx-GetPendingPositions -ErrorAction Stop)
         $activeCount = @($exchangePos).Count
         $exchangeCountOk = $true
+        # 2026-07-23 FIX (auditoria "100% integro"): guard de MaxPositions ja
+        # usava a exchange real (fix 2026-07-15), mas o dedup POR-MERCADO mais
+        # abaixo (linha ~150) continuava dependendo so do arquivo local
+        # efemero -- nunca detectava duplicata na nuvem. Captura os markets
+        # ja abertos aqui (mesma chamada, sem custo extra de API) pra reusar
+        # no dedup real.
+        $exchangeActiveMarkets = @($exchangePos | ForEach-Object { "$($_.market)" } | Where-Object { $_ })
         Write-Host "Posicoes abertas na exchange: $activeCount (fonte: API)" -ForegroundColor Yellow
     } catch {
         Write-Warning "WARN: contagem via exchange falhou: $_"
@@ -148,11 +156,20 @@ foreach ($entry in $entries) {
         }
 
         # Check idempotency (no duplicate entry for this market today)
-        if (Test-Path $posFile) {
+        # 2026-07-23 FIX: checagem por arquivo local (efemero na nuvem, ver
+        # comentario acima) nunca detectava duplicata em producao real --
+        # prioriza a exchange (fonte de verdade real), arquivo local so como
+        # fallback pra ambiente sem a lista da exchange disponivel.
+        if ($exchangeCountOk) {
+            if ($exchangeActiveMarkets -contains $market) {
+                Write-Host "⏭️  $market already has active position (fonte: exchange); skipping" -ForegroundColor Gray
+                continue
+            }
+        } elseif (Test-Path $posFile) {
             $existing = Get-Content $posFile |
                 Where-Object { $_ | ConvertFrom-Json | Where-Object { $_.market -eq $market -and $_.status -eq "active" } }
             if ($existing) {
-                Write-Host "⏭️  $market already has active position; skipping" -ForegroundColor Gray
+                Write-Host "⏭️  $market already has active position (fonte: arquivo local); skipping" -ForegroundColor Gray
                 continue
             }
         }
