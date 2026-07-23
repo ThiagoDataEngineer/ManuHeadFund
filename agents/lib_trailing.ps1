@@ -106,7 +106,17 @@ function Save-TrailingPositions {
     if ((_Test-TrailingUsesStateStore) -and (Get-Command Save-StateRecords -ErrorAction SilentlyContinue)) {
         try {
             # Anota pk_id em cada posicao para upsert correto
-            $augmented = @()
+            # 2026-07-23 FIX: pk_id duplicado no batch (mesmo market 2x, dado
+            # historico corrompido -- ver comentario do caso ZANOUSDT acima)
+            # fazia o Postgres rejeitar o INSERT...ON CONFLICT inteiro (erro
+            # 21000 "cannot affect row a second time"), derrubando a escrita
+            # de TODAS as posicoes no batch, nao so a duplicada -- inclusive
+            # peaks/stops de posicoes saudaveis no mesmo ciclo. Dedup por
+            # pk_id: prefere o registro active=true (posicao real ainda
+            # aberta) sobre active=false (registro fantasma/fechado antigo);
+            # entre 2 com mesmo status, mantem a ultima ocorrencia (mais
+            # recente no array -- $positions += $pos sempre poe o novo no fim).
+            $augmentedByPk = [ordered]@{}
             foreach ($p in $Positions) {
                 if ($null -eq $p) { continue }
                 if (-not $p.PSObject.Properties['market']) { continue }
@@ -117,8 +127,18 @@ function Save-TrailingPositions {
                     $copy | Add-Member -NotePropertyName $prop.Name -NotePropertyValue $prop.Value -Force
                 }
                 $copy | Add-Member -NotePropertyName "pk_id" -NotePropertyValue $pkId -Force
-                $augmented += $copy
+                if ($augmentedByPk.Contains($pkId)) {
+                    $prev = $augmentedByPk[$pkId]
+                    $prevActive = [bool]($prev.PSObject.Properties['active'] -and $prev.active)
+                    $newActive  = [bool]($copy.PSObject.Properties['active'] -and $copy.active)
+                    Write-Warning "[trailing] pk_id duplicado '$pkId' no batch -- prev_active=$prevActive new_active=$newActive"
+                    if ($prevActive -and -not $newActive) {
+                        continue   # mantem o anterior (active=true), descarta o novo (active=false)
+                    }
+                }
+                $augmentedByPk[$pkId] = $copy
             }
+            $augmented = @($augmentedByPk.Values)
             if (@($augmented).Count -gt 0) {
                 # 2026-07-09: trailing_state (nao trailing_positions — ver Get acima)
                 Save-StateRecords -Table "trailing_state" -Records $augmented -PrimaryKey "pk_id"
