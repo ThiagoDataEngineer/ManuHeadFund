@@ -19,7 +19,7 @@ Describe "lib_entry_timing_15m" {
             # Fallback: 50
             $rsi = 50
 
-            ($rsi -eq 50) | Should -Be $true
+            ($rsi -eq 50) | Should Be $true
         }
 
         It "returns high RSI (>70) for uptrend" {
@@ -27,7 +27,7 @@ Describe "lib_entry_timing_15m" {
             $closes = @(100, 101, 102, 103, 104, 105, 106, 107, 108, 109, 110, 111, 112, 113, 114, 115)
             # All closes rising = high RSI (>>70)
 
-            ($closes[-1] -gt $closes[0]) | Should -Be $true
+            ($closes[-1] -gt $closes[0]) | Should Be $true
         }
 
         It "returns low RSI (<30) for downtrend" {
@@ -35,7 +35,7 @@ Describe "lib_entry_timing_15m" {
             $closes = @(115, 114, 113, 112, 111, 110, 109, 108, 107, 106, 105, 104, 103, 102, 101, 100)
             # All closes falling = low RSI (<<30)
 
-            ($closes[-1] -lt $closes[0]) | Should -Be $true
+            ($closes[-1] -lt $closes[0]) | Should Be $true
         }
     }
 
@@ -49,7 +49,7 @@ Describe "lib_entry_timing_15m" {
             # Only 3 vols, need 10+
             $ratio = 1.0
 
-            ($ratio -eq 1.0) | Should -Be $true
+            ($ratio -eq 1.0) | Should Be $true
         }
 
         It "returns >1.5 for recent volume spike" {
@@ -60,7 +60,7 @@ Describe "lib_entry_timing_15m" {
             $vol7 = 100
             $ratio = $vol3 / $vol7
 
-            ($ratio -eq 3.0) | Should -Be $true
+            ($ratio -eq 3.0) | Should Be $true
         }
 
         It "returns <1.5 for low volume" {
@@ -68,7 +68,7 @@ Describe "lib_entry_timing_15m" {
             $vols = @(100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100, 100)
             $ratio = 1.0
 
-            ($ratio -eq 1.0) | Should -Be $true
+            ($ratio -eq 1.0) | Should Be $true
         }
     }
 
@@ -81,21 +81,21 @@ Describe "lib_entry_timing_15m" {
             $rsi = 65
             $signal = if ($rsi -lt 70) { "enter" } else { "wait" }
 
-            ($signal -eq "enter") | Should -Be $true
+            ($signal -eq "enter") | Should Be $true
         }
 
         It "WAIT when RSI 70-80 (elevated)" {
             $rsi = 75
             $signal = if ($rsi -lt 70) { "enter" } elseif ($rsi -le 80) { "wait" } else { "skip" }
 
-            ($signal -eq "wait") | Should -Be $true
+            ($signal -eq "wait") | Should Be $true
         }
 
         It "SKIP when RSI > 80 (overbought)" {
             $rsi = 85
             $signal = if ($rsi -lt 70) { "enter" } elseif ($rsi -le 80) { "wait" } else { "skip" }
 
-            ($signal -eq "skip") | Should -Be $true
+            ($signal -eq "skip") | Should Be $true
         }
     }
 
@@ -108,7 +108,7 @@ Describe "lib_entry_timing_15m" {
             $signal = "enter"
             $conf = 0.85
 
-            ($conf -eq 0.85) | Should -Be $true
+            ($conf -eq 0.85) | Should Be $true
         }
 
         It "confidence 0.95 for ENTER + volume spike" {
@@ -116,21 +116,21 @@ Describe "lib_entry_timing_15m" {
             $volRatio = 1.6
             $conf = if ($volRatio -gt 1.5) { 0.95 } else { 0.85 }
 
-            ($conf -eq 0.95) | Should -Be $true
+            ($conf -eq 0.95) | Should Be $true
         }
 
         It "confidence 0.60 for WAIT" {
             $signal = "wait"
             $conf = 0.60
 
-            ($conf -eq 0.60) | Should -Be $true
+            ($conf -eq 0.60) | Should Be $true
         }
 
         It "confidence 0.75 for SKIP" {
             $signal = "skip"
             $conf = 0.75
 
-            ($conf -eq 0.75) | Should -Be $true
+            ($conf -eq 0.75) | Should Be $true
         }
     }
 
@@ -145,7 +145,7 @@ Describe "lib_entry_timing_15m" {
             $discount = 0
             $effective = $toriScore - $discount
 
-            ($effective -eq 60) | Should -Be $true
+            ($effective -eq 60) | Should Be $true
         }
 
         It "-10 discount for WAIT" {
@@ -154,7 +154,7 @@ Describe "lib_entry_timing_15m" {
             $discount = 10
             $effective = $toriScore - $discount
 
-            ($effective -eq 50) | Should -Be $true
+            ($effective -eq 50) | Should Be $true
         }
 
         It "-25 discount for SKIP" {
@@ -163,7 +163,7 @@ Describe "lib_entry_timing_15m" {
             $discount = 25
             $effective = $toriScore - $discount
 
-            ($effective -eq 35) | Should -Be $true
+            ($effective -eq 35) | Should Be $true
         }
 
         It "-50 discount for ERROR" {
@@ -172,7 +172,7 @@ Describe "lib_entry_timing_15m" {
             $discount = 50
             $effective = $toriScore - $discount
 
-            ($effective -eq 10) | Should -Be $true
+            ($effective -eq 10) | Should Be $true
         }
     }
 
@@ -187,7 +187,7 @@ Describe "lib_entry_timing_15m" {
             $effective = 65
             $passes = $effective -ge 60
 
-            ($passes -eq $true) | Should -Be $true
+            ($passes -eq $true) | Should Be $true
         }
 
         It "fails gate when effective_score < 60" {
@@ -196,7 +196,7 @@ Describe "lib_entry_timing_15m" {
             $effective = 35
             $passes = $effective -ge 60
 
-            ($passes -eq $false) | Should -Be $true
+            ($passes -eq $false) | Should Be $true
         }
 
         It "fails gate when WAIT and score < 75" {
@@ -206,7 +206,7 @@ Describe "lib_entry_timing_15m" {
             $effective = 55
             $passes = $effective -ge 60
 
-            ($passes -eq $false) | Should -Be $true
+            ($passes -eq $false) | Should Be $true
         }
 
         It "passes gate when ENTER and score >= 60" {
@@ -216,7 +216,7 @@ Describe "lib_entry_timing_15m" {
             $effective = 60
             $passes = $effective -ge 60
 
-            ($passes -eq $true) | Should -Be $true
+            ($passes -eq $true) | Should Be $true
         }
     }
 
@@ -229,14 +229,14 @@ Describe "lib_entry_timing_15m" {
             # Simulated DODO 24h atras: +40% ja feito, overbought
             $rsi = 78
 
-            ($rsi -gt 70) | Should -Be $true
+            ($rsi -gt 70) | Should Be $true
         }
 
         It "DODO signal = WAIT (RSI elevated)" {
             $rsi = 78
             $signal = if ($rsi -lt 70) { "enter" } elseif ($rsi -le 80) { "wait" } else { "skip" }
 
-            ($signal -eq "wait") | Should -Be $true
+            ($signal -eq "wait") | Should Be $true
         }
 
         It "DODO discount -10, fails gate at Tori=60" {
@@ -245,7 +245,7 @@ Describe "lib_entry_timing_15m" {
             $effective = 50
             $passes = $effective -ge 60
 
-            ($passes -eq $false) | Should -Be $true
+            ($passes -eq $false) | Should Be $true
         }
 
         It "DODO passes gate at Tori=75" {
@@ -254,7 +254,7 @@ Describe "lib_entry_timing_15m" {
             $effective = 65
             $passes = $effective -ge 60
 
-            ($passes -eq $true) | Should -Be $true
+            ($passes -eq $true) | Should Be $true
         }
     }
 
@@ -264,7 +264,7 @@ Describe "lib_entry_timing_15m" {
             $signal = if ($rsi -lt 70) { "enter" } else { "wait" }
             $discount = 0
 
-            ($signal -eq "enter" -and $discount -eq 0) | Should -Be $true
+            ($signal -eq "enter" -and $discount -eq 0) | Should Be $true
         }
 
         It "RSI=65 + vol spike = confidence 0.95" {
@@ -273,7 +273,7 @@ Describe "lib_entry_timing_15m" {
             $signal = "enter"
             $conf = if ($volRatio -gt 1.5) { 0.95 } else { 0.85 }
 
-            ($conf -eq 0.95) | Should -Be $true
+            ($conf -eq 0.95) | Should Be $true
         }
 
         It "RSI=65 passes gate at Tori=55" {
@@ -283,7 +283,7 @@ Describe "lib_entry_timing_15m" {
             $passes = $effective -ge 60
 
             # Actually fails (55 < 60) but that's correct: Tori too low
-            ($passes -eq $false) | Should -Be $true
+            ($passes -eq $false) | Should Be $true
         }
 
         It "RSI=65 passes gate at Tori=65" {
@@ -292,7 +292,7 @@ Describe "lib_entry_timing_15m" {
             $effective = 65
             $passes = $effective -ge 60
 
-            ($passes -eq $true) | Should -Be $true
+            ($passes -eq $true) | Should Be $true
         }
     }
 
@@ -302,15 +302,15 @@ Describe "lib_entry_timing_15m" {
 
     Context "Function Definitions" {
         It "Get-TrendlineEntrySignal function exists" {
-            (Get-Command Get-TrendlineEntrySignal -ErrorAction SilentlyContinue) | Should -Not -BeNullOrEmpty
+            (Get-Command Get-TrendlineEntrySignal -ErrorAction SilentlyContinue) | Should Not BeNullOrEmpty
         }
 
         It "Test-EntryTimingGate function exists" {
-            (Get-Command Test-EntryTimingGate -ErrorAction SilentlyContinue) | Should -Not -BeNullOrEmpty
+            (Get-Command Test-EntryTimingGate -ErrorAction SilentlyContinue) | Should Not BeNullOrEmpty
         }
 
         It "Format-EntryTimingReport function exists" {
-            (Get-Command Format-EntryTimingReport -ErrorAction SilentlyContinue) | Should -Not -BeNullOrEmpty
+            (Get-Command Format-EntryTimingReport -ErrorAction SilentlyContinue) | Should Not BeNullOrEmpty
         }
     }
 }

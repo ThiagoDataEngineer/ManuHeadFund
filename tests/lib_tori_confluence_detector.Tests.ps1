@@ -15,31 +15,31 @@ Describe "lib_tori_confluence_detector" {
             $volumes = @(100, 95, 105, 98, 102, 250)  # Last is 2.5x average
             $result = Get-VolumeClimax -Volumes $volumes -Threshold 2.0
 
-            $result.is_climax | Should -Be $true
-            $result.ratio | Should -BeGreaterThan 2.0
+            $result.is_climax | Should Be $true
+            $result.ratio | Should BeGreaterThan 2.0
         }
 
         It "returns false when volume is not spiked" {
             $volumes = @(100, 95, 105, 98, 102, 105)
             $result = Get-VolumeClimax -Volumes $volumes -Threshold 2.0
 
-            $result.is_climax | Should -Be $false
+            $result.is_climax | Should Be $false
         }
 
         It "handles insufficient data gracefully" {
             $volumes = @(100, 200)
             $result = Get-VolumeClimax -Volumes $volumes
 
-            $result.is_climax | Should -Be $false
-            $result.ratio | Should -Be 0.0
+            $result.is_climax | Should Be $false
+            $result.ratio | Should Be 0.0
         }
 
         It "handles zero volume gracefully" {
             $volumes = @(0, 0, 0, 0, 0)
             $result = Get-VolumeClimax -Volumes $volumes
 
-            $result.is_climax | Should -Be $false
-            $result.ratio | Should -Be 0.0
+            $result.is_climax | Should Be $false
+            $result.ratio | Should Be 0.0
         }
     }
 
@@ -47,31 +47,31 @@ Describe "lib_tori_confluence_detector" {
         It "detects oversold for LONG setup (RSI < 30)" {
             $result = Get-RSIExtreme -RSI 25 -SetupType "LONG"
 
-            $result.is_extreme | Should -Be $true
-            $result.extreme_type | Should -Be "OVERSOLD"
-            $result.points | Should -Be 20
+            $result.is_extreme | Should Be $true
+            $result.extreme_type | Should Be "OVERSOLD"
+            $result.points | Should Be 20
         }
 
         It "detects overbought for SHORT setup (RSI > 70)" {
             $result = Get-RSIExtreme -RSI 75 -SetupType "SHORT"
 
-            $result.is_extreme | Should -Be $true
-            $result.extreme_type | Should -Be "OVERBOUGHT"
-            $result.points | Should -Be 20
+            $result.is_extreme | Should Be $true
+            $result.extreme_type | Should Be "OVERBOUGHT"
+            $result.points | Should Be 20
         }
 
         It "returns false for LONG when RSI is not oversold" {
             $result = Get-RSIExtreme -RSI 50 -SetupType "LONG"
 
-            $result.is_extreme | Should -Be $false
-            $result.points | Should -Be 0
+            $result.is_extreme | Should Be $false
+            $result.points | Should Be 0
         }
 
         It "returns false for SHORT when RSI is not overbought" {
             $result = Get-RSIExtreme -RSI 50 -SetupType "SHORT"
 
-            $result.is_extreme | Should -Be $false
-            $result.points | Should -Be 0
+            $result.is_extreme | Should Be $false
+            $result.points | Should Be 0
         }
     }
 
@@ -84,8 +84,8 @@ Describe "lib_tori_confluence_detector" {
 
             $result = Get-FractalPattern -Opens $opens -Highs $highs -Lows $lows -Closes $closes
 
-            $result.fractal_type | Should -Be "BEARISH"
-            $result.points | Should -Be 15
+            $result.fractal_type | Should Be "BEARISH"
+            $result.points | Should Be 15
         }
 
         It "detects bullish fractal (trough with higher lows on sides)" {
@@ -96,8 +96,8 @@ Describe "lib_tori_confluence_detector" {
 
             $result = Get-FractalPattern -Opens $opens -Highs $highs -Lows $lows -Closes $closes
 
-            $result.fractal_type | Should -Be "BULLISH"
-            $result.points | Should -Be 15
+            $result.fractal_type | Should Be "BULLISH"
+            $result.points | Should Be 15
         }
 
         It "returns no fractal when pattern insufficient" {
@@ -108,8 +108,8 @@ Describe "lib_tori_confluence_detector" {
 
             $result = Get-FractalPattern -Opens $opens -Highs $highs -Lows $lows -Closes $closes
 
-            $result.fractal_type | Should -Be ""
-            $result.points | Should -Be 0
+            $result.fractal_type | Should Be ""
+            $result.points | Should Be 0
         }
     }
 
@@ -120,8 +120,8 @@ Describe "lib_tori_confluence_detector" {
 
             $result = Get-StructuralBreak -Lows $lows -Highs $highs -SetupType "LONG"
 
-            $result.has_choch | Should -Be $true
-            $result.points | Should -Be 15
+            $result.has_choch | Should Be $true
+            $result.points | Should Be 15
         }
 
         It "detects SHORT CHoCH when new high breaks above prior resistance" {
@@ -130,8 +130,8 @@ Describe "lib_tori_confluence_detector" {
 
             $result = Get-StructuralBreak -Lows $lows -Highs $highs -SetupType "SHORT"
 
-            $result.has_choch | Should -Be $true
-            $result.points | Should -Be 15
+            $result.has_choch | Should Be $true
+            $result.points | Should Be 15
         }
 
         It "returns false when no structural break" {
@@ -140,8 +140,8 @@ Describe "lib_tori_confluence_detector" {
 
             $result = Get-StructuralBreak -Lows $lows -Highs $highs -SetupType "LONG"
 
-            $result.has_choch | Should -Be $false
-            $result.points | Should -Be 0
+            $result.has_choch | Should Be $false
+            $result.points | Should Be 0
         }
 
         It "handles insufficient data" {
@@ -150,7 +150,7 @@ Describe "lib_tori_confluence_detector" {
 
             $result = Get-StructuralBreak -Lows $lows -Highs $highs -SetupType "LONG"
 
-            $result.has_choch | Should -Be $false
+            $result.has_choch | Should Be $false
         }
     }
 
@@ -165,8 +165,8 @@ Describe "lib_tori_confluence_detector" {
 
             $result = Get-VolumeProfile -Candles $candles
 
-            $result.peak_volume_level | Should -BeGreaterThan 0
-            $result.total_volume | Should -Be 9500
+            $result.peak_volume_level | Should BeGreaterThan 0
+            $result.total_volume | Should Be 9500
         }
 
         It "handles single candle" {
@@ -176,7 +176,7 @@ Describe "lib_tori_confluence_detector" {
 
             $result = Get-VolumeProfile -Candles $candles
 
-            $result.peak_volume_level | Should -Be 100
+            $result.peak_volume_level | Should Be 100
         }
 
         It "returns empty for no candles" {
@@ -184,7 +184,7 @@ Describe "lib_tori_confluence_detector" {
 
             $result = Get-VolumeProfile -Candles $candles
 
-            $result.peak_volume_level | Should -Be 0.0
+            $result.peak_volume_level | Should Be 0.0
         }
     }
 
@@ -197,8 +197,8 @@ Describe "lib_tori_confluence_detector" {
             $result = Get-ConfluenceScoreEnhanced -Candles $candles -SetupType "LONG" `
                 -TrendlineStartPrice 100 -TrendlineTouches 2
 
-            $result.total_score | Should -Be 0
-            $result.signals_fired.Count | Should -Be 0
+            $result.total_score | Should Be 0
+            $result.signals_fired.Count | Should Be 0
         }
 
         It "calculates score with multiple signals fired" {
@@ -217,9 +217,9 @@ Describe "lib_tori_confluence_detector" {
             $result = Get-ConfluenceScoreEnhanced -Candles $candles -SetupType "LONG" `
                 -TrendlineStartPrice 99 -TrendlineTouches 3
 
-            $result.total_score | Should -BeGreaterThan 0
-            $result.total_score | Should -BeLessOrEqual 100
-            $result.breakdown | Should -Not -BeNullOrEmpty
+            $result.total_score | Should BeGreaterThan 0
+            ($result.total_score -le 100) | Should Be $true
+            $result.breakdown | Should Not BeNullOrEmpty
         }
 
         It "includes trendline touch bonus" {
@@ -237,7 +237,7 @@ Describe "lib_tori_confluence_detector" {
             $result = Get-ConfluenceScoreEnhanced -Candles $candles -SetupType "LONG" `
                 -TrendlineStartPrice 100 -TrendlineTouches 4  # 4 touches = +10 points
 
-            $result.breakdown["trendline_touches"] | Should -Be 10
+            $result.breakdown["trendline_touches"] | Should Be 10
         }
 
         It "caps score at 100" {
@@ -255,7 +255,7 @@ Describe "lib_tori_confluence_detector" {
             $result = Get-ConfluenceScoreEnhanced -Candles $candles -SetupType "LONG" `
                 -TrendlineStartPrice 100 -TrendlineTouches 5
 
-            $result.total_score | Should -BeLessOrEqual 100
+            ($result.total_score -le 100) | Should Be $true
         }
 
         it "returns correct properties" {
@@ -273,13 +273,13 @@ Describe "lib_tori_confluence_detector" {
             $result = Get-ConfluenceScoreEnhanced -Candles $candles -SetupType "LONG" `
                 -TrendlineStartPrice 99 -TrendlineTouches 2
 
-            $result | Should -HaveProperty "total_score"
-            $result | Should -HaveProperty "breakdown"
-            $result | Should -HaveProperty "signals_fired"
-            $result | Should -HaveProperty "rsi"
-            $result | Should -HaveProperty "volume_climax_ratio"
-            $result | Should -HaveProperty "peak_volume_level"
-            $result | Should -HaveProperty "trendline_touches"
+            $result.PSObject.Properties['total_score'] | Should Not BeNullOrEmpty
+            $result.PSObject.Properties['breakdown'] | Should Not BeNullOrEmpty
+            $result.PSObject.Properties['signals_fired'] | Should Not BeNullOrEmpty
+            $result.PSObject.Properties['rsi'] | Should Not BeNullOrEmpty
+            $result.PSObject.Properties['volume_climax_ratio'] | Should Not BeNullOrEmpty
+            $result.PSObject.Properties['peak_volume_level'] | Should Not BeNullOrEmpty
+            $result.PSObject.Properties['trendline_touches'] | Should Not BeNullOrEmpty
         }
     }
 
@@ -302,11 +302,11 @@ Describe "lib_tori_confluence_detector" {
                 -TrendlineStartPrice 100 -TrendlineTouches 3
 
             # Verify complete output structure
-            $result.total_score | Should -BeGreaterThan 0
-            $result.total_score | Should -BeLessOrEqual 100
-            $result.breakdown.Keys.Count | Should -BeGreaterThan 0
-            $result.rsi | Should -BeGreaterThan 0
-            $result.rsi | Should -BeLessOrEqual 100
+            $result.total_score | Should BeGreaterThan 0
+            ($result.total_score -le 100) | Should Be $true
+            $result.breakdown.Keys.Count | Should BeGreaterThan 0
+            $result.rsi | Should BeGreaterThan 0
+            ($result.rsi -le 100) | Should Be $true
         }
     }
 }

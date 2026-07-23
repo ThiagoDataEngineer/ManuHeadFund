@@ -28,7 +28,7 @@ Describe "lib_breadth_monitor" {
             $total = $script:testMarkets.Count
             $breadth = ($green / $total) * 100
 
-            ($breadth -eq 60) | Should -Be $true
+            ($breadth -eq 60) | Should Be $true
         }
 
         It "classifies bullish trend when breadth > 60% and vol_ratio high" {
@@ -36,7 +36,7 @@ Describe "lib_breadth_monitor" {
             $vol_ratio = 1.8
             $result = ($breadth_pct -gt 60 -and $vol_ratio -gt 1.5)
 
-            $result | Should -Be $true
+            $result | Should Be $true
         }
 
         It "classifies bearish trend when breadth < 40% and vol_ratio high" {
@@ -44,14 +44,14 @@ Describe "lib_breadth_monitor" {
             $vol_ratio = 1.9
             $result = ($breadth_pct -lt 40 -and $vol_ratio -gt 1.8)
 
-            $result | Should -Be $true
+            $result | Should Be $true
         }
 
         It "classifies neutral trend when breadth between 40-60%" {
             $breadth_pct = 50
             $result = ($breadth_pct -ge 40 -and $breadth_pct -le 60)
 
-            $result | Should -Be $true
+            $result | Should Be $true
         }
     }
 
@@ -69,7 +69,7 @@ Describe "lib_breadth_monitor" {
             $result = $btcAllowLong -or `
                       ($breadthTrend -eq "bullish" -and $breadthPct -gt 60 -and $breadthConf -gt 0.70)
 
-            $result | Should -Be $true
+            $result | Should Be $true
         }
 
         It "allows LONG if breadth bullish and confidence high, regardless of BTC" {
@@ -81,7 +81,7 @@ Describe "lib_breadth_monitor" {
             $result = $btcAllowLong -or `
                       ($breadthTrend -eq "bullish" -and $breadthPct -gt 60 -and $breadthConf -gt 0.70)
 
-            $result | Should -Be $true
+            $result | Should Be $true
         }
 
         It "blocks LONG if neither BTC nor breadth bullish" {
@@ -93,7 +93,7 @@ Describe "lib_breadth_monitor" {
             $result = $btcAllowLong -or `
                       ($breadthTrend -eq "bullish" -and $breadthPct -gt 60 -and $breadthConf -gt 0.70)
 
-            $result | Should -Be $false
+            $result | Should Be $false
         }
 
         It "allows SHORT if breadth bearish and confidence high" {
@@ -105,7 +105,7 @@ Describe "lib_breadth_monitor" {
             $result = $btcAllowShort -or `
                       ($breadthTrend -eq "bearish" -and $breadthPct -lt 40 -and $breadthConf -gt 0.65)
 
-            $result | Should -Be $true
+            $result | Should Be $true
         }
 
         It "blocks SHORT if neither BTC nor breadth bearish" {
@@ -117,7 +117,7 @@ Describe "lib_breadth_monitor" {
             $result = $btcAllowShort -or `
                       ($breadthTrend -eq "bearish" -and $breadthPct -lt 40 -and $breadthConf -gt 0.65)
 
-            $result | Should -Be $false
+            $result | Should Be $false
         }
     }
 
@@ -130,7 +130,7 @@ Describe "lib_breadth_monitor" {
             $breadth_pct = 60
             $baseConf = 0.75
 
-            ($baseConf -eq 0.75) | Should -Be $true
+            ($baseConf -eq 0.75) | Should Be $true
         }
 
         It "boosts confidence towards 0.90 at breadth 100% bullish" {
@@ -139,7 +139,7 @@ Describe "lib_breadth_monitor" {
             $baseConf = 0.75 + ($breadth_pct - 60) / 40 * 0.15
             $baseConf = [Math]::Min($baseConf, 0.90)
 
-            ($baseConf -ge 0.85 -and $baseConf -le 0.90) | Should -Be $true
+            ($baseConf -ge 0.85 -and $baseConf -le 0.90) | Should Be $true
         }
 
         It "calculates confidence 0.70 at breadth 0% bearish" {
@@ -148,7 +148,7 @@ Describe "lib_breadth_monitor" {
             $baseConf = 0.70 + ((40 - $breadth_pct) / 40) * 0.15
             $baseConf = [Math]::Min($baseConf, 0.85)
 
-            ($baseConf -ge 0.80 -and $baseConf -le 0.85) | Should -Be $true
+            ($baseConf -ge 0.80 -and $baseConf -le 0.85) | Should Be $true
         }
     }
 
@@ -161,13 +161,13 @@ Describe "lib_breadth_monitor" {
             $markets = @()
             $breadth = if ($markets.Count -gt 0) { 50 } else { 0 }
 
-            ($breadth -eq 0) | Should -Be $true
+            ($breadth -eq 0) | Should Be $true
         }
 
         It "handles API error with unknown trend" {
             $reason = "api_error: timeout"
 
-            ($reason.Contains("api_error")) | Should -Be $true
+            ($reason.Contains("api_error")) | Should Be $true
         }
 
         It "handles all-green markets (100% breadth)" {
@@ -175,7 +175,7 @@ Describe "lib_breadth_monitor" {
             $total = 50
             $breadth = ($green / $total) * 100
 
-            ($breadth -eq 100) | Should -Be $true
+            ($breadth -eq 100) | Should Be $true
         }
 
         It "handles all-red markets (0% breadth)" {
@@ -183,7 +183,7 @@ Describe "lib_breadth_monitor" {
             $total = 50
             $breadth = ($green / $total) * 100
 
-            ($breadth -eq 0) | Should -Be $true
+            ($breadth -eq 0) | Should Be $true
         }
     }
 
@@ -197,7 +197,7 @@ Describe "lib_breadth_monitor" {
             $callTime = $cacheTime.AddMinutes(3)
             $elapsed = ($callTime - $cacheTime).TotalMinutes
 
-            ($elapsed -lt 5) | Should -Be $true
+            ($elapsed -lt 5) | Should Be $true
         }
 
         It "expires cache after 5 minutes" {
@@ -205,7 +205,7 @@ Describe "lib_breadth_monitor" {
             $callTime = $cacheTime.AddMinutes(6)
             $elapsed = ($callTime - $cacheTime).TotalMinutes
 
-            ($elapsed -gt 5) | Should -Be $true
+            ($elapsed -gt 5) | Should Be $true
         }
     }
 
@@ -220,7 +220,7 @@ Describe "lib_breadth_monitor" {
             $breadth_trend = if ($breadth_pct -lt 40 -and $vol_ratio -gt 1.8) { "bearish" } else { "neutral" }
             $breadth_conf = 0.75
 
-            ($breadth_trend -eq "bearish" -and $breadth_conf -gt 0.65) | Should -Be $true
+            ($breadth_trend -eq "bearish" -and $breadth_conf -gt 0.65) | Should Be $true
         }
 
         It "DODO +40%: breadth bullish + high confidence = allows LONG" {
@@ -229,7 +229,7 @@ Describe "lib_breadth_monitor" {
             $breadth_trend = if ($breadth_pct -gt 60 -and $vol_ratio -gt 1.5) { "bullish" } else { "neutral" }
             $breadth_conf = 0.78
 
-            ($breadth_trend -eq "bullish" -and $breadth_conf -gt 0.70) | Should -Be $true
+            ($breadth_trend -eq "bullish" -and $breadth_conf -gt 0.70) | Should Be $true
         }
 
         It "AKE +178%: breadth bullish (high confidence)" {
@@ -238,7 +238,7 @@ Describe "lib_breadth_monitor" {
             $breadth_trend = "bullish"
             $breadth_conf = 0.85
 
-            ($breadth_trend -eq "bullish") | Should -Be $true
+            ($breadth_trend -eq "bullish") | Should Be $true
         }
     }
 }

@@ -57,14 +57,18 @@ function Get-VolumeClimax {
         [double]$Threshold = $script:VOLUME_CLIMAX_THRESHOLD
     )
 
-    if ($Volumes.Length -lt 5) {
+    if ($Volumes.Length -lt 6) {
         return [PSCustomObject]@{ is_climax = $false; ratio = 0.0 }
     }
 
-    # Average volume of last 5 candles
+    # Average volume of the 5 candles PRIOR to the current one (excludes it).
+    # 2026-07-23 FIX: incluir o candle atual na propria media diluia o ratio
+    # (quanto maior o spike, mais ele inflava a media de comparacao), fazendo
+    # o detector nunca bater o threshold documentado ("current > 2.0x average").
+    $n = $Volumes.Length
     $avgVolume = 0.0
-    for ($i = -5; $i -lt 0; $i++) {
-        $avgVolume += $Volumes[$Volumes.Length + $i]
+    for ($i = 2; $i -le 6; $i++) {
+        $avgVolume += $Volumes[$n - $i]
     }
     $avgVolume = $avgVolume / 5.0
 
@@ -277,24 +281,28 @@ function Get-StructuralBreak {
     $n = $Lows.Length
 
     if ($SetupType -eq "LONG") {
-        # LONG CHoCH: Find prior swing low, check if current low breaks below it
-        # Simplified: Check if most recent 2 lows are lower than previous 2
-        $recentLowAvg = ($Lows[$n - 1] + $Lows[$n - 2]) / 2.0
-        $priorLowAvg = ($Lows[$n - 3] + $Lows[$n - 4]) / 2.0
+        # LONG CHoCH: new swing low must break BELOW the prior support (min),
+        # not just have a lower pair-average than the previous pair.
+        # 2026-07-23 FIX: comparar media de pares (recent vs prior) detectava
+        # CHoCH em ruido -- ex. lows [100,101,102,101,100] "quebrava" porque
+        # (101+100)/2 < (101+102)/2, mesmo o ultimo low so igualando o
+        # primeiro (nao fazendo novo minimo real abaixo do suporte previo).
+        $recentLow = [Math]::Min($Lows[$n - 1], $Lows[$n - 2])
+        $priorSupport = ($Lows[0..($n - 3)] | Measure-Object -Minimum).Minimum
 
-        if ($recentLowAvg -lt $priorLowAvg) {
+        if ($recentLow -lt $priorSupport) {
             $hasChoch = $true
-            $breakLevel = $recentLowAvg
+            $breakLevel = $recentLow
             $points = 15
         }
     } else {
-        # SHORT CHoCH: Find prior swing high, check if current high breaks above it
-        $recentHighAvg = ($Highs[$n - 1] + $Highs[$n - 2]) / 2.0
-        $priorHighAvg = ($Highs[$n - 3] + $Highs[$n - 4]) / 2.0
+        # SHORT CHoCH: new swing high must break ABOVE the prior resistance (max)
+        $recentHigh = [Math]::Max($Highs[$n - 1], $Highs[$n - 2])
+        $priorResistance = ($Highs[0..($n - 3)] | Measure-Object -Maximum).Maximum
 
-        if ($recentHighAvg -gt $priorHighAvg) {
+        if ($recentHigh -gt $priorResistance) {
             $hasChoch = $true
-            $breakLevel = $recentHighAvg
+            $breakLevel = $recentHigh
             $points = 15
         }
     }
@@ -326,8 +334,12 @@ function Get-VolumeProfile {
     #>
     [CmdletBinding()]
     param(
-        [Parameter(Mandatory=$true)]
-        [PSObject[]]$Candles,
+        # 2026-07-23 FIX: Mandatory bloqueava a validacao ANTES do corpo da
+        # funcao rodar, entao um array vazio explicito (@()) nunca chegava no
+        # guard de "sem candles" abaixo -- estourava ParameterBindingValidationException
+        # em vez de retornar o resultado vazio gracioso que a funcao ja suporta.
+        [AllowEmptyCollection()]
+        [PSObject[]]$Candles = @(),
 
         [Parameter(Mandatory=$false)]
         [int]$Bins = $script:VOLUME_PROFILE_BINS
