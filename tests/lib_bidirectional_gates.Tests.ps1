@@ -8,7 +8,7 @@ Describe "Bidirectional Gates" {
             $pctAboveMin = 4  # 4% acima da mínima 24h
 
             $approveLong = ($score -ge 60) -and ($pctAboveMin -le 5)
-            $approveLong | Should -Be $true
+            $approveLong | Should Be $true
         }
 
         It "Rejeita LONG quando preço longe da mínima" {
@@ -16,7 +16,7 @@ Describe "Bidirectional Gates" {
             $pctAboveMin = 25  # Mas 25% acima = longe
 
             $approveLong = ($score -ge 60) -and ($pctAboveMin -le 5)
-            $approveLong | Should -Be $false
+            $approveLong | Should Be $false
         }
 
         It "LONG respeita Kelly criterion" {
@@ -25,7 +25,7 @@ Describe "Bidirectional Gates" {
             $kelly = ($winRate * $rr - (1 - $winRate)) / $rr
 
             $canTrade = $kelly -gt 0
-            $canTrade | Should -Be $true  # Ainda positivo mas marginal
+            $canTrade | Should Be $true  # Ainda positivo mas marginal
         }
     }
 
@@ -35,7 +35,7 @@ Describe "Bidirectional Gates" {
             $pctBelowMax = 3  # 3% abaixo da máxima 24h
 
             $approveShort = ($score -ge 60) -and ($pctBelowMax -le 5)
-            $approveShort | Should -Be $true
+            $approveShort | Should Be $true
         }
 
         It "Rejeita SHORT quando preço longe da máxima" {
@@ -43,7 +43,7 @@ Describe "Bidirectional Gates" {
             $pctBelowMax = 20  # 20% abaixo = longe demais
 
             $approveShort = ($score -ge 60) -and ($pctBelowMax -le 5)
-            $approveShort | Should -Be $false
+            $approveShort | Should Be $false
         }
     }
 
@@ -60,7 +60,7 @@ Describe "Bidirectional Gates" {
 
             # Validação: pares diferentes = OK
             $canHaveBoth = $longPos.market -ne $shortPos.market
-            $canHaveBoth | Should -Be $true
+            $canHaveBoth | Should Be $true
         }
 
         It "Não permite LONG + SHORT no MESMO par" {
@@ -71,7 +71,7 @@ Describe "Bidirectional Gates" {
             $shortPos = [PSCustomObject]@{ market = $pair; direction = "SHORT"; size = 0.01 }
 
             $conflict = $longPos.market -eq $shortPos.market
-            $conflict | Should -Be $true
+            $conflict | Should Be $true
         }
     }
 
@@ -80,14 +80,14 @@ Describe "Bidirectional Gates" {
             $entry = 1.00
             $stop = $entry * 0.95  # 5% abaixo
 
-            $stop | Should -Be 0.95
+            $stop | Should Be 0.95
         }
 
         It "SHORT stop = 5% acima entrada" {
             $entry = 1.00
             $stop = $entry * 1.05  # 5% acima
 
-            $stop | Should -Be 1.05
+            $stop | Should Be 1.05
         }
 
         It "LONG target = entrada + 5R" {
@@ -95,7 +95,7 @@ Describe "Bidirectional Gates" {
             $riskAmount = 0.05  # 5%
             $target = $entry + ($riskAmount * 5)
 
-            $target | Should -Be 1.25
+            $target | Should Be 1.25
         }
 
         It "SHORT target = entrada - 5R" {
@@ -103,7 +103,7 @@ Describe "Bidirectional Gates" {
             $riskAmount = 0.05  # 5%
             $target = $entry - ($riskAmount * 5)
 
-            $target | Should -Be 0.75
+            $target | Should Be 0.75
         }
     }
 
@@ -114,7 +114,7 @@ Describe "Bidirectional Gates" {
             $totalTrades = $longsThisWeek + $shortsThisWeek
 
             $canTrade = $totalTrades -lt 5
-            $canTrade | Should -Be $true
+            $canTrade | Should Be $true
         }
 
         It "Respeita 2% daily loss cap (LONG + SHORT agregado)" {
@@ -122,7 +122,7 @@ Describe "Bidirectional Gates" {
             $shortGain = 0.015  # +1.5%
             $netDaily = $longLoss + $shortGain  # +0.8%
 
-            $netDaily | Should -BeGreaterThan -0.02
+            $netDaily | Should BeGreaterThan -0.02
         }
 
         It "Respeita 1% por trade limit" {
@@ -130,7 +130,7 @@ Describe "Bidirectional Gates" {
             $tradeSize = 50  # $50 = 1% de 5000
 
             $pct = ($tradeSize / $capital) * 100
-            $pct | Should -Be 1
+            $pct | Should Be 1
         }
     }
 
@@ -142,7 +142,7 @@ Describe "Bidirectional Gates" {
 
             # Mínima (3%) tem prioridade sobre máxima (50%)
             $priority = if ($pctAboveMin -lt $pctBelowMax) { "LONG" } else { "SHORT" }
-            $priority | Should -Be "LONG"
+            $priority | Should Be "LONG"
         }
 
         It "SHORT priority quando preço em MÁXIMA + score 75+" {
@@ -151,7 +151,7 @@ Describe "Bidirectional Gates" {
             $score = 80
 
             $priority = if ($pctBelowMax -lt $pctAboveMin) { "SHORT" } else { "LONG" }
-            $priority | Should -Be "SHORT"
+            $priority | Should Be "SHORT"
         }
     }
 
@@ -162,7 +162,7 @@ Describe "Bidirectional Gates" {
 
             # Excepção: mínima de 24h sempre permite
             $allowLong = $pctAboveMin -le 5
-            $allowLong | Should -Be $true
+            $allowLong | Should Be $true
         }
 
         It "BEAR_WEAK encoraja SHORT perto máxima" {
@@ -170,7 +170,7 @@ Describe "Bidirectional Gates" {
             $pctBelowMax = 2
 
             $allowShort = $pctBelowMax -le 5
-            $allowShort | Should -Be $true
+            $allowShort | Should Be $true
         }
 
         It "BULL_STRONG permite SHORT perto máxima" {
@@ -178,7 +178,7 @@ Describe "Bidirectional Gates" {
             $pctBelowMax = 3
 
             $allowShort = $pctBelowMax -le 5
-            $allowShort | Should -Be $true
+            $allowShort | Should Be $true
         }
     }
 }
