@@ -96,14 +96,37 @@ try {
     # 2026-07-04 CONTRATO: Get-CurrentRegime NUNCA existiu -> scanner rodava
     # regime-cego (sempre no fallback) desde a criacao. Fonte real:
     # $global:CURRENT_REGIME ou journal/regime_state.json (refresh_regime_state).
+    #
+    # 2026-07-23 FIX: journal/regime_state.json e escrito por regime_change_monitor.py
+    # (processo Python que NAO roda em nenhum job do GitHub Actions -- nada no
+    # workflow chama Python) E gitignored (nunca chega no runner isolado da nuvem).
+    # Cadeia inteira desconectada: o scanner sempre caia no fallback hardcoded
+    # "BEAR_WEAK", nunca uma medicao real -- so nao virava sintoma visivel porque
+    # bateu por coincidencia com o regime real de 2026-07 (bear). Se o mercado
+    # virasse BULL/BEAR_STRONG, os thresholds ficariam errados silenciosamente.
+    # Fix: usar Get-MarketScenario (candles reais CoinEx, ja corrigido no mesmo
+    # dia pra considerar SMA200) como fonte real -- bear_severity WEAK/STRONG
+    # mapeia direto pro contrato de Get-ShortThresholdsForRegime.
     if ($global:CURRENT_REGIME) {
         $currentRegime = [string]$global:CURRENT_REGIME
     } else {
         try {
-            $rsPath = Join-Path (Split-Path $PSScriptRoot -Parent) "journal\regime_state.json"
-            if (Test-Path $rsPath) {
-                $rs = Get-Content $rsPath -Raw | ConvertFrom-Json
-                if ($rs.regime) { $currentRegime = [string]$rs.regime }
+            if (-not (Get-Command Get-MarketScenario -ErrorAction SilentlyContinue)) {
+                . (Join-Path $agentsDir "lib_market_scenario.ps1")
+            }
+            $scen = Get-MarketScenario
+            if ($scen -and $scen.scenario -eq "BULL") {
+                $currentRegime = "BULL"
+            } elseif ($scen -and $scen.bear_severity -eq "STRONG") {
+                $currentRegime = "BEAR_STRONG"
+            } elseif ($scen -and $scen.bear_severity -eq "WEAK") {
+                $currentRegime = "BEAR_WEAK"
+            } elseif ($scen -and $scen.scenario -eq "BEAR") {
+                $currentRegime = "BEAR_WEAK"
+            } elseif ($scen -and $scen.scenario -in @("NEUTRO", "CAPITULACAO", "UNKNOWN")) {
+                # Sem bear confirmado -- default conservador de Get-ShortThresholdsForRegime
+                # (ClimaxMult=3.0 RSI>70), nao o hardcode BEAR_WEAK deste script.
+                $currentRegime = $scen.scenario
             }
         } catch {}
     }
