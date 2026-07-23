@@ -29,7 +29,7 @@ Describe "E2E Trading Flow - SPOT LONG" {
 
             # Todos os gates devem passar para EXECUTAR
             $allPass = $breadthGate.passes -and $pumpGate.passes -and $timingGate.passes
-            $allPass | Should -Be $true
+            $allPass | Should Be $true
         }
 
         It "BILL teria gerado ordem SPOT LONG com stop loss -8 pct" {
@@ -40,8 +40,8 @@ Describe "E2E Trading Flow - SPOT LONG" {
 
             $quantity = $riskAmount / ($entryPrice - $stopPrice)
 
-            ($quantity -gt 0) | Should -Be $true
-            ($stopPrice -eq ($entryPrice * 0.92)) | Should -Be $true
+            ($quantity -gt 0) | Should Be $true
+            ($stopPrice -eq ($entryPrice * 0.92)) | Should Be $true
         }
 
         It "BILL confirmaria em Supabase como posicao OPEN" {
@@ -55,17 +55,19 @@ Describe "E2E Trading Flow - SPOT LONG" {
                 risk_usd = 100
             }
 
-            ($position.market -eq "BILLBTC") | Should -Be $true
-            ($position.status -eq "open") | Should -Be $true
-            ($position.stop_loss -eq ($position.entry_price * 0.92)) | Should -Be $true
+            ($position.market -eq "BILLBTC") | Should Be $true
+            ($position.status -eq "open") | Should Be $true
+            # 2026-07-23 FIX: comparacao exata de float falhava por
+            # imprecisao de ponto flutuante (1.50*0.92 = 1.3800000000000001)
+            ([math]::Round($position.stop_loss, 2) -eq [math]::Round($position.entry_price * 0.92, 2)) | Should Be $true
         }
 
         It "BILL teria enviado alerta Telegram de entrada" {
             $telegramAlert = "[LONG ENTRY] BILLBTC @ 1.50, qty=66.67, SL=1.38 (-8 pct)"
 
-            ($telegramAlert -match "\[LONG") | Should -Be $true
-            ($telegramAlert -match "BILLBTC") | Should -Be $true
-            ($telegramAlert -match "SL=") | Should -Be $true
+            ($telegramAlert -match "\[LONG") | Should Be $true
+            ($telegramAlert -match "BILLBTC") | Should Be $true
+            ($telegramAlert -match "SL=") | Should Be $true
         }
     }
 
@@ -79,7 +81,7 @@ Describe "E2E Trading Flow - SPOT LONG" {
             # Entry timing gate: RSI > 80 = SKIP
             $shouldBlock = $rsi15m -gt 80
 
-            $shouldBlock | Should -Be $true
+            $shouldBlock | Should Be $true
         }
 
         It "DODO teria -25 desconto no Tori score" {
@@ -87,7 +89,7 @@ Describe "E2E Trading Flow - SPOT LONG" {
             $discount = 25
             $effectiveScore = $toriScore - $discount
 
-            ($effectiveScore -eq 50) | Should -Be $true
+            ($effectiveScore -eq 50) | Should Be $true
         }
 
         It "DODO falha gate de timing (effective menor 60)" {
@@ -96,14 +98,14 @@ Describe "E2E Trading Flow - SPOT LONG" {
             $effectiveScore = $toriScore - $discount
             $passesGate = $effectiveScore -ge 60
 
-            $passesGate | Should -Be $false
+            $passesGate | Should Be $false
         }
 
         It "DODO gera log BLOCKED Entry Timing RSI overbought" {
             $blockLog = "[BLOCKED] Entry Timing: RSI overbought (82 > 80)"
 
-            ($blockLog -match "\[BLOCKED\]") | Should -Be $true
-            ($blockLog -match "RSI") | Should -Be $true
+            ($blockLog -match "\[BLOCKED\]") | Should Be $true
+            ($blockLog -match "RSI") | Should Be $true
         }
     }
 
@@ -115,8 +117,8 @@ Describe "E2E Trading Flow - SPOT LONG" {
             $score = 15 + 25 + 15 + 10 + 5 + 15  # 85
             $classification = if ($score -ge 60) { "pump_and_dump" } else { "other" }
 
-            ($classification -eq "pump_and_dump") | Should -Be $true
-            ($score -ge 60) | Should -Be $true
+            ($classification -eq "pump_and_dump") | Should Be $true
+            ($score -ge 60) | Should Be $true
         }
 
         It "AKE pump gate BLOQUEIA pump_and_dump falso positivo para LONG" {
@@ -126,14 +128,14 @@ Describe "E2E Trading Flow - SPOT LONG" {
             # LONG + pump_and_dump = BLOCK
             $passesGate = -not ($direction -eq "LONG" -and $classification -eq "pump_and_dump")
 
-            $passesGate | Should -Be $false
+            $passesGate | Should Be $false
         }
 
         It "AKE gera log BLOCKED Pump Dump score 85 pump_and_dump" {
             $blockLog = "[BLOCKED] Pump Dump: score=85 (pump_and_dump) -- risky for LONG"
 
-            ($blockLog -match "\[BLOCKED\]") | Should -Be $true
-            ($blockLog -match "pump_and_dump") | Should -Be $true
+            ($blockLog -match "\[BLOCKED\]") | Should Be $true
+            ($blockLog -match "pump_and_dump") | Should Be $true
         }
     }
 }
@@ -152,7 +154,7 @@ Describe "E2E Trading Flow - FUTURES SHORT" {
 
             $passesGate = $breadth.losers_pct -ge 40
 
-            $passesGate | Should -Be $true
+            $passesGate | Should Be $true
         }
 
         It "SHORT candidato passa pump gate natural_downtrend" {
@@ -161,8 +163,8 @@ Describe "E2E Trading Flow - FUTURES SHORT" {
 
             $passesGate = $true
 
-            $passesGate | Should -Be $true
-            ($classification -eq "natural_downtrend") | Should -Be $true
+            $passesGate | Should Be $true
+            ($classification -eq "natural_downtrend") | Should Be $true
         }
 
         It "SHORT ordem FUTURES com alavancagem 2x" {
@@ -171,9 +173,10 @@ Describe "E2E Trading Flow - FUTURES SHORT" {
             $stopPrice = $entryPrice * 1.08
             $tpPrice = $entryPrice * 0.92
 
-            ($leverage -eq 2) | Should -Be $true
-            ($stopPrice -eq 10.80) | Should -Be $true
-            ($tpPrice -eq 9.20) | Should -Be $true
+            ($leverage -eq 2) | Should Be $true
+            # 2026-07-23 FIX: mesma imprecisao de float (10.00*0.92 = 9.200000000000001)
+            ([math]::Round($stopPrice, 2) -eq 10.80) | Should Be $true
+            ([math]::Round($tpPrice, 2) -eq 9.20) | Should Be $true
         }
 
         It "SHORT confirma em Supabase como OPEN" {
@@ -188,9 +191,9 @@ Describe "E2E Trading Flow - FUTURES SHORT" {
                 take_profit = 9.20
             }
 
-            ($position.direction -eq "SHORT") | Should -Be $true
-            ($position.type -eq "FUTURES") | Should -Be $true
-            ($position.stop_loss -gt $position.entry_price) | Should -Be $true
+            ($position.direction -eq "SHORT") | Should Be $true
+            ($position.type -eq "FUTURES") | Should Be $true
+            ($position.stop_loss -gt $position.entry_price) | Should Be $true
         }
     }
 }
@@ -209,7 +212,7 @@ Describe "E2E Trading Flow - FUTURES LONG" {
 
             $passesGate = $breadth.gainers_pct -ge 50
 
-            $passesGate | Should -Be $true
+            $passesGate | Should Be $true
         }
 
         It "LONG FUTURES ordem com 2x leverage 1:5 RR" {
@@ -221,9 +224,9 @@ Describe "E2E Trading Flow - FUTURES LONG" {
             $riskPerShare = $entryPrice - $stopPrice
             $tpPrice = $entryPrice + ($riskPerShare * 5)
 
-            ($leverage -eq 2) | Should -Be $true
-            ($riskPerShare -eq 4.00) | Should -Be $true
-            ($tpPrice -eq 70.00) | Should -Be $true
+            ($leverage -eq 2) | Should Be $true
+            ($riskPerShare -eq 4.00) | Should Be $true
+            ($tpPrice -eq 70.00) | Should Be $true
         }
 
         It "LONG FUTURES confirma ORDER e POSITION em Supabase" {
@@ -238,9 +241,9 @@ Describe "E2E Trading Flow - FUTURES LONG" {
                 status = "open"
             }
 
-            ($order.type -eq "FUTURES") | Should -Be $true
-            ($order.leverage -eq 2) | Should -Be $true
-            ($order.take_profit -eq 70.00) | Should -Be $true
+            ($order.type -eq "FUTURES") | Should Be $true
+            ($order.leverage -eq 2) | Should Be $true
+            ($order.take_profit -eq 70.00) | Should Be $true
         }
     }
 }
@@ -256,8 +259,8 @@ Describe "E2E Complete Flow - Gem discovery to execution" {
                 candidates_found = 10
             }
 
-            ($scanResult.candidates_found -gt 0) | Should -Be $true
-            ($scanResult.total_scanned -gt $scanResult.candidates_found) | Should -Be $true
+            ($scanResult.candidates_found -gt 0) | Should Be $true
+            ($scanResult.total_scanned -gt $scanResult.candidates_found) | Should Be $true
         }
 
         It "Gem executor busca 10 candidates aplica 3 gates" {
@@ -279,9 +282,9 @@ Describe "E2E Complete Flow - Gem discovery to execution" {
                 }
             }
 
-            ($candidates.Count -eq 3) | Should -Be $true
-            ($executed -eq 3) | Should -Be $true
-            ($blocked -eq 0) | Should -Be $true
+            ($candidates.Count -eq 3) | Should Be $true
+            ($executed -eq 3) | Should Be $true
+            ($blocked -eq 0) | Should Be $true
         }
 
         It "3 trades SPOT ou FUTURES executados com capital real" {
@@ -291,20 +294,23 @@ Describe "E2E Complete Flow - Gem discovery to execution" {
                 @{ market = "XEMBTC"; type = "FUTURES"; direction = "LONG" }
             )
 
-            $spotCount = ($trades | Where-Object { $_.type -eq "SPOT" }).Count
-            $futuresCount = ($trades | Where-Object { $_.type -eq "FUTURES" }).Count
+            # 2026-07-23 FIX: sem @() o PowerShell "desembrulha" resultado de
+            # 1 item do pipeline, e .Count num Hashtable unico conta as CHAVES
+            # do hashtable (3: market/type/direction), nao o numero de trades.
+            $spotCount = @($trades | Where-Object { $_.type -eq "SPOT" }).Count
+            $futuresCount = @($trades | Where-Object { $_.type -eq "FUTURES" }).Count
 
-            ($trades.Count -eq 3) | Should -Be $true
-            ($spotCount -eq 1) | Should -Be $true
-            ($futuresCount -eq 2) | Should -Be $true
+            ($trades.Count -eq 3) | Should Be $true
+            ($spotCount -eq 1) | Should Be $true
+            ($futuresCount -eq 2) | Should Be $true
         }
 
         It "Telegram envia resumo de 3 trades heartbeat" {
             $msg = "[LIVE TRADING HEARTBEAT] Executed: 3 trades [TRADE #1] LINKUSDT SPOT LONG @ 50"
 
-            ($msg -match "\[LIVE TRADING") | Should -Be $true
-            ($msg -match "3 trades") | Should -Be $true
-            ($msg -match "SPOT LONG") | Should -Be $true
+            ($msg -match "\[LIVE TRADING") | Should Be $true
+            ($msg -match "3 trades") | Should Be $true
+            ($msg -match "SPOT LONG") | Should Be $true
         }
     }
 }
@@ -322,19 +328,19 @@ Describe "E2E Risk Management & Safety" {
             $trade2_risk = 100
             $trade3_risk = 100
 
-            ($trade1_risk -le $riskPerTrade) | Should -Be $true
-            ($trade2_risk -le $riskPerTrade) | Should -Be $true
-            ($trade3_risk -le $riskPerTrade) | Should -Be $true
+            ($trade1_risk -le $riskPerTrade) | Should Be $true
+            ($trade2_risk -le $riskPerTrade) | Should Be $true
+            ($trade3_risk -le $riskPerTrade) | Should Be $true
         }
 
         It "Stop loss acima entry SHORT ou abaixo entry LONG" {
             $longEntry = 50
             $longSL = 46
-            ($longSL -lt $longEntry) | Should -Be $true
+            ($longSL -lt $longEntry) | Should Be $true
 
             $shortEntry = 10
             $shortSL = 10.80
-            ($shortSL -gt $shortEntry) | Should -Be $true
+            ($shortSL -gt $shortEntry) | Should Be $true
         }
     }
 
@@ -347,7 +353,7 @@ Describe "E2E Risk Management & Safety" {
                 @{ market = "XEMBTC" }
             )
 
-            ($openPositions.Count -le $maxPositions) | Should -Be $true
+            ($openPositions.Count -le $maxPositions) | Should Be $true
         }
 
         It "Total capital deployed menor ou igual 3 pct do portfolio" {
@@ -355,7 +361,7 @@ Describe "E2E Risk Management & Safety" {
             $maxDeployable = $totalCapital * 0.03
             $deployed = 300
 
-            ($deployed -le $maxDeployable) | Should -Be $true
+            ($deployed -le $maxDeployable) | Should Be $true
         }
     }
 }
