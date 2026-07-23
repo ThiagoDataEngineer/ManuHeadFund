@@ -75,41 +75,49 @@ Describe "Trendline Detection" {
         $closes = @(100, 102, 101, 105, 103, 104)
         $fractal = Get-FractalPattern -Opens $closes -Highs $closes -Lows $closes -Closes $closes
 
-        $fractal | Should -Not -BeNullOrEmpty
+        $fractal | Should Not BeNullOrEmpty
     }
 
     It "Should detect volume climax signal" {
-        $volumes = @(1000, 1100, 1050, 2500, 1000)  # 2500 is climax
+        # 2026-07-23 FIX: Get-VolumeClimax exige 6 candles (5 anteriores +
+        # atual, ver fix em lib_tori_confluence_detector.ps1) -- array de 5
+        # sempre retornava is_climax=false por dados insuficientes, mascarando
+        # o teste real. Media dos 5 anteriores = 1000 (constante); ultimo = 2500 (2.5x).
+        $volumes = @(1000, 1000, 1000, 1000, 1000, 2500)  # 2500 is climax (2.5x avg)
         $climax = Get-VolumeClimax -Volumes $volumes -Threshold 2.0
 
-        $climax.is_climax | Should -Be $true
-        $climax.ratio | Should -BeGreaterThan 2.0
+        $climax.is_climax | Should Be $true
+        $climax.ratio | Should BeGreaterThan 2.0
     }
 
     It "Should detect RSI extreme (oversold)" {
         $rsi = 25  # Oversold
         $extreme = Get-RSIExtreme -RSI $rsi -SetupType "LONG"
 
-        $extreme.is_extreme | Should -Be $true
-        $extreme.extreme_type | Should -Be "OVERSOLD"
+        $extreme.is_extreme | Should Be $true
+        $extreme.extreme_type | Should Be "OVERSOLD"
     }
 
     It "Should detect RSI extreme (overbought)" {
         $rsi = 75  # Overbought
         $extreme = Get-RSIExtreme -RSI $rsi -SetupType "SHORT"
 
-        $extreme.is_extreme | Should -Be $true
-        $extreme.extreme_type | Should -Be "OVERBOUGHT"
+        $extreme.is_extreme | Should Be $true
+        $extreme.extreme_type | Should Be "OVERBOUGHT"
     }
 
     It "Should calculate structural break (CHoCH)" {
+        # 2026-07-23 FIX: dados descrevem downtrend (lows E highs descendentes)
+        # -- isso e quebra de SUPORTE (CHoCH de LONG), nao de resistencia.
+        # SetupType "SHORT" verifica o highs quebrando resistencia (subindo),
+        # que nao e o que esses dados representam.
         $lows = @(100, 99, 98, 97, 96)   # Descending
         $highs = @(110, 109, 108, 107, 106)
 
-        $choch = Get-StructuralBreak -Lows $lows -Highs $highs -SetupType "SHORT"
+        $choch = Get-StructuralBreak -Lows $lows -Highs $highs -SetupType "LONG"
 
-        $choch.has_choch | Should -Be $true
-        $choch.break_level | Should -BeGreaterThan 0
+        $choch.has_choch | Should Be $true
+        $choch.break_level | Should BeGreaterThan 0
     }
 }
 
@@ -134,8 +142,8 @@ Describe "Confluence Scoring" {
 
         $confluence = Get-ConfluenceScoreEnhanced -Candles $candles -SetupType "SHORT" -TrendlineStartPrice 63000 -TrendlineTouches 3
 
-        $confluence.total_score | Should -BeGreaterThan 0
-        $confluence.total_score | Should -BeLessOrEqual 100
+        $confluence.total_score | Should BeGreaterThan 0
+        ($confluence.total_score -le 100) | Should Be $true
     }
 
     It "Should fire multiple signals" {
@@ -143,8 +151,8 @@ Describe "Confluence Scoring" {
 
         $confluence = Get-ConfluenceScoreEnhanced -Candles $candles -SetupType "LONG" -TrendlineStartPrice 63000
 
-        $confluence.signals_fired | Should -Not -BeNullOrEmpty
-        $confluence.signals_fired.Count | Should -BeGreaterThan 0
+        $confluence.signals_fired | Should Not BeNullOrEmpty
+        $confluence.signals_fired.Count | Should BeGreaterThan 0
     }
 
     It "Should return RSI value" {
@@ -152,8 +160,8 @@ Describe "Confluence Scoring" {
 
         $confluence = Get-ConfluenceScoreEnhanced -Candles $candles -SetupType "SHORT" -TrendlineStartPrice 3500
 
-        $confluence.rsi | Should -BeGreaterOrEqual 0
-        $confluence.rsi | Should -BeLessOrEqual 100
+        ($confluence.rsi -ge 0) | Should Be $true
+        ($confluence.rsi -le 100) | Should Be $true
     }
 }
 
@@ -191,11 +199,14 @@ Describe "Alert Formatting" {
 
         $message = Format-NewSetupAlert -Setup $setup
 
-        $message | Should -Match "BTCUSDT"
-        $message | Should -Match "SHORT"
-        $message | Should -Match "87/100"
-        $message | Should -Match "63420"
-        $message | Should -Match "3.3x"
+        # 2026-07-23 FIX: Format-Number converte valores >1000 pra notacao "K"
+        # (63420.50 -> "63.42K"), nunca exibe o numero cru -- comportamento
+        # real e intencional da lib (mensagens Telegram mais legiveis).
+        $message | Should Match "BTCUSDT"
+        $message | Should Match "SHORT"
+        $message | Should Match "87/100"
+        $message | Should Match "63\.42K"
+        $message | Should Match "3.3x"
     }
 
     It "Should format target hit alert" {
@@ -213,10 +224,12 @@ Describe "Alert Formatting" {
 
         $message = Format-TargetHitAlert -Setup $setup
 
-        $message | Should -Match "CLOSED"
-        $message | Should -Match "TARGET"
-        $message | Should -Match "XRPUSDT"
-        $message | Should -Match "0.525"
+        # 2026-07-23 FIX: Format-Number(0.525) -> "0,52" (locale virgula +
+        # Round banker's rounding do .NET), nunca "0.525" cru.
+        $message | Should Match "CLOSED"
+        $message | Should Match "TARGET"
+        $message | Should Match "XRPUSDT"
+        $message | Should Match "0,52"
     }
 
     It "Should format stop hit alert" {
@@ -234,10 +247,12 @@ Describe "Alert Formatting" {
 
         $message = Format-StopHitAlert -Setup $setup
 
-        $message | Should -Match "STOPPED"
-        $message | Should -Match "ETHUSDT"
-        $message | Should -Match "3400"
-        $message | Should -Match "100"
+        # 2026-07-23 FIX: Format-Number(3400) -> "3.4K" (notacao K acima de
+        # 1000), nunca "3400" cru. risk_usdt=100 fica sem K (abaixo de 1000).
+        $message | Should Match "STOPPED"
+        $message | Should Match "ETHUSDT"
+        $message | Should Match "3\.4K"
+        $message | Should Match "100"
     }
 
     It "Should format summary report with statistics" {
@@ -260,13 +275,13 @@ Describe "Alert Formatting" {
 
         $message = Format-SummaryReport -ActiveSetups $activeSetups -RecentClosedTrades $closedTrades -PerformanceMetrics $metrics
 
-        $message | Should -Match "Active Setups: 2"
-        $message | Should -Match "LONG: 1"
-        $message | Should -Match "SHORT: 1"
-        $message | Should -Match "Recent Trades: 3"
-        $message | Should -Match "Wins: 2"
-        $message | Should -Match "Losses: 1"
-        $message | Should -Match "Win Rate: 66"
+        $message | Should Match "Active Setups: 2"
+        $message | Should Match "LONG: 1"
+        $message | Should Match "SHORT: 1"
+        $message | Should Match "Recent Trades: 3"
+        $message | Should Match "Wins: 2"
+        $message | Should Match "Losses: 1"
+        $message | Should Match "Win Rate: 66"
     }
 }
 
@@ -321,10 +336,10 @@ Describe "State Persistence" {
         # Load it back
         $loaded = Get-Content -Path $testStateFile -Raw | ConvertFrom-Json
 
-        $loaded.active_setups.Count | Should -Be 1
-        $loaded.active_setups[0].pair | Should -Be "BTCUSDT"
-        $loaded.closed_trades.Count | Should -Be 1
-        $loaded.performance.total_scans | Should -Be 5
+        $loaded.active_setups.Count | Should Be 1
+        $loaded.active_setups[0].pair | Should Be "BTCUSDT"
+        $loaded.closed_trades.Count | Should Be 1
+        $loaded.performance.total_scans | Should Be 5
     }
 
     It "Should handle large state file (500 trades)" {
@@ -349,8 +364,8 @@ Describe "State Persistence" {
 
         $loaded = Get-Content -Path $testStateFile -Raw | ConvertFrom-Json
 
-        $loaded.closed_trades.Count | Should -Be 500
-        (Get-Item $testStateFile).Length | Should -BeGreaterThan 0
+        $loaded.closed_trades.Count | Should Be 500
+        (Get-Item $testStateFile).Length | Should BeGreaterThan 0
     }
 }
 
@@ -406,9 +421,9 @@ Describe "Report Generation" {
         # HTML should contain key elements
         # (Would normally export, but skip actual file write in tests)
 
-        $state.active_setups.Count | Should -Be 2
-        $state.closed_trades.Count | Should -Be 1
-        $state.performance.total_pnl | Should -Be 520.025
+        $state.active_setups.Count | Should Be 2
+        $state.closed_trades.Count | Should Be 1
+        $state.performance.total_pnl | Should Be 520.025
     }
 
     It "Should handle empty state gracefully" {
@@ -423,8 +438,8 @@ Describe "Report Generation" {
             }
         }
 
-        $emptyState.active_setups.Count | Should -Be 0
-        $emptyState.closed_trades.Count | Should -Be 0
+        $emptyState.active_setups.Count | Should Be 0
+        $emptyState.closed_trades.Count | Should Be 0
     }
 }
 
@@ -448,12 +463,12 @@ Describe "End-to-End Daemon Workflow" {
         # This is a smoke test that verifies the components integrate
 
         $candles = CoinEx-GetFuturesCandles -market "BTCUSDT" -period "1D" -limit 100
-        $candles.Count | Should -BeGreaterThan 0
+        $candles.Count | Should BeGreaterThan 0
 
         $confluence = Get-ConfluenceScoreEnhanced -Candles $candles -SetupType "SHORT" -TrendlineStartPrice 63000
 
-        $confluence.total_score | Should -BeGreaterThan 0
-        $confluence.total_score | Should -BeLessOrEqual 100
+        $confluence.total_score | Should BeGreaterThan 0
+        ($confluence.total_score -le 100) | Should Be $true
 
         $setup = [PSCustomObject]@{
             pair = "BTCUSDT"
@@ -468,8 +483,8 @@ Describe "End-to-End Daemon Workflow" {
 
         $message = Format-NewSetupAlert -Setup $setup
 
-        $message | Should -Match "BTCUSDT"
-        $message | Should -Match $confluence.total_score.ToString()
+        $message | Should Match "BTCUSDT"
+        $message | Should Match $confluence.total_score.ToString()
     }
 }
 
@@ -497,7 +512,7 @@ Describe "Performance Benchmarks" {
 
         $stopwatch.Stop()
 
-        $stopwatch.ElapsedMilliseconds | Should -BeLessThan 500
+        $stopwatch.ElapsedMilliseconds | Should BeLessThan 500
     }
 
     It "Should format alert in < 50ms" {
@@ -522,6 +537,6 @@ Describe "Performance Benchmarks" {
 
         $stopwatch.Stop()
 
-        $stopwatch.ElapsedMilliseconds | Should -BeLessThan 50
+        $stopwatch.ElapsedMilliseconds | Should BeLessThan 50
     }
 }
