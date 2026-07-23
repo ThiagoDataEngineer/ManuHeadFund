@@ -56,7 +56,18 @@ function Resolve-MarketScenario {
         return [pscustomobject]@{ scenario="BEAR"; strategy="short_ou_caixa"; allow_long=$false; allow_short=$true; reason="abaixo EMA20+50, mom ${Momentum30dPct}%"; momentum_30d=$Momentum30dPct }
     }
 
-    $bull = ($Price -gt $Ema20) -and ($Momentum30dPct -gt 0)
+    # 2026-07-23 FIX: Ema200 chegava como parametro mas nunca era usado aqui --
+    # BTC podia estar 10%+ abaixo da SMA200 (bear estrutural real, Fase 4
+    # Weinstein) e ainda classificar BULL so por um bounce de curto prazo acima
+    # da EMA20 com momentum 30d positivo (confirmado ao vivo 2026-07-23: preco
+    # $65074, EMA20 $64330, SMA200 $72593, dist_sma=-10.36%, mom30d=+3.74% ->
+    # BULL). Isso liberava o TORI LONG sweep gerando candidatos LONG que o
+    # TechAgent (LLM, ve 1W/1D completo) rejeitava com SHORT forte, travando
+    # tudo no Quality Gate (direction_contradiction) -- sintoma pratico: SPOT
+    # nunca abria. Fix: BULL agora exige tambem estar acima da SMA200 (com
+    # folga de -5%, pra nao travar por ruido de dia-a-dia bem perto da linha).
+    $aboveSma200 = ($Ema200 -le 0) -or (($Price - $Ema200) / $Ema200 -gt -0.05)
+    $bull = ($Price -gt $Ema20) -and ($Momentum30dPct -gt 0) -and $aboveSma200
     if ($bull) {
         return [pscustomobject]@{ scenario="BULL"; strategy="long"; allow_long=$true; allow_short=$false; reason="acima EMA20, mom ${Momentum30dPct}%"; momentum_30d=$Momentum30dPct }
     }

@@ -53,4 +53,16 @@ Describe "Resolve-MarketScenario - cenario -> estrategia com edge" {
         $r.scenario | Should Be "UNKNOWN"
         $r.allow_long | Should Be $true
     }
+
+    It "Bounce de curto prazo DENTRO de bear estrutural -- regressao 2026-07-23" {
+        # BTC real 2026-07-23: preco 10.36% abaixo da SMA200 (Fase 4 Weinstein,
+        # bear estrutural), mas subiu +3.74% em 30d e ficou acima da EMA20 --
+        # antes do fix isso classificava BULL (Ema200 recebido mas nunca usado
+        # no ramo bull/bear), liberava o TORI LONG sweep, e o TechAgent (LLM,
+        # ve 1W/1D completo) rejeitava os candidatos LONG gerados com SHORT
+        # forte -- travando tudo no Quality Gate (sintoma: SPOT nunca abria).
+        $r = Resolve-MarketScenario -Price 65074 -Ema20 64330 -Ema50 65130 -Ema200 72593 -Rsi 45 -Momentum30dPct 3.74 -VolRatio 1.0
+        $r.scenario | Should Not Be "BULL"
+        $r.allow_long | Should Be $false
+    }
 }
