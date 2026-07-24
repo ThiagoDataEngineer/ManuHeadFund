@@ -187,8 +187,8 @@ Describe "CoinEx API - Avaliacao Profunda" {
         
         It "CoinEx-GetFuturesCapitalUSDT deve retornar capital disponivel" {
             # Garantir que credenciais estao configuradas
-            $global:COINEX_ACCESS_ID = "test-id"
-            $global:COINEX_SECRET_KEY = "test-key"
+            $script:COINEX_ACCESS_ID = "test-id"
+            $script:COINEX_SECRET_KEY = "test-key"
             
             Mock CoinEx-Get {
                 return [PSCustomObject]@{
@@ -210,8 +210,8 @@ Describe "CoinEx API - Avaliacao Profunda" {
         
         It "CoinEx-GetSpotCapitalUSDT deve retornar capital spot" {
             # Garantir que credenciais estao configuradas
-            $global:COINEX_ACCESS_ID = "test-id"
-            $global:COINEX_SECRET_KEY = "test-key"
+            $script:COINEX_ACCESS_ID = "test-id"
+            $script:COINEX_SECRET_KEY = "test-key"
             
             Mock CoinEx-Get {
                 return [PSCustomObject]@{
@@ -369,10 +369,13 @@ Describe "CoinEx API - Avaliacao Profunda" {
     Context "Stop Loss e Take Profit" {
         
         It "CoinEx-ModifyPositionStopLoss deve atualizar SL" {
+            # 2026-07-23 FIX: endpoint real e set-position-stop-loss (fix
+            # 2026-06-11, modify-* nao existe/retornava 4004 -- ver
+            # knowledge/COINEX_REFERENCE.md:421). Teste nunca atualizado.
             Mock CoinEx-Post {
                 param($path, $bodyObj)
-                
-                $path | Should Be "/v2/futures/modify-position-stop-loss"
+
+                $path | Should Be "/v2/futures/set-position-stop-loss"
                 $bodyObj.market | Should Be "BTCUSDT"
                 $bodyObj.stop_loss_price | Should Be "90000"
                 

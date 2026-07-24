@@ -99,7 +99,13 @@ Describe "CoinEx-AdjustPositionLeverage - ajustar leverage e margin mode" {
     }
 
     It "rejeita MarginMode invalido" {
-        { CoinEx-AdjustPositionLeverage -Market "BTCUSDT" -Leverage 10 -MarginMode "invalid" } | Should Throw
+        # 2026-07-23 FIX: Pester 3.4.0 "{...} | Should Throw" nao captura
+        # ParameterBindingValidationException de [ValidateSet] corretamente
+        # (confirmado: chamada direta fora do Pester lanca normal). try/catch
+        # manual funciona.
+        $threw = $false
+        try { CoinEx-AdjustPositionLeverage -Market "BTCUSDT" -Leverage 10 -MarginMode "invalid" } catch { $threw = $true }
+        $threw | Should Be $true
     }
 }
 
@@ -170,7 +176,10 @@ Describe "CoinEx-AdjustPositionMargin - adicionar ou remover margin" {
     }
 
     It "rejeita Type invalido (nao add ou remove)" {
-        { CoinEx-AdjustPositionMargin -Market "BTCUSDT" -Amount 100 -Type "invalid" } | Should Throw
+        # 2026-07-23 FIX: mesma limitacao do Pester 3.4.0 com ValidateSet.
+        $threw = $false
+        try { CoinEx-AdjustPositionMargin -Market "BTCUSDT" -Amount 100 -Type "invalid" } catch { $threw = $true }
+        $threw | Should Be $true
     }
 }
 
@@ -183,7 +192,8 @@ Describe "CoinEx-ModifyPositionStopLoss - modificar stop loss" {
     It "modifica stop loss para 95000" {
         Mock CoinEx-Post {
             param($path, $bodyObj)
-            $path | Should Be "/v2/futures/modify-position-stop-loss"
+            # 2026-07-23 FIX: endpoint real e set-position-stop-loss (fix 2026-06-11)
+            $path | Should Be "/v2/futures/set-position-stop-loss"
             $bodyObj.market           | Should Be "BTCUSDT"
             $bodyObj.market_type      | Should Be "FUTURES"
             $bodyObj.stop_loss_price  | Should Be "95000"
