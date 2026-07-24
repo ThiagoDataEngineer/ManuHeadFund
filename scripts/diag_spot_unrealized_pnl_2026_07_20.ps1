@@ -1,4 +1,4 @@
-# diag_spot_unrealized_pnl_2026_07_20.ps1 -- diagnostico ONE-SHOT, so leitura
+﻿# diag_spot_unrealized_pnl_2026_07_20.ps1 -- diagnostico ONE-SHOT, so leitura
 #
 # CoinEx /v2/assets/spot/balance NAO retorna preco medio de custo (so
 # available/frozen -- confirmado hoje). Estimativa: reconstroi o preco medio
@@ -9,7 +9,7 @@
 # pode diferir, e taxas nao entram no calculo) -- e' estimativa de PnL NAO
 # REALIZADO das posicoes SPOT que a conta tem HOJE.
 
-$agentsDir = Join-Path $PSScriptRoot ".." "agents"
+$agentsDir = Join-Path (Join-Path $PSScriptRoot "..") "agents"
 $configLocalPath = Join-Path $agentsDir "config.local.ps1"
 if (Test-Path $configLocalPath) { . $configLocalPath }
 . (Join-Path $agentsDir "config.ps1")

@@ -5,7 +5,7 @@
 # decision_grades_agg (calibracao LLM: quantas vezes a decisao de BLOCK
 # estava certa vs errada). NAO envia nenhuma ordem, so consulta Supabase.
 
-$agentsDir = Join-Path $PSScriptRoot ".." "agents"
+$agentsDir = Join-Path (Join-Path $PSScriptRoot "..") "agents"
 $configLocalPath = Join-Path $agentsDir "config.local.ps1"
 if (Test-Path $configLocalPath) { . $configLocalPath }
 . (Join-Path $agentsDir "config.ps1")

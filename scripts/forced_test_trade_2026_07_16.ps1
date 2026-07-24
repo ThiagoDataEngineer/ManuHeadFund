@@ -1,4 +1,4 @@
-# forced_test_trade_2026_07_16.ps1 -- ONE-SHOT: prova o caminho de execucao
+﻿# forced_test_trade_2026_07_16.ps1 -- ONE-SHOT: prova o caminho de execucao
 # real (pos-gates) nunca exercitado em producao ate agora, com teto HARD de
 # risco. NAO edita gem_executor.ps1 -- sobrescreve Invoke-OrderRouted DEPOIS
 # do dot-source (mesmo padrao que os testes Pester ja usam pra mockar),
@@ -18,7 +18,7 @@ param(
     [switch] $DryRun   # valida o mecanismo do guard sem enviar ordem real
 )
 
-$agentsDir = Join-Path $PSScriptRoot ".." "agents"
+$agentsDir = Join-Path (Join-Path $PSScriptRoot "..") "agents"
 $configLocalPath = Join-Path $agentsDir "config.local.ps1"
 if (Test-Path $configLocalPath) { . $configLocalPath }
 . (Join-Path $agentsDir "config.ps1")

@@ -1,4 +1,4 @@
-# diag_trade_outcomes_schema_readonly_2026_07_20.ps1 -- diagnostico ONE-SHOT
+﻿# diag_trade_outcomes_schema_readonly_2026_07_20.ps1 -- diagnostico ONE-SHOT
 #
 # Confirma se pnl_percent/pnl_realized EXISTEM de verdade na tabela real
 # manuheadfund.trade_outcomes -- achado de investigacao: nenhum ALTER TABLE
@@ -11,7 +11,7 @@
 # id proprio, sempre limpo no final, pra confirmar existencia real das
 # colunas sem depender de RPC exec_sql, que nao existe neste repo).
 
-$agentsDir = Join-Path $PSScriptRoot ".." "agents"
+$agentsDir = Join-Path (Join-Path $PSScriptRoot "..") "agents"
 $configLocalPath = Join-Path $agentsDir "config.local.ps1"
 if (Test-Path $configLocalPath) { . $configLocalPath }
 . (Join-Path $agentsDir "config.ps1")

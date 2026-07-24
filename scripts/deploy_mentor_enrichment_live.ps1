@@ -11,7 +11,7 @@ param(
 
 $ErrorActionPreference = "Continue"
 $root = Split-Path $PSScriptRoot -Parent
-$logFile = Join-Path $root "journal" "deploy_mentor_enrichment_live.log"
+$logFile = Join-Path (Join-Path $root "journal") "deploy_mentor_enrichment_live.log"
 
 function Write-Log {
     param([string]$Message, [string]$Level = "INFO")
@@ -39,7 +39,7 @@ Write-Log "Mode: $(if ($DryRun) { 'DRY-RUN' } else { 'LIVE' })" "INFO"
 
 Write-Log "`n[FASE 1] Validando Supabase + Libs..." "INFO"
 
-$libPath = Join-Path $root "agents" "lib_mentor_supabase_enrichment.ps1"
+$libPath = Join-Path (Join-Path $root "agents") "lib_mentor_supabase_enrichment.ps1"
 if (-not (Test-Path $libPath)) {
     Write-Log "❌ lib_mentor_supabase_enrichment.ps1 não encontrada" "ERROR"
     exit 1
@@ -98,7 +98,7 @@ try {
 
 Write-Log "`n[FASE 3] Wiring mentor_agent.ps1 com enriquecimento..." "INFO"
 
-$mentorPath = Join-Path $root "agents" "mentor_agent.ps1"
+$mentorPath = Join-Path (Join-Path $root "agents") "mentor_agent.ps1"
 if (-not (Test-Path $mentorPath)) {
     Write-Log "❌ mentor_agent.ps1 não encontrada" "ERROR"
     exit 1
@@ -195,7 +195,7 @@ if ($KillExisting) {
 
 Write-Log "`n[FASE 5] Iniciando frota com enriquecimento..." "INFO"
 
-$fleetScript = Join-Path $root "scripts" "start_fleet.ps1"
+$fleetScript = Join-Path (Join-Path $root "scripts") "start_fleet.ps1"
 if (Test-Path $fleetScript) {
     if (-not $DryRun) {
         Write-Log "Executando start_fleet.ps1..." "INFO"
@@ -236,7 +236,7 @@ foreach ($daemon in $critical) {
 Write-Log "`n[FASE 7] Ativando SIGNAL BOOSTER (plus adicional)..." "INFO"
 
 # Criar lib de amplificação de sinais (confidence boost baseado em histórico)
-$boosterPath = Join-Path $root "agents" "lib_signal_booster_llm.ps1"
+$boosterPath = Join-Path (Join-Path $root "agents") "lib_signal_booster_llm.ps1"
 
 $boosterCode = @'
 # lib_signal_booster_llm.ps1 — PLUS ADICIONAL

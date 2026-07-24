@@ -2,7 +2,7 @@
 # Sem lógica de commands, apenas testa se consegue receber updates
 
 $projectRoot = Split-Path -Parent (Split-Path -Parent $PSScriptRoot)
-$configPath = Join-Path $projectRoot "config" "telegram.json"
+$configPath = Join-Path (Join-Path $projectRoot "config") "telegram.json"
 
 if (Test-Path $configPath) {
     try {
@@ -18,7 +18,7 @@ if (Test-Path $configPath) {
     exit 1
 }
 
-$logFile = Join-Path $projectRoot "journal" "tg_listener_test.log"
+$logFile = Join-Path (Join-Path $projectRoot "journal") "tg_listener_test.log"
 
 function Write-Log { param([string]$Msg)
     $ts = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")

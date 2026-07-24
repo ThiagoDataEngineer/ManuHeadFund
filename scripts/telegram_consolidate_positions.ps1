@@ -8,7 +8,7 @@ param(
 
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $agentsDir = Join-Path $projectRoot "agents"
-$logFile = Join-Path $projectRoot "journal" "tg_consolidator.log"
+$logFile = Join-Path (Join-Path $projectRoot "journal") "tg_consolidator.log"
 
 function Write-Log {
     param([string]$Message)
@@ -28,7 +28,7 @@ try {
 
 Write-Log "TG Consolidator iniciado. Intervalo=$CheckIntervalSec sec"
 
-$posFile = Join-Path $projectRoot "journal" "trailing_positions.json"
+$posFile = Join-Path (Join-Path $projectRoot "journal") "trailing_positions.json"
 
 while ($true) {
     try {

@@ -1,4 +1,4 @@
-# diag_weekly_pnl_crosscheck_2026_07_20.ps1 -- diagnostico ONE-SHOT, so leitura
+﻿# diag_weekly_pnl_crosscheck_2026_07_20.ps1 -- diagnostico ONE-SHOT, so leitura
 #
 # Responde: quanto o sistema REALMENTE perdeu/ganhou nos ultimos 7-10 dias?
 # Cruza 2 fontes independentes:
@@ -12,7 +12,7 @@
 # Se as duas fontes baterem (mesma ordem de grandeza), confianca alta no
 # numero. Se nao baterem, ha lacuna de tracking nao mapeada ainda.
 
-$agentsDir = Join-Path $PSScriptRoot ".." "agents"
+$agentsDir = Join-Path (Join-Path $PSScriptRoot "..") "agents"
 $configLocalPath = Join-Path $agentsDir "config.local.ps1"
 if (Test-Path $configLocalPath) { . $configLocalPath }
 . (Join-Path $agentsDir "config.ps1")

@@ -120,7 +120,7 @@ function Format-RebalancePlan {
 function Test-RebalanceEnabled {
     param(
         [string]$FlagPath = $(
-            $base = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path $PSScriptRoot ".." "journal" }
+            $base = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path (Join-Path $PSScriptRoot "..") "journal" }
             Join-Path $base "REBALANCE_ENABLED.flag"
         )
     )

@@ -31,7 +31,7 @@ $expectedDaemons = @(
 $downDaemons = @()
 
 foreach ($daemon in $expectedDaemons) {
-    $lockFile = Join-Path $journalDir "daemon_locks" "$($daemon.name).json"
+    $lockFile = Join-Path (Join-Path $journalDir "daemon_locks") "$($daemon.name).json"
 
     if (Test-Path $lockFile) {
         try {
@@ -71,7 +71,7 @@ if ($downDaemons.Count -eq 0) {
         if (Test-Path $scriptPath) {
             if (-not $DryRun) {
                 try {
-                    $lockFile = Join-Path $journalDir "daemon_locks" "$($daemon.name).json"
+                    $lockFile = Join-Path (Join-Path $journalDir "daemon_locks") "$($daemon.name).json"
                     Remove-Item $lockFile -Force -ErrorAction SilentlyContinue
 
                     Start-Process -FilePath "powershell" -ArgumentList @(

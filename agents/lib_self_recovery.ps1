@@ -170,7 +170,7 @@ function Write-RecoveryLog {
         [string]$Path
     )
     if (-not $Path) {
-        $base = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path $PSScriptRoot ".." "journal" }
+        $base = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path (Join-Path $PSScriptRoot "..") "journal" }
         $Path = Join-Path $base "self_recovery.jsonl"
     }
     try {
@@ -199,7 +199,7 @@ function Invoke-AutoRecover {
         [switch]$DryRun
     )
     if (-not $StatePath) {
-        $base = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path $PSScriptRoot ".." "journal" }
+        $base = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path (Join-Path $PSScriptRoot "..") "journal" }
         $StatePath = Join-Path $base "self_recovery_state.json"
     }
 
@@ -279,7 +279,7 @@ function Invoke-RecoveryAction {
             return "reload_libs:$loaded"
         }
         "clear_cache" {
-            $base = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path $PSScriptRoot ".." "journal" }
+            $base = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path (Join-Path $PSScriptRoot "..") "journal" }
             $cachePath = Join-Path $base "gem_recent_decisions.json"
             if (Test-Path $cachePath) {
                 try { "[]" | Set-Content -Path $cachePath -Encoding UTF8; Write-Host "  [SELF-RECOVERY] clear_cache: gem_recent_decisions limpo" -ForegroundColor Cyan; return "clear_cache:ok" } catch { return "clear_cache:fail" }
@@ -296,7 +296,7 @@ function Invoke-RecoveryAction {
                 Write-Host "  [SELF-RECOVERY] restart_daemon: SUPRIMIDO (AllowRestart=false)" -ForegroundColor DarkYellow
                 return "restart_daemon:suppressed"
             }
-            $script = Join-Path $PSScriptRoot ".." "scripts" "restart_all_daemons.ps1"
+            $script = Join-Path (Join-Path $PSScriptRoot "..") "scripts" "restart_all_daemons.ps1"
             if (Test-Path $script) {
                 try { Start-Process pwsh -ArgumentList "-NoProfile","-File","`"$script`"" -WindowStyle Hidden; return "restart_daemon:launched" } catch { return "restart_daemon:fail" }
             }

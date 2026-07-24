@@ -18,7 +18,7 @@ function Invoke-LearningCycle {
         [string]$JournalDir
     )
     if (-not $JournalDir) {
-        $JournalDir = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path $PSScriptRoot ".." "journal" }
+        $JournalDir = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path (Join-Path $PSScriptRoot "..") "journal" }
     }
 
     if (-not (Test-Path $JournalDir)) { return $false }

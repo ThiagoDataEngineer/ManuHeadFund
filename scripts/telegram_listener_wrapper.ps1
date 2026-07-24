@@ -3,7 +3,7 @@ param([switch]$Force, [switch]$Once)
 
 $scriptRoot = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot = Split-Path -Parent $scriptRoot
-$configPath = Join-Path $projectRoot "config" "telegram.json"
+$configPath = Join-Path (Join-Path $projectRoot "config") "telegram.json"
 
 # Load config from telegram.json (git-tracked, always up-to-date)
 if (Test-Path $configPath) {

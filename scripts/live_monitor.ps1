@@ -1,4 +1,4 @@
-# live_monitor.ps1 -- Fase 1 do PRD_LIVE_MONITOR_AUTOCORRECAO_2026_07_20.md
+﻿# live_monitor.ps1 -- Fase 1 do PRD_LIVE_MONITOR_AUTOCORRECAO_2026_07_20.md
 # Monitor de live trading em 6 camadas (jobs, trades, rejeicoes, leverage
 # real, schema drift, rate limit). READ-ONLY -- so observa e classifica,
 # nao corrige nada ainda (auto-correcao e' Fase 2/3, nao implementada).
@@ -7,7 +7,7 @@
 # manuheadfund.live_monitor_snapshots (1 linha por ciclo). CRITICAL dispara
 # alerta Telegram imediato.
 
-$agentsDir = Join-Path $PSScriptRoot ".." "agents"
+$agentsDir = Join-Path (Join-Path $PSScriptRoot "..") "agents"
 $configLocalPath = Join-Path $agentsDir "config.local.ps1"
 if (Test-Path $configLocalPath) { . $configLocalPath }
 . (Join-Path $agentsDir "config.ps1")

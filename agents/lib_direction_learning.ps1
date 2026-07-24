@@ -488,7 +488,7 @@ function Write-SignalSnapshot {
         [string]$Path
     )
     if (-not $Path) {
-        $base = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path $PSScriptRoot ".." "journal" }
+        $base = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path (Join-Path $PSScriptRoot "..") "journal" }
         $Path = Join-Path $base "signal_snapshots.jsonl"
     }
     try {
@@ -537,7 +537,7 @@ function Write-SignalSkip {
     }
 
     # Fallback: local JSONL
-    $base = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path $PSScriptRoot ".." "journal" }
+    $base = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path (Join-Path $PSScriptRoot "..") "journal" }
     $path = Join-Path $base "signal_skips.jsonl"
     try {
         $dir = Split-Path -Parent $path
@@ -625,7 +625,7 @@ function Add-LearningOutcome {
     )
     try {
         if (-not $OutcomePath) {
-            $base = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path $PSScriptRoot ".." "journal" }
+            $base = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path (Join-Path $PSScriptRoot "..") "journal" }
             $OutcomePath = Join-Path $base "trade_outcomes.jsonl"
         }
         $rec = New-LearningOutcome -Market $Market -Side $Side -EntryPrice $EntryPrice `

@@ -4,7 +4,7 @@
 # em producao, breadth neutro bloqueou 100% dos candidatos ate agora).
 # NAO envia nenhuma ordem. Remover job apos uso.
 
-$agentsDir = Join-Path $PSScriptRoot ".." "agents"
+$agentsDir = Join-Path (Join-Path $PSScriptRoot "..") "agents"
 $configLocalPath = Join-Path $agentsDir "config.local.ps1"
 if (Test-Path $configLocalPath) { . $configLocalPath }
 # config.ps1 copia $env:COINEX_ACCESS_ID -> $COINEX_ACCESS_ID (variavel de

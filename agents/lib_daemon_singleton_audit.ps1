@@ -28,7 +28,10 @@ function Invoke-DaemonSingletonAudit {
     $daemonsStatus = @()
 
     foreach ($daemon in $expectedDaemons) {
-        $lockPath = Join-Path $env:TEMP "manuheadfund" "$daemon.lock"
+        # 2026-07-24 FIX: Join-Path so aceita 2 args no PowerShell 5.1 (Path +
+        # ChildPath) -- "Join-Path X Y Z" com 3 args lanca
+        # ParameterBindingException real sempre, quebrando a funcao inteira.
+        $lockPath = Join-Path (Join-Path $env:TEMP "manuheadfund") "$daemon.lock"
         $isAlive = $false
         $daemonPid = $null
         $lockStatus = "NO_LOCK"
@@ -99,7 +102,7 @@ function Test-DaemonLocked {
         [Parameter(Mandatory)] [string] $DaemonName
     )
 
-    $lockPath = Join-Path $env:TEMP "manuheadfund" "$DaemonName.lock"
+    $lockPath = Join-Path (Join-Path $env:TEMP "manuheadfund") "$DaemonName.lock"
     return Test-Path $lockPath
 }
 
@@ -108,7 +111,7 @@ function Get-DaemonLockInfo {
         [Parameter(Mandatory)] [string] $DaemonName
     )
 
-    $lockPath = Join-Path $env:TEMP "manuheadfund" "$DaemonName.lock"
+    $lockPath = Join-Path (Join-Path $env:TEMP "manuheadfund") "$DaemonName.lock"
     if (-not (Test-Path $lockPath)) {
         return $null
     }

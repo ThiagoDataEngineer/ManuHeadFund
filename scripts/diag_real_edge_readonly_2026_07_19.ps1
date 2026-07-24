@@ -1,4 +1,4 @@
-# diag_real_edge_readonly_2026_07_19.ps1 -- diagnostico ONE-SHOT, so leitura
+﻿# diag_real_edge_readonly_2026_07_19.ps1 -- diagnostico ONE-SHOT, so leitura
 # Pergunta unica e honesta: com os dados que o sistema JA coletou (nao
 # estimativa, nao backtest), existe edge estatistico real hoje?
 #
@@ -16,7 +16,7 @@
 # Amostra pequena (n<30) e' sinalizada explicitamente -- nao existe "edge
 # confirmado" com poucos trades, so hipotese ainda nao refutada.
 
-$agentsDir = Join-Path $PSScriptRoot ".." "agents"
+$agentsDir = Join-Path (Join-Path $PSScriptRoot "..") "agents"
 $configLocalPath = Join-Path $agentsDir "config.local.ps1"
 if (Test-Path $configLocalPath) { . $configLocalPath }
 . (Join-Path $agentsDir "config.ps1")

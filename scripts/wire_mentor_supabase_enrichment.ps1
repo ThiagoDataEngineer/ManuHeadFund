@@ -12,7 +12,7 @@ $ErrorActionPreference = "Continue"
 $root = Split-Path $PSScriptRoot -Parent
 
 # Carrega libs
-$libPath = Join-Path $root "agents" "lib_mentor_supabase_enrichment.ps1"
+$libPath = Join-Path (Join-Path $root "agents") "lib_mentor_supabase_enrichment.ps1"
 if (-not (Test-Path $libPath)) {
     Write-Host "❌ lib_mentor_supabase_enrichment.ps1 não encontrada em $libPath" -ForegroundColor Red
     exit 1
@@ -94,7 +94,7 @@ Write-Host "`n  Resultado: $testPass/$($testCases.Count) testes passam" -Foregro
 if ($WireToMentor) {
     Write-Host "`n3️⃣  Wiring mentor_agent.ps1..." -ForegroundColor Yellow
 
-    $mentorPath = Join-Path $root "agents" "mentor_agent.ps1"
+    $mentorPath = Join-Path (Join-Path $root "agents") "mentor_agent.ps1"
     if (-not (Test-Path $mentorPath)) {
         Write-Host "❌ mentor_agent.ps1 não encontrada" -ForegroundColor Red
         exit 1

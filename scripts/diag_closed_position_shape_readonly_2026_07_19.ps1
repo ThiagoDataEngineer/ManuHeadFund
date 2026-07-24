@@ -1,4 +1,4 @@
-# diag_closed_position_shape_readonly_2026_07_19.ps1 -- diagnostico ONE-SHOT, so leitura
+﻿# diag_closed_position_shape_readonly_2026_07_19.ps1 -- diagnostico ONE-SHOT, so leitura
 #
 # Achado investigando por que Reconcile-AppToJournal (lib_position_sync_live.ps1)
 # sempre falha silencioso: CoinEx-GetClosedPositions nunca existiu, e a funcao
@@ -15,7 +15,7 @@
 # audit_coinex_state.ps1), pra confirmar os nomes de campo certos antes de
 # implementar CoinEx-GetClosedPositions de verdade.
 
-$agentsDir = Join-Path $PSScriptRoot ".." "agents"
+$agentsDir = Join-Path (Join-Path $PSScriptRoot "..") "agents"
 $configLocalPath = Join-Path $agentsDir "config.local.ps1"
 if (Test-Path $configLocalPath) { . $configLocalPath }
 . (Join-Path $agentsDir "config.ps1")

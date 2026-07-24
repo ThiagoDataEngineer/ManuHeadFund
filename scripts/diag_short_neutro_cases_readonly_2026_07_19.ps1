@@ -1,4 +1,4 @@
-# diag_short_neutro_cases_readonly_2026_07_19.ps1 -- diagnostico ONE-SHOT, so leitura
+﻿# diag_short_neutro_cases_readonly_2026_07_19.ps1 -- diagnostico ONE-SHOT, so leitura
 #
 # Continuacao do diag_real_edge_readonly_2026_07_19.ps1: mce_counterfactual_agg
 # mostrou um padrao (NEUTRO|SHORT|breadth_short_blocked n=18 hit_rate=94.4%,
@@ -11,7 +11,7 @@
 #
 # NAO decide nada, NAO altera nenhum gate. So read-only.
 
-$agentsDir = Join-Path $PSScriptRoot ".." "agents"
+$agentsDir = Join-Path (Join-Path $PSScriptRoot "..") "agents"
 $configLocalPath = Join-Path $agentsDir "config.local.ps1"
 if (Test-Path $configLocalPath) { . $configLocalPath }
 . (Join-Path $agentsDir "config.ps1")

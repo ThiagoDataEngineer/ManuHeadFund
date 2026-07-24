@@ -41,7 +41,7 @@ Write-Host "[RESTART] State resetado"
 
 if (-not $NoStart) {
     # Load config from telegram.json (git-tracked)
-    $configPath = Join-Path $projectRoot "config" "telegram.json"
+    $configPath = Join-Path (Join-Path $projectRoot "config") "telegram.json"
     if (Test-Path $configPath) {
         try {
             $config = Get-Content $configPath -Raw | ConvertFrom-Json

@@ -15,7 +15,7 @@ Write-Host "Root: $root`n" -ForegroundColor Cyan
 # ==== STEP 1: Wire Mentor Enrichment ====
 Write-Host "[1] Wiring mentor_agent.ps1..." -ForegroundColor Yellow
 
-$mentorPath = Join-Path $root "agents" "mentor_agent.ps1"
+$mentorPath = Join-Path (Join-Path $root "agents") "mentor_agent.ps1"
 if (Test-Path $mentorPath) {
     $content = Get-Content $mentorPath -Raw
 
@@ -59,7 +59,7 @@ Start-Sleep -Seconds 20
 # ==== STEP 3: Start Fleet ====
 Write-Host "`n[3] Starting trading fleet..." -ForegroundColor Yellow
 
-$fleetScript = Join-Path $root "scripts" "start_fleet.ps1"
+$fleetScript = Join-Path (Join-Path $root "scripts") "start_fleet.ps1"
 if (Test-Path $fleetScript) {
     & $fleetScript
     Start-Sleep -Seconds 15

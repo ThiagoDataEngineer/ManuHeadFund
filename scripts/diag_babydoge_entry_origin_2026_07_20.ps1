@@ -1,4 +1,4 @@
-# diag_babydoge_entry_origin_2026_07_20.ps1 -- diagnostico ONE-SHOT, so leitura
+﻿# diag_babydoge_entry_origin_2026_07_20.ps1 -- diagnostico ONE-SHOT, so leitura
 #
 # BABYDOGEUSDT foi comprado de forma 100% autonoma pelo sistema (confirmado
 # pelo usuario -- nao foi manual), mas os journals LOCAIS mostram 45 vetos
@@ -7,7 +7,7 @@
 # fontes REAIS da nuvem (Supabase) qualquer rastro de como/quando essa
 # entrada aconteceu, pra achar o caminho de codigo que contornou o gate FQS.
 
-$agentsDir = Join-Path $PSScriptRoot ".." "agents"
+$agentsDir = Join-Path (Join-Path $PSScriptRoot "..") "agents"
 $configLocalPath = Join-Path $agentsDir "config.local.ps1"
 if (Test-Path $configLocalPath) { . $configLocalPath }
 . (Join-Path $agentsDir "config.ps1")

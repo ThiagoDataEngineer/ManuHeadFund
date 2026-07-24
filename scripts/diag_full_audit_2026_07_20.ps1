@@ -1,10 +1,10 @@
-# diag_full_audit_2026_07_20.ps1 -- auditoria one-shot ampla, so leitura.
+﻿# diag_full_audit_2026_07_20.ps1 -- auditoria one-shot ampla, so leitura.
 #
 # Cobre: posicoes reais (leverage/SL/TP), consistencia de exposicao, e
 # confirmacao de que o gate estrutural novo (lib_token_structural_quality.ps1,
 # commit 9b4c829) esta acessivel/funcional no ambiente real de producao.
 
-$agentsDir = Join-Path $PSScriptRoot ".." "agents"
+$agentsDir = Join-Path (Join-Path $PSScriptRoot "..") "agents"
 $configLocalPath = Join-Path $agentsDir "config.local.ps1"
 if (Test-Path $configLocalPath) { . $configLocalPath }
 . (Join-Path $agentsDir "config.ps1")
