@@ -28,6 +28,18 @@ $global:GEM_SAFETY_STATE  = "$tmpDir\gem_safety_state.json"
 Set-Item function:CoinEx-GetTicker          -Value { param($m) [PSCustomObject]@{ last = 1.0 } }
 Set-Item function:Send-TelegramAlert        -Value { param($Message) $true }
 Set-Item function:CoinEx-GetPendingPositions -Value { $global:MOCK_EXCH }
+# 2026-07-23 FIX: Detect-PhantomPositions tambem consulta saldo SPOT real
+# (CoinEx-Get "/v2/assets/spot/balance") -- sem mock, credenciais ausentes
+# em teste disparam o fail-closed correto ("abortando deteccao"), mas isso
+# fazia phantoms_detected=0 sempre, mascarando T1/T3/T6. Mock retorna spot
+# vazio (nenhum saldo), consistente com o cenario "so FUTURES phantom".
+Set-Item function:CoinEx-Get -Value {
+    param($path)
+    if ($path -eq "/v2/assets/spot/balance") {
+        return [PSCustomObject]@{ code = 0; data = @() }
+    }
+    return [PSCustomObject]@{ code = 0; data = @() }
+}
 
 function Reset-All {
     $global:MOCK_EXCH = @()
