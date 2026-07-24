@@ -43,10 +43,12 @@ Describe "Trailing State Adapter (Fase 2)" {
     Context "Upsert por market (PrimaryKey)" {
 
         It "salvar mesmo market atualiza (nao duplica)" {
+            # 2026-07-24 FIX: "(X | Where-Object {...}).Count" sem @() retorna
+            # o objeto cru (sem .Count) quando ha exatamente 1 match.
             Save-TrailingPositionsState -Positions @([PSCustomObject]@{ market="HYPEUSDT"; stopCurrent=68.67; active=$true })
             Save-TrailingPositionsState -Positions @([PSCustomObject]@{ market="HYPEUSDT"; stopCurrent=74.65; active=$true })
             $back = @(Get-TrailingPositionsState)
-            ($back | Where-Object { $_.market -eq "HYPEUSDT" }).Count | Should Be 1
+            @($back | Where-Object { $_.market -eq "HYPEUSDT" }).Count | Should Be 1
             ($back | Where-Object { $_.market -eq "HYPEUSDT" }).stopCurrent | Should Be 74.65
         }
     }
