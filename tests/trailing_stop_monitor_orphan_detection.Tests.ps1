@@ -175,7 +175,13 @@ Describe "Register-OrphanPosition - Auto-registro de posições órfãs" {
     It "Registra posição órfã COM stop loss configurado na exchange" {
         # Arrange: posição com SL
         $orphan = New-MockPosition -Market "BTCUSDT" -Side "long" -Entry 76000 -StopLoss 72000 -TakeProfit 80000
-        
+        # 2026-07-23 FIX: Register-OrphanPosition confirma via "FIX B (2026-07-07)"
+        # que a posicao ainda esta aberta chamando CoinEx-GetPendingPositions de
+        # novo -- sem mock explicito aqui, o mock global vazava do contexto
+        # anterior (Detect-OrphanPositions) e o guard achava que a posicao tinha
+        # fechado, pulando o calculo do stop silenciosamente.
+        Mock-CoinExPositions -Positions @($orphan)
+
         # Act
         $result = Register-OrphanPosition -Position $orphan
         
@@ -195,7 +201,8 @@ Describe "Register-OrphanPosition - Auto-registro de posições órfãs" {
     It "Registra posição órfã SEM stop loss usando stop conservador (5%)" {
         # Arrange: posição SEM SL
         $orphan = New-MockPosition -Market "ETHUSDT" -Side "long" -Entry 2000
-        
+        Mock-CoinExPositions -Positions @($orphan)
+
         # Act
         $result = Register-OrphanPosition -Position $orphan
         
@@ -212,7 +219,8 @@ Describe "Register-OrphanPosition - Auto-registro de posições órfãs" {
     It "Registra posição SHORT órfã com stop conservador invertido" {
         # Arrange: SHORT sem SL
         $orphan = New-MockPosition -Market "BTCUSDT" -Side "short" -Entry 76000
-        
+        Mock-CoinExPositions -Positions @($orphan)
+
         # Act
         $result = Register-OrphanPosition -Position $orphan
         
@@ -238,6 +246,7 @@ Describe "Register-OrphanPosition - Auto-registro de posições órfãs" {
             stop_loss_price = "0"   # STRING, como a API devolve
             take_profit_price = "0"
         }
+        Mock-CoinExPositions -Positions @($orphan)
 
         $result = Register-OrphanPosition -Position $orphan
 
@@ -271,7 +280,8 @@ Describe "Register-OrphanPosition - Auto-registro de posições órfãs" {
     It "Registra com mode=ORPHAN_AUTO para rastreabilidade" {
         # Arrange
         $orphan = New-MockPosition -Market "SOLUSDT" -Side "long" -Entry 85
-        
+        Mock-CoinExPositions -Positions @($orphan)
+
         # Act
         Register-OrphanPosition -Position $orphan
         
