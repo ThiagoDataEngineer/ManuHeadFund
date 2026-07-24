@@ -296,9 +296,13 @@ function Get-AuditorReport {
         }
 
         $auditCount = $entries.Count
-        $executeCount = ($entries | Where-Object { $_.ai_decision -eq "EXECUTE" }).Count
-        $liveCount = ($entries | Where-Object { $_.trading_mode -eq "LIVE" }).Count
-        $paperCount = ($entries | Where-Object { $_.trading_mode -eq "PAPER" }).Count
+        # 2026-07-24 FIX: "(X | Where-Object {...}).Count" sem @() retorna
+        # o objeto cru (nao array) quando ha exatamente 1 match --
+        # PSCustomObject nao tem .Count, resultado vinha vazio/$null,
+        # fazendo execute/live/paper counts sempre errados com N=1.
+        $executeCount = @($entries | Where-Object { $_.ai_decision -eq "EXECUTE" }).Count
+        $liveCount = @($entries | Where-Object { $_.trading_mode -eq "LIVE" }).Count
+        $paperCount = @($entries | Where-Object { $_.trading_mode -eq "PAPER" }).Count
         $avgConfidence = if ($entries.Count -gt 0) {
             ($entries | Measure-Object -Property confidence_pct -Average).Average
         } else { 0 }
@@ -318,7 +322,7 @@ function Get-AuditorReport {
         }
 
         $tradeCount = $trades.Count
-        $liveTradeCount = ($trades | Where-Object { $_.trading_mode -eq "LIVE" }).Count
+        $liveTradeCount = @($trades | Where-Object { $_.trading_mode -eq "LIVE" }).Count
         $avgRr = if ($trades.Count -gt 0) {
             ($trades | Measure-Object -Property rr_ratio -Average).Average
         } else { 0 }
