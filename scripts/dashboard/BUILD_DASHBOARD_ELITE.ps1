@@ -1,4 +1,4 @@
-# BUILD_DASHBOARD_ELITE.ps1
+﻿# BUILD_DASHBOARD_ELITE.ps1
 # Constroi dashboard elite completo com TDD
 # 2026-05-24
 
@@ -10,12 +10,23 @@ param(
 Write-Host "=== BUILD DASHBOARD ELITE (TDD) ===" -ForegroundColor Cyan
 Write-Host ""
 
+# 2026-07-23 FIX: script movido de raiz do projeto pra scripts\dashboard\ --
+# $PSScriptRoot passou a ser scripts\dashboard\, nao mais a raiz, quebrando
+# os 4 paths abaixo silenciosamente (catch engolia o erro com fallback mock).
+$__projectRoot = Split-Path (Split-Path $PSScriptRoot -Parent) -Parent
+
 # STEP 1: Coletar dados
 Write-Host "[1/5] Coletando dados..." -ForegroundColor Yellow
 
 try {
-    $dataJson = & "$PSScriptRoot\scripts\collect_dashboard_data.ps1"
+    $dataJson = & "$__projectRoot\scripts\collect_dashboard_data.ps1"
     $data = $dataJson | ConvertFrom-Json
+    # 2026-07-23 FIX: ConvertFrom-Json auto-promove generated_at (ISO 8601
+    # com "T"/"Z") pra [datetime] -- interpolar direto no HTML formata pelo
+    # locale (MM/dd/yyyy) em vez de manter ISO. Normaliza de volta pra string.
+    if ($data.generated_at -is [datetime]) {
+        $data.generated_at = $data.generated_at.ToString("o")
+    }
     Write-Host "  ✓ Dados coletados com sucesso" -ForegroundColor Green
 }
 catch {
@@ -33,8 +44,8 @@ catch {
 Write-Host "[2/5] Buscando posicoes..." -ForegroundColor Yellow
 
 try {
-    . "$PSScriptRoot\agents\config.ps1"
-    . "$PSScriptRoot\agents\lib_coinex.ps1"
+    . "$__projectRoot\agents\config.ps1"
+    . "$__projectRoot\agents\lib_coinex.ps1"
     
     $positions = CoinEx-GetPendingPositions
     $capital = CoinEx-GetFuturesCapitalUSDT
@@ -51,7 +62,7 @@ catch {
 # STEP 3: Gerar HTML
 Write-Host "[3/5] Gerando HTML..." -ForegroundColor Yellow
 
-$htmlPath = "$PSScriptRoot\dashboard\index_elite.html"
+$htmlPath = "$__projectRoot\dashboard\index_elite.html"
 
 # Template HTML completo
 $html = @"
@@ -93,7 +104,7 @@ $html = @"
 <body>
     <div class="header">
         <div class="logo"><i class="fas fa-chart-line"></i> ManuHeadFund Dashboard Elite</div>
-        <div>$($data.timestamp) | Auto-refresh: 5 min</div>
+        <div>$($data.generated_at) | Auto-refresh: 5 min</div>
     </div>
     
     <div class="container">
@@ -116,8 +127,8 @@ $html = @"
                 <div class="value positive">100%</div>
             </div>
             <div class="metric-card">
-                <div class="label"><i class="fas fa-robot"></i> Aprovação</div>
-                <div class="value negative">$($data.mentor_decisions.approval_rate)%</div>
+                <div class="label"><i class="fas fa-robot"></i> Decisões Mentor</div>
+                <div class="value negative">$($data.mentor_decisions.count)</div>
             </div>
             <div class="metric-card">
                 <div class="label"><i class="fas fa-coins"></i> Trades 24h</div>
@@ -138,17 +149,17 @@ $html = @"
             <div class="panel">
                 <div class="panel-header"><i class="fas fa-gavel"></i> Decisões do Mentor</div>
                 <div class="panel-body">
-                    <p>Total 24h: <strong>$($data.mentor_decisions.total_24h)</strong></p>
-                    <p>Aprovação: <strong class="positive">$($data.mentor_decisions.approval_rate)%</strong></p>
-                    <p>Veto: <strong class="negative">$($data.mentor_decisions.veto_rate)%</strong></p>
+                    <p>Total: <strong>$($data.mentor_decisions.count)</strong></p>
+                    <p>Última decisão: <strong>$($data.mentor_decisions.last_decision)</strong></p>
+                    <p>Confiança média: <strong class="positive">$($data.mentor_decisions.avg_confidence)</strong></p>
                 </div>
             </div>
             <div class="panel">
                 <div class="panel-header"><i class="fas fa-users"></i> Mesa Consensus</div>
                 <div class="panel-body">
-                    <p>Consensus: <strong>$($data.mesa_consensus.consensus)</strong></p>
-                    <p>Score Médio: <strong>$($data.mesa_consensus.score_avg)</strong></p>
-                    <p>Degraded: <strong>$($data.mesa_consensus.degraded_count)</strong></p>
+                    <p>Ciclos hoje: <strong>$($data.mesa_consensus.cycles_today)</strong></p>
+                    <p>Score Médio: <strong>$($data.mesa_consensus.avg_score)</strong></p>
+                    <p>Top market: <strong>$($data.mesa_consensus.top_market)</strong></p>
                 </div>
             </div>
         </div>
