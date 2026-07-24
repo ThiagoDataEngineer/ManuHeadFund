@@ -180,10 +180,13 @@ Describe "Sync-TrailingPositionsWithExchange dedup" {
 
             Sync-TrailingPositionsWithExchange
 
+            # 2026-07-24 FIX: "(X | Where-Object {...}).Count" sem @() retorna
+            # o objeto cru (sem .Count) quando ha exatamente 1 match --
+            # PSCustomObject.Count vem vazio/$null em vez de 1.
             $positions = @(Get-TrailingPositions | Where-Object { $_.market -eq "LINKUSDT" })
             $positions.Count | Should Be 2
-            ($positions | Where-Object { $_.moonBagKind -eq "moon" }).Count | Should Be 1
-            ($positions | Where-Object { -not $_.moonBagKind }).Count | Should Be 1
+            @($positions | Where-Object { $_.moonBagKind -eq "moon" }).Count | Should Be 1
+            @($positions | Where-Object { -not $_.moonBagKind }).Count | Should Be 1
         }
     }
 }
