@@ -1,5 +1,12 @@
-﻿# lib_market_movers.Tests.ps1 -- TDD universo dinamico top movers
+# lib_market_movers.Tests.ps1 -- TDD universo dinamico top movers
 # 2026-06-09: prioriza gainers/losers (vol spike real) sobre quiet tickers
+#
+# 2026-07-23 FIX: reescrito por completo -- a lib real so define
+# Get-PrioritizedMarkets (chamada em producao por agents/gem_agent.ps1 e
+# scripts/gem_loop.ps1, um dos motores reais). Get-MarketMovers e
+# Get-ScanPriority testados aqui NUNCA existiram -- API real e mais simples:
+# um unico array [gainers + losers + quiet] concatenado (sem propriedades
+# .gainers/.losers separadas, sem ordenacao por magnitude, sem TopCount).
 
 $agentsDir = Join-Path (Split-Path -Parent $PSScriptRoot) "agents"
 . (Join-Path $agentsDir "lib_market_movers.ps1")
@@ -9,8 +16,23 @@ function New-Ticker {
     [PSCustomObject]@{ symbol = $Symbol; change_24h = $Change24h; price = $Price; volume_24h = $Volume }
 }
 
-Describe "MarketMovers: Get-MarketMovers (classifica por 24h change)" {
-    It "separa gainers (+10%+) de losers (-10%-)" {
+Describe "MarketMovers: Get-PrioritizedMarkets (movers primeiro, quiet depois)" {
+    It "prioriza gainers + losers sobre quiet, na ordem original de cada grupo" {
+        $tickers = @(
+            (New-Ticker "MOVE" 56),
+            (New-Ticker "QUIET1" 5),
+            (New-Ticker "H" -80.03),
+            (New-Ticker "QUIET2" -3)
+        )
+        $result = Get-PrioritizedMarkets -AllMarkets $tickers -GainerThreshold 10 -LoserThreshold -10
+        # ordem real: gainers (na ordem de entrada) + losers (na ordem de entrada) + quiet
+        $result[0].symbol | Should Be "MOVE"
+        $result[1].symbol | Should Be "H"
+        $result[2].symbol | Should Be "QUIET1"
+        $result[3].symbol | Should Be "QUIET2"
+    }
+
+    It "classifica corretamente gainers/losers/quiet por threshold" {
         $tickers = @(
             (New-Ticker "MOVE" 56),
             (New-Ticker "SIS" 40.19),
@@ -21,112 +43,32 @@ Describe "MarketMovers: Get-MarketMovers (classifica por 24h change)" {
             (New-Ticker "CLO" -37.58),
             (New-Ticker "BTC" -0.56)
         )
-        $movers = Get-MarketMovers -Tickers $tickers -GainerThreshold 10 -LoserThreshold -10
-        @($movers.gainers).Count | Should Be 3
-        @($movers.losers).Count | Should Be 3
+        $result = @(Get-PrioritizedMarkets -AllMarkets $tickers -GainerThreshold 10 -LoserThreshold -10)
+        # gainers (>=10): MOVE, SIS, FTT = 3; losers (<=-10): H, EPICCHAIN, CLO = 3; quiet: ZECUSDT, BTC = 2
+        $result.Count | Should Be 8
+        @($result | Where-Object { $_.change_24h -ge 10 }).Count | Should Be 3
+        @($result | Where-Object { $_.change_24h -le -10 }).Count | Should Be 3
     }
 
-    It "ordena gainers por magnitude descrescente" {
-        $tickers = @(
-            (New-Ticker "A" 15),
-            (New-Ticker "B" 45),
-            (New-Ticker "C" 25)
-        )
-        $movers = Get-MarketMovers -Tickers $tickers -GainerThreshold 10
-        $movers.gainers[0].symbol | Should Be "B"
-        $movers.gainers[1].symbol | Should Be "C"
-        $movers.gainers[2].symbol | Should Be "A"
-    }
-
-    It "ordena losers por magnitude (mais negativo primeiro)" {
-        $tickers = @(
-            (New-Ticker "X" -15),
-            (New-Ticker "Y" -45),
-            (New-Ticker "Z" -25)
-        )
-        $movers = Get-MarketMovers -Tickers $tickers -LoserThreshold -10
-        $movers.losers[0].symbol | Should Be "Y"
-        $movers.losers[1].symbol | Should Be "Z"
-        $movers.losers[2].symbol | Should Be "X"
-    }
-
-    It "respeita topCount (máximo 15 gainers, máximo 15 losers)" {
-        $tickers = 1..30 | ForEach-Object { New-Ticker "T$_" (50 - $_) }
-        $movers = Get-MarketMovers -Tickers $tickers -GainerThreshold 10 -TopCount 10
-        @($movers.gainers).Count | Should Be 10
-    }
-
-    It "ignora tickers sem change_24h" {
+    It "ignora tickers sem change_24h (trata como quiet, change=0)" {
         $tickers = @(
             (New-Ticker "GOOD" 25),
             [PSCustomObject]@{ symbol = "BAD"; price = 1 }  # sem change_24h
         )
-        $movers = Get-MarketMovers -Tickers $tickers -GainerThreshold 10
-        @($movers.gainers).Count | Should Be 1
+        $result = @(Get-PrioritizedMarkets -AllMarkets $tickers -GainerThreshold 10)
+        $result.Count | Should Be 2
+        $result[0].symbol | Should Be "GOOD"  # gainer vem primeiro
+        $result[1].symbol | Should Be "BAD"   # sem change_24h = quiet (change=0)
     }
 
     It "lista vazia nao quebra" {
-        $movers = Get-MarketMovers -Tickers @()
-        @($movers.gainers).Count | Should Be 0
-        @($movers.losers).Count | Should Be 0
-    }
-}
-
-Describe "MarketMovers: Get-ScanPriority (ordena scan: movers primeiro, quiet depois)" {
-    It "prioriza gainers + losers sobre quiet" {
-        $tickers = @(
-            (New-Ticker "MOVER1" 45),
-            (New-Ticker "MOVER2" -35),
-            (New-Ticker "QUIET1" 5),
-            (New-Ticker "QUIET2" -3),
-            (New-Ticker "QUIET3" 2)
-        )
-        $priority = Get-ScanPriority -Tickers $tickers -GainerThreshold 10 -LoserThreshold -10
-        $priority.prioritized[0].symbol | Should Be "MOVER1"
-        $priority.prioritized[1].symbol | Should Be "MOVER2"
-        @($priority.prioritized[2..4].symbol) | Should Contain "QUIET1"
-        $priority.movers_count | Should Be 2
-        $priority.quiet_count | Should Be 3
-        $priority.total | Should Be 5
+        $result = @(Get-PrioritizedMarkets -AllMarkets @())
+        $result.Count | Should Be 0
     }
 
-    It "reordena: lider sempre top gainer, segundo lugar top loser" {
-        $tickers = @(
-            (New-Ticker "MEGA_UP" 150),
-            (New-Ticker "MEGA_DOWN" -120),
-            (New-Ticker "SMALL_UP" 12)
-        )
-        $priority = Get-ScanPriority -Tickers $tickers -GainerThreshold 10 -LoserThreshold -10 -TopMoversCount 5
-        $priority.prioritized[0].symbol | Should Be "MEGA_UP"
-        $priority.prioritized[1].symbol | Should Be "MEGA_DOWN"
-        $priority.prioritized[2].symbol | Should Be "SMALL_UP"
-    }
-
-    It "quiet tickers (entre -10% e +10%) vao pro final" {
-        $tickers = @(
-            (New-Ticker "UP_QUIET" 8),
-            (New-Ticker "DOWN_QUIET" -5),
-            (New-Ticker "UP_MOVER" 25)
-        )
-        $priority = Get-ScanPriority -Tickers $tickers
-        $priority.quiet_count | Should Be 2
-        $priority.movers_count | Should Be 1
-        $priority.prioritized[0].symbol | Should Be "UP_MOVER"
-    }
-
-    It "ordena quiet por algum critério estável (nao quebra)" {
-        $tickers = @(
-            (New-Ticker "Q1" 3),
-            (New-Ticker "Q2" 5),
-            (New-Ticker "Q3" 1)
-        )
-        $priority = Get-ScanPriority -Tickers $tickers
-        @($priority.prioritized).Count | Should Be 3
-    }
-
-    It "totais batem: movers + quiet = total" {
-        $tickers = 1..50 | ForEach-Object { New-Ticker "T$_" (40 - $_) }
-        $priority = Get-ScanPriority -Tickers $tickers -TopMoversCount 10
-        ($priority.movers_count + $priority.quiet_count) | Should Be $priority.total
+    It "todos os tickers aparecem no resultado (nada se perde)" {
+        $tickers = 1..30 | ForEach-Object { New-Ticker "T$_" (50 - ($_ * 3)) }
+        $result = @(Get-PrioritizedMarkets -AllMarkets $tickers -GainerThreshold 10 -LoserThreshold -10)
+        $result.Count | Should Be 30
     }
 }
