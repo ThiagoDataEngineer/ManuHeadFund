@@ -13,8 +13,13 @@
         }
 
         # Mock CoinEx functions
-        function CoinEx-GetPendingPositions {
-            param([bool]$IsFutures = $true)
+        # 2026-07-23 FIX: Sync-ExchangePositionsLive foi reativada usando
+        # CoinEx-GetOpenOrders (lib_coinex.ps1) como fonte -- schema real
+        # confirmado por uso em producao (lib_trailing_adaptive.ps1,
+        # trailing_stop_monitor.ps1), em vez de CoinEx-GetPendingPositions
+        # direto com campos camelCase especulativos nunca validados.
+        function CoinEx-GetOpenOrders {
+            param([double]$MinValueUSD = 3.0)
             if ($global:TEST_POSITIONS) {
                 return @($global:TEST_POSITIONS)
             }
@@ -45,77 +50,64 @@
     }
 
     Context "Sync-ExchangePositionsLive" {
+        # 2026-07-23 FIX: dados de teste no schema real de CoinEx-GetOpenOrders
+        # (position_type, side "buy"/"sell", price, amount, stop_price,
+        # take_profit_price, order_id, market) -- nao mais o shape camelCase
+        # especulativo (entryPrice/markPrice/stopLossPrice/orderId) que
+        # nunca existiu na API real.
         BeforeEach {
             $global:TEST_POSITIONS = @(
-                @{
-                    orderId = "pos_001"
-                    symbol = "BTCUSDT"
-                    side = "LONG"
-                    entryPrice = 43500.00
-                    quantity = 0.5
-                    markPrice = 44000.00
-                    stopLossPrice = 43000.00
-                    takeProfitPrice = 45000.00
-                    created_at = (Get-Date).AddHours(-2)
+                [PSCustomObject]@{
+                    order_id = "pos_001"; market = "BTCUSDT"; position_type = "FUTURES"
+                    side = "buy"; price = 43500.00; amount = 0.5; last_price = 44000.00
+                    stop_price = 43000.00; take_profit_price = 45000.00
                 },
-                @{
-                    orderId = "pos_002"
-                    symbol = "WLDUSDT"
-                    side = "SHORT"
-                    entryPrice = 0.3897
-                    quantity = 100
-                    markPrice = 0.3900
-                    stopLossPrice = 0
-                    takeProfitPrice = 0
-                    created_at = (Get-Date).AddDays(-1)
+                [PSCustomObject]@{
+                    order_id = "pos_002"; market = "WLDUSDT"; position_type = "FUTURES"
+                    side = "sell"; price = 0.3897; amount = 100; last_price = 0.3900
+                    stop_price = $null; take_profit_price = $null
                 }
             )
         }
 
         It "syncs Futures positions" {
             $synced = Sync-ExchangePositionsLive -IsFutures $true
-            $synced | Should -Not -BeNullOrEmpty
-            $synced.Count | Should -Be 2
+            $synced | Should Not BeNullOrEmpty
+            $synced.Count | Should Be 2
         }
 
         It "normalizes position fields" {
             $synced = Sync-ExchangePositionsLive -IsFutures $true
-            $synced[0].symbol | Should -Be "BTCUSDT"
-            $synced[0].direction | Should -Be "LONG"
-            $synced[0].stop_loss | Should -Be 43000.00
-            $synced[0].take_profit | Should -Be 45000.00
+            $synced[0].symbol | Should Be "BTCUSDT"
+            $synced[0].direction | Should Be "LONG"
+            $synced[0].stop_loss | Should Be 43000.00
+            $synced[0].take_profit | Should Be 45000.00
         }
 
         It "detects orphaned positions (missing SL or TP)" {
             $synced = Sync-ExchangePositionsLive -IsFutures $true
             $orphan = $synced | Where-Object { $_.symbol -eq "WLDUSDT" }
-            $orphan | Should -Not -BeNullOrEmpty
-            $orphan.stop_loss | Should -Be 0
-            $orphan.take_profit | Should -Be 0
+            $orphan | Should Not BeNullOrEmpty
+            $orphan.stop_loss | Should Be 0
+            $orphan.take_profit | Should Be 0
         }
 
         It "sets source to 'app_sync'" {
             $synced = Sync-ExchangePositionsLive -IsFutures $true
-            $synced[0].source | Should -Be "app_sync"
+            $synced[0].source | Should Be "app_sync"
         }
 
         It "respects MaxPositions limit" {
             $global:TEST_POSITIONS = @(1..150 | ForEach-Object {
-                @{
-                    orderId = "pos_$_"
-                    symbol = "TEST$_"
-                    side = "LONG"
-                    entryPrice = 100
-                    quantity = 1
-                    markPrice = 101
-                    stopLossPrice = 99
-                    takeProfitPrice = 102
-                    created_at = (Get-Date)
+                [PSCustomObject]@{
+                    order_id = "pos_$_"; market = "TEST$_"; position_type = "FUTURES"
+                    side = "buy"; price = 100; amount = 1; last_price = 101
+                    stop_price = 99; take_profit_price = 102
                 }
             })
 
             $synced = Sync-ExchangePositionsLive -IsFutures $true -MaxPositions 100
-            $synced.Count | Should -Be 100
+            $synced.Count | Should Be 100
         }
     }
 
@@ -233,23 +225,23 @@
 
         It "identifies positions without stop_loss" {
             $orphans = Get-AdoptableOrphans
-            $orphans | Should -Not -BeNullOrEmpty
+            $orphans | Should Not BeNullOrEmpty
             $nosl = $orphans | Where-Object { [double]$_.stop_loss -eq 0 }
-            $nosl.Count | Should -Be -GreaterThan 0
+            $nosl.Count | Should BeGreaterThan 0
         }
 
         It "identifies positions without take_profit" {
             $orphans = Get-AdoptableOrphans
             $notp = $orphans | Where-Object { [double]$_.take_profit -eq 0 }
-            $notp.Count | Should -Be -GreaterThan 0
+            $notp.Count | Should BeGreaterThan 0
         }
 
         It "returns objects with all required fields" {
             $orphans = Get-AdoptableOrphans
             if ($orphans.Count -gt 0) {
-                $orphans[0] | Should -HaveProperty "id"
-                $orphans[0] | Should -HaveProperty "symbol"
-                $orphans[0] | Should -HaveProperty "status"
+                $orphans[0].PSObject.Properties["id"] | Should Not BeNullOrEmpty
+                $orphans[0].PSObject.Properties["symbol"] | Should Not BeNullOrEmpty
+                $orphans[0].PSObject.Properties["status"] | Should Not BeNullOrEmpty
             }
         }
     }
@@ -257,92 +249,86 @@
     Context "Sync-PositionsPeriodic" {
         BeforeEach {
             $global:TEST_POSITIONS = @(
-                @{
-                    orderId = "pos_fut_001"
-                    symbol = "BTCUSDT"
-                    side = "LONG"
-                    entryPrice = 43500
-                    quantity = 0.5
-                    markPrice = 44000
-                    stopLossPrice = 43000
-                    takeProfitPrice = 45000
-                    created_at = (Get-Date)
+                [PSCustomObject]@{
+                    order_id = "pos_fut_001"; market = "BTCUSDT"; position_type = "FUTURES"
+                    side = "buy"; price = 43500; amount = 0.5; last_price = 44000
+                    stop_price = 43000; take_profit_price = 45000
                 }
             )
             $global:TEST_CLOSED_POSITIONS = @(
-                @{
-                    orderId = "closed_perf"
-                    symbol = "ETHUSDT"
-                    side = "LONG"
-                    entryPrice = 2300
-                    exitPrice = 2350
-                    quantity = 1.0
-                    entered_at = (Get-Date).AddHours(-1)
+                [PSCustomObject]@{
+                    position_id = 9001; market = "ETHUSDT"; side = "long"
+                    realized_pnl = "50"; avg_entry_price = "2300"
+                    ath_margin_size = "460"; leverage = "5"
+                    created_at = [DateTimeOffset]::UtcNow.AddHours(-1).ToUnixTimeMilliseconds()
+                    updated_at = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+                    finished_type = "take_profit"
                 }
             )
         }
 
         It "orchestrates complete sync cycle" {
+            # 2026-07-23 FIX: Sync-PositionsPeriodic retorna Hashtable, nao
+            # PSCustomObject -- .PSObject.Properties[] so reflete
+            # propriedades .NET (Keys/Values/Count), nao as chaves
+            # customizadas. ContainsKey() e o jeito certo pra Hashtable.
             $result = Sync-PositionsPeriodic
-            $result | Should -Not -BeNullOrEmpty
-            $result | Should -HaveProperty "futures_synced"
-            $result | Should -HaveProperty "spot_synced"
-            $result | Should -HaveProperty "closed_outcomes"
-            $result | Should -HaveProperty "orphans_count"
+            $result | Should Not BeNullOrEmpty
+            $result.ContainsKey("futures_synced") | Should Be $true
+            $result.ContainsKey("spot_synced") | Should Be $true
+            $result.ContainsKey("closed_outcomes") | Should Be $true
+            $result.ContainsKey("orphans_count") | Should Be $true
         }
 
         It "returns sync counts" {
             $result = Sync-PositionsPeriodic
-            $result.futures_synced | Should -BeGreaterThan -1  # >= 0
-            $result.spot_synced | Should -BeGreaterThan -1     # >= 0
+            $result.futures_synced | Should BeGreaterThan -1  # >= 0
+            $result.spot_synced | Should BeGreaterThan -1     # >= 0
         }
     }
 
     Context "Edge cases" {
         It "handles null position gracefully" {
+            # 2026-07-23 FIX: "Should Be @()" compara array vazio via -eq,
+            # que no Pester 3 sempre falha (mesmo com ambos os lados vazios,
+            # a mensagem de erro mostra "{}" == "{}" mas o teste falha) --
+            # checar Count -eq 0 e o jeito correto de validar array vazio.
             $global:TEST_POSITIONS = $null
-            $synced = Sync-ExchangePositionsLive -IsFutures $true
-            $synced | Should -Be @()
+            $synced = @(Sync-ExchangePositionsLive -IsFutures $true)
+            $synced.Count | Should Be 0
         }
 
         It "handles empty closed positions" {
             $global:TEST_CLOSED_POSITIONS = @()
-            $outcomes = Reconcile-AppToJournal -Limit 20
-            $outcomes | Should -Be @()
+            $outcomes = @(Reconcile-AppToJournal -Limit 20)
+            $outcomes.Count | Should Be 0
         }
 
         It "coerces string prices to double" {
             $global:TEST_POSITIONS = @(
-                @{
-                    orderId = "pos_string"
-                    symbol = "TEST"
-                    side = "LONG"
-                    entryPrice = "100.50"  # string
-                    quantity = "0.5"       # string
-                    markPrice = "101.00"   # string
-                    stopLossPrice = "99.00"
-                    takeProfitPrice = "102.00"
-                    created_at = (Get-Date)
+                [PSCustomObject]@{
+                    order_id = "pos_string"; market = "TEST"; position_type = "FUTURES"
+                    side = "buy"; price = "100.50"; amount = "0.5"; last_price = "101.00"
+                    stop_price = "99.00"; take_profit_price = "102.00"
                 }
             )
 
-            { Sync-ExchangePositionsLive -IsFutures $true } | Should -Not -Throw
+            { Sync-ExchangePositionsLive -IsFutures $true } | Should Not Throw
         }
 
         It "handles datetime as string in closed position" {
             $global:TEST_CLOSED_POSITIONS = @(
-                @{
-                    orderId = "closed_str_date"
-                    symbol = "TEST"
-                    side = "LONG"
-                    entryPrice = 100
-                    exitPrice = 101
-                    quantity = 1
-                    entered_at = "2026-07-07T10:30:00Z"  # ISO string
+                [PSCustomObject]@{
+                    position_id = 9002; market = "TEST"; side = "long"
+                    realized_pnl = "1"; avg_entry_price = "100"
+                    ath_margin_size = "100"; leverage = "1"
+                    created_at = [DateTimeOffset]::Parse("2026-07-07T10:30:00Z").ToUnixTimeMilliseconds()
+                    updated_at = [DateTimeOffset]::UtcNow.ToUnixTimeMilliseconds()
+                    finished_type = "manual"
                 }
             )
 
-            { Reconcile-AppToJournal -Limit 10 } | Should -Not -Throw
+            { Reconcile-AppToJournal -Limit 10 } | Should Not Throw
         }
     }
 }

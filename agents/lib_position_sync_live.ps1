@@ -8,16 +8,78 @@
 
 $_positionSyncDir = Split-Path $PSScriptRoot -Parent | Join-Path -ChildPath "journal"
 
-# 2026-07-08: COMPLETELY DISABLED - CoinEx-GetPendingPositions param conflict
-# Sync-ExchangePositionsLive is now a simple stub that returns empty array
-# Positions tracked via parallel Trailing system instead
+# 2026-07-08: foi desabilitada apos crash "cannot find parameter IsFutures"
+# -- a causa real era chamar CoinEx-GetPendingPositions (lib_coinex.ps1)
+# passando -IsFutures, mas essa funcao so aceita -Market (busca sempre
+# FUTURES via endpoint pending-position, nao tem conceito de SPOT).
+#
+# 2026-07-23 REATIVADA usando CoinEx-GetOpenOrders (lib_coinex.ps1) como
+# fonte, em vez de _Normalize-ExchangePosition (abaixo, MANTIDA no arquivo
+# mas sem chamador -- assumia campos camelCase especulativos como
+# entryPrice/markPrice/stopLossPrice/orderId que NUNCA foram confirmados
+# contra a resposta real da API, mesmo bug ja corrigido uma vez em
+# _Convert-ClosedTradeToOutcome 2026-07-19). CoinEx-GetOpenOrders ja
+# processa a resposta bruta (snake_case: market, side, avg_entry_price,
+# stop_loss_price, take_profit_price, position_id, leverage, liq_price,
+# unrealized_pnl) com fallback defensivo documentado, e tem uso real
+# confirmado em producao (lib_trailing_adaptive.ps1, trailing_stop_monitor.ps1
+# -- job que roda a cada 5 min) -- schema com muito mais confianca que
+# inventar um mapeamento novo sem credenciais pra validar contra a API.
+# Cobre SPOT (holdings reais: entry via ultima ordem BUY, SL/TP via stop
+# orders pendentes reais) e FUTURES (pending-position) numa unica chamada,
+# filtrado aqui por position_type.
 function Sync-ExchangePositionsLive {
     param(
         [bool]$IsFutures = $true,
         [int]$MaxPositions = 100
     )
-    # STUB: return empty array immediately — no position sync from exchange
-    return @()
+
+    try {
+        if (-not (Get-Command CoinEx-GetOpenOrders -ErrorAction SilentlyContinue)) {
+            Write-Verbose "[position_sync] CoinEx-GetOpenOrders not available"
+            return @()
+        }
+
+        $wantedType = if ($IsFutures) { "FUTURES" } else { "SPOT" }
+        $all = @(CoinEx-GetOpenOrders -ErrorAction SilentlyContinue)
+        $raw = @($all | Where-Object { $_.position_type -eq $wantedType })
+
+        if (-not $raw -or $raw.Count -eq 0) { return @() }
+
+        $regime = if (Test-Command -Name "Get-CurrentRegime") {
+            Get-CurrentRegime -ErrorAction SilentlyContinue
+        } else {
+            "UNKNOWN"
+        }
+
+        $normalized = @($raw | Select-Object -First $MaxPositions | ForEach-Object {
+            $sideNorm = if ($IsFutures) {
+                if ("$($_.side)" -eq "buy") { "LONG" } else { "SHORT" }
+            } else {
+                "LONG"  # SPOT so tem holding, sem short
+            }
+            @{
+                id = if ($_.order_id) { "$($_.order_id)" } else { "$($_.market)_$wantedType" }
+                symbol = "$($_.market)"
+                direction = $sideNorm
+                entry_price = [double]$_.price
+                quantity = [double]$_.amount
+                stop_loss = if ($null -ne $_.stop_price) { [double]$_.stop_price } else { 0.0 }
+                take_profit = if ($null -ne $_.take_profit_price) { [double]$_.take_profit_price } else { 0.0 }
+                current_price = if ($null -ne $_.last_price) { [double]$_.last_price } else { 0.0 }
+                source = "app_sync"
+                regime = $regime
+                status = "active"
+                entered_at = (Get-Date).ToUniversalTime()
+                created_at = (Get-Date).ToUniversalTime()
+            }
+        })
+
+        return @($normalized)
+    } catch {
+        Write-Error "[position_sync] Sync-ExchangePositionsLive failed: $_"
+        return @()
+    }
 }
 
 function Reconcile-AppToJournal {
@@ -172,6 +234,12 @@ function Sync-PositionsPeriodic {
 # Private helpers
 # ─────────────────────────────────────────────────────────────────────
 
+# 2026-07-23: SEM CHAMADOR -- Sync-ExchangePositionsLive foi reescrita pra
+# usar CoinEx-GetOpenOrders (schema real confirmado) em vez desta funcao.
+# Mantida no arquivo como referencia historica do shape especulativo
+# original (nunca validado contra a API real), nao apagada por seguranca
+# caso algum outro caller apareca, mas nao remover o codigo morto de
+# Sync-ExchangePositionsLive assumindo que esta funcao ainda e usada.
 function _Normalize-ExchangePosition {
     param(
         [PSCustomObject]$Position,
