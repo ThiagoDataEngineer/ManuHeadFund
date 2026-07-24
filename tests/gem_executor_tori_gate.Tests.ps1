@@ -135,6 +135,23 @@ function Test-ToriConfluence {
     param([string]$Market, [string]$SetupType = "LONG", [int]$TimeframeMinutes = 60, [double]$Price = 0, [int]$TimeoutSeconds = 8)
     return [PSCustomObject]@{ allows = $true; confluence_score = 85; signals_fired = @("test_stub"); reason = "pass" }
 }
+# 2026-07-24 FIX: flakiness real -- funcoes definidas dentro do 2o Describe
+# ("Leverage real", mais abaixo neste arquivo) sao globais no PowerShell e
+# persistem entre invocacoes consecutivas de Invoke-Pester no MESMO
+# processo (ex.: Get-GemRouteForMarket la forca route=FUTURES). Se esse
+# arquivo ja rodou antes no processo, o 1o Describe (Tori gate) herdava
+# esse estado e roteava FIROUSDT pra FUTURES, batendo no gate de leverage
+# real (sem credenciais -> bloqueia) em vez de completar via SPOT como
+# os testes 1/2/6/8 esperam. Mock explicito aqui garante SPOT
+# independente de execucao anterior no processo.
+function Get-GemRouteForMarket {
+    param([string]$Market, [switch]$PreferFutures)
+    return [PSCustomObject]@{ market=$Market; route="spot"; market_type="SPOT"; wallet="spot"; spot_available=$true; futures_available=$true; reason="test_stub_default_spot" }
+}
+function CoinEx-AdjustPositionLeverage {
+    param([string]$Market, [int]$Leverage, [string]$MarginMode = "isolated")
+    return [PSCustomObject]@{ success = $true; leverage = $Leverage; margin_mode = $MarginMode; market = $Market }
+}
 
 # Wrap Calculate-StopTarget para registrar quando foi chamado
 $script:__realCalc = ${function:Calculate-StopTarget}
@@ -175,6 +192,16 @@ function Reset-ToriState {
     $global:__tori_reason       = "trendline A+ confirmada"
     $global:__tori_should_throw = $false
     $global:__call_seq          = @()
+    # 2026-07-24 FIX: gem_executor.ps1 tem cache de rejeicao real (TTL 60min,
+    # match by MARKET apenas, by design pos 2026-05-21 -- ver
+    # Test-GemRecentlyRejected em lib_gem_decision_cache.ps1) gravado em
+    # $global:JOURNAL_DIR/gem_recent_decisions.json. Varios testes deste
+    # arquivo reusam "FIROUSDT" -- uma rejeicao de um It (SKIP/WAIT/throw)
+    # vazava pro proximo It que esperava PlaceOrder chamado, causando
+    # flakiness dependente da ordem de execucao do Pester. Limpa o cache
+    # a cada reset.
+    $__cacheFile = Join-Path $global:JOURNAL_DIR "gem_recent_decisions.json"
+    if (Test-Path $__cacheFile) { Remove-Item $__cacheFile -Force -ErrorAction SilentlyContinue }
 }
 
 # ── TESTES ────────────────────────────────────────────────────────────────────
