@@ -166,8 +166,13 @@ function Test-AntiOscillation {
         [object[]] $History = @()
     )
     $cutoff = (Get-Date).ToUniversalTime().AddHours(-72)
+    # 2026-07-23 FIX: ConvertFrom-Json auto-promove ts ISO 8601 pra
+    # [datetime] (perde 'Z'/offset), quebrando [datetime]::Parse subsequente
+    # -- mesmo bug ja corrigido em lib_tori_proximity.ps1/lib_asymmetric_demote.ps1.
     $recent = @($History | Where-Object {
-        $_.param -eq $ParamName -and ([datetime]::Parse([string]$_.ts).ToUniversalTime() -gt $cutoff)
+        if ($_.param -ne $ParamName) { return $false }
+        $tsVal = if ($_.ts -is [datetime]) { $_.ts } else { [datetime]::Parse([string]$_.ts) }
+        $tsVal.ToUniversalTime() -gt $cutoff
     } | Select-Object -Last 1)
     if ($recent.Count -eq 0) { return $false }
     $lastDelta = [double]$recent[0].after - [double]$recent[0].before

@@ -29,7 +29,13 @@ function Get-DailyPnL {
                     $exitRaw = if ($obj.exit_date) { $obj.exit_date } elseif ($obj.updated_at) { $obj.updated_at } else { $null }
                     if (-not $exitRaw) { continue }
                     try {
-                        $exitDate = ([datetime]::Parse([string]$exitRaw)).Date
+                        # 2026-07-23 FIX: Invoke-RestMethod (usado por
+                        # _Supabase-Get) tambem auto-promove strings ISO
+                        # 8601 pra [datetime] (mesmo parser JSON do
+                        # ConvertFrom-Json) -- [string]$exitRaw coagia de
+                        # volta usando o formato do locale, sem timezone,
+                        # quebrando o Parse. Ver lib_tori_proximity.ps1.
+                        $exitDate = if ($exitRaw -is [datetime]) { $exitRaw.Date } else { ([datetime]::Parse([string]$exitRaw)).Date }
                         if ($exitDate -eq $today) {
                             $pnlField = if ($null -ne $obj.pnl_realized) { $obj.pnl_realized } else { $obj.pnl_usd }
                             $pnl += [double]$pnlField

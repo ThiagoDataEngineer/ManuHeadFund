@@ -27,7 +27,9 @@ try {
     Write-Host "  Total: $($outcomes.Count)" -ForegroundColor White
     $fixCommitTime = [datetime]::Parse("2026-07-19T05:34:00Z")
     foreach ($o in ($outcomes | Sort-Object closed_at -Descending | Select-Object -First 25)) {
-        $ts = try { [datetime]::Parse([string]$o.closed_at) } catch { $null }
+        # 2026-07-23: defesa contra ConvertFrom-Json/Invoke-RestMethod
+        # auto-promover ISO 8601 pra [datetime] (ver lib_tori_proximity.ps1)
+        $ts = try { if ($o.closed_at -is [datetime]) { $o.closed_at } else { [datetime]::Parse([string]$o.closed_at) } } catch { $null }
         $marker = if ($ts -and $ts -gt $fixCommitTime) { "[POS-FIX]" } else { "[pre-fix]" }
         Write-Host "  $marker closed_at=$($o.closed_at) market=$($o.market) pnl_percent=$($o.pnl_percent) pnl_realized=$($o.pnl_realized)"
     }

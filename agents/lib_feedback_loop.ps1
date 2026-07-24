@@ -129,7 +129,13 @@ function ConvertTo-SupabaseOutcome {
     # incompleta, campo obrigatorio nunca setado). Mesmo padrao de geracao de
     # lib_trade_journal_supabase.ps1 (ticks+market+guid, garante unicidade).
     $tsForId = & $get "ts"
-    $ticks = try { ([datetime]::Parse([string]$tsForId)).Ticks } catch { [datetime]::UtcNow.Ticks }
+    # 2026-07-23: defesa contra o bug de ConvertFrom-Json auto-promovendo
+    # ISO 8601 pra [datetime] (ver lib_tori_proximity.ps1) -- caso este
+    # caminho um dia receba $Outcome vindo de JSON deserializado, nao so
+    # hashtable em memoria como hoje.
+    $ticks = try {
+        if ($tsForId -is [datetime]) { $tsForId.Ticks } else { ([datetime]::Parse([string]$tsForId)).Ticks }
+    } catch { [datetime]::UtcNow.Ticks }
     $idMarket = (& $get "market")
     $genId = "{0}|{1}|feedback_loop|{2}" -f $ticks, $idMarket, ([guid]::NewGuid().ToString().Substring(0,8))
 

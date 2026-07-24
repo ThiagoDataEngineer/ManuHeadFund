@@ -56,7 +56,12 @@ foreach ($line in (Get-Content $snapsPath -Encoding UTF8)) {
     if ([double]$s.entry_price -le 0) { continue }
     if ($s.decision -notin @("APROVAR","VETAR")) { continue }
     $ts = $null
-    try { $ts = [datetime]::Parse([string]$s.ts, $null, [System.Globalization.DateTimeStyles]::RoundtripKind).ToUniversalTime() } catch { continue }
+    # 2026-07-23 FIX: RoundtripKind nao salva o Parse quando o valor ja foi
+    # auto-promovido a [datetime] pelo ConvertFrom-Json (perde 'Z'/offset
+    # antes mesmo de chegar aqui) -- checar o tipo primeiro. Ver lib_tori_proximity.ps1.
+    try {
+        $ts = if ($s.ts -is [datetime]) { $s.ts.ToUniversalTime() } else { [datetime]::Parse([string]$s.ts, $null, [System.Globalization.DateTimeStyles]::RoundtripKind).ToUniversalTime() }
+    } catch { continue }
     if ($ts -gt $cutoff) { continue }   # muito recente pra gradear
     $key = "$($s.ts)|$($s.market)|$($s.decision)"
     if ($graded.ContainsKey($key)) { continue }

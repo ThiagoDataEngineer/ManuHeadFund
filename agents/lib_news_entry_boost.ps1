@@ -37,7 +37,10 @@ function Test-IdeaTriggeredRecently {
             if ($o.market -ne $Market) { continue }
             if ($o.status -ne "triggered") { continue }
             if ($o.fired_at) {
-                $firedTs = [DateTime]::Parse([string]$o.fired_at).ToUniversalTime()
+                # 2026-07-23: defesa contra ConvertFrom-Json auto-promover
+                # ISO 8601 pra [datetime] (ver lib_tori_proximity.ps1).
+                $firedTs = if ($o.fired_at -is [datetime]) { $o.fired_at } else { [DateTime]::Parse([string]$o.fired_at) }
+                $firedTs = $firedTs.ToUniversalTime()
                 if ($firedTs -ge $cutoff) { return $true }
             }
         } catch {}
@@ -63,7 +66,8 @@ function Get-NewsSignalRecent {
         try {
             $o = $line | ConvertFrom-Json
             if ($o.market -ne $Market -and $o.symbol -ne $Market) { continue }
-            $ts = if ($o.ts) { [DateTime]::Parse([string]$o.ts).ToUniversalTime() } else { continue }
+            # 2026-07-23: mesma defesa (ConvertFrom-Json auto-promove ISO 8601)
+            $ts = if (-not $o.ts) { continue } elseif ($o.ts -is [datetime]) { $o.ts.ToUniversalTime() } else { [DateTime]::Parse([string]$o.ts).ToUniversalTime() }
             if ($ts -lt $cutoff) { continue }
             if ($null -eq $latest -or $ts -gt $latest.ts) {
                 $latest = @{ ts = $ts; sentiment = [double]$o.sentiment }

@@ -61,7 +61,12 @@ function Lock-EntryMarket {
             try {
                 $existing = @(Get-StateRecords -Table "entry_locks" -Filter @{ market = $Market })
                 if ($existing.Count -gt 0) {
-                    $exp = [datetimeoffset]::Parse($existing[0].expires_at).UtcDateTime
+                    # 2026-07-23 FIX: Invoke-RestMethod (usado por
+                    # _Supabase-Get) tambem auto-promove strings ISO 8601
+                    # pra [datetime] -- quebra [datetimeoffset]::Parse se
+                    # coagido de volta pra string. Ver lib_tori_proximity.ps1.
+                    $rawExp = $existing[0].expires_at
+                    $exp = if ($rawExp -is [datetime]) { [datetime]::SpecifyKind($rawExp, [System.DateTimeKind]::Utc) } else { [datetimeoffset]::Parse($rawExp).UtcDateTime }
                     if ($exp -lt $now) {
                         # Lock expirado -- remove e tenta de novo (1x, evita loop infinito)
                         try { Remove-StateRecord -Table "entry_locks" -PrimaryKey "market" -Value $Market } catch {}

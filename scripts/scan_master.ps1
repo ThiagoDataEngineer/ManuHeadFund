@@ -1139,7 +1139,11 @@ function Invoke-MasterCycle {
                 $cwPath = Join-Path $scriptDir "..\journal\crowding_watchlist.json"
                 if (Test-Path $cwPath) {
                     $cw = Get-Content $cwPath -Raw -Encoding UTF8 | ConvertFrom-Json
-                    $cwAge = ((Get-Date).ToUniversalTime() - [datetime]::Parse([string]$cw.ts).ToUniversalTime()).TotalHours
+                    # 2026-07-23 FIX: ConvertFrom-Json auto-promove ts ISO
+                    # 8601 pra [datetime] (perde 'Z'/offset) -- quebra Parse
+                    # se coagido de volta pra string. Ver lib_tori_proximity.ps1.
+                    $cwTs = if ($cw.ts -is [datetime]) { $cw.ts } else { [datetime]::Parse([string]$cw.ts) }
+                    $cwAge = ((Get-Date).ToUniversalTime() - $cwTs.ToUniversalTime()).TotalHours
                     if ($cwAge -lt 7 -and @($cw.crowded_longs).Count -gt 0) {
                         $existingMkts = @($topCandidates.market)
                         $crowdCands = @()
