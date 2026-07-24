@@ -51,7 +51,9 @@ Describe "Invoke-OrderRouted - basic routing" {
     }
 
     It "Route 'none' lanca excecao" {
-        { Invoke-OrderRouted -Route "none" -Market "X" -Side "buy" -Type "limit" -Amount 1 -Price 1 } | Should Throw
+        $threw = $false
+        try { Invoke-OrderRouted -Route "none" -Market "X" -Side "buy" -Type "limit" -Amount 1 -Price 1 } catch { $threw = $true }
+        $threw | Should Be $true
     }
 
     It "Spot market BUY com QuoteAmountUsd" {

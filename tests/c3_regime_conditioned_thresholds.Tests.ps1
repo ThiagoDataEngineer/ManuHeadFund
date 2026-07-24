@@ -41,6 +41,8 @@ Describe "C3 Get-RegimeAwareThreshold" {
         $r.threshold | Should Be 1.0
     }
     It "Metric desconhecida: throw" {
-        { Get-RegimeAwareThreshold -Metric "metric_inexistente" -Phase "phase_3_bear" } | Should Throw
+        $threw = $false
+        try { Get-RegimeAwareThreshold -Metric "metric_inexistente" -Phase "phase_3_bear" } catch { $threw = $true }
+        $threw | Should Be $true
     }
 }

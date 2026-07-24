@@ -48,6 +48,8 @@ Describe "CoinEx-PlaceSpotStopOrder - precisao sub-nano" {
     It "ABORTA (throw) se trigger formatar para 0 -- nunca posicao sem stop" {
         Mock CoinEx-Post { return [PSCustomObject]@{ code = 0; data = [PSCustomObject]@{} } }
         # 1e-15 < 1e-12 de precisao -> arredonda pra 0 -> deve abortar em vez de enviar 0
-        { CoinEx-PlaceSpotStopOrder -Market "DUSTUSDT" -Side "sell" -TriggerPrice 1e-15 -Amount 100 } | Should Throw
+        $threw = $false
+        try { CoinEx-PlaceSpotStopOrder -Market "DUSTUSDT" -Side "sell" -TriggerPrice 1e-15 -Amount 100 } catch { $threw = $true }
+        $threw | Should Be $true
     }
 }

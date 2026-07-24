@@ -511,7 +511,9 @@ Describe "CoinEx-PlaceSpotOrder - construcao do body (fix code 3639)" {
             $script:CapturedBody = $bodyObj
             return [PSCustomObject]@{ code=0; data=@{ order_id=1 } }
         }
-        { CoinEx-PlaceSpotOrder -Market "AIUSDT" -Side "buy" -Type "market" -Amount 100 } | Should Throw
+        $threw = $false
+        try { CoinEx-PlaceSpotOrder -Market "AIUSDT" -Side "buy" -Type "market" -Amount 100 } catch { $threw = $true }
+        $threw | Should Be $true
     }
 
     It "PlaceSpotOrder erro propaga codigo da API (3639)" {
@@ -954,7 +956,9 @@ Describe "Multi Exit Ladder" {
             })
             sl_levels = @()
         }
-        { CoinEx-PlaceMultiExitLadder -Market "AIUSDT" -PositionSide "long" -TotalAmount 100 -Entry 0.10 -Ladder $bigLadder } | Should Throw
+        $threw = $false
+        try { CoinEx-PlaceMultiExitLadder -Market "AIUSDT" -PositionSide "long" -TotalAmount 100 -Entry 0.10 -Ladder $bigLadder } catch { $threw = $true }
+        $threw | Should Be $true
     }
 
     It "amount serializado via InvariantCulture (ponto, nao virgula, sub-dollar safe)" {

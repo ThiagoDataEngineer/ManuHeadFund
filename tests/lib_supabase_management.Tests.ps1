@@ -18,7 +18,9 @@ Describe "Test-SupabasePat" {
 
     It "Throws when no PAT provided" {
         Remove-Item env:SUPABASE_PAT -ErrorAction SilentlyContinue
-        { Test-SupabasePat -Pat "" } | Should Throw
+        $threw = $false
+        try { Test-SupabasePat -Pat "" } catch { $threw = $true }
+        $threw | Should Be $true
     }
 
     It "Builds correct authorization header" {
@@ -71,11 +73,15 @@ Describe "Invoke-SupabaseSql" {
     }
 
     It "Throws clearly when ProjectRef empty" {
-        { Invoke-SupabaseSql -Pat "sbp_x" -ProjectRef "" -Sql "SELECT 1" } | Should Throw
+        $threw = $false
+        try { Invoke-SupabaseSql -Pat "sbp_x" -ProjectRef "" -Sql "SELECT 1" } catch { $threw = $true }
+        $threw | Should Be $true
     }
 
     It "Throws clearly when SQL empty" {
-        { Invoke-SupabaseSql -Pat "sbp_x" -ProjectRef "abc" -Sql "" } | Should Throw
+        $threw = $false
+        try { Invoke-SupabaseSql -Pat "sbp_x" -ProjectRef "abc" -Sql "" } catch { $threw = $true }
+        $threw | Should Be $true
     }
 }
 

@@ -23,23 +23,29 @@ Describe "B19 Invoke-WithRetry" {
         $ctx.n | Should Be 3
     }
     It "Fail apos MaxAttempts: rethrows" {
+        # 2026-07-23 FIX: Pester 3.4.0 "{...} | Should Throw" nao captura
+        # corretamente excecoes rethrows de dentro de scriptblocks aninhados.
         $ctx = @{ n = 0 }
-        {
+        $threw = $false
+        try {
             Invoke-WithRetry -ScriptBlock {
                 $ctx.n++
                 throw "timed out"
             } -MaxAttempts 3 -BaseDelayMs 10
-        } | Should Throw
+        } catch { $threw = $true }
+        $threw | Should Be $true
         $ctx.n | Should Be 3
     }
     It "Non-retriable error: throws na 1a tentativa" {
         $ctx = @{ n = 0 }
-        {
+        $threw = $false
+        try {
             Invoke-WithRetry -ScriptBlock {
                 $ctx.n++
                 throw "code 3639 Invalid Parameter"
             } -MaxAttempts 3 -BaseDelayMs 10
-        } | Should Throw
+        } catch { $threw = $true }
+        $threw | Should Be $true
         $ctx.n | Should Be 1
     }
     It "Test-CoinExRetriable: 429 e 503 sao retriaveis" {

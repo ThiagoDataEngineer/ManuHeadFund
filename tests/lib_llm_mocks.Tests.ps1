@@ -74,11 +74,15 @@ Describe "New-MockMentorResponse" {
     }
 
     It "Rejects veredicto invalido (ValidateSet)" {
-        { New-MockMentorResponse -Veredicto "INVALIDO" } | Should Throw
+        $threw = $false
+        try { New-MockMentorResponse -Veredicto "INVALIDO" } catch { $threw = $true }
+        $threw | Should Be $true
     }
 
     It "Rejects risco invalido (ValidateSet)" {
-        { New-MockMentorResponse -Risco "ULTRA_HIGH" } | Should Throw
+        $threw = $false
+        try { New-MockMentorResponse -Risco "ULTRA_HIGH" } catch { $threw = $true }
+        $threw | Should Be $true
     }
 }
 
