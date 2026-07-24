@@ -16,15 +16,20 @@ Describe "Learning Engine" {
         }
 
         It "Extrai erros BLOCKED do log" {
+            # 2026-07-23 FIX: timestamps hardcoded 2026-06-18 sempre caiam
+            # fora da janela -Hours 24 relativa a "agora" -- gerar dinamico.
             $tmpLog = Join-Path $env:TEMP ("log_test_" + [guid]::NewGuid().ToString() + ".log")
+            $ts1 = (Get-Date).AddHours(-2).ToString("yyyy-MM-dd HH:mm:ss")
+            $ts2 = (Get-Date).AddHours(-1).ToString("yyyy-MM-dd HH:mm:ss")
+            $ts3 = (Get-Date).AddMinutes(-30).ToString("yyyy-MM-dd HH:mm:ss")
             @"
-[2026-06-18 14:09:27] [BLOCKED] BTCUSDT -- downtrend forte sem toques suficientes
-[2026-06-18 14:10:00] [INFO] GemScan: 1 gem(s) encontrados
-[2026-06-18 14:10:30] [BLOCKED] ETHUSDT -- conviction score insuficiente
+[$ts1] [BLOCKED] BTCUSDT -- downtrend forte sem toques suficientes
+[$ts2] [INFO] GemScan: 1 gem(s) encontrados
+[$ts3] [BLOCKED] ETHUSDT -- conviction score insuficiente
 "@ | Out-File $tmpLog -Encoding UTF8
 
             $result = Read-CloudErrorLog -LogPath $tmpLog -Hours 24
-            $result.errors.Count | Should BeGreaterThan 0
+            ($result.errors.Count -gt 0) | Should Be $true
             $result | Should Not BeNullOrEmpty
 
             Remove-Item $tmpLog -Force
@@ -32,10 +37,13 @@ Describe "Learning Engine" {
 
         It "Calcula error rate" {
             $tmpLog = Join-Path $env:TEMP ("log_test_" + [guid]::NewGuid().ToString() + ".log")
+            $ts1 = (Get-Date).AddHours(-2).ToString("yyyy-MM-dd HH:mm:ss")
+            $ts2 = (Get-Date).AddHours(-1).ToString("yyyy-MM-dd HH:mm:ss")
+            $ts3 = (Get-Date).AddMinutes(-30).ToString("yyyy-MM-dd HH:mm:ss")
             @(
-                "[2026-06-18 14:09:27] [BLOCKED] BTCUSDT -- erro1",
-                "[2026-06-18 14:10:00] [INFO] ok",
-                "[2026-06-18 14:10:30] [BLOCKED] ETHUSDT -- erro2"
+                "[$ts1] [BLOCKED] BTCUSDT -- erro1",
+                "[$ts2] [INFO] ok",
+                "[$ts3] [BLOCKED] ETHUSDT -- erro2"
             ) | Out-File $tmpLog -Encoding UTF8
 
             $result = Read-CloudErrorLog -LogPath $tmpLog -Hours 24
