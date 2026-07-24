@@ -15,7 +15,7 @@ Sistema automatizado multi-agente (Backend PowerShell + Mentor LLM) que executa 
 | **Trailing** | 🟡 CONSOLIDANDO | motor unico em SHADOW MODE (so log) — ~20 libs concorrentes identificadas (Oracle Detector 16) |
 | **Leverage FUTURES** | ✅ FIX CRITICO | hard cap 5x em todo caminho de ordem real (achado: SUIUSDT/ADA/XRP iam a 50x) |
 | **Evolution Engine** | ✅ LIVE | auto-tuning de thresholds de deteccao (tori_confluence_threshold etc), risk params sempre manual |
-| **Mentor LLMs** | ✅ LIVE | Sonnet/Haiku + Mistral (Gemini deprecated), grading diario vs mercado real |
+| **Mentor LLMs** | ⚠️ NAO CONECTADO | codigo pronto (`Invoke-MentorDebate`, debate+deteccao de alucinacao) mas o executor real (`gem_executor.ps1`) nunca o chama — so `scan_master.ps1`/`orchestrator_v6.ps1` chamam, e nenhum dos dois esta no workflow. Decisao real hoje e 100% deterministica (gates + enrichment estatistico Supabase), sem LLM avaliando entrada. Achado em 2026-07-24, ver `project_mentor_llm_never_connected_2026_07_24` na memoria |
 | **Root Cause Oracle** | ✅ 16 detectores | scanner de padroes conhecidos (regex), manual/query_engine, nao roda em cron |
 | **Regime** | 📊 | ver bear_severity calculado ao vivo em Get-MarketScenario (SMA200 real + momentum) |
 
@@ -64,8 +64,10 @@ Invoke-Pester tests/ -Output Detailed
         │ Confluence: ≥3 sinais confluem?   │
         └────────────┬──────────────────────┘
                      ↓
-        ┌─ MENTOR (LLM Final Veto) ────────┐
-        │ Debate: precedentes + fundos      │
+        ┌─ MENTOR (LLM Final Veto) ────────┐  ⚠️ NAO ATIVO no caminho real
+        │ Debate: precedentes + fundos      │  (so em scan_master.ps1/orchestrator_v6.ps1,
+        │                                    │   nenhum dos dois roda via cron. Ver estado
+        │                                    │   real na tabela acima)
         └────────────┬──────────────────────┘
                      ↓
         ┌─ EXECUÇÃO ───────────────────────┐
@@ -100,7 +102,7 @@ Principais (ver `.github/workflows/trading-pipeline.yml` para a lista completa, 
 
 | Job | Função |
 |-----|--------|
-| **gem-scanner-executor** | Live trading real: triagem→gates→mentor→execução (SPOT+FUTURES) |
+| **gem-scanner-executor** | Live trading real: triagem→gates→execução (SPOT+FUTURES). Mentor LLM NAO faz parte deste caminho hoje (ver tabela de estado acima) |
 | **trailing-stop-monitor** | Atualiza peaks, empurra SL (motor real; motor unificado em shadow ao lado) |
 | **position-risk** | Guarda de risco por posição aberta |
 | **short-scanner** | Sweep TORI_SHORT com confluence real |
@@ -161,11 +163,13 @@ Auto-tunes parâmetros de detecção com bounds duros:
 - Parâmetros de **RISCO** (SL, cap) → **NUNCA automático** (owner gate)
 - Parâmetros de **DETECÇÃO** (thresholds, confluence) → auto-aprova com auditoria
 
-### 4. Mentor LLM Grading (Diário ~06h)
-Grada decisões de 48h+ contra o mercado real:
-- Trade aprovado mas virou -5% → credibilidade LLM -5
-- Trade rejeitado mas seria +10% → credibilidade LLM -5
-- Placar atualizado no prompt ([CALIBRACAO])
+### 4. Mentor LLM Grading (Diário ~06h) — ⚠️ NAO ATIVO
+Descrito originalmente como grading de decisões via LLM, mas o job real
+("Kelly Graduation Audit" → `scripts/daily_kelly_audit.ps1`) é puramente
+estatístico (Kelly criterion), sem chamada a LLM. Nenhum "placar de
+credibilidade LLM" é calculado hoje — decisão de entrada não passa por
+avaliação de LLM em nenhum ponto do pipeline real (ver tabela de estado
+no topo do documento).
 
 ---
 

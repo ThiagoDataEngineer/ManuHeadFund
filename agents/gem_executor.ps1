@@ -43,6 +43,12 @@ $__enrichmentPath = Join-Path $PSScriptRoot "lib_mentor_supabase_enrichment.ps1"
 if (Test-Path $__enrichmentPath) { . $__enrichmentPath }
 $__boosterPath = Join-Path $PSScriptRoot "lib_signal_booster_llm.ps1"
 if (Test-Path $__boosterPath) { . $__boosterPath }
+# 2026-07-24: Mentor LLM shadow mode (Fase 0 do plano de integracao) -- so
+# carrega orchestrator_v6.ps1 (Triagem+Mesa+Mentor via Invoke-V6Cascade) para
+# LOGAR a opiniao do LLM, nunca para influenciar a execucao real. Ver
+# Invoke-MentorShadowObservation abaixo e lib_mentor_shadow.ps1.
+$__mentorShadowPath = Join-Path $PSScriptRoot "lib_mentor_shadow.ps1"
+if (Test-Path $__mentorShadowPath) { . $__mentorShadowPath }
 # 2026-05-21: B9 cache TTL (Add-GemRejection + Test-GemRecentlyRejected).
 # Bug encontrado: scan_master dot-sourced gem_executor mas NAO lib_gem_decision_cache,
 # entao Get-Command Test-GemRecentlyRejected returnava null silently -> cache check
@@ -1862,6 +1868,43 @@ function Invoke-GemExecute {
         }
     }
 
+    # ── HARD CAP DE RISCO 3%/TRADE (2026-07-24, blueprint audit) ────────────
+    # Achado: o teto de 3% (Regra de Ouro #2) so e' aplicado no caminho
+    # primario de sizing (dynamic_feedback) via normalizacao interna -- os
+    # fallbacks (Kelly/legacy, Add Position cascata 5%, ladder, sizing clamp)
+    # nao reafirmam esse teto de forma centralizada. Este gate roda por
+    # ULTIMO, depois de QUALQUER caminho de sizing ja ter decidido $usd_size,
+    # e clampa (nunca bloqueia o trade -- so reduz o tamanho) se o valor
+    # final exceder 3% do capital atual. Fail-safe: se $capital nao estiver
+    # disponivel aqui por algum motivo, nao clampa (evita falso-positivo por
+    # dado ausente bloquear trade legitimo -- o caminho primario ja aplicou
+    # o teto corretamente na maioria dos casos).
+    if ($capital -gt 0 -and $usd_size -gt 0) {
+        $__hardCapUsd = [math]::Round($capital * 0.03, 2)
+        if ($usd_size -gt $__hardCapUsd) {
+            Write-Host "  [RISK HARD CAP] $mkt usd_size=$usd_size excede 3% do capital ($__hardCapUsd) -- clampado" -ForegroundColor Yellow
+            $usd_size = $__hardCapUsd
+            # $qty precisa refletir o clamp -- e' o que Invoke-OrderRouted usa
+            # de fato pra FUTURES (SPOT usa $usd_size via QuoteAmountUsd direto).
+            if ($price -gt 0) { $qty = [math]::Round($usd_size / $price, 6) }
+        }
+    }
+
+    # ── MENTOR SHADOW OBSERVATION (2026-07-24, Fase 0 do plano) ─────────────
+    # Roda a cascade Triagem->Mesa->Mentor (LLM real) so pra LOGAR a opiniao
+    # dele vs a decisao real ja tomada acima -- nunca influencia $usd_size,
+    # $direction ou bloqueio. No-op total se journal/MENTOR_SHADOW_ENABLED.flag
+    # nao existir. Ver agents/lib_mentor_shadow.ps1.
+    if (Get-Command Invoke-MentorShadowObservation -ErrorAction SilentlyContinue) {
+        try {
+            Invoke-MentorShadowObservation -Market $mkt -RealDirection $direction `
+                -RealPrice $price -RealUsdSize $usd_size -Change24h $gemChange24h `
+                -Regime "$($btcScenario.scenario)"
+        } catch {
+            # observacao nunca afeta execucao
+        }
+    }
+
     # ── ENTRY LOCK (2026-07-23, auditoria "100% integro") ───────────────────
     # 3 motores de execucao real (gem_scanner_executor_live/gem_loop, ambos via
     # esta funcao, + faro_v3_entry.ps1 separado) rodam em paralelo (jobs GH
@@ -1951,10 +1994,28 @@ function Invoke-GemExecute {
             }
         }
         if (-not $spotStopOk) {
-            $__critMsg = "CRITICO: SPOT SL FALHOU apos 3 tentativas -- ${mkt} posicao ABERTA SEM PROTECAO. Ultimo erro: $spotStopLastErr"
-            Write-Host "  $__critMsg" -ForegroundColor Red
+            # 2026-07-24 FIX (blueprint audit): antes so alertava e deixava a
+            # posicao aberta SEM PROTECAO ate intervencao manual -- viola
+            # Regra de Ouro #1 (stop antes de qualquer entrada) na pratica.
+            # Fail-safe real: sem stop condicional confirmado, vende a
+            # posicao a mercado AGORA (nao espera humano ver o Telegram).
+            $__critMsg = "CRITICO: SPOT SL FALHOU apos 3 tentativas -- ${mkt}. Ultimo erro: $spotStopLastErr"
+            Write-Host "  $__critMsg -- fechando posicao a mercado (fail-safe)" -ForegroundColor Red
+            $__emergencyCloseOk = $false
+            $__emergencyCloseErr = ""
+            try {
+                CoinEx-PlaceSpotOrder -Market $mkt -Side "sell" -Type "market" -Amount $filled_qty | Out-Null
+                $__emergencyCloseOk = $true
+            } catch {
+                $__emergencyCloseErr = $_.Exception.Message
+            }
             if (Get-Command Send-TelegramAlert -ErrorAction SilentlyContinue) {
-                try { Send-TelegramAlert -Message "🚨 $__critMsg" | Out-Null } catch {}
+                $__alertMsg = if ($__emergencyCloseOk) {
+                    "🚨 $__critMsg`nPosicao fechada a mercado (fail-safe) -- sem protecao nao ficou aberta."
+                } else {
+                    "🚨🚨 $__critMsg`nFECHAMENTO DE EMERGENCIA TAMBEM FALHOU: $__emergencyCloseErr`nPOSICAO ABERTA SEM PROTECAO -- AGIR MANUALMENTE AGORA."
+                }
+                try { Send-TelegramAlert -Message $__alertMsg | Out-Null } catch {}
             }
         }
     }
@@ -1979,12 +2040,42 @@ function Invoke-GemExecute {
                 Write-Host "  [PROTECAO OK] $mkt SL=$($protect.sl_price) TP=$($protect.tp_price) (validado na corretora)" -ForegroundColor Green
                 try { Send-TelegramAlert -Message "✅ PROTEÇÃO ATIVA: $mkt SL=$($protect.sl_price) TP=$($protect.tp_price)" | Out-Null } catch {}
             } else {
-                Write-Host "  [PROTECAO FALHOU] $mkt sl_set=$($protect.sl_set) tp_set=$($protect.tp_set) -- ALERTA ENVIADO" -ForegroundColor Red
-                try { Send-TelegramAlert -Message "🚨 CRÍTICO: SL/TP FALHOU em $mkt — COLOQUE MANUALMENTE! Entry=$avg_price Stop=$stop_price Target=$tgt_price" | Out-Null } catch {}
+                # 2026-07-24 FIX (blueprint audit): antes so alertava e deixava
+                # a posicao FUTURES aberta SEM PROTECAO (alavancada = risco
+                # maior que SPOT) ate intervencao manual. Fail-safe real:
+                # sem SL/TP confirmado na corretora, fecha a posicao AGORA.
+                Write-Host "  [PROTECAO FALHOU] $mkt sl_set=$($protect.sl_set) tp_set=$($protect.tp_set) -- fechando posicao (fail-safe)" -ForegroundColor Red
+                $__futEmergencyOk = $false
+                $__futEmergencyErr = ""
+                try {
+                    CoinEx-ClosePosition $mkt | Out-Null
+                    $__futEmergencyOk = $true
+                } catch {
+                    $__futEmergencyErr = $_.Exception.Message
+                }
+                $__futAlertMsg = if ($__futEmergencyOk) {
+                    "🚨 CRÍTICO: SL/TP FALHOU em $mkt — posicao FECHADA a mercado (fail-safe, alavancada demais pra ficar sem protecao). Entry=$avg_price Stop=$stop_price Target=$tgt_price"
+                } else {
+                    "🚨🚨 CRÍTICO: SL/TP FALHOU em $mkt E fechamento de emergencia TAMBEM FALHOU ($__futEmergencyErr) — POSICAO ALAVANCADA ABERTA SEM PROTECAO, AGIR MANUALMENTE AGORA! Entry=$avg_price Stop=$stop_price Target=$tgt_price"
+                }
+                try { Send-TelegramAlert -Message $__futAlertMsg | Out-Null } catch {}
             }
         } else {
-            Write-Host "  [CRITICO] Set-PositionProtection NAO CARREGADA! Posição SEM proteção!" -ForegroundColor Red
-            try { Send-TelegramAlert -Message "🚨 CRÍTICO: $mkt ABERTO SEM SL/TP! Lib_position_protection não carregada. COLOQUE MANUALMENTE AGORA!" | Out-Null } catch {}
+            Write-Host "  [CRITICO] Set-PositionProtection NAO CARREGADA! Fechando posicao (fail-safe)!" -ForegroundColor Red
+            $__futEmergencyOk2 = $false
+            $__futEmergencyErr2 = ""
+            try {
+                CoinEx-ClosePosition $mkt | Out-Null
+                $__futEmergencyOk2 = $true
+            } catch {
+                $__futEmergencyErr2 = $_.Exception.Message
+            }
+            $__futAlertMsg2 = if ($__futEmergencyOk2) {
+                "🚨 CRÍTICO: $mkt lib_position_protection não carregada — posicao FECHADA a mercado (fail-safe)."
+            } else {
+                "🚨🚨 CRÍTICO: $mkt lib_position_protection não carregada E fechamento de emergencia FALHOU ($__futEmergencyErr2) — AGIR MANUALMENTE AGORA!"
+            }
+            try { Send-TelegramAlert -Message $__futAlertMsg2 | Out-Null } catch {}
         }
     }
 
