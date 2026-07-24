@@ -23,10 +23,10 @@ Describe "DISTRIBUTION_SHORT Pattern Detection" {
             # primeiros 3 candles (90000), contradizendo "volume_declining".
             $ath = 0.000025
             $candles = @(
-                @{ close = 0.000025; vol = 100000 },    # ATH test 1
-                @{ close = 0.000023; vol = 80000 },     # pullback
-                @{ close = 0.0000246; vol = 50000 },    # ATH test 2 (retest, dentro de 2%, vol menor)
-                @{ close = 0.000022; vol = 85000 }      # pullback again
+                [PSCustomObject]@{ close = 0.000025; vol = 100000 },    # ATH test 1
+                [PSCustomObject]@{ close = 0.000023; vol = 80000 },     # pullback
+                [PSCustomObject]@{ close = 0.0000246; vol = 50000 },    # ATH test 2 (retest, dentro de 2%, vol menor)
+                [PSCustomObject]@{ close = 0.000022; vol = 85000 }      # pullback again
             )
 
             # WHEN: detecting ATH retests
@@ -41,9 +41,9 @@ Describe "DISTRIBUTION_SHORT Pattern Detection" {
         It "Should NOT detect if price makes new ATH (not retest)" {
             $ath = 0.000025
             $candles = @(
-                @{ close = 0.000025; vol = 100000 },
-                @{ close = 0.000023; vol = 80000 },
-                @{ close = 0.000026; vol = 120000 }     # NEW ATH, not retest
+                [PSCustomObject]@{ close = 0.000025; vol = 100000 },
+                [PSCustomObject]@{ close = 0.000023; vol = 80000 },
+                [PSCustomObject]@{ close = 0.000026; vol = 120000 }     # NEW ATH, not retest
             )
 
             $result = Test-ATHRetestPattern -Candles $candles -ATHPrice $ath
@@ -60,10 +60,10 @@ Describe "DISTRIBUTION_SHORT Pattern Detection" {
         It "Should detect when red candles >= green size (distribution)" {
             # GIVEN: recent candles com red ≥ green
             $candles = @(
-                @{ open = 0.000024; close = 0.000020; vol = 50000 },   # RED -20%
-                @{ open = 0.000020; close = 0.000021; vol = 40000 },   # GREEN +5%
-                @{ open = 0.000021; close = 0.000019; vol = 48000 },   # RED -10%
-                @{ open = 0.000019; close = 0.000020; vol = 35000 }    # GREEN +5%
+                [PSCustomObject]@{ open = 0.000024; close = 0.000020; vol = 50000 },   # RED -20%
+                [PSCustomObject]@{ open = 0.000020; close = 0.000021; vol = 40000 },   # GREEN +5%
+                [PSCustomObject]@{ open = 0.000021; close = 0.000019; vol = 48000 },   # RED -10%
+                [PSCustomObject]@{ open = 0.000019; close = 0.000020; vol = 35000 }    # GREEN +5%
             )
 
             # WHEN: analyzing red vs green
@@ -76,9 +76,9 @@ Describe "DISTRIBUTION_SHORT Pattern Detection" {
 
         It "Should NOT detect if green candles dominate" {
             $candles = @(
-                @{ open = 0.000015; close = 0.000020; vol = 80000 },   # GREEN +33%
-                @{ open = 0.000020; close = 0.000025; vol = 90000 },   # GREEN +25%
-                @{ open = 0.000025; close = 0.000024; vol = 20000 }    # red small
+                [PSCustomObject]@{ open = 0.000015; close = 0.000020; vol = 80000 },   # GREEN +33%
+                [PSCustomObject]@{ open = 0.000020; close = 0.000025; vol = 90000 },   # GREEN +25%
+                [PSCustomObject]@{ open = 0.000025; close = 0.000024; vol = 20000 }    # red small
             )
 
             $result = Test-RedVsGreenStructure -Candles $candles -WindowSize 3
@@ -97,9 +97,9 @@ Describe "DISTRIBUTION_SHORT Pattern Detection" {
             $all_candles = @(
                 1..20 | ForEach-Object { @{ vol = 40000 } }  # avg_20 = 40000
             ) + @(
-                @{ vol = 95000 },    # Last 3: high
-                @{ vol = 105000 },
-                @{ vol = 98000 }     # All >= 40000
+                [PSCustomObject]@{ vol = 95000 },    # Last 3: high
+                [PSCustomObject]@{ vol = 105000 },
+                [PSCustomObject]@{ vol = 98000 }     # All >= 40000
             )
 
             # WHEN: checking volume
@@ -129,10 +129,10 @@ Describe "DISTRIBUTION_SHORT Pattern Detection" {
         It "Should identify clear support level from recent lows" {
             # GIVEN: candles com padrão de support
             $candles = @(
-                @{ low = 0.000010; high = 0.000025 },
-                @{ low = 0.000011; high = 0.000024 },
-                @{ low = 0.000010; high = 0.000023 },  # touched same low 2x = support
-                @{ low = 0.0000105; high = 0.000022 }
+                [PSCustomObject]@{ low = 0.000010; high = 0.000025 },
+                [PSCustomObject]@{ low = 0.000011; high = 0.000024 },
+                [PSCustomObject]@{ low = 0.000010; high = 0.000023 },  # touched same low 2x = support
+                [PSCustomObject]@{ low = 0.0000105; high = 0.000022 }
             )
 
             # WHEN: identifying support
@@ -154,9 +154,9 @@ Describe "DISTRIBUTION_SHORT Pattern Detection" {
             $support = 0.000010
 
             $candles = @(
-                @{ close = 0.0000105; vol = 50000 },
-                @{ close = 0.0000102; vol = 55000 },
-                @{ close = 0.0000098; vol = 120000 }   # BREAKS support, high vol
+                [PSCustomObject]@{ close = 0.0000105; vol = 50000 },
+                [PSCustomObject]@{ close = 0.0000102; vol = 55000 },
+                [PSCustomObject]@{ close = 0.0000098; vol = 120000 }   # BREAKS support, high vol
             )
 
             # WHEN: checking for entry
@@ -172,9 +172,9 @@ Describe "DISTRIBUTION_SHORT Pattern Detection" {
             $support = 0.000010
 
             $candles = @(
-                @{ close = 0.0000105; vol = 50000 },
-                @{ close = 0.0000102; vol = 50000 },
-                @{ close = 0.0000098; vol = 20000 }    # breaks but LOW volume
+                [PSCustomObject]@{ close = 0.0000105; vol = 50000 },
+                [PSCustomObject]@{ close = 0.0000102; vol = 50000 },
+                [PSCustomObject]@{ close = 0.0000098; vol = 20000 }    # breaks but LOW volume
             )
 
             $result = Test-SupportBreakEntry -Candles $candles -SupportLevel $support
@@ -273,18 +273,18 @@ Describe "DISTRIBUTION_SHORT Pattern Detection" {
             # Adicionado "low" coerente em cada candle, com suporte real
             # testado 2x em 0.000028 (dias 17-18) que o dump (dia 20-21) rompe.
             $bonk_candles = @(
-                @{ date = "2024-06-15"; close = 0.00003; vol = 200000; low = 0.0000298 },
-                @{ date = "2024-06-16"; close = 0.000032; vol = 250000; low = 0.0000318 },   # ATH
-                @{ date = "2024-06-16b"; close = 0.0000316; vol = 150000; low = 0.0000314 }, # ATH retest (dentro de 2%)
-                @{ date = "2024-06-17"; close = 0.000030; vol = 180000; open = 0.000031; low = 0.000028 },  # RED, suporte teste 1
-                @{ date = "2024-06-18"; close = 0.000029; vol = 190000; open = 0.000030; low = 0.000028 },  # RED, suporte teste 2
+                [PSCustomObject]@{ date = "2024-06-15"; close = 0.00003; vol = 200000; low = 0.0000298 },
+                [PSCustomObject]@{ date = "2024-06-16"; close = 0.000032; vol = 250000; low = 0.0000318 },   # ATH
+                [PSCustomObject]@{ date = "2024-06-16b"; close = 0.0000316; vol = 150000; low = 0.0000314 }, # ATH retest (dentro de 2%)
+                [PSCustomObject]@{ date = "2024-06-17"; close = 0.000030; vol = 180000; open = 0.000031; low = 0.000028 },  # RED, suporte teste 1
+                [PSCustomObject]@{ date = "2024-06-18"; close = 0.000029; vol = 190000; open = 0.000030; low = 0.000028 },  # RED, suporte teste 2
                 # 2026-07-23 FIX (cont.): Test-SupportBreakEntry usa
                 # "Select-Object -First 1" do PRIMEIRO candle (dos ultimos 3)
                 # que quebra o suporte -- e o dia 19, nao o dia 20 como
                 # presumido inicialmente. Volume realocado pro dia 19.
-                @{ date = "2024-06-19"; close = 0.000025; vol = 1600000; open = 0.000028; low = 0.0000240 }, # RED, quebra suporte + vol confirma (break candle real)
-                @{ date = "2024-06-20"; close = 0.000020; vol = 700000; open = 0.000025; low = 0.0000190 },  # DUMP (capitulacao)
-                @{ date = "2024-06-21"; close = 0.000015; vol = 900000; open = 0.000020; low = 0.0000140 }  # Cascata (RED)
+                [PSCustomObject]@{ date = "2024-06-19"; close = 0.000025; vol = 1600000; open = 0.000028; low = 0.0000240 }, # RED, quebra suporte + vol confirma (break candle real)
+                [PSCustomObject]@{ date = "2024-06-20"; close = 0.000020; vol = 700000; open = 0.000025; low = 0.0000190 },  # DUMP (capitulacao)
+                [PSCustomObject]@{ date = "2024-06-21"; close = 0.000015; vol = 900000; open = 0.000020; low = 0.0000140 }  # Cascata (RED)
             )
 
             $result = Detect-DistributionShortPattern -Market "BONKUSDT" -Candles $bonk_candles
@@ -312,14 +312,14 @@ Describe "DISTRIBUTION_SHORT Pattern Detection" {
             # ATH retest, suporte testado 2x em 0.70, break com vol
             # confirmado no PRIMEIRO candle dos ultimos 3 que fecha < suporte.
             $skyai_candles = @(
-                @{ date = "2024-04-09"; close = 0.80; vol = 200000; low = 0.79 },              # ATH
-                @{ date = "2024-04-09b"; close = 0.792; vol = 190000; low = 0.785 },           # ATH retest (~1%)
-                @{ date = "2024-04-10"; close = 0.75; vol = 200000; open = 0.78; low = 0.70 }, # RED, suporte teste 1
-                @{ date = "2024-04-11"; close = 0.72; vol = 210000; open = 0.76; low = 0.70 }, # RED, suporte teste 2
-                @{ date = "2024-04-12"; close = 0.68; vol = 210000; open = 0.74; low = 0.67 }, # RED
-                @{ date = "2024-04-13"; close = 0.60; vol = 2000000; open = 0.70; low = 0.60 }, # RED, quebra suporte + vol confirma (break candle real)
-                @{ date = "2024-04-14"; close = 0.55; vol = 900000; open = 0.60; low = 0.53 },  # DUMP
-                @{ date = "2024-04-15"; close = 0.45; vol = 1000000; open = 0.55; low = 0.44 }  # Cascata
+                [PSCustomObject]@{ date = "2024-04-09"; close = 0.80; vol = 200000; low = 0.79 },              # ATH
+                [PSCustomObject]@{ date = "2024-04-09b"; close = 0.792; vol = 190000; low = 0.785 },           # ATH retest (~1%)
+                [PSCustomObject]@{ date = "2024-04-10"; close = 0.75; vol = 200000; open = 0.78; low = 0.70 }, # RED, suporte teste 1
+                [PSCustomObject]@{ date = "2024-04-11"; close = 0.72; vol = 210000; open = 0.76; low = 0.70 }, # RED, suporte teste 2
+                [PSCustomObject]@{ date = "2024-04-12"; close = 0.68; vol = 210000; open = 0.74; low = 0.67 }, # RED
+                [PSCustomObject]@{ date = "2024-04-13"; close = 0.60; vol = 2000000; open = 0.70; low = 0.60 }, # RED, quebra suporte + vol confirma (break candle real)
+                [PSCustomObject]@{ date = "2024-04-14"; close = 0.55; vol = 900000; open = 0.60; low = 0.53 },  # DUMP
+                [PSCustomObject]@{ date = "2024-04-15"; close = 0.45; vol = 1000000; open = 0.55; low = 0.44 }  # Cascata
             )
 
             $result = Detect-DistributionShortPattern -Market "SKYAIUSDT" -Candles $skyai_candles
