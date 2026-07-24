@@ -544,7 +544,15 @@ function Test-ProximityAlertRecent {
         try {
             $j = $line | ConvertFrom-Json
             if ($j.market -ne $Market) { continue }
-            $ts = ([datetimeoffset]::Parse($j.ts_utc)).UtcDateTime
+            # 2026-07-23 FIX: mesmo bug de _Parse-ToriProximityPayload --
+            # ConvertFrom-Json promove ts_utc ISO 8601 pra [datetime]
+            # (perde 'Z'/offset), quebrando [datetimeoffset]::Parse() se
+            # coagido de volta pra string.
+            $ts = if ($j.ts_utc -is [datetime]) {
+                [datetime]::SpecifyKind($j.ts_utc, [System.DateTimeKind]::Utc)
+            } else {
+                ([datetimeoffset]::Parse($j.ts_utc)).UtcDateTime
+            }
             if ($ts -ge $cutoff) { return $true }
         } catch {}
     }
@@ -594,9 +602,22 @@ function _Parse-ToriProximityPayload {
     if (-not $j -or -not $j.ts_utc) {
         return [PSCustomObject]@{ fresh = $false; reason = "no_timestamp"; markets = @{} }
     }
-    # PS 5.1: [datetime]::Parse retorna Kind=Local pra string com 'Z' -> bug TZ.
-    # DateTimeOffset.Parse respeita o offset embutido, UtcDateTime garante Kind=Utc.
-    $ts = ([datetimeoffset]::Parse($j.ts_utc)).UtcDateTime
+    # 2026-07-23 FIX: ConvertFrom-Json auto-detecta strings ISO 8601 e as
+    # promove pra [datetime] (perde 'Z'/offset e precisao de fracao de
+    # segundo no processo -- Kind vira Unspecified). Passar esse [datetime]
+    # pra [datetimeoffset]::Parse() coage de volta pra string usando o
+    # formato do locale (MM/dd/yyyy HH:mm:ss, sem timezone), que sempre
+    # falha o parse -- bug real de producao, nao so de teste (scanner cron
+    # grava/le esses snapshots a cada 15min). Se $j.ts_utc ja veio como
+    # [datetime] (JSON local via ConvertFrom-Json), usa direto; so faz
+    # Parse de string quando realmente e string (ex: linha de Supabase).
+    $ts = if ($j.ts_utc -is [datetime]) {
+        [datetime]::SpecifyKind($j.ts_utc, [System.DateTimeKind]::Utc)
+    } else {
+        # PS 5.1: [datetime]::Parse retorna Kind=Local pra string com 'Z' -> bug TZ.
+        # DateTimeOffset.Parse respeita o offset embutido, UtcDateTime garante Kind=Utc.
+        ([datetimeoffset]::Parse($j.ts_utc)).UtcDateTime
+    }
     $ageMin = ((Get-Date).ToUniversalTime() - $ts).TotalMinutes
     if ($ageMin -gt $MaxAgeMinutes) {
         $ageRounded = [math]::Round($ageMin, 1)
