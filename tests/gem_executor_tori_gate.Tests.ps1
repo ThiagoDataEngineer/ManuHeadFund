@@ -112,6 +112,30 @@ function Test-GemSafetyGuards {
 }
 function Add-OpenGemPosition { param($Market, $SizeUsdt, $StateFilePath) }
 
+# 2026-07-23 FIX: gates de pump/breadth/confluence/market-info foram
+# adicionados ao pipeline real de gem_executor.ps1 DEPOIS deste arquivo
+# (2026-06-04) -- sem mock, batem API externa indisponivel em teste e
+# bloqueiam ANTES do Tori gate (visivel como "BLOQUEADO GATES:
+# pump_long_blocked" no output), derrubando os testes 1/2/6/8 mesmo com
+# Tori mockado corretamente. Mesmo padrao de liberacao ja usado no
+# segundo Describe deste arquivo ("Leverage real", linhas ~266-301).
+function CoinEx-GetMarketInfo {
+    param([string]$Market)
+    return [PSCustomObject]@{ isSafe = $true; status = "active"; notices = @() }
+}
+function Test-PumpDumpGate {
+    param([string]$Market, [hashtable]$Metadata = @{}, [double]$DistFromPeakThreshold = -5.0)
+    return [PSCustomObject]@{ allow_long = $true; allow_short = $true; pump_class = "natural_uptrend"; reason = "test_stub" }
+}
+function Test-ParallelBreadthGate {
+    param([string]$BtcScenario = "UNKNOWN", [bool]$BtcAllowLong = $true, [bool]$BtcAllowShort = $true)
+    return [PSCustomObject]@{ allow_long = $true; allow_short = $true; breadth_trend = "neutral"; breadth_pct = 50 }
+}
+function Test-ToriConfluence {
+    param([string]$Market, [string]$SetupType = "LONG", [int]$TimeframeMinutes = 60, [double]$Price = 0, [int]$TimeoutSeconds = 8)
+    return [PSCustomObject]@{ allows = $true; confluence_score = 85; signals_fired = @("test_stub"); reason = "pass" }
+}
+
 # Wrap Calculate-StopTarget para registrar quando foi chamado
 $script:__realCalc = ${function:Calculate-StopTarget}
 function Calculate-StopTarget {
