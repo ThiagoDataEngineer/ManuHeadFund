@@ -90,12 +90,18 @@ Describe "Get-TrendlineGeometry -- normalizacao de escala" {
     }
 
     It "MinGapCandles customizado e respeitado" {
+        # 2026-07-24 FIX: "(Get-TrendlineGeometry ...).Count" sem @() externo
+        # vaza o objeto cru quando a funcao retorna exatamente 1 candidata
+        # (bug array-of-one via function return, ver
+        # feedback_array_of_one_function_return_unwrap_bug) -- .Count vinha
+        # vazio/$null em vez de 1. Todos os outros testes deste arquivo ja
+        # envolvem a chamada com @() externo; este era o unico sem.
         $pts = @(
             [PSCustomObject]@{ price=100.0; barsAgo=10 }
             [PSCustomObject]@{ price=105.0; barsAgo=6 }   # gap=4
         )
-        (Get-TrendlineGeometry -Points $pts -MinGapCandles 6).Count | Should Be 0
-        (Get-TrendlineGeometry -Points $pts -MinGapCandles 3).Count | Should Be 1
+        @(Get-TrendlineGeometry -Points $pts -MinGapCandles 6).Count | Should Be 0
+        @(Get-TrendlineGeometry -Points $pts -MinGapCandles 3).Count | Should Be 1
     }
 }
 
