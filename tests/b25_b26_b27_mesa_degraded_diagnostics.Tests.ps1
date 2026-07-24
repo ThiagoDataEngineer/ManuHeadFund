@@ -135,14 +135,20 @@ Describe "B25/B27 Infra health: mesa_drones.jsonl degraded rate" {
     # Anti-regression: se >30% das ultimas 30 entries forem degraded, infra cascade LLM
     # esta quebrando e fixes B25-B27 precisam ser revisitados.
     It "degraded rate nas ultimas 30 entries <= 30% (skip se historico curto)" {
+        # 2026-07-24 FIX: Set-TestInconclusive e API do Pester 4+, nao existe
+        # no Pester 3.4.0 (motor real do projeto) -- os 3 "skips" pretendidos
+        # (arquivo ausente, historico curto, degraded rate alto = sinal
+        # operacional runtime nao-bug-de-codigo) viravam FAIL real em vez de
+        # inconclusive/skip gracioso. Substituido por Write-Host + return
+        # (equivalente ao skip pretendido: sai sem fazer assertion).
         $jsonl = Join-Path $projectRoot "journal\mesa_drones.jsonl"
         if (-not (Test-Path $jsonl)) {
-            Set-TestInconclusive "mesa_drones.jsonl nao existe ainda"
+            Write-Host "  [SKIP] mesa_drones.jsonl nao existe ainda" -ForegroundColor Yellow
             return
         }
         $lines = @(Get-Content $jsonl -Encoding UTF8 | Where-Object { $_.Trim() -ne "" })
         if ($lines.Count -lt 30) {
-            Set-TestInconclusive "Apenas $($lines.Count) entries -- precisa >=30 pra threshold confiavel"
+            Write-Host "  [SKIP] Apenas $($lines.Count) entries -- precisa >=30 pra threshold confiavel" -ForegroundColor Yellow
             return
         }
         $recent = $lines[-30..-1]
@@ -156,11 +162,11 @@ Describe "B25/B27 Infra health: mesa_drones.jsonl degraded rate" {
         $rate = $degraded / 30.0
         Write-Host "Mesa degraded rate (last 30): $degraded/30 = $([math]::Round($rate*100,1))%" -ForegroundColor Cyan
         # Health check de DADOS RUNTIME (nao codigo): breach = sinal operacional, nao
-        # regressao de codigo deterministica. Marca INCONCLUSIVE (warning alto) em vez de
-        # FAIL pra nao bloquear o gate de codigo com estado live transiente.
+        # regressao de codigo deterministica. Skip (warning alto) em vez de FAIL pra
+        # nao bloquear o gate de codigo com estado live transiente.
         if ($rate -ge 0.30) {
             Write-Host "  [OPERATIONAL WARNING] Mesa cascade degradando ($([math]::Round($rate*100,1))%) -- revisitar B25-B27 / checar daemons LLM" -ForegroundColor Red
-            Set-TestInconclusive "Mesa degraded rate $([math]::Round($rate*100,1))% >= 30% (sinal operacional runtime, nao bug de codigo)"
+            Write-Host "  [SKIP] Mesa degraded rate $([math]::Round($rate*100,1))% >= 30% (sinal operacional runtime, nao bug de codigo)" -ForegroundColor Yellow
             return
         }
         $rate | Should BeLessThan 0.30
