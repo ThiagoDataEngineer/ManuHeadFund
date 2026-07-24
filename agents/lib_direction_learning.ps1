@@ -196,9 +196,13 @@ function Get-SnapshotDate {
         $ed = "$($Snapshot.entry_date)".Trim()
         if ($ed -match '^(\d{4})-(\d{2})-(\d{2})') { return "$($Matches[1])-$($Matches[2])-$($Matches[3])" }
     }
-    # 2) deriva do ts
-    if ($Snapshot.PSObject.Properties['ts'] -and $Snapshot.ts) {
-        $ts = "$($Snapshot.ts)".Trim()
+    # 2) deriva do ts (ou entry_ts -- schema real de trade_outcomes.jsonl
+    # usa entry_ts, nao ts nem entry_date; ver ConvertTo-SupabaseOutcome)
+    $rawTs = if ($Snapshot.PSObject.Properties['ts'] -and $Snapshot.ts) { $Snapshot.ts }
+             elseif ($Snapshot.PSObject.Properties['entry_ts'] -and $Snapshot.entry_ts) { $Snapshot.entry_ts }
+             else { $null }
+    if ($rawTs) {
+        $ts = "$rawTs".Trim()
         # ISO: 2026-06-09T...
         if ($ts -match '^(\d{4})-(\d{2})-(\d{2})') { return "$($Matches[1])-$($Matches[2])-$($Matches[3])" }
         # US locale: MM/dd/yyyy ...
@@ -239,7 +243,13 @@ function Join-SignalOutcomes {
     foreach ($o in $Outcomes) {
         if (-not $o) { continue }
         if ($o.PSObject.Properties['trade_id'] -and $o.trade_id) { $byId["$($o.trade_id)"] = $o }
-        $mkt = if ($o.PSObject.Properties['market']) { "$($o.market)" } else { "" }
+        # 2026-07-23 FIX: schema real de trade_outcomes.jsonl usa "symbol",
+        # nao "market" (ver ConvertTo-SupabaseOutcome) -- Join-SignalOutcomes
+        # nunca casava nenhum outcome real, motor de aprendizado direcional
+        # nunca aprendia de fato em producao (0 matches sempre).
+        $mkt = if ($o.PSObject.Properties['market'] -and $o.market) { "$($o.market)" }
+               elseif ($o.PSObject.Properties['symbol'] -and $o.symbol) { "$($o.symbol)" }
+               else { "" }
         $dInt = _DateToInt (Get-SnapshotDate -Snapshot $o)
         if ($mkt -and $null -ne $dInt) {
             if (-not $byMkt.ContainsKey($mkt)) { $byMkt[$mkt] = @() }
@@ -253,7 +263,9 @@ function Join-SignalOutcomes {
     $consumed = @{}
     function _OutcomeKey($o) {
         if ($o.PSObject.Properties['trade_id'] -and $o.trade_id) { return "id:$($o.trade_id)" }
-        $m = if ($o.PSObject.Properties['market']) { "$($o.market)" } else { "?" }
+        $m = if ($o.PSObject.Properties['market'] -and $o.market) { "$($o.market)" }
+             elseif ($o.PSObject.Properties['symbol'] -and $o.symbol) { "$($o.symbol)" }
+             else { "?" }
         $d = Get-SnapshotDate -Snapshot $o
         return "$m|$d"
     }
