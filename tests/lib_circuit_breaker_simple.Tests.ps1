@@ -5,6 +5,11 @@ $agentsDir = Join-Path (Split-Path -Parent $PSScriptRoot) "agents"
 
 $testJournal = Join-Path $PSScriptRoot "test_journal"
 if (-not (Test-Path $testJournal)) { mkdir $testJournal | Out-Null }
+# 2026-07-23 FIX: Set-CircuitBreakerPause/Reset-CircuitBreaker usam
+# $global:JOURNAL_DIR (sem parametro -JournalDir), nao $testJournal local
+# -- sem isso, os testes de flag liam/escreviam no journal/ real do
+# projeto, nao no isolado de teste.
+$global:JOURNAL_DIR = $testJournal
 
 Describe "CircuitBreaker: Get-DailyPnL" {
     It "retorna 0 se arquivo não existe" {
@@ -15,8 +20,8 @@ Describe "CircuitBreaker: Get-DailyPnL" {
     It "soma PnL de hoje" {
         $today = (Get-Date).Date.ToString("yyyy-MM-dd")
         $outcomeFile = Join-Path $testJournal "trade_outcomes.jsonl"
-        @{ exit_date=$today; pnl_usd=50.0 } | ConvertTo-Json | Add-Content $outcomeFile
-        @{ exit_date=$today; pnl_usd=30.0 } | ConvertTo-Json | Add-Content $outcomeFile
+        @{ exit_date=$today; pnl_usd=50.0 } | ConvertTo-Json -Compress | Add-Content $outcomeFile
+        @{ exit_date=$today; pnl_usd=30.0 } | ConvertTo-Json -Compress | Add-Content $outcomeFile
 
         $pnl = Get-DailyPnL -JournalDir $testJournal
         $pnl | Should Be 80.0
@@ -28,8 +33,8 @@ Describe "CircuitBreaker: Get-DailyPnL" {
         $today = (Get-Date).Date.ToString("yyyy-MM-dd")
         $yesterday = (Get-Date).AddDays(-1).Date.ToString("yyyy-MM-dd")
         $outcomeFile = Join-Path $testJournal "trade_outcomes.jsonl"
-        @{ exit_date=$yesterday; pnl_usd=100.0 } | ConvertTo-Json | Add-Content $outcomeFile
-        @{ exit_date=$today; pnl_usd=50.0 } | ConvertTo-Json | Add-Content $outcomeFile
+        @{ exit_date=$yesterday; pnl_usd=100.0 } | ConvertTo-Json -Compress | Add-Content $outcomeFile
+        @{ exit_date=$today; pnl_usd=50.0 } | ConvertTo-Json -Compress | Add-Content $outcomeFile
 
         $pnl = Get-DailyPnL -JournalDir $testJournal
         $pnl | Should Be 50.0
@@ -38,13 +43,17 @@ Describe "CircuitBreaker: Get-DailyPnL" {
     }
 
     It "trata malformed JSON gracefully" {
+        # 2026-07-23 FIX: "Add-Content $outcomeFile @{...} | ConvertTo-Json"
+        # tinha a ordem do pipeline errada -- gravava o hashtable como
+        # string bruta (Add-Content aplicado ANTES do ConvertTo-Json, que
+        # so recebia o $null de retorno do Add-Content).
         $outcomeFile = Join-Path $testJournal "trade_outcomes.jsonl"
         Add-Content $outcomeFile "{ invalid json"
-        Add-Content $outcomeFile @{ exit_date=((Get-Date).Date.ToString("yyyy-MM-dd")); pnl_usd=10.0 } | ConvertTo-Json
+        @{ exit_date=((Get-Date).Date.ToString("yyyy-MM-dd")); pnl_usd=10.0 } | ConvertTo-Json -Compress | Add-Content $outcomeFile
 
         # Não deve lançar erro
         $pnl = Get-DailyPnL -JournalDir $testJournal
-        $pnl | Should BeGreaterOrEqual 0
+        ($pnl -ge 0) | Should Be $true
 
         Remove-Item $outcomeFile
     }
