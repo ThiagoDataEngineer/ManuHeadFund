@@ -16,10 +16,10 @@ Describe "PULL_BACK_RECOVERY Pattern Detection" {
         It "Should detect pump when price 5x in 3 days" {
             # GIVEN: 3-day candle sequence (1h timeframe simulated)
             $candles = @(
-                @{ close = 0.000001; vol = 1000 },      # Day 1 low
-                @{ close = 0.000002; vol = 3000 },      # +100%
-                @{ close = 0.000004; vol = 5000 },      # +100%
-                @{ close = 0.000005; vol = 2000 }       # +25% (5x total)
+                [PSCustomObject]@{ close = 0.000001; vol = 1000 },      # Day 1 low
+                [PSCustomObject]@{ close = 0.000002; vol = 3000 },      # +100%
+                [PSCustomObject]@{ close = 0.000004; vol = 5000 },      # +100%
+                [PSCustomObject]@{ close = 0.000005; vol = 2000 }       # +25% (5x total)
             )
 
             # WHEN: detecting pump
@@ -32,9 +32,9 @@ Describe "PULL_BACK_RECOVERY Pattern Detection" {
 
         It "Should NOT detect pump when price 2x (below threshold)" {
             $candles = @(
-                @{ close = 0.000001; vol = 1000 },
-                @{ close = 0.000001.5; vol = 1500 },
-                @{ close = 0.000002; vol = 1200 }
+                [PSCustomObject]@{ close = 0.000001; vol = 1000 },
+                [PSCustomObject]@{ close = 0.000001.5; vol = 1500 },
+                [PSCustomObject]@{ close = 0.000002; vol = 1200 }
             )
 
             $result = Test-PumpDetected -Candles $candles -MinPumpMultiplier 5
@@ -54,11 +54,11 @@ Describe "PULL_BACK_RECOVERY Pattern Detection" {
             $support = 0.000001
 
             $candles = @(
-                @{ close = $support; vol = 1000 },
-                @{ close = 0.000002; vol = 3000 },
-                @{ close = 0.000004; vol = 5000 },      # pump high
-                @{ close = 0.000003; vol = 2000 },      # pullback start
-                @{ close = 0.00000102; vol = 1500 }    # tests support ±2%
+                [PSCustomObject]@{ close = $support; vol = 1000 },
+                [PSCustomObject]@{ close = 0.000002; vol = 3000 },
+                [PSCustomObject]@{ close = 0.000004; vol = 5000 },      # pump high
+                [PSCustomObject]@{ close = 0.000003; vol = 2000 },      # pullback start
+                [PSCustomObject]@{ close = 0.00000102; vol = 1500 }    # tests support ±2%
             )
 
             # WHEN: detecting pullback
@@ -78,10 +78,10 @@ Describe "PULL_BACK_RECOVERY Pattern Detection" {
             # suporte (preco sempre >2% acima dele).
             $support = 0.000001
             $candles = @(
-                @{ close = 0.0000015; vol = 1000 },
-                @{ close = 0.000002; vol = 3000 },
-                @{ close = 0.000004; vol = 5000 },
-                @{ close = 0.000003; vol = 2000 }       # pullback but doesn't reach support
+                [PSCustomObject]@{ close = 0.0000015; vol = 1000 },
+                [PSCustomObject]@{ close = 0.000002; vol = 3000 },
+                [PSCustomObject]@{ close = 0.000004; vol = 5000 },
+                [PSCustomObject]@{ close = 0.000003; vol = 2000 }       # pullback but doesn't reach support
             )
 
             $result = Test-PullbackDetected -Candles $candles -SupportLevel $support
@@ -99,12 +99,12 @@ Describe "PULL_BACK_RECOVERY Pattern Detection" {
             $avg_vol_pump = 3000
 
             $candles = @(
-                @{ close = 0.000001; vol = 1000 },
-                @{ close = 0.000002; vol = 3000 },
-                @{ close = 0.000004; vol = 5000 },      # pump
-                @{ close = 0.000001.5; vol = 1000 },    # pullback low vol
-                @{ close = 0.000002; vol = 6000 },      # RECOVERY vol spike
-                @{ close = 0.000003; vol = 7000 }       # sustained
+                [PSCustomObject]@{ close = 0.000001; vol = 1000 },
+                [PSCustomObject]@{ close = 0.000002; vol = 3000 },
+                [PSCustomObject]@{ close = 0.000004; vol = 5000 },      # pump
+                [PSCustomObject]@{ close = 0.000001.5; vol = 1000 },    # pullback low vol
+                [PSCustomObject]@{ close = 0.000002; vol = 6000 },      # RECOVERY vol spike
+                [PSCustomObject]@{ close = 0.000003; vol = 7000 }       # sustained
             )
 
             $result = Test-VolumeRecovery -Candles $candles -PullbackIndex 3
@@ -124,11 +124,11 @@ Describe "PULL_BACK_RECOVERY Pattern Detection" {
             $pullback_low = 0.00000102
 
             $candles = @(
-                @{ close = 0.000001; vol = 1000 },
-                @{ close = 0.000002; vol = 3000 },
-                @{ close = 0.000005; vol = 5000 },      # pump high
-                @{ close = 0.000003; vol = 2000 },      # pullback high
-                @{ close = 0.00000102; vol = 1500 }    # pullback low
+                [PSCustomObject]@{ close = 0.000001; vol = 1000 },
+                [PSCustomObject]@{ close = 0.000002; vol = 3000 },
+                [PSCustomObject]@{ close = 0.000005; vol = 5000 },      # pump high
+                [PSCustomObject]@{ close = 0.000003; vol = 2000 },      # pullback high
+                [PSCustomObject]@{ close = 0.00000102; vol = 1500 }    # pullback low
             )
 
             $result = Get-EntryZone -Candles $candles -PullbackHighPrice $pullback_high
@@ -263,13 +263,13 @@ Describe "PULL_BACK_RECOVERY Pattern Detection" {
             # o preco base pra atingir 5x+ real, mantendo o shape da serie
             # (baixa -> pump -> pullback -> recovery).
             $pepe_candles = @(
-                @{ date = "2024-05-01"; close = 0.000004; vol = 45000 },
-                @{ date = "2024-05-02"; close = 0.000012; vol = 120000 },
-                @{ date = "2024-05-03"; close = 0.000022; vol = 250000 },   # pump peak (5.5x)
-                @{ date = "2024-05-04"; close = 0.000015; vol = 80000 },    # pullback start
-                @{ date = "2024-05-05"; close = 0.000010; vol = 50000 },    # pullback low
-                @{ date = "2024-05-06"; close = 0.000013; vol = 150000 },   # RECOVERY spike
-                @{ date = "2024-05-07"; close = 0.000016; vol = 180000 }
+                [PSCustomObject]@{ date = "2024-05-01"; close = 0.000004; vol = 45000 },
+                [PSCustomObject]@{ date = "2024-05-02"; close = 0.000012; vol = 120000 },
+                [PSCustomObject]@{ date = "2024-05-03"; close = 0.000022; vol = 250000 },   # pump peak (5.5x)
+                [PSCustomObject]@{ date = "2024-05-04"; close = 0.000015; vol = 80000 },    # pullback start
+                [PSCustomObject]@{ date = "2024-05-05"; close = 0.000010; vol = 50000 },    # pullback low
+                [PSCustomObject]@{ date = "2024-05-06"; close = 0.000013; vol = 150000 },   # RECOVERY spike
+                [PSCustomObject]@{ date = "2024-05-07"; close = 0.000016; vol = 180000 }
             )
 
             $result = Detect-PullbackRecoveryPattern -Market "PEPOUSDT" -Candles $pepe_candles
@@ -287,13 +287,13 @@ Describe "PULL_BACK_RECOVERY Pattern Detection" {
     Context "Real Data BONK" {
         It "Should detect pullback recovery pattern in BONK 2024" {
             $bonk_candles = @(
-                @{ date = "2024-03-01"; close = 0.00001; vol = 30000 },
-                @{ date = "2024-03-02"; close = 0.00002; vol = 100000 },
-                @{ date = "2024-03-03"; close = 0.00005; vol = 280000 },    # pump peak
-                @{ date = "2024-03-04"; close = 0.00004; vol = 60000 },     # pullback
-                @{ date = "2024-03-05"; close = 0.00002; vol = 40000 },     # pullback low
-                @{ date = "2024-03-06"; close = 0.00004; vol = 160000 },    # RECOVERY
-                @{ date = "2024-03-07"; close = 0.00006; vol = 200000 }
+                [PSCustomObject]@{ date = "2024-03-01"; close = 0.00001; vol = 30000 },
+                [PSCustomObject]@{ date = "2024-03-02"; close = 0.00002; vol = 100000 },
+                [PSCustomObject]@{ date = "2024-03-03"; close = 0.00005; vol = 280000 },    # pump peak
+                [PSCustomObject]@{ date = "2024-03-04"; close = 0.00004; vol = 60000 },     # pullback
+                [PSCustomObject]@{ date = "2024-03-05"; close = 0.00002; vol = 40000 },     # pullback low
+                [PSCustomObject]@{ date = "2024-03-06"; close = 0.00004; vol = 160000 },    # RECOVERY
+                [PSCustomObject]@{ date = "2024-03-07"; close = 0.00006; vol = 200000 }
             )
 
             $result = Detect-PullbackRecoveryPattern -Market "BONKUSDT" -Candles $bonk_candles
