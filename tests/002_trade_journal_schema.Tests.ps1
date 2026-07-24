@@ -23,13 +23,17 @@ Describe "A2: Trade Journal Schema Extension" {
     }
 
     It "schema contem campos obrigatorios" {
+        # 2026-07-23 FIX: schema real de producao usa id/symbol/direction/
+        # pnl_realized (ver ConvertTo-SupabaseOutcome), nao trade_id/market/
+        # side/pnl_usd como este teste (2026-06-05) assumia -- nunca batia
+        # com o arquivo real desta maquina.
         $lines = @(Get-Content $tradeOutcomesPath | Where-Object { $_.Trim() -ne "" })
 
         $obj = $lines[0] | ConvertFrom-Json
-        ($obj.trade_id -ne $null) | Should Be $true
-        ($obj.market -ne $null) | Should Be $true
-        ($obj.side -ne $null) | Should Be $true
-        ($obj.pnl_usd -ne $null) | Should Be $true
+        ($obj.id -ne $null) | Should Be $true
+        ($obj.symbol -ne $null) | Should Be $true
+        ($obj.direction -ne $null) | Should Be $true
+        ($obj.pnl_realized -ne $null) | Should Be $true
     }
 
     It "pode serializar novo trade com campos estendidos" {

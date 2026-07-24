@@ -12,15 +12,17 @@ Describe "Audit Trail Validation: 10 Trades Cross-Check" {
     }
 
     It "trade_outcomes.jsonl contem trades com gate_results registrados" {
+        # 2026-07-23 FIX: schema real usa id/symbol (ver ConvertTo-SupabaseOutcome),
+        # nao trade_id/market.
         if (Test-Path $tradeOutcomesPath) {
             $lines = @(Get-Content $tradeOutcomesPath | Where-Object { $_.Trim() -ne "" })
-            $lines.Count | Should BeGreaterThan 0
+            ($lines.Count -gt 0) | Should Be $true
 
             # Sample first trade
             if ($lines.Count -gt 0) {
                 $trade = $lines[0] | ConvertFrom-Json
-                ($trade.trade_id -ne $null) | Should Be $true
-                ($trade.market -ne $null) | Should Be $true
+                ($trade.id -ne $null) | Should Be $true
+                ($trade.symbol -ne $null) | Should Be $true
             }
         }
     }
@@ -43,11 +45,12 @@ Describe "Audit Trail Validation: 10 Trades Cross-Check" {
     }
 
     It "nao ha trades com pnl_usd = 0 ou nula (audit trail completeness)" {
+        # 2026-07-23 FIX: schema real usa pnl_realized, nao pnl_usd.
         if (Test-Path $tradeOutcomesPath) {
             $trades = @(Get-Content $tradeOutcomesPath | ConvertFrom-Json)
 
             foreach ($trade in $trades) {
-                ($trade.pnl_usd -ne $null) | Should Be $true
+                ($trade.pnl_realized -ne $null) | Should Be $true
             }
         }
     }
