@@ -17,8 +17,12 @@ Describe "Schema-aware backend selection" {
         Remove-Item env:STATE_STORE_SCHEMA -ErrorAction SilentlyContinue
     }
 
-    It "Get-StateStoreSchema returns 'public' as default" {
-        Get-StateStoreSchema | Should Be "public"
+    It "Get-StateStoreSchema returns 'manuheadfund' as default" {
+        # 2026-07-23 FIX: default mudou de "public" pra "manuheadfund" em
+        # 2026-06-28 (fix critico -- schema "public" compartilhado causou
+        # trailing_positions orfao/congelamento quando app de pagamentos
+        # alterou a tabela). Teste nunca atualizado apos o fix real.
+        Get-StateStoreSchema | Should Be "manuheadfund"
     }
 
     It "Get-StateStoreSchema returns env value when set" {
@@ -39,9 +43,13 @@ Describe "Supabase request headers schema-aware" {
         Remove-Variable -Name STATE_STORE_SCHEMA -Scope Global -ErrorAction SilentlyContinue
     }
 
-    It "Get-SupabaseRequestHeaders returns base headers when schema=public" {
+    It "Get-SupabaseRequestHeaders omite Accept-Profile quando schema explicito='public'" {
+        # 2026-07-23 FIX: default real e "manuheadfund" (nao "public") desde
+        # 2026-06-28 -- sem $global:STATE_STORE_SCHEMA setado, SEMPRE tem
+        # Accept-Profile agora. Teste ajustado pra setar "public" explicito.
         $env:SUPABASE_URL = "https://example.supabase.co"
         $env:SUPABASE_ANON_KEY = "fake_key"
+        $global:STATE_STORE_SCHEMA = "public"
         try {
             $h = Get-SupabaseRequestHeaders -Method "GET"
             $h.headers.ContainsKey("Accept-Profile") | Should Be $false
@@ -89,8 +97,13 @@ Describe "Supabase request headers schema-aware" {
     }
 
     It "Throws clearly when SUPABASE_URL missing" {
-        Remove-Item env:SUPABASE_URL -ErrorAction SilentlyContinue
-        { Get-SupabaseRequestHeaders -Method "GET" } | Should Throw
+        # 2026-07-23 FIX: "{...} | Should Throw" intermitente no Pester 3.4.0
+        # (mesma limitacao vista com ValidateSet -- as vezes nao captura a
+        # excecao corretamente). try/catch manual e deterministico.
+        Remove-Item env:SUPABASE_URL, env:SUPABASE_SERVICE_KEY, env:SUPABASE_ANON_KEY -ErrorAction SilentlyContinue
+        $threw = $false
+        try { Get-SupabaseRequestHeaders -Method "GET" } catch { $threw = $true }
+        $threw | Should Be $true
     }
 }
 

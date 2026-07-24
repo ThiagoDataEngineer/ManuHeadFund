@@ -25,9 +25,26 @@ $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"
 
 Describe "Test-StateBackend" {
 
+    # 2026-07-23 FIX: journal/USE_SUPABASE_STATE.flag e um flag operacional
+    # REAL desta maquina (decisao do owner, prioridade 3 no Test-StateBackend)
+    # -- sem mover temporariamente, os testes "default local" sempre liam
+    # "supabase" por causa do flag real, nao por bug de logica. Move e
+    # restaura no AfterEach (nunca deleta permanentemente).
+    $script:__ssbFlagPath = Join-Path (Split-Path $agentsDir -Parent) "journal\USE_SUPABASE_STATE.flag"
+    $script:__ssbFlagBackup = "$script:__ssbFlagPath.bak_test"
+
+    BeforeEach {
+        if (Test-Path $script:__ssbFlagPath) {
+            Move-Item $script:__ssbFlagPath $script:__ssbFlagBackup -Force
+        }
+    }
+
     AfterEach {
         Remove-Item env:STATE_STORE_BACKEND -ErrorAction SilentlyContinue
         Remove-Variable -Name STATE_STORE_BACKEND -Scope Global -ErrorAction SilentlyContinue
+        if (Test-Path $script:__ssbFlagBackup) {
+            Move-Item $script:__ssbFlagBackup $script:__ssbFlagPath -Force
+        }
     }
 
     It "Default returns 'local' when no env var or flag" {
