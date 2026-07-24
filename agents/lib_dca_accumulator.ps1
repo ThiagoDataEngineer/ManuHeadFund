@@ -37,7 +37,10 @@ function Save-DcaState {
         updated_at = (Get-Date).ToString("o")
     }
 
-    $state | ConvertTo-Json -AsArray | Set-Content (Join-Path $journalDir "dca_state.json") -Encoding UTF8
+    # 2026-07-24 FIX: "-AsArray" nao existe no ConvertTo-Json do PowerShell
+    # 5.1 -- lancava erro real, Set-Content nunca rodava (estado DCA nunca
+    # persistia). $state e um unico objeto, nunca precisou de -AsArray.
+    $state | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $journalDir "dca_state.json") -Encoding UTF8
 }
 
 function Test-DcaShouldBuy {

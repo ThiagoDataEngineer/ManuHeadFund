@@ -50,7 +50,10 @@ try {
                 market = $o.market
                 direction = if ($o.side -eq "buy") { "LONG" } else { "SHORT" }
                 entry_price = [double]$o.price
-                entry_time = [datetime]$o.created_at | ConvertTo-Json -AsArray | ConvertFrom-Json
+                # 2026-07-24 FIX: "-AsArray" nao existe no PowerShell 5.1 --
+                # lancava erro real sempre. O round-trip JSON tambem era
+                # desnecessario: [datetime]$o.created_at ja e o valor certo.
+                entry_time = [datetime]$o.created_at
                 status = "closed"
                 pnl_usd = $cumulativePnL
                 pnl_pct = $pnlPct
@@ -58,7 +61,7 @@ try {
                 leverage = if ($o.leverage) { [double]$o.leverage } else { 1.0 }
                 source = "coinex_api_closed_orders"
                 registered_at = (Get-Date -Format 'o')
-                close_time = [datetime]$o.updated_at | ConvertTo-Json -AsArray | ConvertFrom-Json
+                close_time = [datetime]$o.updated_at
                 notes = "Reconcile from closed orders API"
             }
             $closedTrades += $trade

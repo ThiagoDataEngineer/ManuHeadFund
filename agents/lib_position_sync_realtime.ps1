@@ -256,7 +256,12 @@ function Sync-PositionsFromCoinEx {
 
         # Salvar trade_outcomes atualizado
         if ($updatedOutcomes.Count -gt 0) {
-            $updatedOutcomes | ConvertTo-Json -AsArray | Set-Content $outcomesFile -Encoding UTF8
+            # 2026-07-24 FIX: "-AsArray" nao existe no PowerShell 5.1 --
+            # lancava erro real, Set-Content nunca rodava. trade_outcomes.jsonl
+            # e JSONL real (1 objeto por linha, nao array formatado) --
+            # grava linha por linha, cada uma comprimida.
+            $lines = @($updatedOutcomes | ForEach-Object { $_ | ConvertTo-Json -Compress -Depth 5 })
+            Set-Content -Path $outcomesFile -Value $lines -Encoding UTF8
             Write-SyncLog "UPDATED: trade_outcomes.jsonl ($($updatedOutcomes.Count) entradas)"
         }
 
