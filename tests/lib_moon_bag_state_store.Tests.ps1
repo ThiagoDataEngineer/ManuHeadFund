@@ -22,29 +22,44 @@ function Send-TelegramAlert { param($Message) return $true }
 Describe "Moon Bag with state_store: opt-in respect" {
 
     BeforeEach {
-        $script:tmpDir = Join-Path $env:TEMP "mbss_$PID_$(Get-Random)"
+        # 2026-07-23 FIX: "$PID_" interpola como variavel PID_ (inexistente,
+        # string vazia), nao "$PID" + underscore literal -- nome do tmpDir
+        # perdia o PID (so "mbss_<random>").
+        $script:tmpDir = Join-Path $env:TEMP "mbss_${PID}_$(Get-Random)"
         New-Item -ItemType Directory -Path $script:tmpDir -Force | Out-Null
         $global:STATE_STORE_BACKEND = "local"
         $global:STATE_STORE_LOCAL_DIR = $script:tmpDir
         $global:TRAILING_USE_STATE_STORE = $true
+        # 2026-07-23 FIX CRITICO: Get-TrailingPositions cai (by design, para
+        # producao real) no arquivo legado quando o state_store retorna 0
+        # registros -- sem isolar $global:TRAILING_FILE tambem, o teste lia
+        # o journal/trailing_positions.json REAL desta maquina (WLDUSDT de
+        # posicao real ja aberta), inflando o Count esperado. Isolar aqui
+        # tambem fecha o fallback com um arquivo vazio dedicado ao teste.
+        $global:TRAILING_FILE = Join-Path $script:tmpDir "trailing_positions_legacy.json"
     }
 
     AfterEach {
         if (Test-Path $script:tmpDir) { Remove-Item $script:tmpDir -Recurse -Force -ErrorAction SilentlyContinue }
-        Remove-Variable -Name STATE_STORE_BACKEND, STATE_STORE_LOCAL_DIR, TRAILING_USE_STATE_STORE -Scope Global -ErrorAction SilentlyContinue
+        Remove-Variable -Name STATE_STORE_BACKEND, STATE_STORE_LOCAL_DIR, TRAILING_USE_STATE_STORE, TRAILING_FILE -Scope Global -ErrorAction SilentlyContinue
     }
 
-    It "Add-MoonBagPair writes 2 legs to state_store table 'trailing_positions'" {
+    It "Add-MoonBagPair writes 2 legs to state_store table 'trailing_state'" {
+        # 2026-07-23 FIX: tabela renomeada trailing_positions -> trailing_state
+        # em 2026-07-09 (commit da epoca: "trailing_positions" no Supabase
+        # pertence ao position_sync, shape id/symbol/... diferente -- upsert
+        # 400 silencioso, estado nunca persistia). Teste nunca foi atualizado
+        # apos o rename, sempre lia 0 registros da tabela errada desde entao.
         Add-MoonBagPair -Market "BNBUSDT" -Side "LONG" -Entry 647 -Size 1000 | Out-Null
 
-        $rows = @(Get-StateRecords -Table "trailing_positions")
+        $rows = @(Get-StateRecords -Table "trailing_state")
         $rows.Count | Should Be 2
     }
 
     It "Add-MoonBagPair: harvest leg has correct target +5%" {
         Add-MoonBagPair -Market "BTCUSDT" -Side "LONG" -Entry 50000 -Size 1000 | Out-Null
 
-        $rows = @(Get-StateRecords -Table "trailing_positions")
+        $rows = @(Get-StateRecords -Table "trailing_state")
         $harvest = $null
         foreach ($r in $rows) {
             if ([string]$r.moonBagKind -eq "harvest") { $harvest = $r }
@@ -56,7 +71,7 @@ Describe "Moon Bag with state_store: opt-in respect" {
     It "Add-MoonBagPair: moon leg has correct stop -10%" {
         Add-MoonBagPair -Market "ETHUSDT" -Side "LONG" -Entry 3000 -Size 1000 | Out-Null
 
-        $rows = @(Get-StateRecords -Table "trailing_positions")
+        $rows = @(Get-StateRecords -Table "trailing_state")
         $moon = $null
         foreach ($r in $rows) {
             if ([string]$r.moonBagKind -eq "moon") { $moon = $r }
@@ -107,7 +122,7 @@ Describe "Moon Bag with state_store: opt-in respect" {
         Add-MoonBagPair -Market "ACT1" -Side "LONG" -Entry 100 -Size 500 | Out-Null
 
         # Mark all positions inactive directly via state_store
-        $allRows = @(Get-StateRecords -Table "trailing_positions")
+        $allRows = @(Get-StateRecords -Table "trailing_state")
         $deactivated = @()
         foreach ($r in $allRows) {
             $copy = [PSCustomObject]@{}
@@ -117,7 +132,7 @@ Describe "Moon Bag with state_store: opt-in respect" {
             $copy.active = $false
             $deactivated += $copy
         }
-        Save-StateRecords -Table "trailing_positions" -Records $deactivated -PrimaryKey "pk_id"
+        Save-StateRecords -Table "trailing_state" -Records $deactivated -PrimaryKey "pk_id"
 
         $activeOnly = @(Get-MoonBagPositions -ActiveOnly)
         $activeOnly.Count | Should Be 0

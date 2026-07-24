@@ -30,7 +30,7 @@ function Send-TelegramAlert {
 Describe "lib_trailing: state_store opt-in via global flag" {
 
     BeforeEach {
-        $script:tmpDir = Join-Path $env:TEMP "ts_$PID_$(Get-Random)"
+        $script:tmpDir = Join-Path $env:TEMP "ts_${PID}_$(Get-Random)"
         New-Item -ItemType Directory -Path $script:tmpDir -Force | Out-Null
         $global:STATE_STORE_BACKEND = "local"
         $global:STATE_STORE_LOCAL_DIR = $script:tmpDir
@@ -42,7 +42,11 @@ Describe "lib_trailing: state_store opt-in via global flag" {
         Remove-Variable -Name STATE_STORE_BACKEND, STATE_STORE_LOCAL_DIR, TRAILING_USE_STATE_STORE -Scope Global -ErrorAction SilentlyContinue
     }
 
-    It "Save-TrailingPositions writes to state_store table 'trailing_positions'" {
+    It "Save-TrailingPositions writes to state_store table 'trailing_state'" {
+        # 2026-07-23 FIX: tabela renomeada trailing_positions -> trailing_state
+        # em 2026-07-09 (trailing_positions no Supabase pertence ao
+        # position_sync, shape diferente -- upsert 400 silencioso). Teste
+        # nunca foi atualizado apos o rename.
         $pos = [PSCustomObject]@{
             market = "BTCUSDT"; side = "LONG"; entry = 50000; stop = 49000; target = 52000
             phase = 0; peak = 50000; stopCurrent = 49000; active = $true
@@ -50,7 +54,7 @@ Describe "lib_trailing: state_store opt-in via global flag" {
         }
         Save-TrailingPositions -Positions @($pos)
 
-        $rows = @(Get-StateRecords -Table "trailing_positions")
+        $rows = @(Get-StateRecords -Table "trailing_state")
         $rows.Count | Should Be 1
         $rows[0].market | Should Be "BTCUSDT"
     }
@@ -128,23 +132,28 @@ Describe "lib_trailing: state_store opt-in via global flag" {
 Describe "lib_trailing: legacy file path (default behavior)" {
 
     BeforeEach {
-        $script:tmpDir = Join-Path $env:TEMP "tslc_$PID_$(Get-Random)"
+        $script:tmpDir = Join-Path $env:TEMP "tslc_${PID}_$(Get-Random)"
         New-Item -ItemType Directory -Path $script:tmpDir -Force | Out-Null
-        $script:savedTrailingFile = $script:TRAILING_FILE
-        # Simulate redirecting TRAILING_FILE to tmpDir for isolation
-        $script:TRAILING_FILE = Join-Path $script:tmpDir "trailing_positions.json"
+        # 2026-07-23 FIX: "$script:TRAILING_FILE" nao afeta nada -- _Get-TrailingFile
+        # (lib_trailing.ps1) le $global:TRAILING_FILE, nao script-scope. O teste
+        # sempre escrevia (e o assert sempre lia) o path certo POR ACASO so porque
+        # $script:TRAILING_FILE e $global:TRAILING_FILE coincidiam se nunca setados
+        # -- mas a escrita real caia no arquivo padrao ($TRAILING_FILE do lib,
+        # journal/trailing_positions.json de producao), nao no tmpDir isolado.
+        $script:savedTrailingFile = $global:TRAILING_FILE
+        $global:TRAILING_FILE = Join-Path $script:tmpDir "trailing_positions.json"
         # Ensure global flag is OFF (default)
         Remove-Variable -Name TRAILING_USE_STATE_STORE -Scope Global -ErrorAction SilentlyContinue
     }
 
     AfterEach {
         if (Test-Path $script:tmpDir) { Remove-Item $script:tmpDir -Recurse -Force -ErrorAction SilentlyContinue }
-        $script:TRAILING_FILE = $script:savedTrailingFile
+        $global:TRAILING_FILE = $script:savedTrailingFile
     }
 
     It "Default: writes to legacy TRAILING_FILE not state_store" {
         $pos = [PSCustomObject]@{ market="ABC"; side="LONG"; entry=1; stop=0.9; target=1.5; phase=0; peak=1; stopCurrent=0.9; active=$true; openedAt="ts"; updatedAt="ts" }
         Save-TrailingPositions -Positions @($pos)
-        Test-Path $script:TRAILING_FILE | Should Be $true
+        Test-Path $global:TRAILING_FILE | Should Be $true
     }
 }
