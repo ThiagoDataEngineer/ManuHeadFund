@@ -27,6 +27,11 @@ Describe "Cloud Trading (gem_loop -Once no Actions)" {
     }
 
     Context "Trava dry ATIVA por default (prova antes de live)" {
+        # 2026-07-23: FALHA ESPERADA -- este teste valida a fase de transicao
+        # (2026-06-18/19, dry-run antes de virar live). Sistema esta em LIVE
+        # TRADING real desde antes de 2026-07-22 (ver CLAUDE.md), CLOUD_DRY_RUN.flag
+        # foi removido de proposito pelo cutover (ver cutover_online.Tests.ps1,
+        # que exige o oposto: flag REMOVIDO = cloud live). Nao recriar o flag.
         It "CLOUD_DRY_RUN.flag presente (deploy dry primeiro)" {
             Test-Path ".\journal\CLOUD_DRY_RUN.flag" | Should Be $true
         }

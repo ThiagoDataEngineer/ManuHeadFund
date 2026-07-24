@@ -20,7 +20,10 @@ Describe "Cloud Execution Safety" {
             $script:gl | Should Match "exit\s+0"
         }
         It "-Once bypassa o gate" {
-            ($script:gl | Should Match '\$Once.*bypas' -or $script:gl | Should Match 'if.*\$Once')
+            # 2026-07-23 FIX: "(A | Should Match X -or B | Should Match Y)" nao e
+            # sintaxe valida -- "Should" nao retorna bool usavel em -or, lanca
+            # excecao ou passa silenciosamente. Reescrito como -match direto.
+            (($script:gl -match '\$Once.*bypas') -or ($script:gl -match 'if.*\$Once')) | Should Be $true
         }
     }
 
@@ -40,7 +43,7 @@ Describe "Cloud Execution Safety" {
             (Get-Content ".\scripts\gem_loop.ps1" -Raw) | Should Match '\[switch\]\$Once'
         }
         It "scan_master.ps1 aceita -Once" {
-            (Get-Content ".\scripts\scan_master.ps1" -Raw) | Should Match '\[switch\]\$Once'
+            (Get-Content ".\scripts\scan_master.ps1" -Raw) | Should Match '\[switch\]\s*\$Once'
         }
         It "telegram_listener.ps1 aceita -Once" {
             (Get-Content ".\scripts\telegram_listener.ps1" -Raw) | Should Match '\[switch\]\$Once'
