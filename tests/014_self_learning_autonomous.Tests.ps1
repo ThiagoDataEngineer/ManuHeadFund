@@ -115,12 +115,15 @@ Describe "Semana 6: Self-Learning Autonomous Loop" {
 
     It "aprende coisas não documentadas (anomalias → refinamentos)" {
         if (Get-Command Invoke-UndocumentedLearning -ErrorAction SilentlyContinue) {
-            # Sistema descobre padrão novo por conta própria
+            # 2026-07-24 FIX: Measure-Object -Property nao funciona com
+            # Hashtable (so PSCustomObject) -- dados reais de producao vem
+            # de ConvertFrom-Json (sempre PSCustomObject), entao o mock
+            # deve refletir isso pra testar o caminho real corretamente.
             $historico = @(
-                @{ market="SOLUSDT"; volume_24h=50000000; blocks=0 },
-                @{ market="SOLUSDT"; volume_24h=50000000; blocks=0 },
-                @{ market="SMALL_CAP"; volume_24h=5000000; blocks=15 },
-                @{ market="SMALL_CAP"; volume_24h=5000000; blocks=18 }
+                [PSCustomObject]@{ market="SOLUSDT"; volume_24h=50000000; blocks=0 },
+                [PSCustomObject]@{ market="SOLUSDT"; volume_24h=50000000; blocks=0 },
+                [PSCustomObject]@{ market="SMALL_CAP"; volume_24h=5000000; blocks=15 },
+                [PSCustomObject]@{ market="SMALL_CAP"; volume_24h=5000000; blocks=18 }
             )
 
             $learning = Invoke-UndocumentedLearning -History $historico
