@@ -113,11 +113,14 @@ try {
     }
     $now = Get-Date
 
-    $t24h   = [int](@($trades | Where-Object { $_.exit_date -and ([datetime]$_.exit_date) -ge $now.AddDays(-1)  }).Count)
-    $t7d    = [int](@($trades | Where-Object { $_.exit_date -and ([datetime]$_.exit_date) -ge $now.AddDays(-7)  }).Count)
-    $t30d   = [int](@($trades | Where-Object { $_.exit_date -and ([datetime]$_.exit_date) -ge $now.AddDays(-30) }).Count)
-    $tpnl   = [double](($trades | Measure-Object -Property pnl_usd -Sum).Sum)
-    $wins   = @($trades | Where-Object { $_.win }).Count
+    # 2026-07-24 FIX: schema real de trade_outcomes.jsonl usa created_at
+    # (nao exit_date), pnl_realized (nao pnl_usd), e nao tem campo "win"
+    # booleano -- deriva de pnl_realized > 0 (ver ConvertTo-SupabaseOutcome).
+    $t24h   = [int](@($trades | Where-Object { $_.created_at -and ([datetime]$_.created_at) -ge $now.AddDays(-1)  }).Count)
+    $t7d    = [int](@($trades | Where-Object { $_.created_at -and ([datetime]$_.created_at) -ge $now.AddDays(-7)  }).Count)
+    $t30d   = [int](@($trades | Where-Object { $_.created_at -and ([datetime]$_.created_at) -ge $now.AddDays(-30) }).Count)
+    $tpnl   = [double](@($trades) | Measure-Object -Property pnl_realized -Sum).Sum
+    $wins   = @($trades | Where-Object { [double]$_.pnl_realized -gt 0 }).Count
     $wr     = if ($trades.Count -gt 0) { [math]::Round($wins / $trades.Count, 4) } else { 0.0 }
 
     # 2026-07-16 FIX: market_regime era hardcoded "BEAR_WEAK" sempre, independente
