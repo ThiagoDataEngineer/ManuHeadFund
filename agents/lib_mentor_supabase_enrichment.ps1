@@ -42,10 +42,16 @@ function Get-SupabaseState {
     try {
         $resp = Invoke-RestMethod -Uri "$sbUrl/rest/v1/$Table?$query&limit=100" `
             -Method GET -Headers $headers -TimeoutSec 5 -ErrorAction Stop
-        return @($resp)
+        # 2026-07-23 FIX: "return @($resp)" com exatamente 1 registro vaza o
+        # objeto cru pro pipeline de saida da funcao (PowerShell "desembrulha"
+        # array-de-1-elemento quando o elemento em si e enumeravel/IDictionary
+        # ou PSCustomObject) -- $capital[0] em Get-CapitalEnrichment quebrava
+        # silenciosamente (Count virava o numero de PROPRIEDADES do objeto,
+        # nao 1). "," (comma unario) forca o wrapper a sobreviver ao pipeline.
+        return ,@($resp)
     } catch {
         Write-Host "[WARN] Get-SupabaseState $Table failed: $_" -ForegroundColor Yellow
-        return @()
+        return ,@()
     }
 }
 
@@ -100,7 +106,7 @@ function Get-CounterfactualEnrichment {
         $n_skip = [int]$found.n_skipped
 
         if ($n_skip -gt 0) {
-            $winRate = $n_win / $n_skip
+            $winRate = [math]::Round($n_win / $n_skip, 3)
             return @{
                 market = $Market
                 direction = $Direction
