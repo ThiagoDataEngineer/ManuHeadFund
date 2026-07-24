@@ -112,19 +112,27 @@ Describe "Calculate-StopTarget -- formula nuclear" {
 
     Context "Guardas defensivas -- robustez" {
         It "Entry <= 0 lanca excecao" {
-            { Calculate-StopTarget -Entry 0 -StopPct 0.50 -TargetPct 2.00 -Direction "LONG" } | Should Throw
+            $threw = $false
+            try { Calculate-StopTarget -Entry 0 -StopPct 0.50 -TargetPct 2.00 -Direction "LONG" } catch { $threw = $true }
+            $threw | Should Be $true
         }
 
         It "StopPct fora de (0,1) lanca excecao" {
-            { Calculate-StopTarget -Entry 0.10 -StopPct 1.50 -TargetPct 2.00 -Direction "LONG" } | Should Throw
+            $threw = $false
+            try { Calculate-StopTarget -Entry 0.10 -StopPct 1.50 -TargetPct 2.00 -Direction "LONG" } catch { $threw = $true }
+            $threw | Should Be $true
         }
 
         It "TargetPct negativo em LONG lanca excecao" {
-            { Calculate-StopTarget -Entry 0.10 -StopPct 0.50 -TargetPct -0.5 -Direction "LONG" } | Should Throw
+            $threw = $false
+            try { Calculate-StopTarget -Entry 0.10 -StopPct 0.50 -TargetPct -0.5 -Direction "LONG" } catch { $threw = $true }
+            $threw | Should Be $true
         }
 
         It "Direction invalida lanca excecao" {
-            { Calculate-StopTarget -Entry 0.10 -StopPct 0.50 -TargetPct 2.00 -Direction "SIDEWAYS" } | Should Throw
+            $threw = $false
+            try { Calculate-StopTarget -Entry 0.10 -StopPct 0.50 -TargetPct 2.00 -Direction "SIDEWAYS" } catch { $threw = $true }
+            $threw | Should Be $true
         }
     }
 

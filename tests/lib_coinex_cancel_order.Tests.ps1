@@ -333,15 +333,19 @@ Describe "CoinEx-CancelAllOrders - cancelamento em massa" {
 Describe "CoinEx-CancelOrder - validacao de parametros" {
 
     It "requer Market obrigatorio" {
-        # PowerShell pede input interativo para parametros obrigatorios
-        # Nao da pra testar com Should Throw - skip
-        Set-TestInconclusive "PowerShell pede input interativo para parametros obrigatorios"
+        # 2026-07-23 FIX: Set-TestInconclusive nao existe no Pester 3.4.0
+        # (motor real do projeto, e API do Pester 4+) -- causava erro real,
+        # nao skip. try/catch manual captura o parametro ausente
+        # corretamente (confirmado: nao trava em stdin fechado/nao-interativo).
+        $threw = $false
+        try { CoinEx-CancelOrder -OrderId "123" -MarketType "SPOT" } catch { $threw = $true }
+        $threw | Should Be $true
     }
 
     It "requer OrderId obrigatorio" {
-        # PowerShell pede input interativo para parametros obrigatorios
-        # Nao da pra testar com Should Throw - skip
-        Set-TestInconclusive "PowerShell pede input interativo para parametros obrigatorios"
+        $threw = $false
+        try { CoinEx-CancelOrder -Market "BTCUSDT" -MarketType "SPOT" } catch { $threw = $true }
+        $threw | Should Be $true
     }
 
     It "aceita MarketType SPOT ou FUTURES" {
@@ -352,7 +356,9 @@ Describe "CoinEx-CancelOrder - validacao de parametros" {
     }
 
     It "rejeita MarketType invalido" {
-        { CoinEx-CancelOrder -Market "BTCUSDT" -OrderId "123" -MarketType "INVALID" } | Should Throw
+        $threw = $false
+        try { CoinEx-CancelOrder -Market "BTCUSDT" -OrderId "123" -MarketType "INVALID" } catch { $threw = $true }
+        $threw | Should Be $true
     }
 }
 

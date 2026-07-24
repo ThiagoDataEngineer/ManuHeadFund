@@ -33,7 +33,12 @@ Describe "Get-AtrStop - validacoes" {
     }
 
     It "Direction invalido tira excecao" {
-        { Get-AtrStop -Entry 100 -Atr 2 -Direction "sideways" -Multiplier 2.0 } | Should Throw
+        # 2026-07-23 FIX: Pester 3.4.0 "{...} | Should Throw" nao captura
+        # corretamente ParameterBindingValidationException de [ValidateSet]
+        # (limitacao conhecida do motor, ver feedback_pester3_validateset_should_throw_bug).
+        $threw = $false
+        try { Get-AtrStop -Entry 100 -Atr 2 -Direction "sideways" -Multiplier 2.0 } catch { $threw = $true }
+        $threw | Should Be $true
     }
 }
 

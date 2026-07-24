@@ -55,7 +55,9 @@ Describe "Get-ExitLadder -- Dispatcher" {
 
     Context "Invalid template" {
         It "Get-ExitLadder com template_id invalido throws erro claro" {
-            { Get-ExitLadder -TemplateId 'invalid_template' } | Should Throw
+            $threw = $false
+            try { Get-ExitLadder -TemplateId 'invalid_template' } catch { $threw = $true }
+            $threw | Should Be $true
         }
     }
 }
