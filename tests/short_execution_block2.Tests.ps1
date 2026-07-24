@@ -25,7 +25,11 @@ Describe "SHORT Block2 - B. SIDEWAYS SHORT edge +0.34R" {
 Describe "SHORT Block2 - C. TRANSITION_UP SHORT bounce failure +0.81R" {
     It "TRANSITION_UP SHORT paper=execute" { (_r 'TRANSITION_UP' 'SHORT' 3 'paper').tier | Should Be 'execute' }
     It "TRANSITION_UP SHORT live=observe"  { (_r 'TRANSITION_UP' 'SHORT' 3 'live').tier  | Should Be 'observe' }
-    It "TRANSITION_UP LONG Mon=execute"    { (_r 'TRANSITION_UP' 'LONG'  1 'paper').tier | Should Be 'execute' }
+    # 2026-07-23 FIX: regra mudou em 2026-07-05 (ver lib_operational_whitelist.ps1
+    # ~linha 59) -- TRANSITION_UP+LONG liberado pra qualquer dia da semana, mas
+    # como "observe" (edge +0.98R n=25 ainda insuficiente pra "execute", DoW
+    # deixou de ser o gate). Segunda-feira nao e mais especial.
+    It "TRANSITION_UP LONG Mon=observe (DoW nao bloqueia mais desde 07-05)" { (_r 'TRANSITION_UP' 'LONG'  1 'paper').tier | Should Be 'observe' }
     It "TRANSITION_UP LONG Tue=observe"    { (_r 'TRANSITION_UP' 'LONG'  2 'paper').tier | Should Be 'observe' }
 }
 

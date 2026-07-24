@@ -32,15 +32,19 @@ Describe "Test-RegimeDirectionAllowed - EXECUTE (whitelist live)" {
         ($r.tier) | Should Be 'execute'
     }
 
-    It "TRANSITION_UP + LONG + Monday + paper = execute" {
+    # 2026-07-23 FIX: regra mudou em 2026-07-05 (lib_operational_whitelist.ps1
+    # ~linha 59) -- TRANSITION_UP+LONG virou "observe" em qualquer dia/modo
+    # (edge +0.98R n=25 ainda insuficiente pra "execute"). Monday deixou de
+    # ser especial. Testes movidos pro Describe correto (OBSERVE, nao EXECUTE).
+    It "TRANSITION_UP + LONG + Monday + paper = observe (DoW nao bloqueia mais desde 07-05)" {
         $r = _r 'TRANSITION_UP' 'LONG' 1 'paper'
-        ($r.tier)    | Should Be 'execute'
+        ($r.tier)    | Should Be 'observe'
         ($r.allowed) | Should Be $true
     }
 
-    It "TRANSITION_UP + LONG + Monday + live = execute" {
+    It "TRANSITION_UP + LONG + Monday + live = observe (mesma regra, paper e live)" {
         $r = _r 'TRANSITION_UP' 'LONG' 1 'live'
-        ($r.tier)    | Should Be 'execute'
+        ($r.tier)    | Should Be 'observe'
         ($r.allowed) | Should Be $true
     }
 }
@@ -55,15 +59,15 @@ Describe "Test-RegimeDirectionAllowed - OBSERVE paper, SKIP live" {
         ($r.allowed) | Should Be $true
     }
 
-    It "TRANSITION_UP + LONG + Tuesday + live = skip" {
+    It "TRANSITION_UP + LONG + Tuesday + live = observe (nao mais skip desde 07-05)" {
         $r = _r 'TRANSITION_UP' 'LONG' 2 'live'
-        ($r.tier)    | Should Be 'skip'
-        ($r.allowed) | Should Be $false
+        ($r.tier)    | Should Be 'observe'
+        ($r.allowed) | Should Be $true
     }
 
-    It "TRANSITION_UP + LONG + Sunday + live = skip" {
+    It "TRANSITION_UP + LONG + Sunday + live = observe (nao mais skip desde 07-05)" {
         $r = _r 'TRANSITION_UP' 'LONG' 0 'live'
-        ($r.tier) | Should Be 'skip'
+        ($r.tier) | Should Be 'observe'
     }
 
     It "BULL_WEAK + LONG + Monday + paper = observe (structural break observa)" {

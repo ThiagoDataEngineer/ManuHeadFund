@@ -176,12 +176,15 @@ Describe "Wave2 whitelist gate - SKIP em live, OBSERVE em paper" {
         ($out.telegramFire) | Should Be $false
     }
 
-    It "TRANSITION_UP + LONG + Tuesday BRT + live -> ABORTAR (fora da janela Mon)" {
+    It "TRANSITION_UP + LONG + Tuesday BRT + live -> EXECUTAR (regra mudou 07-05, sem janela Mon)" {
+        # 2026-07-23 FIX: TRANSITION_UP+LONG virou "observe" (allowed=true)
+        # em qualquer dia/modo desde 2026-07-05 (lib_operational_whitelist.ps1
+        # ~linha 59) -- nao e mais "skip" fora de Monday. observe ainda
+        # permite executar (fica so em modo de observacao, nao bloqueia).
         Set-Triagem -Tier "B" -Regime "TRANSITION_UP" -Direction "LONG"
         $ctx = New-IntegrationContext -Mode "live" -DayOfWeekBRT 2
         $out = Invoke-V6Cascade -Market "BTCUSDT" -Context $ctx -Setup $setup
-        ($out.decisao) | Should Be "ABORTAR"
-        ($out.motivo -match "whitelist:skip") | Should Be $true
+        ($out.decisao) | Should Be "EXECUTAR"
     }
 
     It "BULL_WEAK + LONG + paper -> observe (executa, sem tg)" {

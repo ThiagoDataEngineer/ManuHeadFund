@@ -70,9 +70,9 @@ Describe "Whitelist v3 - SHORT live em regimes bearish" {
             $r.tier | Should Be "execute"
         }
 
-        It "TRANSITION_UP + LONG + Monday -> execute (mantido)" {
+        It "TRANSITION_UP + LONG + Monday -> observe (regra mudou 07-05, DoW nao bloqueia mais)" {
             $r = Test-RegimeDirectionAllowed -Regime "TRANSITION_UP" -Direction "LONG" -DayOfWeekBRT 1 -Mode "live"
-            $r.tier | Should Be "execute"
+            $r.tier | Should Be "observe"
         }
 
         It "BULL_WEAK + LONG + paper -> observe (mantido)" {
