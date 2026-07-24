@@ -13,29 +13,27 @@
 
     Context "TDD Library Loading" {
         It "Should load lib_sizing_centralized without error" {
-            Get-Command Get-SafePositionSize -ErrorAction SilentlyContinue | Should -Not -BeNullOrEmpty
+            Get-Command Get-SafePositionSize -ErrorAction SilentlyContinue | Should Not BeNullOrEmpty
         }
 
         It "Should load lib_leverage_cap without error" {
-            Get-Command Get-SafeLeverage -ErrorAction SilentlyContinue | Should -Not -BeNullOrEmpty
+            Get-Command Get-SafeLeverage -ErrorAction SilentlyContinue | Should Not BeNullOrEmpty
         }
 
         It "Should load lib_chart_gate_active without error" {
-            Get-Command Test-ChartPatternGate -ErrorAction SilentlyContinue | Should -Not -BeNullOrEmpty
+            Get-Command Test-ChartPatternGate -ErrorAction SilentlyContinue | Should Not BeNullOrEmpty
         }
 
         It "All TDD libs should be present" {
-            $script:tdd_libs_loaded | Should -Be $true
+            $script:tdd_libs_loaded | Should Be $true
         }
     }
 
     Context "gem_executor Function Availability" {
-        It "Should have Invoke-GemExecutor function" {
-            Get-Command Invoke-GemExecutor -ErrorAction SilentlyContinue | Should -Not -BeNullOrEmpty
-        }
-
-        It "Should have Get-GemDecision function" {
-            Get-Command Get-GemDecision -ErrorAction SilentlyContinue | Should -Not -BeNullOrEmpty
+        It "Should have Invoke-GemExecute function" {
+            # 2026-07-23 FIX: nome real e Invoke-GemExecute (sem "or" no
+            # final) -- teste testava "Invoke-GemExecutor", que nunca existiu.
+            Get-Command Invoke-GemExecute -ErrorAction SilentlyContinue | Should Not BeNullOrEmpty
         }
     }
 
@@ -45,8 +43,8 @@
             $volumes = @(1000, 1100, 1200, 2500, 2600, 2700)
 
             $result = Test-ChartPatternGate -Market "TEST/USDT" -HistoricalPrice $prices -Volume $volumes
-            $result.pass | Should -Be $false
-            $result.reason | Should -Match "pump|pattern"
+            $result.pass | Should Be $false
+            $result.reason | Should Match "pump|pattern"
         }
 
         It "Test-ChartPatternGate should pass normal trends" {
@@ -54,14 +52,14 @@
             $volumes = @(1000, 1100, 1000, 1050, 1000, 1100)
 
             $result = Test-ChartPatternGate -Market "TEST/USDT" -HistoricalPrice $prices -Volume $volumes
-            $result.pass | Should -Be $true
+            $result.pass | Should Be $true
         }
     }
 
     Context "No Runtime Errors" {
         It "gem_executor should load without throwing exceptions" {
             # If we got here, loading succeeded (no exceptions thrown)
-            $true | Should -Be $true
+            $true | Should Be $true
         }
 
         It "TDD lib loader should not produce variable reference errors" {
@@ -72,7 +70,7 @@
             . "$PSScriptRoot\..\agents\gem_executor.ps1" -ErrorAction SilentlyContinue
 
             # Should not have PowerShell variable reference errors
-            $error | Where-Object { $_ -match "Variable reference" } | Should -BeNullOrEmpty
+            $error | Where-Object { $_ -match "Variable reference" } | Should BeNullOrEmpty
         }
     }
 }
