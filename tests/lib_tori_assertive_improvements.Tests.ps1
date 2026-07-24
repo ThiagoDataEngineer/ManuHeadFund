@@ -13,28 +13,28 @@ $script:TORI_PROX_CANDLES_N   = 80
 Describe "Tori assertive improvements" {
 
     Context "#3: SHORT proximity expandido (-10% min)" {
+        # 2026-07-23 FIX: series sinteticas originais caiam ~1 unidade/candle
+        # numa escala de preco 20-100 -- slope_deg real ficava em -58 (muito
+        # alem do range valido -5 a -35), sempre valid=false por
+        # "slope_out_of_range". Series recalibrada: queda suave 0.5/candle
+        # numa escala 145-200, gera slope_deg~-15.5 (dentro do range), com o
+        # ultimo close ajustado pra bater exatamente na proximity_pct alvo.
         It "SHORT com prox=-10% PASSA ripening (expandido from -5%)" {
-            # Synthetic market: descending trendline (resistance), prox=-10%
-            $closes = @(100, 99, 98, 97, 96, 95, 94, 93, 92, 91) + @(90..21)
-            $highs  = @(101, 100, 99, 98, 97, 96, 95, 94, 93, 92) + @(91..22)
-            $lows   = @(99, 98, 97, 96, 95, 94, 93, 92, 91, 90) + @(89..20)
+            $highs  = 0..79 | ForEach-Object { 201.0 - (0.5 * $_) }
+            $lows   = 0..79 | ForEach-Object { 199.0 - (0.5 * $_) }
+            $closes = @(0..78 | ForEach-Object { 200.0 - (0.5 * $_) }) + @(145.35)
             $vols   = @(1000) * 80
 
             $r = Get-ToriShortProximityFromArrays -Closes $closes -Highs $highs -Lows $lows -Volumes $vols
 
-            # prox=-10% deveria estar agora em "staging" ou "ripening" com novo range -10% a +5%
-            # Setup_staging: trendline valid + slope ok + touches ok, mas prox FORA da zona ripening
             $r.valid | Should Be $true
-            # Depois que #2 ativar, vai ter $r.setup_staging = $true
-            # Por enquanto, validar que computed corretamente
             [math]::Abs($r.proximity_pct - (-10.0)) -lt 1.0 | Should Be $true
         }
 
         It "SHORT com prox=-5% PASSA ripening (no novo limit -10%)" {
-            # Synthetic: prox=-5% (era limite antigo, agora é middle da zona)
-            $closes = @(100, 99.5, 99, 98.5, 98, 97.5, 97, 96.5, 96, 95.5) + @(95..20)
-            $highs  = @(101, 100.5, 100, 99.5, 99, 98.5, 98, 97.5, 97, 96.5) + @(96..21)
-            $lows   = @(99, 98.5, 98, 97.5, 97, 96.5, 96, 95.5, 95, 94.5) + @(94..19)
+            $highs  = 0..79 | ForEach-Object { 201.0 - (0.5 * $_) }
+            $lows   = 0..79 | ForEach-Object { 199.0 - (0.5 * $_) }
+            $closes = @(0..78 | ForEach-Object { 200.0 - (0.5 * $_) }) + @(153.425)
             $vols   = @(500) * 80
 
             $r = Get-ToriShortProximityFromArrays -Closes $closes -Highs $highs -Lows $lows -Volumes $vols
@@ -81,10 +81,14 @@ Describe "Tori assertive improvements" {
         }
 
         It "regressao: proximidade valida ainda retorna valid=true" {
-            # BTC-like: ascending trendline, prox=-2% (dentro ripening zone)
-            $closes = @(60000, 60500, 61000, 61500, 62000, 62500, 63000, 63500, 64000, 64500) + @(65000..65790)
-            $lows   = @(59000, 59500, 60000, 60500, 61000, 61500, 62000, 62500, 63000, 63500) + @(64000..64790)
-            $highs  = @(61000, 61500, 62000, 62500, 63000, 63500, 64000, 64500, 65000, 65500) + @(66000..66790)
+            # 2026-07-23 FIX: serie original subia so 1 unidade/candle numa
+            # escala ~65000 -- slope_deg~0.11 (quase reto, fora do range
+            # valido +5 a +35), sempre valid=false. Recalibrada: BTC-like,
+            # ascending trendline suave (slope_deg~16), prox=-2% (dentro
+            # ripening zone -3% a +5%).
+            $lows   = 0..79 | ForEach-Object { 59000.0 + (200.0 * $_) }
+            $highs  = 0..79 | ForEach-Object { 61000.0 + (200.0 * $_) }
+            $closes = @(0..78 | ForEach-Object { 60000.0 + (200.0 * $_) }) + @(73304.0)
             $vols   = @(1000) * 80
 
             $r = Get-ToriProximityFromArrays -Closes $closes -Highs $highs -Lows $lows -Volumes $vols
