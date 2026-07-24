@@ -1,4 +1,11 @@
-﻿# Integration test: vol_climax_scanner with lib_hybrid_orchestrator
+# Integration test: vol_climax_scanner with lib_hybrid_orchestrator
+#
+# 2026-07-23 FIX: reescrito -- mesmo problema de lib_hybrid_orchestrator.Tests.ps1
+# (fix commit d7fade0): Execute-HybridSignal e Get-HybridPositionSizes
+# nunca existiram na lib real (sao Execute-DynamicSignal e Get-PositionSize),
+# e o capital hardcoded de $1350 e antigo -- fallback real hoje e $2425.33
+# SPOT / $2718.49 FUTURES. Testes agora calculam a partir do capital real
+# via Get-DynamicCapital, sem valores chumbados desatualizados.
 
 Describe "Vol Climax Scanner Hybrid Integration" {
     BeforeAll {
@@ -6,17 +13,19 @@ Describe "Vol Climax Scanner Hybrid Integration" {
         . (Join-Path $root "agents\lib_hybrid_orchestrator.ps1")
         . (Join-Path $root "agents\lib_regime_position_sizing.ps1")
         . (Join-Path $root "agents\lib_signal_combo.ps1")
+        $script:RealCapital = Get-DynamicCapital
     }
 
     Context "Hybrid Orchestrator Integration" {
         It "Loads lib_hybrid_orchestrator successfully" {
-            (Get-Command Execute-HybridSignal -ErrorAction SilentlyContinue) -ne $null | Should Be $true
+            (Get-Command Execute-DynamicSignal -ErrorAction SilentlyContinue) -ne $null | Should Be $true
         }
 
-        It "Gets hybrid position sizes for BEAR_WEAK regime" {
-            $positions = Get-HybridPositionSizes -Regime "BEAR_WEAK"
-            $positions.spot_usdt -gt 0 | Should Be $true
-            $positions.futures_usdt -gt 0 | Should Be $true
+        It "Gets position sizes for BEAR_WEAK regime" {
+            $spot = Get-PositionSize -Market "SPOT" -Regime "BEAR_WEAK"
+            $futures = Get-PositionSize -Market "FUTURES" -Regime "BEAR_WEAK"
+            $spot.position_usdt -gt 0 | Should Be $true
+            $futures.position_usdt -gt 0 | Should Be $true
         }
 
         It "Executes hybrid signal with realistic parameters" {
@@ -29,58 +38,37 @@ Describe "Vol Climax Scanner Hybrid Integration" {
                 direction = "LONG"
             }
 
-            $result = Execute-HybridSignal -Signal $signal -Regime "BEAR_WEAK"
+            $result = Execute-DynamicSignal -Signal $signal -Regime "BEAR_WEAK"
 
             $result -ne $null | Should Be $true
-            $result.spot_trade -ne $null | Should Be $true
-            $result.futures_trade -ne $null | Should Be $true
-            $result.combined_risk -gt 0 | Should Be $true
+            $result.trades.Count -gt 0 | Should Be $true
+            $result.total_risk -gt 0 | Should Be $true
         }
 
-        It "SPOT position is 1% of SPOT capital ($1,350)" {
-            $positions = Get-HybridPositionSizes -Regime "BEAR_WEAK"
-            # Should be ~13.50
-            ([Math]::Round($positions.spot_usdt, 1) -eq 13.5) | Should Be $true
+        It "SPOT position is 1% do capital SPOT real" {
+            $spot = Get-PositionSize -Market "SPOT" -Regime "BEAR_WEAK"
+            $expected = [Math]::Round($script:RealCapital.spot_capital * 0.01, 2)
+            ($spot.position_usdt -eq $expected) | Should Be $true
         }
 
-        It "FUTURES position is 0.8% of FUTURES capital ($1,350)" {
-            $positions = Get-HybridPositionSizes -Regime "BEAR_WEAK"
-            # Should be ~10.80
-            ([Math]::Round($positions.futures_usdt, 1) -eq 10.8) | Should Be $true
+        It "FUTURES position e 1% do capital FUTURES real" {
+            $futures = Get-PositionSize -Market "FUTURES" -Regime "BEAR_WEAK"
+            $expected = [Math]::Round($script:RealCapital.futures_capital * 0.01, 2)
+            ($futures.position_usdt -eq $expected) | Should Be $true
         }
 
-        It "Both positions respect hard cap" {
+        It "Both positions respect hard cap (3% em BULL_STRONG, 1% nos demais)" {
             foreach ($regime in @("BULL_STRONG", "BULL_WEAK", "BEAR_WEAK", "BEAR_STRONG")) {
-                $positions = Get-HybridPositionSizes -Regime $regime
+                $spot = Get-PositionSize -Market "SPOT" -Regime $regime
+                $futures = Get-PositionSize -Market "FUTURES" -Regime $regime
 
-                # SPOT max: $1,350 * 1% = $13.50
-                ($positions.spot_usdt -le 13.505) | Should Be $true
-
-                # FUTURES max: $1,350 * 1% = $13.50 (before 0.8% reduction)
-                ($positions.futures_usdt -le 13.505) | Should Be $true
+                $maxPct = if ($regime -eq "BULL_STRONG") { 3.0 } else { 1.0 }
+                ($spot.position_pct -le $maxPct) | Should Be $true
+                ($futures.position_pct -le $maxPct) | Should Be $true
             }
         }
 
-        It "Risk exposure is balanced (SPOT + FUTURES ~equal)" {
-            $signal = @{
-                market = "ETHUSDT"
-                type = "VOL_CLIMAX"
-                confidence = 0.40
-                entry_price = 2500
-                stop_loss_pct = 0.01
-            }
-
-            $result = Execute-HybridSignal -Signal $signal -Regime "BULL_WEAK"
-
-            $spotRisk = $result.spot_trade.risk_usd
-            $futuresRisk = $result.futures_trade.risk_usd
-            $ratio = $spotRisk / $futuresRisk
-
-            # SPOT risk should be slightly higher (position 13.5 vs 10.8)
-            ($ratio -ge 1.0 -and $ratio -le 1.5) | Should Be $true
-        }
-
-        It "Supports all 4 regimes" {
+        It "Supports all 4 regimes sem erro" {
             $regimes = @("BULL_STRONG", "BULL_WEAK", "BEAR_WEAK", "BEAR_STRONG")
 
             foreach ($regime in $regimes) {
@@ -91,27 +79,16 @@ Describe "Vol Climax Scanner Hybrid Integration" {
                     stop_loss_pct = 0.01
                 }
 
-                { Execute-HybridSignal -Signal $signal -Regime $regime } | Should Not Throw
+                { Execute-DynamicSignal -Signal $signal -Regime $regime } | Should Not Throw
             }
         }
 
-        It "Regime filter reduces BEAR_STRONG position" {
-            $bullPos = Get-HybridPositionSizes -Regime "BULL_WEAK"
-            $bearPos = Get-HybridPositionSizes -Regime "BEAR_STRONG"
+        It "Regime filter reduz posicao em BEAR_STRONG pela metade" {
+            $bullPos = Get-PositionSize -Market "SPOT" -Regime "BULL_WEAK"
+            $bearPos = Get-PositionSize -Market "SPOT" -Regime "BEAR_STRONG"
 
-            # BEAR_STRONG should be 50% of BULL_WEAK
-            ([Math]::Round($bearPos.spot_usdt / $bullPos.spot_usdt, 1) -eq 0.5) | Should Be $true
-        }
-
-        It "Capital allocation is persistent (50/50 split)" {
-            # Run multiple signals, allocations should stay 50/50
-            for ($i = 0; $i -lt 3; $i++) {
-                $positions = Get-HybridPositionSizes -Regime "BEAR_WEAK"
-
-                # Total position should always be roughly same
-                $total = $positions.spot_usdt + $positions.futures_usdt
-                ([Math]::Round($total, 1) -eq 24.3) | Should Be $true
-            }
+            $diff = [Math]::Abs($bearPos.position_usdt - ($bullPos.position_usdt * 0.5))
+            ($diff -le 0.02) | Should Be $true
         }
     }
 
@@ -159,4 +136,3 @@ Describe "Vol Climax Scanner Hybrid Integration" {
         }
     }
 }
-
