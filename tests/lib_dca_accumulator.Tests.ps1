@@ -13,12 +13,18 @@ Describe "DcaAccumulator: Test-DcaShouldBuy" {
     }
 
     It "não compra quando BTC > fundo + 10%" {
-        $should = Test-DcaShouldBuy -BtcPrice 50000 -BtcHistoricalLow 40000 -BtcHistoricalHigh 65000
+        # 2026-07-23 FIX: 50000 tambem cai no downtrend padrao (65000*0.8=52000,
+        # 50000<52000=compra) -- teste original testava so 1 das 2 condicoes
+        # OR da funcao sem perceber que a outra tambem disparava. 55000 nao
+        # dispara nenhuma (>44000 fundo E >52000 downtrend).
+        $should = Test-DcaShouldBuy -BtcPrice 55000 -BtcHistoricalLow 40000 -BtcHistoricalHigh 65000
         $should | Should Be $false
     }
 
-    It "compra em downtrend > 20%" {
-        $should = Test-DcaShouldBuy -BtcPrice 50000 -BtcHistoricalLow 40000 -BtcHistoricalHigh 65000 -DowntrendThreshold 0.25
+    It "compra em downtrend > 25%" {
+        # 2026-07-23 FIX: com DowntrendThreshold=0.25, o nivel e 65000*0.75=48750;
+        # 50000 esta ACIMA disso (nao dispara). 48000 dispara corretamente.
+        $should = Test-DcaShouldBuy -BtcPrice 48000 -BtcHistoricalLow 40000 -BtcHistoricalHigh 65000 -DowntrendThreshold 0.25
         $should | Should Be $true
     }
 }
@@ -46,15 +52,20 @@ Describe "DcaAccumulator: Get-DcaAllocationPercentage" {
 }
 
 Describe "DcaAccumulator: Invoke-DcaBuy" {
+    # 2026-07-23 FIX: sem -JournalDir, grava no journal REAL do lib
+    # (nao no test_journal isolado) -- isola em tmpDir dedicado.
+    $script:__dcaBuyTmpDir = Join-Path $env:TEMP "dca_buy_test_$([guid]::NewGuid())"
+    New-Item -ItemType Directory -Path $script:__dcaBuyTmpDir -Force | Out-Null
+
     It "calcula quantidade corretamente" {
-        $result = Invoke-DcaBuy -AvailableCapital 10000 -DcaPctAllocation 0.01 -Market "BTCUSDT" -Price 50000
+        $result = Invoke-DcaBuy -AvailableCapital 10000 -DcaPctAllocation 0.01 -Market "BTCUSDT" -Price 50000 -JournalDir $script:__dcaBuyTmpDir
         $result.executed | Should Be $true
         $result.usd | Should Be 100
         $result.qty | Should Be 0.002
     }
 
     It "rejeita compra < $10" {
-        $result = Invoke-DcaBuy -AvailableCapital 500 -DcaPctAllocation 0.01 -Market "BTCUSDT" -Price 50000
+        $result = Invoke-DcaBuy -AvailableCapital 500 -DcaPctAllocation 0.01 -Market "BTCUSDT" -Price 50000 -JournalDir $script:__dcaBuyTmpDir
         $result.executed | Should Be $false
     }
 }
@@ -77,8 +88,18 @@ Describe "DcaAccumulator: Get/Save DcaState" {
 
 Describe "DcaAccumulator: Get-DcaStatistics" {
     It "calcula statisticas corretamente" {
-        $stats = Get-DcaStatistics -JournalDir $global:JOURNAL_DIR
-        ($stats.total_purchases -ge 0) | Should Be $true
-        $stats.total_usd_invested | Should Be 0
+        # 2026-07-23 FIX: test_journal/dca_purchases.jsonl e fixture
+        # compartilhado (tambem escrito por Invoke-DcaBuy neste mesmo
+        # arquivo) -- ja tem registros reais, nunca seria 0. Isola em
+        # tmpDir dedicado pra validar o caso vazio de verdade.
+        $tmpDir = Join-Path $env:TEMP "dca_stats_test_$([guid]::NewGuid())"
+        New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null
+        try {
+            $stats = Get-DcaStatistics -JournalDir $tmpDir
+            ($stats.total_purchases -ge 0) | Should Be $true
+            $stats.total_usd_invested | Should Be 0
+        } finally {
+            Remove-Item $tmpDir -Recurse -Force -ErrorAction SilentlyContinue
+        }
     }
 }
