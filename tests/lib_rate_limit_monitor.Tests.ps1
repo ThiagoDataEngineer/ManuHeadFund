@@ -188,7 +188,7 @@ Describe "Get-RateLimitSummary - Resumo de eventos" {
         
         $summary = Get-RateLimitSummary
         
-        $summary.events_per_hour | Should BeGreaterThan 0
+        ($summary.events_per_hour -gt 0) | Should Be $true
     }
 }
 
@@ -232,7 +232,7 @@ Describe "Test-RateLimitHealthy - Health check" {
         $health = Test-RateLimitHealthy -ThresholdPerHour 10
         
         $health.recommendations | Should Not BeNullOrEmpty
-        $health.recommendations.Count | Should BeGreaterThan 0
+        ($health.recommendations.Count -gt 0) | Should Be $true
     }
 }
 

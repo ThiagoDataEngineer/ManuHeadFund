@@ -71,7 +71,9 @@ function Get-RateLimitEvents {
         if (-not $line.Trim()) { continue }
         try { $e = $line | ConvertFrom-Json } catch { continue }
         if (-not $e) { continue }
-        $ts = try { [datetime]::Parse($e.timestamp, $null, [System.Globalization.DateTimeStyles]::RoundtripKind) } catch { [datetime]::MinValue }
+        $ts = try {
+            if ($e.timestamp -is [datetime]) { $e.timestamp } else { [datetime]::Parse([string]$e.timestamp, $null, [System.Globalization.DateTimeStyles]::RoundtripKind) }
+        } catch { [datetime]::MinValue }
         if ($ts -lt $cutoff) { continue }
         if ($Category -and $e.category -ne $Category) { continue }
         if ($Market   -and $e.market   -ne $Market)   { continue }
@@ -169,7 +171,9 @@ function Clear-OldRateLimitEvents {
         foreach ($line in (Get-Content $global:RATE_LIMIT_MONITOR.log_path -EA SilentlyContinue)) {
             if (-not $line.Trim()) { continue }
             try { $e = $line | ConvertFrom-Json } catch { continue }
-            $ts = try { [datetime]::Parse($e.timestamp, $null, [System.Globalization.DateTimeStyles]::RoundtripKind) } catch { [datetime]::MinValue }
+            $ts = try {
+                if ($e.timestamp -is [datetime]) { $e.timestamp } else { [datetime]::Parse([string]$e.timestamp, $null, [System.Globalization.DateTimeStyles]::RoundtripKind) }
+            } catch { [datetime]::MinValue }
             if ($ts -ge $cutoff) { $kept += $line } else { $removed += 1 }
         }
         Set-Content -Path $global:RATE_LIMIT_MONITOR.log_path -Value $kept -Encoding UTF8
