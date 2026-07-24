@@ -45,7 +45,11 @@ function Save-PyramidExitState {
         updated_at = (Get-Date).ToString("o")
     }
 
-    $state | ConvertTo-Json -AsArray | Set-Content (Join-Path $journalDir "pyramid_exit_state.json") -Encoding UTF8
+    # 2026-07-24 FIX: "-AsArray" nao existe no ConvertTo-Json do PowerShell
+    # 5.1 (so 6+/Core) -- lancava erro real, Set-Content nunca rodava.
+    # $state e um unico objeto de estado (nao uma lista), -AsArray nunca
+    # fazia sentido conceitual aqui.
+    $state | ConvertTo-Json -Depth 5 | Set-Content (Join-Path $journalDir "pyramid_exit_state.json") -Encoding UTF8
 }
 
 function Test-NewAllTimeHigh {
@@ -111,7 +115,10 @@ function Invoke-PyramidExit {
 
         Add-Content -Path $logFile -Value $exit -Encoding UTF8 -ErrorAction SilentlyContinue
 
-        $exits += @{
+        # 2026-07-24 FIX: [PSCustomObject] em vez de Hashtable -- Measure-Object
+        # -Property (usado abaixo em total_locked_usd) so funciona com
+        # PSCustomObject, sempre falhava silenciosamente com Hashtable.
+        $exits += [PSCustomObject]@{
             market = $pos.market
             qty_sold = [math]::Round($exitQty, 8)
             proceeds_usd = [math]::Round($proceedsUsd, 2)
@@ -125,7 +132,7 @@ function Invoke-PyramidExit {
         executed = $true
         exits = $exits
         total_gain_usd = [math]::Round($totalGainUsd, 2)
-        total_locked_usd = [math]::Round(($exits | Measure-Object -Property proceeds_usd -Sum).Sum, 2)
+        total_locked_usd = [math]::Round((@($exits) | Measure-Object -Property proceeds_usd -Sum).Sum, 2)
     }
 }
 
