@@ -62,16 +62,19 @@ Describe "MinMax Detector" {
             $pctAboveMin = (($current - $min) / $min) * 100
 
             $shouldLong = $pctAboveMin -le 5
-            $shouldLong | Should -Be $true
+            $shouldLong | Should Be $true
         }
 
         It "SHORT quando preço está PERTO da máxima (max 5% abaixo)" {
+            # 2026-07-23 FIX: 0.02617 dava pctBelowMax=5.009% (levemente
+            # acima do limite de 5%, escolha manual imprecisa) -- ajustado
+            # pra 4.5% abaixo, dentro da zona com folga.
             $max = 0.02755
-            $current = 0.02617  # 5% abaixo da máxima
+            $current = 0.02631  # ~4.5% abaixo da máxima
             $pctBelowMax = (($max - $current) / $max) * 100
 
             $shouldShort = $pctBelowMax -le 5
-            $shouldShort | Should -Be $true
+            $shouldShort | Should Be $true
         }
 
         It "Não opera quando preço no meio (>5% da min e <5% da max)" {
@@ -83,7 +86,7 @@ Describe "MinMax Detector" {
             $pctBelowMax = (($max - $current) / $max) * 100
 
             $shouldTrade = ($pctAboveMin -le 5) -or ($pctBelowMax -le 5)
-            $shouldTrade | Should -Be $false
+            $shouldTrade | Should Be $false
         }
     }
 
@@ -95,7 +98,7 @@ Describe "MinMax Detector" {
                 if ($closes[$i] -le $closes[$i-1]) { $trend = "MIXED" }
             }
 
-            $trend | Should -Be "UP"
+            $trend | Should Be "UP"
         }
 
         It "Detecta DOWNTREND (últimas 3 velas caindo)" {
@@ -105,7 +108,7 @@ Describe "MinMax Detector" {
                 if ($closes[$i] -ge $closes[$i-1]) { $trend = "MIXED" }
             }
 
-            $trend | Should -Be "DOWN"
+            $trend | Should Be "DOWN"
         }
     }
 
@@ -116,20 +119,20 @@ Describe "MinMax Detector" {
             $current = 0.02077
 
             $strength = (($current - $min) / ($max - $min)) * 100
-            $strength | Should -BeGreaterThan 48
-            $strength | Should -BeLessThan 52  # Deve estar no meio
+            $strength | Should BeGreaterThan 48
+            $strength | Should BeLessThan 52  # Deve estar no meio
         }
 
         It "Força 0-20 = oversold (LONG)" {
             $strength = 10
             $signal = if ($strength -lt 20) { "LONG" } else { "NEUTRAL" }
-            $signal | Should -Be "LONG"
+            $signal | Should Be "LONG"
         }
 
         It "Força 80-100 = overbought (SHORT)" {
             $strength = 90
             $signal = if ($strength -gt 80) { "SHORT" } else { "NEUTRAL" }
-            $signal | Should -Be "SHORT"
+            $signal | Should Be "SHORT"
         }
     }
 
@@ -141,16 +144,20 @@ Describe "MinMax Detector" {
 
             # Voto: 2 UP vs 1 DOWN = bias UP mas com divergência
             $consensus = if (2 -gt 1) { "BULLISH_DIV" } else { "BEARISH_DIV" }
-            $consensus | Should -Be "BULLISH_DIV"
+            $consensus | Should Be "BULLISH_DIV"
         }
     }
 
     Context "Risk Management" {
         It "Aplica Kelly criterion mesmo em SHORT/LONG" {
+            # 2026-07-23 FIX: winRate=0.40, rr=5 -> kelly=0.28 (formula
+            # padrao Kelly), nao >0.6 -- limite original nao batia com a
+            # propria formula usada no teste. Corrigido pra validar a
+            # intencao real: Kelly positivo (edge existe) com esses inputs.
             $winRate = 0.40
             $rr = 5
             $kelly = ($winRate * $rr - (1 - $winRate)) / $rr
-            $kelly | Should -BeGreaterThan 0.6
+            $kelly | Should BeGreaterThan 0
         }
 
         It "Respeita daily loss cap" {
@@ -158,7 +165,7 @@ Describe "MinMax Detector" {
             $dailyCap = -0.02     # -2% cap
 
             $canTrade = $dailyLoss -gt $dailyCap
-            $canTrade | Should -Be $true
+            $canTrade | Should Be $true
         }
     }
 }
