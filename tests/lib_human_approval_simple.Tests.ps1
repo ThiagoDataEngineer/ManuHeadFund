@@ -51,12 +51,19 @@ Describe "HumanApproval: Get-PendingApprovals" {
     }
 
     It "retorna apenas PENDING" {
+        # 2026-07-23 FIX: ConvertTo-Json SEM -Compress grava JSON multi-linha
+        # indentado (Get-Content divide em varias linhas, so a primeira
+        # "{" casa a regex '^\{' de Get-PendingApprovals/Mark-ApprovalDone
+        # que esperam JSONL real -- 1 linha = 1 registro). ConvertFrom-Json
+        # falhava silenciosamente (catch vazio), nunca processando nada.
+        # A propria lib real (Request-HumanApproval) ja usa -Compress
+        # corretamente -- so o teste gravava errado.
         $file = Join-Path $global:JOURNAL_DIR "human_approvals_pending.jsonl"
         Remove-Item $file -ErrorAction SilentlyContinue
 
-        @{ market="TEST1"; status="PENDING" } | ConvertTo-Json | Add-Content $file
-        @{ market="TEST2"; status="APPROVED" } | ConvertTo-Json | Add-Content $file
-        @{ market="TEST3"; status="PENDING" } | ConvertTo-Json | Add-Content $file
+        @{ market="TEST1"; status="PENDING" } | ConvertTo-Json -Compress | Add-Content $file
+        @{ market="TEST2"; status="APPROVED" } | ConvertTo-Json -Compress | Add-Content $file
+        @{ market="TEST3"; status="PENDING" } | ConvertTo-Json -Compress | Add-Content $file
 
         $pending = Get-PendingApprovals -JournalDir $global:JOURNAL_DIR
         $pending.Count | Should Be 2
@@ -65,11 +72,14 @@ Describe "HumanApproval: Get-PendingApprovals" {
     }
 
     It "trata arquivo vazio gracefully" {
+        # 2026-07-23 FIX: "Should Be @()" compara array vazio via -eq, que
+        # no Pester 3 sempre falha mesmo com ambos os lados vazios --
+        # checar Count -eq 0 e o jeito correto.
         $file = Join-Path $global:JOURNAL_DIR "human_approvals_pending.jsonl"
         Remove-Item $file -ErrorAction SilentlyContinue
 
-        $result = Get-PendingApprovals -JournalDir $global:JOURNAL_DIR
-        $result | Should Be @()
+        $result = @(Get-PendingApprovals -JournalDir $global:JOURNAL_DIR)
+        $result.Count | Should Be 0
     }
 }
 
@@ -78,7 +88,7 @@ Describe "HumanApproval: Mark-ApprovalDone" {
         $file = Join-Path $global:JOURNAL_DIR "human_approvals_pending.jsonl"
         Remove-Item $file -ErrorAction SilentlyContinue
 
-        @{ market="TESTUSDT"; status="PENDING"; size_usd=100 } | ConvertTo-Json | Add-Content $file
+        @{ market="TESTUSDT"; status="PENDING"; size_usd=100 } | ConvertTo-Json -Compress | Add-Content $file
 
         Mark-ApprovalDone -MarketId "TESTUSDT" -Approved $true
 
@@ -92,7 +102,7 @@ Describe "HumanApproval: Mark-ApprovalDone" {
         $file = Join-Path $global:JOURNAL_DIR "human_approvals_pending.jsonl"
         Remove-Item $file -ErrorAction SilentlyContinue
 
-        @{ market="TESTUSDT"; status="PENDING" } | ConvertTo-Json | Add-Content $file
+        @{ market="TESTUSDT"; status="PENDING" } | ConvertTo-Json -Compress | Add-Content $file
 
         Mark-ApprovalDone -MarketId "TESTUSDT" -Approved $false
 
@@ -106,7 +116,7 @@ Describe "HumanApproval: Mark-ApprovalDone" {
         $file = Join-Path $global:JOURNAL_DIR "human_approvals_pending.jsonl"
         Remove-Item $file -ErrorAction SilentlyContinue
 
-        @{ market="TESTUSDT"; status="PENDING" } | ConvertTo-Json | Add-Content $file
+        @{ market="TESTUSDT"; status="PENDING" } | ConvertTo-Json -Compress | Add-Content $file
 
         Mark-ApprovalDone -MarketId "TESTUSDT" -Approved $true
 

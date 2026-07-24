@@ -55,14 +55,27 @@ function Mark-ApprovalDone {
         try {
             $obj = ConvertFrom-Json $_
             if ($obj.market -eq $MarketId) {
-                $obj | Add-Member -Name "status" -Value (if ($Approved) { "APPROVED" } else { "REJECTED" }) -Force
-                $obj | Add-Member -Name "decided_at" -Value ((Get-Date).ToString("o")) -Force
+                # 2026-07-23 FIX: 2 bugs empilhados aqui, ambos engolidos
+                # pelo catch abaixo (Mark-ApprovalDone NUNCA marcava status
+                # em producao): (1) Add-Member exige -MemberType, nao existe
+                # overload sem ele; (2) "if(){}else{}" usado como expressao
+                # inline dentro de "-Value (...)" nao e valido como argumento
+                # de parametro ("'if' is not recognized as a cmdlet") --
+                # precisa ser calculado numa variavel antes.
+                $newStatus = if ($Approved) { "APPROVED" } else { "REJECTED" }
+                $obj | Add-Member -MemberType NoteProperty -Name "status" -Value $newStatus -Force
+                $obj | Add-Member -MemberType NoteProperty -Name "decided_at" -Value ((Get-Date).ToString("o")) -Force
             }
             $updated += $obj
         } catch { }
     }
 
     if ($updated.Count -gt 0) {
-        $updated | ConvertTo-Json -AsArray | Set-Content $file -Encoding UTF8
+        # 2026-07-23 FIX: -AsArray e PS7+ only, nao existe no PowerShell 5.1
+        # (motor real de producao/CI) -- quebraria com "parametro nao
+        # encontrado" em runtime real. Reescreve JSONL manualmente (1 linha
+        # -Compress por registro), preservando o formato real do arquivo.
+        $lines = @($updated | ForEach-Object { $_ | ConvertTo-Json -Compress })
+        Set-Content -Path $file -Value $lines -Encoding UTF8
     }
 }
