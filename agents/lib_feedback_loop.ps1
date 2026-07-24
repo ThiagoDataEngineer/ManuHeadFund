@@ -242,7 +242,7 @@ function Get-OutcomeStats {
     # explicito (comportamento default de producao) -- testes que passam um
     # arquivo temporario continuam 100% locais, sem chamar Supabase.
     $usedDefault = -not $PSBoundParameters.ContainsKey('OutcomePath')
-    $rows = _LoadOutcomes -Path $OutcomePath -UsedDefaultPath $usedDefault
+    $rows = @(_LoadOutcomes -Path $OutcomePath -UsedDefaultPath $usedDefault)
     if ($Mode) { $rows = @($rows | Where-Object { $_.mode -eq $Mode }) }
     if ($Regime) { $rows = @($rows | Where-Object { $_.regime -eq $Regime }) }
     if ($Market) { $rows = @($rows | Where-Object { $_.market -eq $Market }) }

@@ -41,7 +41,7 @@ function Get-PendingApprovals {
             if ($obj.status -eq "PENDING") { $result += $obj }
         } catch { }
     }
-    return $result
+    return ,$result
 }
 
 function Mark-ApprovalDone {
