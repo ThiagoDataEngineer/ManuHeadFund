@@ -18,7 +18,13 @@ Describe "Trailing Peak Update - side-aware + fino" {
         if (Test-Path $script:tf) { Remove-Item $script:tf -Force }
     }
 
-    function Write-TrailFile($obj) { ,@($obj) | ConvertTo-Json -Depth 5 | Set-Content $script:tf -Encoding UTF8 }
+    # 2026-07-24 FIX: ",@($obj)" com 1 hashtable serializa como
+    # {"value":[...],"Count":1} em vez do objeto/array direto (o comma
+    # extra confunde o serializador ConvertTo-Json aqui, mesmo fora de
+    # function-return) -- Update-TrailingPeakLive real le o arquivo e faz
+    # foreach, que so funciona se o JSON for o objeto/array esperado, nao
+    # o wrapper. "@($obj)" sem comma serializa e faz round-trip corretamente.
+    function Write-TrailFile($obj) { @($obj) | ConvertTo-Json -Depth 5 | Set-Content $script:tf -Encoding UTF8 }
     function Read-Pos { (Get-Content $script:tf -Raw | ConvertFrom-Json) | Select-Object -First 1 }
 
     Context "LONG - caso HYPE (micro swing trava breakeven)" {
@@ -106,7 +112,7 @@ Describe "Trailing Peak Update - side-aware + fino" {
             $tmpDir = Join-Path $env:TEMP "trailjdir_$([guid]::NewGuid().ToString('N').Substring(0,8))"
             New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null
             $tf = Join-Path $tmpDir "trailing_positions.json"
-            ,@(@{ market="HYPEUSDT"; side="LONG"; entry=74.65; peak=75.0; stopCurrent=68.67; phase=0; active=$true }) | ConvertTo-Json -Depth 5 | Set-Content $tf -Encoding UTF8
+            @(@{ market="HYPEUSDT"; side="LONG"; entry=74.65; peak=75.0; stopCurrent=68.67; phase=0; active=$true }) | ConvertTo-Json -Depth 5 | Set-Content $tf -Encoding UTF8
             $old = $global:JOURNAL_DIR
             $global:JOURNAL_DIR = $tmpDir
             try {
