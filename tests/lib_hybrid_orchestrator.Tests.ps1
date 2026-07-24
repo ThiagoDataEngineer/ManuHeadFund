@@ -1,28 +1,64 @@
-﻿# Tests for lib_hybrid_orchestrator.ps1
+# Tests for lib_hybrid_orchestrator.ps1
 # Pester 3.4 compatible
+#
+# 2026-07-23 FIX: reescrito por completo -- a lib evoluiu desde o teste
+# original (funcoes renomeadas/removidas, nunca detectado porque o CI real
+# nunca rodou Pester 5 syntax neste arquivo):
+# - Get-HybridPositionSizes nunca existiu -- funcao real e Get-PositionSize
+#   (-Market/-Regime/-IsScalp, nao so -Regime)
+# - Execute-HybridSignal nunca existiu -- funcao real e Execute-DynamicSignal
+# - Rebalance-HybridCapital nunca existiu nesta lib (sem logica de
+#   rebalanceamento aqui -- ver lib_portfolio_rebalance.ps1 pra isso)
+# - Execute-SpotTrade/Execute-FuturesTrade tem params -Signal/-PositionSize
+#   (nao -PositionSizeUSDT), retornam "position_usdt" (nao "position_size_usd"),
+#   e NAO tem liquidation_risk/liquidation_price -- Execute-FuturesTrade e
+#   uma copia funcional de Execute-SpotTrade, sem logica de alavancagem/
+#   liquidacao real (achado, nao consertado aqui -- fora do escopo desta
+#   correcao de teste).
+# - Capital fallback real e $2425.33 SPOT / $2718.49 FUTURES (nao os valores
+#   antigos 1350.425/1700/1000.85 do teste original).
+#
+# Nenhuma das funcoes de execucao (Get-PositionSize, Execute-SpotTrade,
+# Execute-FuturesTrade, Execute-DynamicSignal) desta lib e chamada por
+# nenhum motor real -- lib_gem_router.ps1 tem sua PROPRIA Get-PositionSize
+# com assinatura diferente, que sobrescreve esta quando ambas sao
+# dot-sourceadas no mesmo escopo. So Get-DynamicCapital e usada de fato
+# (por lib_place_order.ps1).
 
 Describe "Hybrid Orchestrator" {
     BeforeAll {
         $root = Get-Location
         . (Join-Path $root "agents\lib_hybrid_orchestrator.ps1")
+        $script:RealCapital = Get-DynamicCapital
     }
 
     Context "Position Sizing" {
-        It "Calculates correct SPOT position for BULL_STRONG" {
-            $positions = Get-HybridPositionSizes -Regime "BULL_STRONG"
-            ([Math]::Round($positions.spot_usdt, 2) -eq 13.50) | Should Be $true
+        It "Calculates SPOT position for BULL_STRONG (3% base)" {
+            $positions = Get-PositionSize -Market "SPOT" -Regime "BULL_STRONG"
+            $expected = [Math]::Round($script:RealCapital.spot_capital * 0.03, 2)
+            ($positions.position_usdt -eq $expected) | Should Be $true
         }
 
-        It "Reduces positions by 50% for BEAR_STRONG" {
-            $positionsNormal = Get-HybridPositionSizes -Regime "BULL_WEAK"
-            $positionsBearStrong = Get-HybridPositionSizes -Regime "BEAR_STRONG"
-            ($positionsBearStrong.spot_usdt -eq ($positionsNormal.spot_usdt * 0.5)) | Should Be $true
+        It "Reduces positions by 50% for BEAR_STRONG vs BULL_WEAK" {
+            # 2026-07-23 FIX: comparar contra o position_usdt JA arredondado
+            # (24.25*0.5=12.125, banker's rounding do .NET arredonda pro
+            # par mais proximo = 12.12) diverge do calculo real da lib, que
+            # arredonda so o resultado final (capital*0.01*0.5, sem
+            # arredondamento intermediario) = 12.13. Comparar com tolerancia.
+            $positionsNormal = Get-PositionSize -Market "SPOT" -Regime "BULL_WEAK"
+            $positionsBearStrong = Get-PositionSize -Market "SPOT" -Regime "BEAR_STRONG"
+            $diff = [Math]::Abs($positionsBearStrong.position_usdt - ($positionsNormal.position_usdt * 0.5))
+            ($diff -le 0.01) | Should Be $true
         }
 
-        It "Never exceeds 1% hard cap per market" {
-            $positions = Get-HybridPositionSizes -Regime "BULL_STRONG"
-            $spotPct = ($positions.spot_usdt / 1350.425) * 100
-            ($spotPct -le 1.0) | Should Be $true
+        It "Never exceeds 3% hard cap per market (BULL_STRONG)" {
+            $positions = Get-PositionSize -Market "SPOT" -Regime "BULL_STRONG"
+            ($positions.position_pct -le 3.0) | Should Be $true
+        }
+
+        It "Never exceeds 1% hard cap per market (regime normal)" {
+            $positions = Get-PositionSize -Market "SPOT" -Regime "BULL_WEAK"
+            ($positions.position_pct -le 1.0) | Should Be $true
         }
     }
 
@@ -35,21 +71,9 @@ Describe "Hybrid Orchestrator" {
                 type = "VOL_CLIMAX_ENGULFING"
                 confidence = 0.42
             }
-            $trade = Execute-SpotTrade -Signal $signal -PositionSizeUSDT 13.5 -Regime "BEAR_WEAK"
+            $trade = Execute-SpotTrade -Signal $signal -PositionSize 13.5
             ($trade.market -eq "SPOT") | Should Be $true
-            ($trade.position_size_usd -eq 13.5) | Should Be $true
-        }
-
-        It "SPOT has NO liquidation risk" {
-            $signal = @{
-                market = "BTCUSDT"
-                entry_price = 50000
-                stop_loss_pct = 0.01
-                type = "VOL_CLIMAX_ENGULFING"
-                confidence = 0.42
-            }
-            $trade = Execute-SpotTrade -Signal $signal -PositionSizeUSDT 13.5 -Regime "BEAR_WEAK"
-            ($trade.liquidation_risk -eq "NONE") | Should Be $true
+            ($trade.position_usdt -eq 13.5) | Should Be $true
         }
 
         It "Calculates stop loss correctly" {
@@ -60,7 +84,7 @@ Describe "Hybrid Orchestrator" {
                 type = "VOL_CLIMAX"
                 confidence = 0.37
             }
-            $trade = Execute-SpotTrade -Signal $signal -PositionSizeUSDT 10 -Regime "BULL_WEAK"
+            $trade = Execute-SpotTrade -Signal $signal -PositionSize 10
             ($trade.stop_loss -eq 99) | Should Be $true
         }
     }
@@ -74,50 +98,25 @@ Describe "Hybrid Orchestrator" {
                 type = "VOL_CLIMAX_ENGULFING"
                 confidence = 0.42
             }
-            $trade = Execute-FuturesTrade -Signal $signal -PositionSizeUSDT 10.8 -Regime "BEAR_WEAK"
+            $trade = Execute-FuturesTrade -Signal $signal -PositionSize 10.8
             ($trade.market -eq "FUTURES") | Should Be $true
-            ($trade.position_size_usd -eq 10.8) | Should Be $true
+            ($trade.position_usdt -eq 10.8) | Should Be $true
         }
 
-        It "FUTURES has liquidation monitoring" {
-            $signal = @{
-                market = "BTCUSDT"
-                entry_price = 50000
-                stop_loss_pct = 0.01
-                type = "VOL_CLIMAX_ENGULFING"
-                confidence = 0.42
-            }
-            $trade = Execute-FuturesTrade -Signal $signal -PositionSizeUSDT 10.8 -Regime "BEAR_WEAK"
-            ($trade.liquidation_risk -eq "MONITOR") | Should Be $true
-        }
-
-        It "Calculates liquidation price correctly" {
-            $signal = @{
-                market = "BTCUSDT"
-                entry_price = 100
-                stop_loss_pct = 0.01
-                type = "VOL_CLIMAX"
-                confidence = 0.37
-            }
-            $trade = Execute-FuturesTrade -Signal $signal -PositionSizeUSDT 10 -Regime "BULL_WEAK"
-            ($trade.liquidation_price -eq 50) | Should Be $true
-        }
-
-        It "Stop loss is above liquidation price" {
-            $signal = @{
-                market = "BTCUSDT"
-                entry_price = 100
-                stop_loss_pct = 0.02
-                type = "VOL_CLIMAX"
-                confidence = 0.37
-            }
-            $trade = Execute-FuturesTrade -Signal $signal -PositionSizeUSDT 10 -Regime "BULL_WEAK"
-            ($trade.stop_loss -gt $trade.liquidation_price) | Should Be $true
+        It "KNOWN GAP: Execute-FuturesTrade nao calcula liquidacao/alavancagem real" {
+            # 2026-07-23: Execute-FuturesTrade e uma copia funcional de
+            # Execute-SpotTrade -- mesma formula de stop_loss, sem
+            # liquidation_price nem ajuste por leverage. Documentando o gap
+            # em vez de mascarar com uma expectativa falsa (nenhum motor
+            # real chama esta funcao hoje, ver nota no topo do arquivo).
+            $signal = @{ market = "BTCUSDT"; entry_price = 100; stop_loss_pct = 0.01 }
+            $trade = Execute-FuturesTrade -Signal $signal -PositionSize 10
+            $trade.ContainsKey("liquidation_price") | Should Be $false
         }
     }
 
-    Context "Hybrid Signal Execution" {
-        It "Executes both SPOT and FUTURES simultaneously" {
+    Context "Dynamic Signal Execution" {
+        It "Executa SPOT e/ou FUTURES conforme capital disponivel" {
             $signal = @{
                 market = "BTCUSDT"
                 type = "VOL_CLIMAX_ENGULFING"
@@ -126,13 +125,12 @@ Describe "Hybrid Orchestrator" {
                 stop_loss_pct = 0.01
                 direction = "LONG"
             }
-            $result = Execute-HybridSignal -Signal $signal -Regime "BEAR_WEAK"
-            ($result.spot_trade -ne $null) | Should Be $true
-            ($result.futures_trade -ne $null) | Should Be $true
+            $result = Execute-DynamicSignal -Signal $signal -Regime "BEAR_WEAK"
+            ($result.trades.Count -gt 0) | Should Be $true
             ($result.regime -eq "BEAR_WEAK") | Should Be $true
         }
 
-        It "Combined risk equals sum of both markets" {
+        It "total_risk soma o risco de todos os trades executados" {
             $signal = @{
                 market = "BTCUSDT"
                 type = "VOL_CLIMAX_ENGULFING"
@@ -140,55 +138,23 @@ Describe "Hybrid Orchestrator" {
                 entry_price = 50000
                 stop_loss_pct = 0.01
             }
-            $result = Execute-HybridSignal -Signal $signal -Regime "BEAR_WEAK"
-            $combinedRisk = $result.spot_trade.risk_usd + $result.futures_trade.risk_usd
-            ($result.combined_risk -eq $combinedRisk) | Should Be $true
-        }
-    }
-
-    Context "Rebalancing" {
-        It "Detects no rebalance needed when drift <10%" {
-            $result = Rebalance-HybridCapital -CurrentSpotBalance 1350.425 -CurrentFuturesBalance 1350.425
-            ($result.rebalance_needed -eq $false) | Should Be $true
-        }
-
-        It "Identifies source market for rebalancing when drift >10%" {
-            # Create bigger drift to trigger rebalance_needed=true (11%+ required)
-            $result = Rebalance-HybridCapital -CurrentSpotBalance 1700 -CurrentFuturesBalance 1000.85
-            ($result.rebalance_needed -eq $true) | Should Be $true
-            ($result.from_market -eq "SPOT") | Should Be $true
+            $result = Execute-DynamicSignal -Signal $signal -Regime "BEAR_WEAK"
+            $expectedRisk = ($result.trades | Measure-Object -Property risk_usd -Sum).Sum
+            ($result.total_risk -eq $expectedRisk) | Should Be $true
         }
     }
 
     Context "Risk Management" {
-        It "BEAR_STRONG reduces position by 50%" {
-            $positions = Get-HybridPositionSizes -Regime "BEAR_STRONG"
-            $positionsBull = Get-HybridPositionSizes -Regime "BULL_WEAK"
-            ($positions.spot_usdt -eq ($positionsBull.spot_usdt * 0.5)) | Should Be $true
+        It "Each market respects 3% cap for BULL_STRONG" {
+            $result = Get-PositionSize -Market "SPOT" -Regime "BULL_STRONG"
+            $expected = [Math]::Round($script:RealCapital.spot_capital * 0.03, 2)
+            ($result.position_usdt -eq $expected) | Should Be $true
         }
 
-        It "Each market respects 1% capital hard cap" {
-            $signal = @{
-                market = "BTCUSDT"
-                type = "VOL_CLIMAX"
-                entry_price = 50000
-                stop_loss_pct = 0.01
-            }
-            $result = Execute-HybridSignal -Signal $signal -Regime "BULL_STRONG"
-            # SPOT should be 1% of $1350.425 = $13.50425
-            ([Math]::Round($result.spot_trade.position_size_usd, 2) -eq ([Math]::Round(13.50, 2))) | Should Be $true
-        }
-
-        It "Liquidation price is always less than stop loss" {
-            $signal = @{
-                market = "BTCUSDT"
-                type = "VOL_CLIMAX"
-                entry_price = 1000
-                stop_loss_pct = 0.02
-            }
-            $trade = Execute-FuturesTrade -Signal $signal -PositionSizeUSDT 10 -Regime "BULL_WEAK"
-            ($trade.liquidation_price -lt $trade.stop_loss) | Should Be $true
+        It "Scalp trades usam 3% mesmo fora de BULL_STRONG" {
+            $normal = Get-PositionSize -Market "SPOT" -Regime "BEAR_WEAK" -IsScalp $false
+            $scalp = Get-PositionSize -Market "SPOT" -Regime "BEAR_WEAK" -IsScalp $true
+            ($scalp.position_usdt -gt $normal.position_usdt) | Should Be $true
         }
     }
 }
-
