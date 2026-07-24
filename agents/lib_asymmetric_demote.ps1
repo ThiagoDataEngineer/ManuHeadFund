@@ -35,8 +35,19 @@ function Test-AsymmetricDemoteCondition {
         return [PSCustomObject]@{ should_demote = $false; streak = 0; reason = "empty_history" }
     }
 
+    # 2026-07-23 FIX: ConvertFrom-Json auto-promove strings ISO 8601 pra
+    # [datetime] (perde 'Z'/offset). [string]$_.ts nesse caso coage de volta
+    # usando o formato do locale (MM/dd/yyyy HH:mm:ss), que [DateTime]::Parse
+    # nao reconhece -- mesmo bug ja corrigido em lib_tori_proximity.ps1.
+    # Helper local: usa o [datetime] direto se ja veio como tal, so faz
+    # Parse de string quando realmente e string.
+    function _ParseEventTs($ts) {
+        if ($ts -is [datetime]) { return $ts }
+        return [DateTime]::Parse([string]$ts)
+    }
+
     # Sort por timestamp asc (oldest first)
-    $sorted = @($events | Sort-Object { [DateTime]::Parse([string]$_.ts) })
+    $sorted = @($events | Sort-Object { _ParseEventTs $_.ts })
 
     # CRITICAL ultimo evento = demote imediato (1-day rule)
     $last = $sorted[-1]
@@ -58,7 +69,7 @@ function Test-AsymmetricDemoteCondition {
         $ev = $sorted[$i]
         $flaggedList = @($ev.flagged)
         $criticalList = @($ev.critical)
-        $thisTs = [DateTime]::Parse([string]$ev.ts)
+        $thisTs = _ParseEventTs $ev.ts
         if ($null -ne $prevTs) {
             $hoursGap = ($prevTs - $thisTs).TotalHours
             if ($hoursGap -gt 36) {
