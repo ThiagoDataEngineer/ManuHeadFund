@@ -65,10 +65,14 @@ Describe "Trailing Executor Phase 2" {
         }
 
         It "Low agreement = invalid" {
+            # 2026-07-23 FIX: volumes originais (500 UP + 5000 UP = 5500 vs
+            # 10000 DOWN) davam agreement=64.5% (>=60, valid=true) -- dados
+            # nao geravam de fato "low agreement". Rebalanceado pra UP/DOWN
+            # ficarem proximos (3500 vs 3500 = 50%, < 60% threshold).
             $candles = @(
-                @{ close = 101; open = 100; volume = 500 }   # UP (low vol)
-                @{ close = 99; open = 101; volume = 10000 }  # DOWN (high vol)
-                @{ close = 100; open = 99; volume = 5000 }   # UP (medium vol)
+                @{ close = 101; open = 100; volume = 500 }   # UP
+                @{ close = 99; open = 101; volume = 3500 }   # DOWN
+                @{ close = 100; open = 99; volume = 3000 }   # UP
             )
             $result = Test-VolumePriceAgreement -Candles $candles
             $result.valid | Should Be $false
