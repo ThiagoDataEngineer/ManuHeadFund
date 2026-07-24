@@ -233,7 +233,7 @@ function Execute-DynamicSignal {
         signal = $Signal.market
         regime = $Regime
         trades = $trades
-        total_risk = ($trades | Measure-Object -Property risk_usd -Sum).Sum
+        total_risk = (@($trades) | Measure-Object -Property risk_usd -Sum).Sum
     }
 }
 
@@ -251,7 +251,10 @@ function Execute-SpotTrade {
     $sl = $entry * (1 - ($(if ($null -ne $Signal.stop_loss_pct) { $Signal.stop_loss_pct } else { 0.01 })))
     $risk = $PositionSize * ($(if ($null -ne $Signal.stop_loss_pct) { $Signal.stop_loss_pct } else { 0.01 }))
 
-    return @{
+    # 2026-07-24 FIX: [PSCustomObject] em vez de Hashtable -- Measure-Object
+    # -Property (usado em Invoke-HybridExecution, total_risk) so funciona
+    # com PSCustomObject.
+    return [PSCustomObject]@{
         market = "SPOT"
         pair = $Signal.market
         position_usdt = $PositionSize
@@ -276,7 +279,7 @@ function Execute-FuturesTrade {
     $sl = $entry * (1 - ($(if ($null -ne $Signal.stop_loss_pct) { $Signal.stop_loss_pct } else { 0.01 })))
     $risk = $PositionSize * ($(if ($null -ne $Signal.stop_loss_pct) { $Signal.stop_loss_pct } else { 0.01 }))
 
-    return @{
+    return [PSCustomObject]@{
         market = "FUTURES"
         pair = $Signal.market
         position_usdt = $PositionSize

@@ -109,9 +109,13 @@ Describe "Hybrid Orchestrator" {
             # liquidation_price nem ajuste por leverage. Documentando o gap
             # em vez de mascarar com uma expectativa falsa (nenhum motor
             # real chama esta funcao hoje, ver nota no topo do arquivo).
+            # 2026-07-24: Execute-FuturesTrade/-SpotTrade agora retornam
+            # [PSCustomObject] (nao Hashtable, fix pra Measure-Object -Property
+            # funcionar em total_risk) -- .ContainsKey nao existe mais,
+            # equivalente correto e .PSObject.Properties[...].
             $signal = @{ market = "BTCUSDT"; entry_price = 100; stop_loss_pct = 0.01 }
             $trade = Execute-FuturesTrade -Signal $signal -PositionSize 10
-            $trade.ContainsKey("liquidation_price") | Should Be $false
+            ($trade.PSObject.Properties['liquidation_price'] -ne $null) | Should Be $false
         }
     }
 
