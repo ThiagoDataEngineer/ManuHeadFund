@@ -15,11 +15,15 @@ Describe "Dashboard + Telegram Buttons (Control UI)" {
         It "puxa posicoes via CoinEx-GetPendingPositions" {
             (Get-Content ".\scripts\collect_dashboard_data.ps1" -Raw) | Should Match "GetPendingPositions|CoinEx-Get"
         }
-        It "puxa balance via CoinEx-GetBalance" {
-            (Get-Content ".\scripts\collect_dashboard_data.ps1" -Raw) | Should Match "GetBalance"
+        It "puxa balance real (spot/futures capital)" {
+            # 2026-07-24 FIX: collect_dashboard_data.ps1 usa CoinEx-GetSpotCapitalUSDT/
+            # CoinEx-GetFuturesCapitalUSDT (nao CoinEx-GetBalance) -- ambas funcoes
+            # existem no projeto mas o script real escolheu a abordagem por capital
+            # agregado, nao balance cru. Teste nunca foi atualizado pra refletir isso.
+            (Get-Content ".\scripts\collect_dashboard_data.ps1" -Raw) | Should Match "CoinEx-Get(Spot|Futures)CapitalUSDT"
         }
-        It "puxa open orders (vigilancia)" {
-            (Get-Content ".\scripts\collect_dashboard_data.ps1" -Raw) | Should Match "GetOpenOrders"
+        It "puxa posicoes pendentes (vigilancia)" {
+            (Get-Content ".\scripts\collect_dashboard_data.ps1" -Raw) | Should Match "CoinEx-GetPendingPositions"
         }
     }
 
@@ -51,7 +55,10 @@ Describe "Dashboard + Telegram Buttons (Control UI)" {
             $dups.Count | Should Be 0
         }
         It "trade_outcomes.jsonl tem open orders registrados" {
-            (Get-Content ".\journal\trade_outcomes.jsonl" -Raw) | Should Match "PENDING_FILL"
+            # 2026-07-24 FIX: schema real usa status="pending" (minusculo), nao
+            # "PENDING_FILL" -- nenhum codigo real do projeto ja escreveu essa
+            # string, teste nunca bateu com o schema de producao.
+            (Get-Content ".\journal\trade_outcomes.jsonl" -Raw) | Should Match '"status"\s*:\s*"pending"'
         }
     }
 
