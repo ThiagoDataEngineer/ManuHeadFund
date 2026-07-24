@@ -13,11 +13,14 @@ Describe "MentorAudit: Get-MentorDecisionsRecent" {
     }
 
     It "retorna últimas N decisões" {
+        # 2026-07-23 FIX: "ConvertTo-Json | Add-Content" SEM -Compress grava
+        # JSON multi-linha indentado -- quebra leitura JSONL (1 linha = 1
+        # registro) que Get-MentorDecisionsRecent espera. -Compress corrige.
         $file = Join-Path $global:JOURNAL_DIR "decisions_text.jsonl"
         Remove-Item $file -ErrorAction SilentlyContinue
 
         1..50 | ForEach-Object {
-            @{ decision="APROVAR"; market="TEST$_"; score=75 } | ConvertTo-Json | Add-Content $file
+            @{ decision="APROVAR"; market="TEST$_"; score=75 } | ConvertTo-Json -Compress | Add-Content $file
         }
 
         $recent = Get-MentorDecisionsRecent -Limit 10 -JournalDir $global:JOURNAL_DIR
@@ -31,7 +34,7 @@ Describe "MentorAudit: Get-MentorDecisionsRecent" {
         Remove-Item $file -ErrorAction SilentlyContinue
 
         1..200 | ForEach-Object {
-            @{ decision="APROVAR"; market="TEST$_" } | ConvertTo-Json | Add-Content $file
+            @{ decision="APROVAR"; market="TEST$_" } | ConvertTo-Json -Compress | Add-Content $file
         }
 
         $recent = Get-MentorDecisionsRecent -JournalDir $global:JOURNAL_DIR
