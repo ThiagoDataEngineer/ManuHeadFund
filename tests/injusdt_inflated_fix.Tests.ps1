@@ -15,6 +15,27 @@ $script:agentsDir = Join-Path (Split-Path -Parent $PSScriptRoot) "agents"
 . (Join-Path $script:agentsDir "lib_quant_whitelist.ps1")
 . (Join-Path $script:agentsDir "lib_top_candidates.ps1")
 
+# 2026-07-23 FIX CRITICO: o teste original NAO passava -Path pra
+# Merge-QuantWhitelistIntoCandidates, entao Get-QuantWhitelist lia o
+# arquivo journal/per_asset_whitelist_*.json MAIS RECENTE NO DISCO --
+# nao deterministico, muda toda semana. Isso mascarou um bug real de
+# producao: o arquivo mais recente (per_asset_whitelist_20260701_101921_RESTORED.json,
+# criado manualmente em 2026-07-01 apos parada de 18 dias, ver
+# docs/ENTREGA_COMPLETA_2026_07_01.md) estava num schema INCOMPATIVEL
+# (array plano com campo "tier") com o que Get-QuantWhitelist realmente
+# le ({TIER_A_LIVE:[...]}) -- BTCUSDT/ETHUSDT/SOLUSDT nunca eram forcados
+# no topo do scan desde 07-01. Corrigido o arquivo real (formato certo)
+# E este teste agora cria seu proprio arquivo temporario deterministico,
+# nao dependendo mais do estado do disco.
+$script:wlTestPath = Join-Path ([System.IO.Path]::GetTempPath()) "test_whitelist_$([guid]::NewGuid()).json"
+@{
+    TIER_A_LIVE = @(
+        @{ market = "BTCUSDT"; tier = "tier_a_live" }
+        @{ market = "INJUSDT"; tier = "tier_a_live" }
+    )
+    TIER_B_PAPER = @()
+} | ConvertTo-Json -Depth 5 | Set-Content $script:wlTestPath -Encoding UTF8
+
 Describe "INJUSDT Inflated Fix" {
 
     Context "isWhitelistForced field" {
@@ -25,6 +46,7 @@ Describe "INJUSDT Inflated Fix" {
             
             $result = Merge-QuantWhitelistIntoCandidates `
                 -Candidates $candidates `
+                -Path $script:wlTestPath `
                 -Mode "LIVE" `
                 -AnchorMarkets @("BTCUSDT")
             
@@ -76,6 +98,7 @@ Describe "INJUSDT Inflated Fix" {
             $candidates = @()
             $result = Merge-QuantWhitelistIntoCandidates `
                 -Candidates $candidates `
+                -Path $script:wlTestPath `
                 -Mode "LIVE" `
                 -RegimeProvider $regimeProvider `
                 -AnchorMarkets @("BTCUSDT", "INJUSDT")
@@ -124,6 +147,7 @@ Describe "INJUSDT Inflated Fix" {
             # Com AnchorMarkets=@("BTCUSDT"), apenas BTC e forcado
             $result = Merge-QuantWhitelistIntoCandidates `
                 -Candidates $candidates `
+                -Path $script:wlTestPath `
                 -AnchorMarkets @("BTCUSDT")
             
             # Contar forcados
@@ -146,6 +170,7 @@ Describe "INJUSDT Inflated Fix" {
             $candidates = @()
             $result = Merge-QuantWhitelistIntoCandidates `
                 -Candidates $candidates `
+                -Path $script:wlTestPath `
                 -Mode "LIVE" `
                 -AnchorMarkets @("BTCUSDT")
             
@@ -159,6 +184,7 @@ Describe "INJUSDT Inflated Fix" {
             $candidates = @()
             $result = Merge-QuantWhitelistIntoCandidates `
                 -Candidates $candidates `
+                -Path $script:wlTestPath `
                 -Mode "LIVE" `
                 -AnchorMarkets @("BTCUSDT")
             
@@ -174,6 +200,7 @@ Describe "INJUSDT Inflated Fix" {
             $candidates = @()
             $result = Merge-QuantWhitelistIntoCandidates `
                 -Candidates $candidates `
+                -Path $script:wlTestPath `
                 -Mode "LIVE"
             
             # Sem -AnchorMarkets, deve retornar todos os Tier A/B forcados
@@ -185,6 +212,7 @@ Describe "INJUSDT Inflated Fix" {
             $candidates = @()
             $result = Merge-QuantWhitelistIntoCandidates `
                 -Candidates $candidates `
+                -Path $script:wlTestPath `
                 -Mode "LIVE" `
                 -AnchorMarkets @()
             
@@ -194,3 +222,5 @@ Describe "INJUSDT Inflated Fix" {
         }
     }
 }
+
+Remove-Item $script:wlTestPath -Force -ErrorAction SilentlyContinue
