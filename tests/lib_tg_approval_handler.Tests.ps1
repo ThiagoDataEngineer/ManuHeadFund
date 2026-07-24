@@ -10,7 +10,7 @@ Describe "TgApprovalHandler: Process-ApprovalCommand" {
     It "/approve market seta status APPROVED" {
         $file = Join-Path $global:JOURNAL_DIR "human_approvals_pending.jsonl"
         Remove-Item $file -ErrorAction SilentlyContinue
-        @{ market="TESTUSDT"; status="PENDING"; size_usd=150 } | ConvertTo-Json | Add-Content $file
+        @{ market="TESTUSDT"; status="PENDING"; size_usd=150 } | ConvertTo-Json -Compress | Add-Content $file
 
         $result = Process-ApprovalCommand -Command "/approve" -Market "TESTUSDT" -JournalDir $global:JOURNAL_DIR
         $result.status | Should Be "ok"
@@ -24,7 +24,7 @@ Describe "TgApprovalHandler: Process-ApprovalCommand" {
     It "/reject market seta status REJECTED" {
         $file = Join-Path $global:JOURNAL_DIR "human_approvals_pending.jsonl"
         Remove-Item $file -ErrorAction SilentlyContinue
-        @{ market="TESTUSDT"; status="PENDING"; size_usd=150 } | ConvertTo-Json | Add-Content $file
+        @{ market="TESTUSDT"; status="PENDING"; size_usd=150 } | ConvertTo-Json -Compress | Add-Content $file
 
         $result = Process-ApprovalCommand -Command "/reject" -Market "TESTUSDT" -JournalDir $global:JOURNAL_DIR
         $result.status | Should Be "ok"
@@ -85,8 +85,8 @@ Describe "TgApprovalHandler: Get-PendingApprovalStatus" {
     It "lista pending approvals" {
         $file = Join-Path $global:JOURNAL_DIR "human_approvals_pending.jsonl"
         Remove-Item $file -ErrorAction SilentlyContinue
-        @{ market="TEST1"; status="PENDING"; size_usd=100 } | ConvertTo-Json | Add-Content $file
-        @{ market="TEST2"; status="PENDING"; size_usd=200 } | ConvertTo-Json | Add-Content $file
+        @{ market="TEST1"; status="PENDING"; size_usd=100 } | ConvertTo-Json -Compress | Add-Content $file
+        @{ market="TEST2"; status="PENDING"; size_usd=200 } | ConvertTo-Json -Compress | Add-Content $file
 
         $status = Get-PendingApprovalStatus -JournalDir $global:JOURNAL_DIR
         $status | Should Match "TEST1"
