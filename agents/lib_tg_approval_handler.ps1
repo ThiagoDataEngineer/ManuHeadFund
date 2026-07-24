@@ -37,10 +37,17 @@ function Process-ApprovalCommand {
                     } catch { }
                 }
                 if ($updated.Count -gt 0) {
-                    # "-AsArray" nao existe no ConvertTo-Json do PowerShell 5.1
-                    # (so 6+/Core) -- "," forca o wrapper de array a
-                    # sobreviver mesmo com 1 elemento (bug array-of-one).
-                    (, @($updated)) | ConvertTo-Json -Depth 5 | Set-Content $file -Encoding UTF8
+                    # 2026-07-24 FIX (v3): o arquivo e JSONL real (1 objeto por
+                    # linha -- Get-PendingApprovalStatus e o proprio loop de
+                    # leitura acima usam "Where-Object { $_ -match '^\{' }",
+                    # que exige exatamente isso). "-AsArray" nao existe no
+                    # PowerShell 5.1; qualquer ConvertTo-Json de um array
+                    # inteiro de uma vez produz "[...]" multi-linha (v1) ou
+                    # {"value":[...],"Count":N} com o comma-wrap errado (v2) --
+                    # ambos quebram a proxima leitura JSONL. Fix real: gravar
+                    # linha por linha, cada uma comprimida.
+                    $lines = @($updated | ForEach-Object { $_ | ConvertTo-Json -Compress -Depth 5 })
+                    Set-Content -Path $file -Value $lines -Encoding UTF8
                 }
             }
 
@@ -65,15 +72,11 @@ function Process-ApprovalCommand {
                     } catch { }
                 }
                 if ($updated.Count -gt 0) {
-                    # 2026-07-24 FIX: "-AsArray" nao existe no ConvertTo-Json
-                    # do PowerShell 5.1 (so PowerShell 6+/Core) -- lancava erro
-                    # real (engolido pelo catch mais externo do chamador em
-                    # producao), Set-Content nunca rodava, e /approve|/reject
-                    # sempre retornava status=ok mas NUNCA persistia a decisao
-                    # (arquivo ficava com status=PENDING pra sempre). "," forca
-                    # o wrapper de array a serializar como JSON array mesmo com
-                    # 1 elemento (mesmo padrao do bug array-of-one desta sessao).
-                    (, @($updated)) | ConvertTo-Json -Depth 5 | Set-Content $file -Encoding UTF8
+                    # 2026-07-24 FIX (v3): arquivo e JSONL real (1 objeto por
+                    # linha) -- grava linha por linha, cada uma comprimida
+                    # (mesmo fix aplicado no bloco /approve acima).
+                    $lines = @($updated | ForEach-Object { $_ | ConvertTo-Json -Compress -Depth 5 })
+                    Set-Content -Path $file -Value $lines -Encoding UTF8
                 }
             }
 
