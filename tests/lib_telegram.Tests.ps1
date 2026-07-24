@@ -88,11 +88,16 @@ Describe "Send-TelegramAlert -- validacoes e envio" {
     }
 
     It "retorna false em erro HTTP" {
+        # 2026-07-23 FIX: "teste" nao casa a whitelist radical (so 6 tipos
+        # criticos passam, ver lib_telegram.ps1 ~line 313) -- mensagem NAO
+        # acionavel retorna $true (silenciada) ANTES de chegar no
+        # Invoke-RestMethod, nunca exercitando o path de erro HTTP. Mensagem
+        # trocada pra uma que bate no padrao de ERROR critico.
         function Invoke-RestMethod {
             param($Uri, $Method, $Body, $Headers, $ContentType, $ErrorAction)
             throw "network error"
         }
-        $r = Send-TelegramAlert -Message "teste" -Token "tok" -ChatId "123" -Enabled "true"
+        $r = Send-TelegramAlert -Message "❌ ERROR: falha crítica no sistema" -Token "tok" -ChatId "123" -Enabled "true"
         $r | Should Be $false
     }
 }

@@ -312,11 +312,11 @@ function Send-TelegramAlert {
     #   -> BLUAI abriu autonomo e user NAO recebeu NADA (so viu no app CoinEx).
     # Padroes agora cobrem os formatos REAIS de open/close/critico/moon-bag.
     $isActionable = (
-        ($msg -match "🎯.*ENTRADA|EXECUTAR.*trade|ordem.*aberta") -or
+        ($msg -match "🎯.*ENTRADA|EXECUTAR.*trade|ordem.*aberta|ENTRADA.*executada") -or
         ($msg -match "TRADE ABERTO|TRADE EXECUTADO|GEM EXECUTADO") -or
-        ($msg -match "❌.*FECHAD|TRADE.*FECHADO|posição.*fechada|posicao.*fechada|STOP.*HIT|SL.*ativado|TP.*atingido") -or
+        ($msg -match "❌.*FECHAD|TRADE.*FECHADO|posição.*fechada|posicao.*fechada|STOP.*HIT|SL.*ativado|ativado.*SL|TP.*atingido") -or
         ($msg -match "🛑.*CIRCUIT|CIRCUIT.*BREAKER|DAILY.*LOSS|perda.*limite") -or
-        ($msg -match "❌.*ERROR|erro.*crítico|FALHA.*crítica|ERRO.*sistema") -or
+        ($msg -match "❌.*ERROR|erro.*crítico|FALHA.*crítica|ERRO.*sistema|<b>ERRO</b>|❌.*ERRO\b") -or
         ($msg -match "📊.*REGIME|regime.*mudou|BULL.*BEAR|BEAR.*BULL") -or
         ($msg -match "CRÍTICO|CRITICO|CRITICAL|PROTEÇÃO ATIVA|PROTECAO ATIVA") -or
         ($msg -match "Moon Bag.*vend|CLIMAX.*vend|HARVEST") -or
