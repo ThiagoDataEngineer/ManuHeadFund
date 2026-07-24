@@ -1,4 +1,4 @@
-# mentor_supabase_enrichment.Tests.ps1 — TDD para enriquecimento Supabase
+﻿# mentor_supabase_enrichment.Tests.ps1 — TDD para enriquecimento Supabase
 # Mock de Get-SupabaseState, valida formato enrichment
 # 2026-07-09
 # 2026-07-23 FIX: reescrito p/ Pester 3.4.0 (motor real de producao/CI) --
@@ -21,9 +21,13 @@ $script:mockCounterfactual = @(
     @{ market = "NAKA"; direction = "SHORT"; avg_gain_pct = 45; n_skipped = 5; n_would_win = 2 }
 )
 
+# 2026-07-24 FIX: [PSCustomObject] em vez de Hashtable -- Measure-Object
+# -Property (usado em Get-TrailingHistoryEnrichment) so funciona com
+# PSCustomObject, dados reais de Get-SupabaseState/ConvertFrom-Json
+# sempre vem assim.
 $script:mockTrailing = @(
-    @{ market = "ETHUSDT"; regime = "BULL_WEAK"; side = "LONG"; profit_realized_pct = 3.2; sl_effectiveness = 0.92; duration_minutes = 240 }
-    @{ market = "ETHUSDT"; regime = "BULL_WEAK"; side = "LONG"; profit_realized_pct = 2.8; sl_effectiveness = 0.88; duration_minutes = 180 }
+    [PSCustomObject]@{ market = "ETHUSDT"; regime = "BULL_WEAK"; side = "LONG"; profit_realized_pct = 3.2; sl_effectiveness = 0.92; duration_minutes = 240 }
+    [PSCustomObject]@{ market = "ETHUSDT"; regime = "BULL_WEAK"; side = "LONG"; profit_realized_pct = 2.8; sl_effectiveness = 0.88; duration_minutes = 180 }
 )
 
 $script:mockCapital = @(
