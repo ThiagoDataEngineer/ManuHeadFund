@@ -283,8 +283,16 @@ function Update-DashboardState {
     $day1 = $now.AddDays(-1)
     $day7 = $now.AddDays(-7)
 
-    $State.trades_24h = @($TradeOutcomes | Where-Object { [datetime]$_.exit_date -ge $day1 }).Count
-    $State.trades_7d = @($TradeOutcomes | Where-Object { [datetime]$_.exit_date -ge $day7 }).Count
+    # 2026-07-24 FIX: "[datetime]$_.exit_date" assume culture invariant
+    # (MM/dd/yyyy) -- quebra com exit_date gravado via .ToString() no
+    # locale local (pt-BR: dd/MM/yyyy), mesmo bug sistemico ja visto
+    # nesta auditoria (ConvertFrom-Json/coercao de datetime).
+    function _Parse-ExitDate($val) {
+        if ($val -is [datetime]) { return $val }
+        return [datetime]::Parse([string]$val)
+    }
+    $State.trades_24h = @($TradeOutcomes | Where-Object { (_Parse-ExitDate $_.exit_date) -ge $day1 }).Count
+    $State.trades_7d = @($TradeOutcomes | Where-Object { (_Parse-ExitDate $_.exit_date) -ge $day7 }).Count
 
     $wins = @($TradeOutcomes | Where-Object { $_.win }).Count
     $State.win_rate = if ($TradeOutcomes.Count -gt 0) {
@@ -482,13 +490,15 @@ function New-DashboardHtmlWithControls {
 # EXPORT
 # ============================================================================
 
-Export-ModuleMember -Function @(
-    'Start-DashboardRealtimeSync',
-    'New-RealtimeSubscription',
-    'Update-SubscriptionData',
-    'New-ControlButton',
-    'Invoke-ControlButton',
-    'New-DashboardState',
-    'Update-DashboardState',
-    'New-DashboardHtmlWithControls'
-)
+# Export disabled for dot-source compatibility (PS 5.1) -- Export-ModuleMember
+# so funciona dentro de um .psm1 real, lanca erro em dot-source direto.
+# Export-ModuleMember -Function @(
+#     'Start-DashboardRealtimeSync',
+#     'New-RealtimeSubscription',
+#     'Update-SubscriptionData',
+#     'New-ControlButton',
+#     'Invoke-ControlButton',
+#     'New-DashboardState',
+#     'Update-DashboardState',
+#     'New-DashboardHtmlWithControls'
+# )
