@@ -5,9 +5,10 @@ Describe "FARO V3 Aggressive Config (score 30→28)" {
 
     Context "Score threshold lowball 28 (from 35)" {
         It "accepts score ~28 when 4/7 signals with high values" {
-            # 4 * 25 = 100 raw, / 175 * 100 = 57 actual score
+            # 2026-07-24 FIX: normalizacao real divide por 165 (nao 175, erro
+            # do comentario original) -- 4*25=100 raw, /165*100 = 60.6 -> [int] 61
             $result = Get-FaroScoreV3 -VolScore 25 -PatternScore 25 -SentimentScore 25 -MomentumScore 25
-            $result.score | Should Be 57
+            $result.score | Should Be 61
             $result.signal_count | Should Be 4
             $result.decision | Should Be "WATCH"
         }

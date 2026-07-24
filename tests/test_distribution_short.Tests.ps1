@@ -95,7 +95,7 @@ Describe "DISTRIBUTION_SHORT Pattern Detection" {
         It "Should detect high volume in last 3 candles vs 20-avg" {
             # GIVEN: volume spike in recent candles
             $all_candles = @(
-                1..20 | ForEach-Object { @{ vol = 40000 } }  # avg_20 = 40000
+                1..20 | ForEach-Object { [PSCustomObject]@{ vol = 40000 } }  # avg_20 = 40000
             ) + @(
                 [PSCustomObject]@{ vol = 95000 },    # Last 3: high
                 [PSCustomObject]@{ vol = 105000 },
@@ -112,7 +112,7 @@ Describe "DISTRIBUTION_SHORT Pattern Detection" {
 
         It "Should NOT detect if volume is normal" {
             $all_candles = @(
-                1..23 | ForEach-Object { @{ vol = 40000 } }  # all same, avg = 40000
+                1..23 | ForEach-Object { [PSCustomObject]@{ vol = 40000 } }  # all same, avg = 40000
             )
 
             $result = Test-HighVolume -Candles $all_candles

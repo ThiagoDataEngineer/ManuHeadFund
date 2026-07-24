@@ -11,11 +11,11 @@ Describe "Trailing Executor Phase 2" {
     Context "Order Flow Intensity Detection" {
         It "Low volume = low intensity" {
             $candles = @(
-                @{ close = 100; volume = 1000; open = 99 }
-                @{ close = 101; volume = 900; open = 100 }
-                @{ close = 100; volume = 800; open = 101 }
-                @{ close = 102; volume = 950; open = 100 }
-                @{ close = 101; volume = 1000; open = 102 }
+                [PSCustomObject]@{ close = 100; volume = 1000; open = 99 }
+                [PSCustomObject]@{ close = 101; volume = 900; open = 100 }
+                [PSCustomObject]@{ close = 100; volume = 800; open = 101 }
+                [PSCustomObject]@{ close = 102; volume = 950; open = 100 }
+                [PSCustomObject]@{ close = 101; volume = 1000; open = 102 }
             )
             $result = Test-OrderFlowIntensity -Candles $candles
             $result.signal | Should Match "low|medium"
@@ -23,11 +23,11 @@ Describe "Trailing Executor Phase 2" {
 
         It "High volume spike = high intensity" {
             $candles = @(
-                @{ close = 100; volume = 1000; open = 99 }
-                @{ close = 100.5; volume = 2000; open = 100 }
-                @{ close = 101; volume = 5000; open = 100.5 }
-                @{ close = 101.5; volume = 8000; open = 101 }
-                @{ close = 102; volume = 9000; open = 101.5 }
+                [PSCustomObject]@{ close = 100; volume = 1000; open = 99 }
+                [PSCustomObject]@{ close = 100.5; volume = 2000; open = 100 }
+                [PSCustomObject]@{ close = 101; volume = 5000; open = 100.5 }
+                [PSCustomObject]@{ close = 101.5; volume = 8000; open = 101 }
+                [PSCustomObject]@{ close = 102; volume = 9000; open = 101.5 }
             )
             $result = Test-OrderFlowIntensity -Candles $candles
             $result.signal | Should Be "high"
@@ -36,16 +36,16 @@ Describe "Trailing Executor Phase 2" {
 
         It "CustomWindowSize funciona" {
             $candles = @(
-                @{ close = 100; volume = 1000; open = 99 }
-                @{ close = 101; volume = 2000; open = 100 }
-                @{ close = 102; volume = 3000; open = 101 }
+                [PSCustomObject]@{ close = 100; volume = 1000; open = 99 }
+                [PSCustomObject]@{ close = 101; volume = 2000; open = 100 }
+                [PSCustomObject]@{ close = 102; volume = 3000; open = 101 }
             )
             $result = Test-OrderFlowIntensity -Candles $candles -WindowSize 2
             $result.intensity | Should BeGreaterThan 0
         }
 
         It "Trata insuficientes candles" {
-            $candles = @(@{ close = 100; volume = 1000; open = 99 })
+            $candles = @([PSCustomObject]@{ close = 100; volume = 1000; open = 99 })
             $result = Test-OrderFlowIntensity -Candles $candles -WindowSize 5
             $result.signal | Should Be "low"
             $result.intensity | Should Be 0
@@ -55,9 +55,9 @@ Describe "Trailing Executor Phase 2" {
     Context "Volume Price Agreement" {
         It "High agreement = valid" {
             $candles = @(
-                @{ close = 101; open = 100; volume = 1000 }  # UP
-                @{ close = 102; open = 101; volume = 2000 }  # UP
-                @{ close = 103; open = 102; volume = 1500 }  # UP
+                [PSCustomObject]@{ close = 101; open = 100; volume = 1000 }  # UP
+                [PSCustomObject]@{ close = 102; open = 101; volume = 2000 }  # UP
+                [PSCustomObject]@{ close = 103; open = 102; volume = 1500 }  # UP
             )
             $result = Test-VolumePriceAgreement -Candles $candles
             $result.valid | Should Be $true
@@ -70,9 +70,9 @@ Describe "Trailing Executor Phase 2" {
             # nao geravam de fato "low agreement". Rebalanceado pra UP/DOWN
             # ficarem proximos (3500 vs 3500 = 50%, < 60% threshold).
             $candles = @(
-                @{ close = 101; open = 100; volume = 500 }   # UP
-                @{ close = 99; open = 101; volume = 3500 }   # DOWN
-                @{ close = 100; open = 99; volume = 3000 }   # UP
+                [PSCustomObject]@{ close = 101; open = 100; volume = 500 }   # UP
+                [PSCustomObject]@{ close = 99; open = 101; volume = 3500 }   # DOWN
+                [PSCustomObject]@{ close = 100; open = 99; volume = 3000 }   # UP
             )
             $result = Test-VolumePriceAgreement -Candles $candles
             $result.valid | Should Be $false
@@ -148,11 +148,11 @@ Describe "Trailing Executor Phase 2" {
     Context "Integrated SmartTrailingUpdate" {
         It "Detecta flow + atualiza level" {
             $candles = @(
-                @{ close = 100; volume = 1000; open = 99 }
-                @{ close = 100.5; volume = 2000; open = 100 }
-                @{ close = 101; volume = 5000; open = 100.5 }
-                @{ close = 101.5; volume = 8000; open = 101 }
-                @{ close = 102; volume = 9000; open = 101.5 }
+                [PSCustomObject]@{ close = 100; volume = 1000; open = 99 }
+                [PSCustomObject]@{ close = 100.5; volume = 2000; open = 100 }
+                [PSCustomObject]@{ close = 101; volume = 5000; open = 100.5 }
+                [PSCustomObject]@{ close = 101.5; volume = 8000; open = 101 }
+                [PSCustomObject]@{ close = 102; volume = 9000; open = 101.5 }
             )
             $levels = New-StopLevelStructure -EntryPrice 100 -StopPrice 95 -Side "LONG"
             $result = Update-TrailingWithSmartSL -Market "BTCUSDT" -CurrentPrice 105.5 `
@@ -163,9 +163,9 @@ Describe "Trailing Executor Phase 2" {
 
         It "Retorna novo SL para nível atual" {
             $candles = @(
-                @{ close = 100; volume = 5000; open = 99 }
-                @{ close = 101; volume = 6000; open = 100 }
-                @{ close = 102; volume = 7000; open = 101 }
+                [PSCustomObject]@{ close = 100; volume = 5000; open = 99 }
+                [PSCustomObject]@{ close = 101; volume = 6000; open = 100 }
+                [PSCustomObject]@{ close = 102; volume = 7000; open = 101 }
             )
             $levels = New-StopLevelStructure -EntryPrice 100 -StopPrice 95 -Side "LONG"
             $levels.current_level = 2
@@ -176,8 +176,8 @@ Describe "Trailing Executor Phase 2" {
 
         It "Calcula profit_pct corretamente" {
             $candles = @(
-                @{ close = 100; volume = 1000; open = 99 }
-                @{ close = 101; volume = 1000; open = 100 }
+                [PSCustomObject]@{ close = 100; volume = 1000; open = 99 }
+                [PSCustomObject]@{ close = 101; volume = 1000; open = 100 }
             )
             $levels = New-StopLevelStructure -EntryPrice 100 -StopPrice 95 -Side "LONG"
             $result = Update-TrailingWithSmartSL -Market "BTCUSDT" -CurrentPrice 110 `

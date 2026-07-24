@@ -105,8 +105,8 @@ Describe "Dashboard Phase 2 — WebSocket + Controls" {
         It "Atualiza com posições abertas" {
             $state = New-DashboardState
             $positions = @(
-                @{ capital = 1000; unrealized_pnl = 50 },
-                @{ capital = 2000; unrealized_pnl = -100 }
+                [PSCustomObject]@{ capital = 1000; unrealized_pnl = 50 },
+                [PSCustomObject]@{ capital = 2000; unrealized_pnl = -100 }
             )
             $state = Update-DashboardState -State $state -Positions $positions -TradeOutcomes @() -DaemonStatus @{}
             $state.capital_total | Should Be 3000
@@ -116,7 +116,7 @@ Describe "Dashboard Phase 2 — WebSocket + Controls" {
 
         It "Calcula PnL percentage" {
             $state = New-DashboardState
-            $positions = @(@{ capital = 1000; unrealized_pnl = 100 })
+            $positions = @([PSCustomObject]@{ capital = 1000; unrealized_pnl = 100 })
             $state = Update-DashboardState -State $state -Positions $positions -TradeOutcomes @() -DaemonStatus @{}
             $state.pnl_percentage | Should BeGreaterThan 0
         }
