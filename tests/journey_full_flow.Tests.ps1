@@ -24,15 +24,15 @@
 
             # Gate 1: Conviction
             $conv = Test-ConvictionGate -conviction 40 -mesa_score 84
-            $conv | Should -Be $true
+            $conv | Should Be $true
 
             # Gate 2: FQS
             $fqs = Test-FqsGatePassesWithDefault -Gem $gem -MesaScore 84
-            $fqs.pass | Should -Be $true
+            $fqs.pass | Should Be $true
 
             # Gate 3: Tori
             $tori = Test-ToriGateConsistent -MesaScore 84 -ToriSignal "SKIP"
-            $tori.pass | Should -Be $true
+            $tori.pass | Should Be $true
 
             # Result: GEM should ENTER
             Write-Host "BCHUSDT: All gates pass ✓" -ForegroundColor Green
@@ -48,7 +48,7 @@
 
             # Gate: Tori (should FAIL)
             $tori = Test-ToriGateConsistent -MesaScore 50 -ToriSignal "SKIP"
-            $tori.pass | Should -Be $false
+            $tori.pass | Should Be $false
 
             # Result: GEM should be REJECTED
             Write-Host "TRUMPUSDT: Blocked by Tori ✓" -ForegroundColor Yellow
@@ -64,8 +64,11 @@
             $size = Get-SafePositionSize -Capital $capital -EntryPrice $entry -StopLossPercent 0.02
 
             # Verify 1% capital rule
-            $size.max_loss_usd | Should -BeCloseTo 36.45 -Precision 1
-            $size.size_usd | Should -BeGreaterThan 1000
+            # 2026-07-23 FIX: Round(36.45, 1) usa banker's rounding do .NET
+            # (arredonda pro par mais proximo) = 36.4, nao 36.5 -- valor
+            # real (36.45) ja bate exato com 2 casas, sem precisar arredondar.
+            ($size.max_loss_usd -eq 36.45) | Should Be $true
+            $size.size_usd | Should BeGreaterThan 1000
 
             Write-Host "Entry 100, SL 98 → Size $($size.size_usd) USD ✓" -ForegroundColor Green
         }
@@ -76,8 +79,8 @@
             $leverage = Get-SafeLeverage -RequestedLeverage 50 -ConvictionPercent 90
 
             # Cap applied
-            $leverage | Should -BeLessOrEqual 5.0
-            $leverage | Should -BeGreaterThan 1.0
+            ($leverage -le 5.0) | Should Be $true
+            $leverage | Should BeGreaterThan 1.0
 
             Write-Host "Requested 50x → Applied $leverage x ✓" -ForegroundColor Green
         }
@@ -93,8 +96,8 @@
             }
 
             # Verify SL is set
-            $gem.stop_loss | Should -BeGreaterThan 0
-            $gem.stop_loss | Should -BeLessThan $gem.entry_price
+            $gem.stop_loss | Should BeGreaterThan 0
+            $gem.stop_loss | Should BeLessThan $gem.entry_price
 
             Write-Host "Entry 100, SL 98 (2% below) ✓" -ForegroundColor Green
         }
@@ -111,8 +114,8 @@
             $trail_pct = 0.02  # 2% trail
             $new_sl = $peak * (1 - $trail_pct)  # 102.90
 
-            $new_sl | Should -BeGreaterThan $entry  # Higher than entry (profit locked)
-            $new_sl | Should -BeLessThan $peak      # Below peak (protecting gains)
+            $new_sl | Should BeGreaterThan $entry  # Higher than entry (profit locked)
+            $new_sl | Should BeLessThan $peak      # Below peak (protecting gains)
 
             Write-Host "Entry 100 → Peak 105 → Trail SL to $new_sl ✓" -ForegroundColor Green
         }
@@ -134,11 +137,11 @@
             }
 
             # Verify all fields populated
-            $trade.trade_id | Should -Not -BeNullOrEmpty
-            $trade.market | Should -Not -BeNullOrEmpty
-            $trade.exit_price | Should -BeGreaterThan $trade.entry_price
-            $trade.pnl_usd | Should -BeGreaterThan 0
-            $trade.win | Should -Be $true
+            $trade.trade_id | Should Not BeNullOrEmpty
+            $trade.market | Should Not BeNullOrEmpty
+            $trade.exit_price | Should BeGreaterThan $trade.entry_price
+            $trade.pnl_usd | Should BeGreaterThan 0
+            $trade.win | Should Be $true
 
             Write-Host "Trade closed: $($trade.market) +$($trade.pnl_pct)% ✓" -ForegroundColor Green
         }
@@ -168,19 +171,19 @@
             $tori_pass = Test-ToriGateConsistent -MesaScore 84 -ToriSignal "SKIP"
 
             $all_gates_pass = ($conv_pass -and $fqs_pass.pass -and $tori_pass.pass)
-            $all_gates_pass | Should -Be $true
+            $all_gates_pass | Should Be $true
 
             Write-Host "✓ Gate 1: All conviction/FQS/Tori gates pass" -ForegroundColor Green
 
             # Journey 2: SIZING ✓
             $size = Get-SafePositionSize -Capital 3645 -EntryPrice 100 -StopLossPercent 0.02
-            $size.valid | Should -Be $true
+            $size.valid | Should Be $true
 
             Write-Host "✓ Gate 2: Position sized $($size.size_usd) USD" -ForegroundColor Green
 
             # Journey 3: LEVERAGE ✓
             $lev = Get-SafeLeverage -Mode "STANDARD"
-            $lev | Should -BeLessOrEqual 5.0
+            ($lev -le 5.0) | Should Be $true
 
             Write-Host "✓ Gate 3: Leverage capped at $lev x" -ForegroundColor Green
 
@@ -190,7 +193,7 @@
 
             # FINAL: Trade should be profitable
             $pnl_pct = (($scenario.exit.price - $scenario.gem_signal.entry_price) / $scenario.gem_signal.entry_price) * 100
-            $pnl_pct | Should -BeGreaterThan 0
+            $pnl_pct | Should BeGreaterThan 0
 
             Write-Host "✅ FULL JOURNEY COMPLETE: Signal → Entry → Size → Leverage → Monitor → Exit (+$pnl_pct%)" -ForegroundColor Green
         }
@@ -219,7 +222,7 @@
 
             $all_ready = $metrics.Values | Where-Object { $_ -eq $true } | Measure-Object | Select-Object -ExpandProperty Count
 
-            $all_ready | Should -Be 6
+            $all_ready | Should Be 6
 
             Write-Host "System ready: 6/6 critical metrics ✓" -ForegroundColor Green
         }
