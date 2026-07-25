@@ -27,15 +27,23 @@ function Invoke-Claude {
     # Garantir TLS 1.2 no runspace atual (runspaces paralelos nao herdam do parent)
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13
 
-    $body = @{
+    $bodyHash = [ordered]@{
         model       = $Model
         max_tokens  = $MaxTokens
-        temperature = $Temperature
         system      = $SystemPrompt
         messages    = @(
             @{ role = "user"; content = $UserContent }
         )
-    } | ConvertTo-Json -Depth 10 -Compress
+    }
+    # 2026-07-25: claude-sonnet-5 rejeita o param "temperature" com 400
+    # invalid_request_error ("`temperature` is deprecated for this model") --
+    # confirmado via diagnostico real pos credito Anthropic. Haiku 4.5 aceita
+    # normalmente. Omitir o campo so para a familia sonnet-5 (nao afeta Haiku
+    # nem versoes futuras que voltem a aceitar).
+    if ($Model -notlike "claude-sonnet-5*") {
+        $bodyHash["temperature"] = $Temperature
+    }
+    $body = $bodyHash | ConvertTo-Json -Depth 10 -Compress
 
     $start = Get-Date
     try {
