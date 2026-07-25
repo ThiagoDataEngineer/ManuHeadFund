@@ -77,18 +77,16 @@ function Invoke-Claude {
         $msg = $_.Exception.Message
         # 2026-07-25: corpo da resposta de erro nunca era capturado -- 400/401/403
         # sempre apareciam so como "Response status code does not indicate success"
-        # sem a mensagem real da API (ex: "model not found", "invalid x-api-key").
-        # PS5.1 Desktop (Invoke-WebRequest -UseBasicParsing) NAO popula
-        # $_.ErrorDetails.Message (isso so existe no PS Core/7) -- precisa ler o
-        # stream de resposta manualmente. Confirmado via teste real contra a API.
-        try {
-            $errStream = $_.Exception.Response.GetResponseStream()
-            if ($errStream) {
-                $reader = New-Object System.IO.StreamReader($errStream)
-                $body = $reader.ReadToEnd()
-                if ($body) { $msg = $body.Substring(0, [Math]::Min(300, $body.Length)) }
-            }
-        } catch {}
+        # sem a mensagem real da API (ex: "invalid_request_error", "credit balance
+        # too low"). Confirmado via diagnostico real (workflow_dispatch, runner
+        # Ubuntu/pwsh Core): $_.ErrorDetails.Message TEM o corpo no ambiente real
+        # de producao (PS Core, HttpResponseException) -- GetResponseStream()
+        # (API do .NET Framework WebException) nao existe em HttpResponseMessage,
+        # so seria necessario num PS5.1 Desktop puro que este projeto nao usa
+        # para chamadas de API (todos os jobs GitHub Actions rodam shell:pwsh).
+        if ($_.ErrorDetails -and $_.ErrorDetails.Message) {
+            $msg = $_.ErrorDetails.Message.Substring(0, [Math]::Min(300, $_.ErrorDetails.Message.Length))
+        }
         throw "Claude API error ($statusCode): $msg"
     }
 }
@@ -463,7 +461,7 @@ function Invoke-MesaDroneCascade {
             return Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
                 -Model "claude-haiku-4-5-20251001" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
-            Write-Host "  [$Agent] Haiku primary falhou, fallback Groq: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+            Write-Host "  [$Agent] Haiku primary falhou, fallback Groq: $($_.Exception.Message.Substring(0,[Math]::Min(200,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
 
@@ -473,7 +471,7 @@ function Invoke-MesaDroneCascade {
             return Invoke-Groq -SystemPrompt $SystemPrompt -UserContent $UserContent `
                 -Model $GroqModel -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
-            Write-Host "  [$Agent] Groq falhou, fallback Mistral: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+            Write-Host "  [$Agent] Groq falhou, fallback Mistral: $($_.Exception.Message.Substring(0,[Math]::Min(200,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
 
@@ -509,7 +507,7 @@ function Invoke-MesaDroneCascade {
             return Invoke-Mistral -SystemPrompt $SystemPrompt -UserContent $UserContent `
                 -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
-            Write-Host "  [$Agent] Mistral falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+            Write-Host "  [$Agent] Mistral falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(200,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
 
@@ -552,7 +550,7 @@ function Invoke-MentorCascade {
                 -Model $AnthropicModel -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
             if ($r) { $script:LAST_CASCADE_PROVIDER = "anthropic_sonnet"; return $r }
         } catch {
-            Write-Host "  [$Agent] Sonnet falhou, fallback Groq: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+            Write-Host "  [$Agent] Sonnet falhou, fallback Groq: $($_.Exception.Message.Substring(0,[Math]::Min(200,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
     # 2. Groq llama-70b (fallback 1, gratis, dual-key automatico)
@@ -562,7 +560,7 @@ function Invoke-MentorCascade {
                 -Model "llama-3.3-70b-versatile" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
             if ($r) { $script:LAST_CASCADE_PROVIDER = "groq_llama70b"; return $r }
         } catch {
-            Write-Host "  [$Agent] Groq falhou, fallback Mistral: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+            Write-Host "  [$Agent] Groq falhou, fallback Mistral: $($_.Exception.Message.Substring(0,[Math]::Min(200,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
     # 3. Mistral (fallback 2 -- ~1B tok/mes, sem RPD fixo, 2026-05-29)
@@ -573,7 +571,7 @@ function Invoke-MentorCascade {
                 -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
             if ($r) { $script:LAST_CASCADE_PROVIDER = "mistral_small"; return $r }
         } catch {
-            Write-Host "  [$Agent] Mistral falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+            Write-Host "  [$Agent] Mistral falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(200,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
     # 4. Claude Haiku (ultimo recurso, ~$0.005/call)
@@ -604,7 +602,7 @@ function Invoke-TriagemCascade {
             return Invoke-Groq -SystemPrompt $SystemPrompt -UserContent $UserContent `
                 -Model "llama-3.3-70b-versatile" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
-            Write-Host "  [$Agent] Groq falhou, fallback Mistral: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+            Write-Host "  [$Agent] Groq falhou, fallback Mistral: $($_.Exception.Message.Substring(0,[Math]::Min(200,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
     # 2. Mistral (fallback 2 -- ~1B tok/mes, sem RPD fixo, 2026-05-29)
@@ -614,7 +612,7 @@ function Invoke-TriagemCascade {
             return Invoke-Mistral -SystemPrompt $SystemPrompt -UserContent $UserContent `
                 -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
-            Write-Host "  [$Agent] Mistral falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+            Write-Host "  [$Agent] Mistral falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(200,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
     }
     # 3. Haiku (fallback final, cost-conscious -- SOMENTE Haiku, nao Sonnet)
@@ -693,7 +691,7 @@ function Invoke-TechCascadeJson {
                     -Model "llama-3.3-70b-versatile" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
                 $parsed = _ParseJsonResponse $raw
                 if ($parsed) { return $parsed }
-            } catch { Write-Host "  [$Agent] Groq falhou: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow }
+            } catch { Write-Host "  [$Agent] Groq falhou: $($_.Exception.Message.Substring(0,[Math]::Min(200,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow }
         }
         # 2. Mistral fallback (2026-05-29: substitui Gemini, sem RPD fixo)
         # NOTA: gemini-2.0-flash = 1.500 RPD seria alternativa mais simples.
@@ -703,7 +701,7 @@ function Invoke-TechCascadeJson {
                     -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
                 $parsed = _ParseJsonResponse $raw
                 if ($parsed) { return $parsed }
-            } catch { Write-Host "  [$Agent] Mistral falhou: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow }
+            } catch { Write-Host "  [$Agent] Mistral falhou: $($_.Exception.Message.Substring(0,[Math]::Min(200,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow }
         }
         # 3. Haiku final fallback (SOMENTE Haiku, nao Sonnet)
         if ($env:ANTHROPIC_API_KEY) {
