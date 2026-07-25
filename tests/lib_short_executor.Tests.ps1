@@ -60,7 +60,7 @@ Describe "Test-ShortLiveGate -- fail-closed (dormente)" {
 }
 
 Describe "Test-ShortEntryReady -- consolida stack (fail-closed)" {
-    $okArgs = @{ PlanValid=$true; GateAllow=$true; Tier="S"; ClusterExceeded=$false; HasPosition=$false; CapitalSafe=$true }
+    $okArgs = @{ PlanValid=$true; GateAllow=$true; Tier="S"; ClusterExceeded=$false; HasPosition=$false; CapitalSafe=$true; FundingSafe=$true }
     It "tudo ok + tier S -> ready" {
         (Test-ShortEntryReady @okArgs).ready | Should Be $true
     }
@@ -89,6 +89,43 @@ Describe "Test-ShortEntryReady -- consolida stack (fail-closed)" {
     It "gate negado (sem flag/tier) -> bloqueia" {
         $a = $okArgs.Clone(); $a.GateAllow = $false
         (Test-ShortEntryReady @a).ready | Should Be $false
+    }
+    It "funding em risco de squeeze -> bloqueia (2026-07-25)" {
+        $a = $okArgs.Clone(); $a.FundingSafe = $false
+        $r = Test-ShortEntryReady @a
+        $r.ready | Should Be $false
+        ($r.reason -match "funding_squeeze_risk") | Should Be $true
+    }
+    It "FundingSafe omitido -> fail-closed (bloqueia por padrao, Regra de Ouro #5)" {
+        $a = $okArgs.Clone(); $a.Remove("FundingSafe")
+        (Test-ShortEntryReady @a).ready | Should Be $false
+    }
+}
+
+Describe "Test-ShortFundingSafe -- protecao contra short squeeze (2026-07-25)" {
+    # knowledge/MANIPULATION.md: funding muito negativo (-0.05%/8h+) = shorts
+    # lotados = candidato a short squeeze coordenado. Nunca checado no fluxo
+    # SHORT ate esta implementacao.
+    It "funding neutro/positivo -> safe" {
+        (Test-ShortFundingSafe -FundingRate 0.0001).safe | Should Be $true
+        (Test-ShortFundingSafe -FundingRate 0.001).safe | Should Be $true
+    }
+    It "funding levemente negativo (acima do limiar) -> safe" {
+        (Test-ShortFundingSafe -FundingRate -0.0002).safe | Should Be $true
+    }
+    It "funding muito negativo (-0.05%/8h) -> unsafe (squeeze risk)" {
+        $r = Test-ShortFundingSafe -FundingRate -0.0006
+        $r.safe | Should Be $false
+        ($r.reason -match "squeeze_risk") | Should Be $true
+    }
+    It "funding indisponivel (null) -> unsafe (fail-closed)" {
+        $r = Test-ShortFundingSafe -FundingRate $null
+        $r.safe | Should Be $false
+        $r.reason | Should Be "funding_unavailable"
+    }
+    It "limiar customizavel" {
+        (Test-ShortFundingSafe -FundingRate -0.001 -MinFundingRate -0.002).safe | Should Be $true
+        (Test-ShortFundingSafe -FundingRate -0.003 -MinFundingRate -0.002).safe | Should Be $false
     }
 }
 

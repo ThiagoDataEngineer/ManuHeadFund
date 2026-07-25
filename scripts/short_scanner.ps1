@@ -1,15 +1,20 @@
 ﻿# short_scanner.ps1 -- SHORT signal scanner - CROSS-PLATFORM (Windows/Linux)
 # Tier 2 Block 1 D.1 (2026-05-23): habilita SHORT observatory.
-# Backtest T6 validou: 505 signals, EV +2.85pp, hit 60% â€” POSITIVE EDGE.
+# Backtest T6 validou: 505 signals, EV +2.85pp, hit 60% -- POSITIVE EDGE.
 #
-# Universe: SHORT_TIER_A_LIVE + SHORT_TIER_B_PAPER do per_asset_whitelist v3.6+
+# Universe: config/short_universe.json (git-tracked) -- 22 futures liquidos no
+# observatorio, tier_a_live = 15 majors liquidos (ver live_enabled abaixo)
 # Cadencia: HOURLY (mesma logica vol_climax)
 # Output:
 #   - journal/short_alerts.jsonl (append-only)
 #   - TG alert Tier S apenas (Tier B silent log)
 #   - Forward tracker registra cada Tier S signal pra audit posterior
 #
-# Modo: OBSERVATORY ONLY (sem trade execution). Block 2 add Mentor + executor.
+# Modo: LIVE desde 2026-07-09 (config/short_universe.json live_enabled=true).
+# Tier S + market em tier_a_live + Test-ShortEntryReady (plano valido + gate
+# live + sem cluster cap + sem posicao + capital safety + funding-squeeze
+# guard 2026-07-25) -> ordem real via CoinEx-PlaceOrder. Nao e so observatorio
+# ha tempo; este comentario ficou desatualizado ate ser corrigido nesta data.
 # 2026-05-24: Refatorado para cross-platform (Windows/Linux)
 
 param([switch] $DryRun)
@@ -300,7 +305,17 @@ try {
                 } elseif ($tier -eq "S") {
                     $shortIco = if ($global:TG_EMOJI -and $global:TG_EMOJI.shortArrow) { $global:TG_EMOJI.shortArrow } else { "R" }
                     $bearIco = if ($global:TG_EMOJI -and $global:TG_EMOJI.bear) { $global:TG_EMOJI.bear } else { "" }
-                    $msg = "$bearIco [SHORT TIER S] $mkt $shortIco`nWSS=$wssScore (paper observatory)`nstrength=$($r.strength) vol_ratio=$($r.vol_ratio)x break=$($r.break_pct)% RSI=$($r.rsi)`nBTC DD=$([math]::Round($btcRegime.drawdown_pct,1))% vol_20d=$([math]::Round($btcRegime.vol_20d,2))%`nT6 backtest: EV +2.85pp em 505 signals. PAPER ONLY ate Block 2."
+                    # 2026-07-25: mensagem antiga sempre dizia "paper observatory /
+                    # PAPER ONLY", mesmo para mercados live (tier_a_live) que vao
+                    # executar ordem real logo abaixo -- enganoso. So promete
+                    # paper-only quando o mercado de fato nao esta elegivel a live.
+                    $__cfgSLPreview = $null
+                    $__cfgSLPreviewPath = Join-Path $projectRoot "config/short_universe.json"
+                    if (Test-Path $__cfgSLPreviewPath) { try { $__cfgSLPreview = Get-Content $__cfgSLPreviewPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch {} }
+                    $__tierAPreview = @(); if ($__cfgSLPreview -and $__cfgSLPreview.tier_a_live) { $__tierAPreview = @($__cfgSLPreview.tier_a_live) }
+                    $__liveEligible = ($__cfgSLPreview -and $__cfgSLPreview.live_enabled -eq $true -and ($__tierAPreview -contains $mkt))
+                    $__execTag = if ($__liveEligible) { "candidato a execucao real (ver mensagem SHORT LIVE EXECUTADO a seguir se todos os gates passarem)" } else { "paper observatory (fora do tier_a_live)" }
+                    $msg = "$bearIco [SHORT TIER S] $mkt $shortIco`nWSS=$wssScore ($__execTag)`nstrength=$($r.strength) vol_ratio=$($r.vol_ratio)x break=$($r.break_pct)% RSI=$($r.rsi)`nBTC DD=$([math]::Round($btcRegime.drawdown_pct,1))% vol_20d=$([math]::Round($btcRegime.vol_20d,2))%`nT6 backtest: EV +2.85pp em 505 signals."
                     try { Send-TelegramAlert -Message $msg | Out-Null } catch {}
 
                     # Forward tracker SHORT
@@ -345,8 +360,17 @@ try {
                                     -StoplossPrice $plan.stop -TargetPrice $plan.target -ProposedSizeUsd $usd_size -Market $mkt
                             $pos = $null; try { $pos = CoinEx-GetPosition $mkt } catch {}
                             $hasPos = ($pos -and @($pos).Count -gt 0)
+                            # 2026-07-25: protecao contra short squeeze coordenado (knowledge/MANIPULATION.md
+                            # -- funding muito negativo = shorts lotados = risco de squeeze). Nunca checado
+                            # neste fluxo ate agora. Fail-closed: funding indisponivel tambem bloqueia.
+                            $__fundingRate = $null
+                            if (Get-Command CoinEx-GetFundingRate -ErrorAction SilentlyContinue) {
+                                try { $__fundingRate = CoinEx-GetFundingRate $mkt } catch {}
+                            }
+                            $fundingCheck = Test-ShortFundingSafe -FundingRate $__fundingRate
                             $ready = Test-ShortEntryReady -PlanValid $plan.valid -GateAllow $gate.allow -Tier $tier `
-                                        -ClusterExceeded ([bool]($cluster -and $cluster.exceeded)) -HasPosition $hasPos -CapitalSafe ([bool]$cs.passes)
+                                        -ClusterExceeded ([bool]($cluster -and $cluster.exceeded)) -HasPosition $hasPos -CapitalSafe ([bool]$cs.passes) `
+                                        -FundingSafe ([bool]$fundingCheck.safe)
 
                             # Log SEMPRE (auditoria), dispara ordem so se gate.allow (live_enabled+tier) e ready.
                             $liveTag = if ($liveOn) { "LIVE" } else { "DRY(live_off)" }
@@ -370,7 +394,7 @@ try {
                                     $amount = [math]::Round($usd_size / $entryPx, 6)
                                     $order = CoinEx-PlaceOrder $mkt "sell" "market" $amount $null $plan.stop $plan.target
                                     Log "  [SHORT LIVE] $mkt ORDEM SHORT ENVIADA amount=$amount (~$usd_size USDT) stop=$($plan.stop) target=$($plan.target) leverage=${__safeLeverage}x"
-                                    try { Send-TelegramAlert -Message "[SHORT LIVE EXECUTADO] $mkt`namount=$amount (~$usd_size USDT)`nstop=$($plan.stop) target=$($plan.target)`nleverage=${__safeLeverage}x isolated`nWSS=$wssScore Tier S (rollout BTC/ETH)" | Out-Null } catch {}
+                                    try { Send-TelegramAlert -Message "[SHORT LIVE EXECUTADO] $mkt`namount=$amount (~$usd_size USDT)`nstop=$($plan.stop) target=$($plan.target)`nleverage=${__safeLeverage}x isolated`nWSS=$wssScore Tier S (tier_a_live, config/short_universe.json)" | Out-Null } catch {}
                                 } else {
                                     Log "  [SHORT LIVE] $mkt BLOQUEADO -- falha ao fixar leverage segura (${__safeLeverage}x): $($__levResult.error_msg)"
                                 }

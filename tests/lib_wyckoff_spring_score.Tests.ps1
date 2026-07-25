@@ -55,6 +55,43 @@ Describe "_WSS-ScoreDdZone" {
     }
 }
 
+Describe "_WSS-ScoreDdZone -- Side SHORT (curva invertida, 2026-07-25)" {
+    # mce_counterfactual_agg (dado real, n=24): NEUTRO|SHORT hit_rate=87.5%,
+    # o melhor edge medido. ESTUDO_GATES_SHORT_2026_07_03.md: BEAR_STRONG
+    # (drawdown profundo) win=24%, 52% toca stop adverso (squeeze risk).
+    # Sweet zone do SHORT = drawdown RASO, oposto do LONG/Spring.
+    It "Side padrao (omitido) preserva comportamento LONG -- zero regressao" {
+        _WSS-ScoreDdZone -DrawdownPct -25 | Should Be 100
+        _WSS-ScoreDdZone -DrawdownPct -70 | Should Be 0
+    }
+    It "DD 0 a -15 (sweet zone SHORT, drawdown raso) retorna 100" {
+        _WSS-ScoreDdZone -DrawdownPct 0 -Side "SHORT" | Should Be 100
+        _WSS-ScoreDdZone -DrawdownPct -10 -Side "SHORT" | Should Be 100
+        _WSS-ScoreDdZone -DrawdownPct -15 -Side "SHORT" | Should Be 100
+    }
+    It "DD -15 a -25 (transicao) retorna 60" {
+        _WSS-ScoreDdZone -DrawdownPct -20 -Side "SHORT" | Should Be 60
+    }
+    It "DD -25 a -40 (aprofundando) retorna 30" {
+        _WSS-ScoreDdZone -DrawdownPct -30 -Side "SHORT" | Should Be 30
+    }
+    It "DD alem de -40 (capitulacao profunda, squeeze risk) retorna 0" {
+        _WSS-ScoreDdZone -DrawdownPct -45 -Side "SHORT" | Should Be 0
+        _WSS-ScoreDdZone -DrawdownPct -70 -Side "SHORT" | Should Be 0
+    }
+    It "DD null com Side SHORT retorna 50 (neutro, mesma regra do LONG)" {
+        _WSS-ScoreDdZone -DrawdownPct $null -Side "SHORT" | Should Be 50
+    }
+    It "curva SHORT e literalmente oposta a LONG no mesmo DD" {
+        # DD -25: LONG=100 (sweet), SHORT=60 (ja saindo da zona rasa)
+        (_WSS-ScoreDdZone -DrawdownPct -25 -Side "LONG") | Should Be 100
+        (_WSS-ScoreDdZone -DrawdownPct -25 -Side "SHORT") | Should Be 60
+        # DD -5: LONG=30 (fora do sweet), SHORT=100 (bem raso, sweet)
+        (_WSS-ScoreDdZone -DrawdownPct -5 -Side "LONG") | Should Be 30
+        (_WSS-ScoreDdZone -DrawdownPct -5 -Side "SHORT") | Should Be 100
+    }
+}
+
 Describe "_WSS-ClusterPenalty" {
     It "Cluster 1 (solo) retorna 0" {
         _WSS-ClusterPenalty -ClusterSize 1 | Should Be 0
@@ -150,5 +187,39 @@ Describe "Get-WyckoffSpringScore END-TO-END" {
               -NowUtc ([datetime]::new(2018,1,1,0,0,0,[DateTimeKind]::Utc)) -ClusterSize 20 `
               -VolDistribution @(1.0,2.0,3.0)
         ($r.wss -ge 0 -and $r.wss -le 100) | Should Be $true
+    }
+
+    It "Side omitido (default LONG) preserva wss/tier identico ao comportamento pre-2026-07-25" {
+        $args = @{
+            Market = "ATOMUSDT"; BtcDrawdownPct = -25; BtcVol20d = 3.0
+            NowUtc = [datetime]::new(2026,5,22,0,0,0,[DateTimeKind]::Utc)
+            ClusterSize = 1; VolDistribution = @(1.0,1.5,2.0,2.5,3.5); QualityTable = $script:qt
+        }
+        $withoutSide = Get-WyckoffSpringScore @args
+        $withLongSide = Get-WyckoffSpringScore @args -Side "LONG"
+        $withoutSide.wss  | Should Be $withLongSide.wss
+        $withoutSide.tier | Should Be $withLongSide.tier
+    }
+
+    It "Side SHORT em drawdown raso (NEUTRO-like) da tier melhor que Side LONG no mesmo cenario" {
+        $args = @{
+            Market = "ATOMUSDT"; BtcDrawdownPct = -5; BtcVol20d = 3.0
+            NowUtc = [datetime]::new(2026,5,22,0,0,0,[DateTimeKind]::Utc)
+            ClusterSize = 1; VolDistribution = @(1.0,1.5,2.0,2.5,3.5); QualityTable = $script:qt
+        }
+        $long  = Get-WyckoffSpringScore @args -Side "LONG"
+        $short = Get-WyckoffSpringScore @args -Side "SHORT"
+        ($short.wss -gt $long.wss) | Should Be $true
+    }
+
+    It "Side SHORT em drawdown profundo (capitulacao) da tier pior que Side LONG no mesmo cenario" {
+        $args = @{
+            Market = "ATOMUSDT"; BtcDrawdownPct = -45; BtcVol20d = 3.0
+            NowUtc = [datetime]::new(2026,5,22,0,0,0,[DateTimeKind]::Utc)
+            ClusterSize = 1; VolDistribution = @(1.0,1.5,2.0,2.5,3.5); QualityTable = $script:qt
+        }
+        $long  = Get-WyckoffSpringScore @args -Side "LONG"
+        $short = Get-WyckoffSpringScore @args -Side "SHORT"
+        ($short.wss -lt $long.wss) | Should Be $true
     }
 }

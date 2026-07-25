@@ -171,7 +171,10 @@ function Get-ShortSignalWss {
     $r = Detect-ShortSignal -Volumes $Volumes -Highs $Highs -Lows $Lows -Closes $Closes
     if (-not $r.detected) { return $null }
 
-    # WSS scoring (same as LONG — Wyckoff theory says capitulation signals symmetric)
+    # WSS scoring (2026-07-25: -Side "SHORT" usa curva DdZone invertida --
+    # ver lib_wyckoff_spring_score.ps1 _WSS-ScoreDdZone. Sweet zone SHORT e
+    # drawdown RASO/NEUTRO, oposto do LONG/Spring que favorece capitulacao
+    # profunda ja em curso)
     if (Get-Command Get-WyckoffSpringScore -ErrorAction SilentlyContinue) {
         try {
             $wss = Get-WyckoffSpringScore `
@@ -181,7 +184,8 @@ function Get-ShortSignalWss {
                 -NowUtc $NowUtc `
                 -ClusterSize $ClusterSize `
                 -VolDistribution $VolDistribution `
-                -QualityTable $QualityTable
+                -QualityTable $QualityTable `
+                -Side "SHORT"
             return [PSCustomObject]@{
                 detected = $true
                 signal_result = $r
@@ -226,6 +230,9 @@ function Get-ShortThresholdsForRegime {
     Thresholds por regime:
     - BEAR_STRONG: ClimaxMult=2.0, RSI>75 (aggressive shorts, high conviction)
     - BEAR_WEAK: ClimaxMult=2.5, RSI>70 (default, moderate shorts)
+    - NEUTRO: ClimaxMult=2.5, RSI>68 (2026-07-25: mce_counterfactual_agg mostra
+      NEUTRO|SHORT hit_rate=87.5% n=24, melhor edge medido em producao -- antes
+      caia no default conservador por falta de case dedicado)
     - TRANSITION_DOWN: ClimaxMult=3.0, RSI>65 (conservative, early signals)
     - Default (unknown/BULL): ClimaxMult=3.0, RSI>70 (conservative fallback)
 
@@ -271,6 +278,20 @@ function Get-ShortThresholdsForRegime {
             return @{
                 ClimaxMultiplier = 3.0
                 RsiOverboughtMin = 65.0
+            }
+        }
+        "NEUTRO" {
+            # 2026-07-25: mce_counterfactual_agg (dado real, n=24) mostra
+            # NEUTRO|SHORT hit_rate=87.5%, avg_fwd_24h=+2.26% -- o melhor edge
+            # medido em producao entre todos os regimes. Antes caia no
+            # default conservador (3.0/70) so por falta de case dedicado, nao
+            # por avaliacao do dado. Mesma seletividade de volume do BEAR_WEAK
+            # (2.5x, ja validado no T6 backtest); RSI levemente mais permissivo
+            # (68 vs 70) reconhecendo o edge real, sem igualar a agressividade
+            # de BEAR_STRONG (nunca validado com dado de producao para NEUTRO).
+            return @{
+                ClimaxMultiplier = 2.5
+                RsiOverboughtMin = 68.0
             }
         }
         default {

@@ -1,11 +1,14 @@
-﻿# lib_short_executor.ps1 -- EXECUTOR SHORT (futures), DORMENTE por padrao.
+﻿# lib_short_executor.ps1 -- EXECUTOR SHORT (futures).
 #
-# Estado (2026-06-22): preparado em TDD mas NAO ativado. Para sair do observatorio
-# e shortar de verdade, precisa de DUAS chaves explicitas do usuario:
-#   1. journal/SHORT_LIVE_ENABLED.flag presente, E
-#   2. o market estar em SHORT_TIER_A_LIVE (hoje vazio de proposito).
-# Sem as duas, Test-ShortLiveGate NEGA -> Invoke-ShortEntry so observa (nao envia ordem).
-# NAO esta wired em nenhum scanner (existe, mas ninguem chama) -> zero risco ate ativar.
+# Estado (2026-07-25): LIVE via scripts/short_scanner.ps1, que chama
+# Build-ShortOrderPlan/Test-ShortLiveGate/Test-ShortEntryReady diretamente
+# (Invoke-ShortEntry abaixo e um wrapper alternativo, nao usado pelo scanner
+# real). Chaves de ativacao (config/short_universe.json, git-tracked):
+#   1. live_enabled=true (ativo desde 2026-07-09), E
+#   2. market em tier_a_live (15 majors liquidos).
+# Sem as duas, Test-ShortLiveGate NEGA -> so observa/loga (nao envia ordem).
+# Protecoes: Tori gate >=80, Mesa consensus, capital_safety sizing cap,
+# dedup posicao, funding-squeeze guard (2026-07-25, Test-ShortFundingSafe).
 #
 # Respeita Regras de Ouro: stop ANTES da entrada, risco <=1%/trade, R:R >=1:5,
 # fail-closed (plano invalido = nao opera).
@@ -106,7 +109,8 @@ function Test-ShortEntryReady {
         [bool]$ClusterExceeded = $false,
         [bool]$HasPosition = $false,
         [bool]$CapitalSafe = $false,
-        [bool]$RequireTierS = $true
+        [bool]$RequireTierS = $true,
+        [bool]$FundingSafe = $false
     )
     $reasons = @()
     if (-not $PlanValid)                       { $reasons += "invalid_plan" }
@@ -115,7 +119,29 @@ function Test-ShortEntryReady {
     if ($ClusterExceeded)                       { $reasons += "cluster_cap" }
     if ($HasPosition)                           { $reasons += "position_exists" }
     if (-not $CapitalSafe)                      { $reasons += "capital_unsafe" }
+    if (-not $FundingSafe)                      { $reasons += "funding_squeeze_risk" }
     return [PSCustomObject]@{ ready = ($reasons.Count -eq 0); reason = ($reasons -join ",") }
+}
+
+# ----------------------------------------------------------------------------
+# Test-ShortFundingSafe -- PURO. Protecao contra short squeeze coordenado
+# (knowledge/MANIPULATION.md: funding muito negativo = shorts lotados = risco
+# de squeeze -- "nunca manter short grande quando funding esta muito negativo").
+# Fail-closed: funding indisponivel (null) = nao seguro, bloqueia por padrao.
+# ----------------------------------------------------------------------------
+function Test-ShortFundingSafe {
+    [CmdletBinding()]
+    param(
+        [Nullable[double]]$FundingRate = $null,
+        [double]$MinFundingRate = -0.0005
+    )
+    if ($null -eq $FundingRate) {
+        return [PSCustomObject]@{ safe = $false; reason = "funding_unavailable" }
+    }
+    if ($FundingRate -lt $MinFundingRate) {
+        return [PSCustomObject]@{ safe = $false; reason = "funding_too_negative_${FundingRate}_squeeze_risk" }
+    }
+    return [PSCustomObject]@{ safe = $true; reason = "ok" }
 }
 
 # ----------------------------------------------------------------------------

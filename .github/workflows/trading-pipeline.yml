@@ -410,8 +410,10 @@ jobs:
         run: |
           try {
             # 2026-06-22: gate $minute -eq 0 NUNCA casava (GH throttle nunca cai no :00
-            # exato) -> short scanner rodou 0x. Observatorio (so loga candidatos SHORT,
-            # nao executa; dedup de alerta interno). Roda em todo fire p/ alimentar learning.
+            # exato) -> short scanner rodou 0x. Fix: roda em todo fire (sem gate de minuto).
+            # 2026-07-25: short_scanner.ps1 executa ordem SHORT real (nao so observatorio)
+            # quando Tier S + market em tier_a_live (config/short_universe.json) + todos os
+            # gates passam (plano valido, capital safety, funding-squeeze guard, sem posicao).
             if ($true) {
               Write-Host "=== SHORT SCANNER ===" -ForegroundColor Cyan
               & ./scripts/short_scanner.ps1

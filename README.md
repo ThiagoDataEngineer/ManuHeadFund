@@ -107,7 +107,7 @@ Principais (ver `.github/workflows/trading-pipeline.yml` para a lista completa, 
 | **gem-scanner-executor** | Live trading real: triagem→gates→mentor override pontual→execução (SPOT+FUTURES). Mentor so' consultado quando um gate de qualidade/sinal ja bloqueou (ver tabela de estado acima) |
 | **trailing-stop-monitor** | Atualiza peaks, empurra SL (motor real; motor unificado em shadow ao lado) |
 | **position-risk** | Guarda de risco por posição aberta |
-| **short-scanner** | Sweep TORI_SHORT com confluence real |
+| **short-scanner** | Wyckoff Buying Climax invertido (`Detect-ShortSignal`) + WSS tier S/A/B → Tier S em `tier_a_live` (15 majors, `config/short_universe.json`) executa ordem real. Thresholds por regime (`Get-ShortThresholdsForRegime`, incl. case `NEUTRO` calibrado 2026-07-25 com hit_rate real 87.5%); funding-squeeze guard (`Test-ShortFundingSafe`) bloqueia se funding < -0.05%/8h |
 | **tori-scanner** / **vol-climax** | Sinais de entrada complementares |
 | **gate-replay-study** | Mede edge real de candidatos rejeitados (contrafactual) |
 | **mce-counterfactual** | Agrega contrafactual por gate/regime/direction p/ Evolution Engine |

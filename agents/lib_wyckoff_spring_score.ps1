@@ -106,10 +106,26 @@ function _WSS-ScoreBtcVol {
 }
 
 function _WSS-ScoreDdZone {
-    # Drawdown is negative (e.g., -25). Sweet zone -15 to -40%.
-    param([Nullable[double]] $DrawdownPct)
+    # LONG (Spring): drawdown is negative (e.g., -25). Sweet zone -15 to -40%
+    # (capitulacao ja em curso = fundo formando).
+    #
+    # SHORT (Upthrust, 2026-07-25): curva INVERTIDA. mce_counterfactual_agg
+    # (dado real, n=24) mostra NEUTRO|SHORT hit_rate=87.5% -- o melhor edge
+    # medido -- enquanto ESTUDO_GATES_SHORT_2026_07_03.md mostra BEAR_STRONG
+    # (drawdown profundo, ja capitulado) com win=24% e 52% tocando stop
+    # adverso (short squeeze, ver knowledge/MANIPULATION.md). Rodar o WSS do
+    # LONG cru pro SHORT empurrava Tier S exatamente pro regime historicamente
+    # pior: sweet zone aqui e drawdown RASO (0 a -15%), nota decrescente
+    # conforme o drawdown se aprofunda.
+    param([Nullable[double]] $DrawdownPct, [string] $Side = "LONG")
     if ($null -eq $DrawdownPct) { return 50 }
     $d = [double]$DrawdownPct
+    if ($Side -eq "SHORT") {
+        if ($d -ge -15 -and $d -le 0)   { return 100 }
+        if ($d -ge -25 -and $d -lt -15) { return 60 }
+        if ($d -ge -40 -and $d -lt -25) { return 30 }
+        return 0
+    }
     if ($d -ge -40 -and $d -le -15) { return 100 }
     if ($d -ge -50 -and $d -le -10) { return 60 }
     if ($d -ge -55 -and $d -le -5)  { return 30 }
@@ -183,14 +199,15 @@ function Get-WyckoffSpringScore {
         [datetime] $NowUtc = (Get-Date).ToUniversalTime(),
         [int] $ClusterSize = 1,
         [double[]] $VolDistribution = @(),
-        [hashtable] $QualityTable = @{}
+        [hashtable] $QualityTable = @{},
+        [string] $Side = "LONG"
     )
 
     $mph = Get-MonthsPostHalving -NowUtc $NowUtc
 
     $mq   = _WSS-ScoreMarketQuality -Market $Market -QualityTable $QualityTable
     $vp   = _WSS-ScoreBtcVol -Vol20d $BtcVol20d -VolDistribution $VolDistribution
-    $ddz  = _WSS-ScoreDdZone -DrawdownPct $BtcDrawdownPct
+    $ddz  = _WSS-ScoreDdZone -DrawdownPct $BtcDrawdownPct -Side $Side
     $mphs = _WSS-ScoreMonthsPostHalving -Mph $mph
     $cp   = _WSS-ClusterPenalty -ClusterSize $ClusterSize
 

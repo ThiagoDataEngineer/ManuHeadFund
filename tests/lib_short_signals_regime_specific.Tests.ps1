@@ -224,5 +224,19 @@ Describe "Regime-Specific Config Helper (NEW)" {
         $unknown.ClimaxMultiplier | Should Be 3.0
         $unknown.RsiOverboughtMin | Should Be 70
     }
+
+    It "Get-ShortThresholdsForRegime tem case NEUTRO dedicado (2026-07-25)" {
+        # RED antes do fix: NEUTRO caia no default (3.0/70) so por falta de
+        # case, apesar de mce_counterfactual_agg mostrar NEUTRO|SHORT com o
+        # melhor hit_rate (87.5%, n=24) entre todos os regimes medidos.
+        $neutro = Get-ShortThresholdsForRegime -Regime "NEUTRO"
+        $neutro.ClimaxMultiplier | Should Be 2.5
+        $neutro.RsiOverboughtMin | Should Be 68
+
+        # Nao pode ser identico ao default conservador (validaria que o case
+        # dedicado existe de fato, nao so reaproveita o fallback)
+        $default = Get-ShortThresholdsForRegime -Regime "SOME_UNKNOWN_REGIME_XYZ"
+        ($neutro.ClimaxMultiplier -eq $default.ClimaxMultiplier -and $neutro.RsiOverboughtMin -eq $default.RsiOverboughtMin) | Should Be $false
+    }
 }
 
