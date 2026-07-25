@@ -50,26 +50,26 @@ if ($structQuality.verdict -eq "BLOCK") {
 }
 ```
 
-## Quais gates são elegíveis para override (12 de 27)
+## Quais gates são elegíveis para override (9 implementados de 12 candidatos, de 27 gates totais)
 
 Baseado na categorização do blueprint audit — só QUALIDADE DE SINAL, nunca
 SEGURANÇA/INFRAESTRUTURA nem CÁLCULO/VALIDAÇÃO:
 
 | linha (aprox) | gate_tag | elegível? | motivo |
 |---|---|---|---|
-| 444 | `score_below_min` | SIM | qualidade de sinal (score do Gem) |
-| 580 | `breadth/pump/entry_timing` | SIM | qualidade de sinal — maior volume de edge medido (`BEAR\|LONG\|breadth_long_blocked` n=62 hit_rate 67.7%) |
-| 627 | `spike_BEARISH_G1B` | SIM | qualidade de sinal |
-| 1082 | `cenario:$scenario` | SIM | qualidade de sinal (cenário BTC-core) |
-| 1111 | `crowding` | SIM | qualidade de sinal |
-| 1131 | `chart_pattern` | SIM | qualidade de sinal |
-| 1186 | `tori_confluence` | SIM | qualidade de sinal |
-| 1235 | `conviction_gate_failed` | SIM | qualidade de sinal |
-| 1366 | `tori_skip/wait` | SIM | qualidade de sinal |
-| 1489 | `no_direction_confidence` | SIM | qualidade de sinal |
-| 1581 | `quality_gate` | SIM | qualidade de sinal |
-| 1773 | `multi_tf_misalignment` | SIM | qualidade de sinal |
-| 1861 | `token_structural_quality` | SIM | qualidade de sinal |
+| 444 | `score_below_min` | **NÃO na implementação** | qualidade de sinal por natureza, mas roda ANTES de `$price` existir no fluxo de `Invoke-GemExecute` — sem preço real não dá pra montar `Setup` pro mentor avaliar. Fora de escopo desta rodada |
+| 580 | `breadth/pump/entry_timing` | SIM (implementado) | qualidade de sinal — maior volume de edge medido (`BEAR\|LONG\|breadth_long_blocked` n=62 hit_rate 67.7%) |
+| 627 | `spike_BEARISH_G1B` | **NÃO na implementação** | qualidade de sinal por natureza, mesmo motivo do 444 (roda antes de `$price`) — fora de escopo desta rodada |
+| 1082 | `cenario:$scenario` | SIM (implementado) | qualidade de sinal (cenário BTC-core) |
+| 1111 | `crowding` | SIM (implementado) | qualidade de sinal |
+| 1131 | `chart_pattern` | SIM (implementado) | qualidade de sinal |
+| 1186 | `tori_confluence` | SIM (implementado) | qualidade de sinal |
+| 1235 | `conviction_gate_failed` | SIM (implementado) | qualidade de sinal |
+| 1366 | `tori_skip/wait` | **NÃO na implementação** | qualidade de sinal por natureza, mas não interceptado nesta rodada (whitelist em `lib_mentor_live.ps1` inclui os tags `tori_skip`/`tori_wait` para uma implementação futura, mas o gate em si em `gem_executor.ps1` não foi tocado) |
+| 1489 | `no_direction_confidence` | SIM (implementado) | qualidade de sinal |
+| 1581 | `quality_gate` | SIM (implementado) | qualidade de sinal |
+| 1773 | `multi_tf_misalignment` | SIM (implementado) | qualidade de sinal |
+| 1861 | `token_structural_quality` | SIM (implementado) | qualidade de sinal |
 | **416** | `recent_decision_cache` | **NÃO** | infra (evita re-veto loop / custo LLM) |
 | **426** | `circuit_breaker_daily_loss` | **NÃO** | proteção de capital agregada — NUNCA destravável |
 | **623** | `sizing_invalido` | **NÃO** | cálculo/validação |
@@ -123,7 +123,7 @@ chamadas + Mentor até 2 chamadas). Para não estourar o ciclo de 5min:
 `journal/MENTOR_OVERRIDE_ENABLED.flag` — ausência = `Test-MentorOverride`
 retorna `approved=$false` imediatamente (comportamento idêntico ao
 sistema atual, 100% determinístico). Presença = ativa a consulta real ao
-LLM nos 12 gates elegíveis.
+LLM nos 9 gates interceptados (ver tabela acima).
 
 ## Plano de teste (TDD) antes do commit
 
