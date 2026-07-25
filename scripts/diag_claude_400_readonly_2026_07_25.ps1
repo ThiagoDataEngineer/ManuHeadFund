@@ -22,6 +22,30 @@ if ($env:ANTHROPIC_API_KEY) {
     Write-Host "ANTHROPIC_API_KEY prefix: $($env:ANTHROPIC_API_KEY.Substring(0, [Math]::Min(10, $env:ANTHROPIC_API_KEY.Length)))" -ForegroundColor Cyan
 }
 
+Write-Host "PSVersion: $($PSVersionTable.PSVersion) Edition: $($PSVersionTable.PSEdition)" -ForegroundColor Cyan
+
+# Chamada RAW direta (bypass Invoke-Claude) pra ver o erro sem nenhuma camada
+# de abstracao -- descobrir se o problema e no pwsh Core (Linux runner) que
+# expoe erro HTTP diferente do Windows PowerShell 5.1 Desktop testado local.
+try {
+    $body = @{ model = $CLAUDE_MODEL; max_tokens = 10; messages = @(@{role="user";content="teste"}) } | ConvertTo-Json -Compress
+    $wr = Invoke-WebRequest -Uri "https://api.anthropic.com/v1/messages" -Method POST `
+        -Headers @{ "x-api-key" = $env:ANTHROPIC_API_KEY; "anthropic-version" = "2023-06-01"; "content-type" = "application/json" } `
+        -Body $body -UseBasicParsing -TimeoutSec 20 -ErrorAction Stop
+    Write-Host "RAW SUCESSO: $($wr.Content)" -ForegroundColor Green
+} catch {
+    Write-Host "RAW ERRO -- tipo excecao: $($_.Exception.GetType().FullName)" -ForegroundColor Red
+    Write-Host "RAW ERRO -- Exception.Message: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "RAW ERRO -- ErrorDetails.Message: $($_.ErrorDetails.Message)" -ForegroundColor Red
+    if ($_.Exception.Response) {
+        Write-Host "RAW ERRO -- Response tipo: $($_.Exception.Response.GetType().FullName)" -ForegroundColor Red
+        try {
+            $content = $_.Exception.Response.Content.ReadAsStringAsync().Result
+            Write-Host "RAW ERRO -- Response.Content (HttpResponseMessage): $content" -ForegroundColor Red
+        } catch { Write-Host "RAW ERRO -- Response.Content falhou: $_" -ForegroundColor Red }
+    }
+}
+
 try {
     $r = Invoke-Claude -SystemPrompt "Responda apenas com a palavra OK." -UserContent "teste" `
         -Model $CLAUDE_MODEL -MaxTokens 10 -Temperature 0 -Agent "diag_400"
