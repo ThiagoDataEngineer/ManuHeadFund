@@ -447,7 +447,7 @@ function Invoke-MesaDroneCascade {
     if ($HaikuPrimary -and $env:ANTHROPIC_API_KEY) {
         try {
             return Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model "claude-haiku-4-5" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+                -Model "claude-haiku-4-5-20251001" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
             Write-Host "  [$Agent] Haiku primary falhou, fallback Groq: $($_.Exception.Message.Substring(0,[Math]::Min(80,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
@@ -503,7 +503,7 @@ function Invoke-MesaDroneCascade {
     if (-not $HaikuPrimary -and $env:ANTHROPIC_API_KEY) {
         try {
             return Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model "claude-haiku-4-5" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+                -Model "claude-haiku-4-5-20251001" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
             Write-Warning "  [$Agent] Haiku final falhou: $($_.Exception.Message)"
         }
@@ -566,7 +566,7 @@ function Invoke-MentorCascade {
     if ($env:ANTHROPIC_API_KEY) {
         try {
             $r = Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model "claude-haiku-4-5" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+                -Model "claude-haiku-4-5-20251001" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
             if ($r) { $script:LAST_CASCADE_PROVIDER = "anthropic_haiku"; return $r }
         } catch {
             Write-Warning "  [$Agent] Haiku final falhou: $($_.Exception.Message)"
@@ -607,7 +607,7 @@ function Invoke-TriagemCascade {
     if ($env:ANTHROPIC_API_KEY) {
         try {
             return Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
-                -Model "claude-haiku-4-5" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+                -Model "claude-haiku-4-5-20251001" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
             Write-Warning "  [$Agent] Haiku final falhou: $($_.Exception.Message)"
         }
@@ -695,7 +695,7 @@ function Invoke-TechCascadeJson {
         if ($env:ANTHROPIC_API_KEY) {
             try {
                 $raw = Invoke-Claude -SystemPrompt $sysWithJson -UserContent $UserContent `
-                    -Model "claude-haiku-4-5" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+                    -Model "claude-haiku-4-5-20251001" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
                 $parsed = _ParseJsonResponse $raw
                 if ($parsed) { return $parsed }
             } catch { Write-Warning "  [$Agent] Haiku falhou: $($_.Exception.Message)" }

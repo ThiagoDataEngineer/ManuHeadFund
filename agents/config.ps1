@@ -145,8 +145,8 @@ $COINEX_FEE_ROUNDTRIP_FALLBACK = 0.0008  # 0.08% round trip (maker+taker) — fa
 
 # ── Modelo Claude ─────────────────────────────────────────────────────────────
 
-$CLAUDE_MODEL       = "claude-sonnet-4-6"        # Tech + Mentor: analise complexa
-$CLAUDE_MODEL_CHEAP = "claude-haiku-4-5"         # Fund + Sent + Chain: ~10x mais barato
+$CLAUDE_MODEL       = "claude-sonnet-5"             # Tech + Mentor: analise complexa
+$CLAUDE_MODEL_CHEAP = "claude-haiku-4-5-20251001"   # Fund + Sent + Chain: ~10x mais barato
 $CLAUDE_MAX_TOKENS  = 2048
 $CLAUDE_TEMP_TRADE  = 0.3   # baixo para decisoes de trade
 $CLAUDE_TEMP_STUDY  = 0.7   # mais alto para analise educacional
