@@ -75,6 +75,20 @@ function Invoke-Claude {
     } catch {
         $statusCode = $_.Exception.Response.StatusCode.value__
         $msg = $_.Exception.Message
+        # 2026-07-25: corpo da resposta de erro nunca era capturado -- 400/401/403
+        # sempre apareciam so como "Response status code does not indicate success"
+        # sem a mensagem real da API (ex: "model not found", "invalid x-api-key").
+        # PS5.1 Desktop (Invoke-WebRequest -UseBasicParsing) NAO popula
+        # $_.ErrorDetails.Message (isso so existe no PS Core/7) -- precisa ler o
+        # stream de resposta manualmente. Confirmado via teste real contra a API.
+        try {
+            $errStream = $_.Exception.Response.GetResponseStream()
+            if ($errStream) {
+                $reader = New-Object System.IO.StreamReader($errStream)
+                $body = $reader.ReadToEnd()
+                if ($body) { $msg = $body.Substring(0, [Math]::Min(300, $body.Length)) }
+            }
+        } catch {}
         throw "Claude API error ($statusCode): $msg"
     }
 }
