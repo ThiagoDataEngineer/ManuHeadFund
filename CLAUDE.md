@@ -12,8 +12,9 @@
 - Telegram bot: approval gates, comandos `/scan /halt /resume /demote /keep /idea`
 - Docs técnicos: `docs/ARCHITECTURE_TATICA.md`, `docs/STRATEGIC_ROADMAP.md`, `docs/AGENTS.md`
 
-### Estado atual (2026-07-22)
+### Estado atual (2026-07-25)
 
+- **Calibragem SHORT recalibrada** (commit `320950d`, 2026-07-25): pesquisa em `mce_counterfactual_agg` + `knowledge/WYCKOFF_SMC.md` + `knowledge/MANIPULATION.md` achou 3 gaps reais — (1) `Get-ShortThresholdsForRegime` sem case `NEUTRO` (caía no default conservador apesar de NEUTRO|SHORT ter hit_rate=87.5% n=24, o melhor edge medido); (2) nenhum guard de funding rate no fluxo SHORT apesar do risco de short squeeze documentado (`Test-ShortFundingSafe` novo, bloqueia funding < -0.05%/8h); (3) WSS (tier S/A/B) reaproveitava cru a curva `_WSS-ScoreDdZone` calibrada pro LONG/Spring, empurrando Tier S pro regime historicamente PIOR pra SHORT — novo param `-Side` inverte a curva pro SHORT (zero regressão no LONG). `short_scanner.ps1` já executa ordem real (`live_enabled=true` desde 07-09, 15 mercados em `tier_a_live`) — comentários "observatory only"/"PAPER ONLY" desatualizados corrigidos.
 - **LIVE TRADING**: `Trading Pipeline Complete` roda 24/7 no GitHub Actions (cron `*/5 * * * *`), 100% verde nas últimas ~100 runs
 - **CI Verify**: 100% verde (era 24h+ quebrado até 2026-07-20 — parse-fail em 31 arquivos, causa raiz BOM UTF-8 ausente; ver histórico de commits `5e735ee`..`6d4ba41`)
 - **Audit amplo 2026-07-20/22**: ~15 bugs reais corrigidos em produção (não só testes) — trailing stop sem `lib_candle_fetcher`, `Set-StateRecord`→`Save-StateRecords`, `Get-FqsQualityOrDefault` ignorando Hashtable, dashboard com schema `pnl_realized` vs `pnl_usd`, path travado no dot-source em `lib_override_expiry`/`lib_trade_journal_supabase`, 15 params `-BeLessThanOrEqual`/`-BeGreaterThanOrEqual` inválidos em testes (nunca existiram no Pester)
