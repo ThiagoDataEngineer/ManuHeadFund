@@ -1,0 +1,30 @@
+MENTOR LLM OVERRIDE ENABLED 2026-07-25
+Ativado apos: blueprint audit completo (27 gates mapeados, categorizados
+seguranca/qualidade/calculo) + Test-MentorOverride implementado com TDD
+(7/7 pass) + fail-closed confirmado + 9 gates de qualidade/sinal
+interceptados em gem_executor.ps1 + zero regressao na suite completa
+(5846 passed / 22 failed, mesmos 22 ja conhecidos como contaminacao/
+plataforma).
+
+O que isso ativa: quando um dos 9 gates de qualidade/sinal (breadth/pump/
+entry_timing, cenario, crowding, chart_pattern, tori_confluence,
+conviction_gate_failed, no_direction_confidence, quality_gate,
+multi_tf_misalignment, token_structural_quality) bloqueia um trade, o
+mentor LLM real (Sonnet/Groq/Mistral/Haiku cascade, via Invoke-V6Cascade)
+e' consultado antes do bloqueio definitivo. Se aprovar, o gate e'
+destravado e o trade prossegue.
+
+O que NUNCA e' afetado por isso (protecoes fora do alcance do LLM):
+- Stop loss obrigatorio (fail-safe fecha posicao se protecao falhar, a0f03f1)
+- Cap de risco de 3%/trade (hard cap centralizado, a0f03f1)
+- Gates de SEGURANCA/INFRAESTRUTURA (circuit breaker, exposure cap, entry
+  lock, leverage adjust, cascade limits, gem safety, market unsafe, tori
+  unavailable) -- whitelist interna em lib_mentor_live.ps1 nunca consulta
+  o LLM pra esses.
+
+Budget de 3 chamadas de override por ciclo (journal/MENTOR_OVERRIDE_BUDGET.flag).
+
+Reversivel: deletar este arquivo e commitar -> volta a 100% deterministico
+(comportamento identico ao sistema anterior a esta mudanca).
+
+Ver docs/DESIGN_MENTOR_LLM_OVERRIDE_2026_07_24.md pro design completo.
