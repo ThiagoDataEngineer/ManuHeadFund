@@ -13,26 +13,23 @@
 # bloqueio). Gated por journal/MENTOR_SHADOW_ENABLED.flag -- ausencia do
 # flag = no-op total (nem tenta rodar, nem faz dot-source das libs pesadas).
 
-$script:__mentorShadowLibsLoaded = $false
-
-function _Import-MentorShadowDependencies {
-    if ($script:__mentorShadowLibsLoaded) { return $true }
-    if (Get-Command Invoke-V6Cascade -ErrorAction SilentlyContinue) {
-        $script:__mentorShadowLibsLoaded = $true
-        return $true
-    }
+# 2026-07-25 FIX (mesmo bug achado em lib_mentor_live.ps1, run 30145266606):
+# dot-source DENTRO de uma funcao define as funcoes carregadas so no escopo
+# LOCAL dessa funcao (comentario de topo de lib_loader_auto.ps1) -- o
+# dot-source precisa rodar no nivel de MODULO deste arquivo, fora de
+# qualquer funcao, pra herdar o escopo de quem fizer ". lib_mentor_shadow.ps1".
+if (-not (Get-Command Invoke-V6Cascade -ErrorAction SilentlyContinue)) {
     try {
         . (Join-Path $PSScriptRoot "mentor_agent.ps1")
         . (Join-Path $PSScriptRoot "mesa_agent.ps1")
         . (Join-Path $PSScriptRoot "triagem_agent.ps1")
         . (Join-Path $PSScriptRoot "orchestrator_v6.ps1")
-        $script:__mentorShadowLibsLoaded = $null -ne (Get-Command Invoke-V6Cascade -ErrorAction SilentlyContinue)
-        return $script:__mentorShadowLibsLoaded
     } catch {
         Write-Host "  [MENTOR SHADOW WARN] falha ao carregar dependencias: $_" -ForegroundColor DarkYellow
-        return $false
     }
 }
+
+$script:__mentorShadowLibsLoaded = $null -ne (Get-Command Invoke-V6Cascade -ErrorAction SilentlyContinue)
 
 function Invoke-MentorShadowObservation {
     <#
@@ -54,7 +51,7 @@ function Invoke-MentorShadowObservation {
     $flagPath = Join-Path $PSScriptRoot "..\journal\MENTOR_SHADOW_ENABLED.flag"
     if (-not (Test-Path $flagPath)) { return }
 
-    if (-not (_Import-MentorShadowDependencies)) { return }
+    if (-not $script:__mentorShadowLibsLoaded) { return }
 
     try {
         $context = [PSCustomObject]@{

@@ -19,7 +19,32 @@
 #   overrides permitidos por execucao do processo) -- acima do budget,
 #   nega sem chamar o LLM (custo/latencia controlados).
 
-$script:__mentorLiveLibsLoaded = $false
+# 2026-07-25 FIX (achado no 2o ciclo real, run 30145266606): dot-source
+# DENTRO de uma funcao define as funcoes carregadas so no escopo LOCAL
+# dessa funcao -- mesmo bug documentado no comentario de topo de
+# lib_loader_auto.ps1 ("dot-source dentro de funcao -> nao visivel pro
+# caller"). Antes, o dot-source de mentor_agent.ps1/mesa_agent.ps1/
+# triagem_agent.ps1/orchestrator_v6.ps1 rodava dentro de
+# _Import-MentorLiveDependencies -- Invoke-V6Cascade "existia" ali dentro
+# (confirmava sucesso) mas sumia assim que a funcao retornava, causando
+# "The term 'Invoke-V6Cascade' is not recognized" na chamada real dentro
+# de Test-MentorOverride. Fix: dot-source AQUI, no nivel de modulo do
+# arquivo (fora de qualquer funcao) -- herda o escopo de quem fizer
+# ". lib_mentor_live.ps1" (gem_executor.ps1), igual o padrao ja usado por
+# lib_loader_auto.ps1. So carrega se ainda nao existir Invoke-V6Cascade
+# (evita custo de I/O redundante quando ja veio de outro caminho).
+if (-not (Get-Command Invoke-V6Cascade -ErrorAction SilentlyContinue)) {
+    try {
+        . (Join-Path $PSScriptRoot "mentor_agent.ps1")
+        . (Join-Path $PSScriptRoot "mesa_agent.ps1")
+        . (Join-Path $PSScriptRoot "triagem_agent.ps1")
+        . (Join-Path $PSScriptRoot "orchestrator_v6.ps1")
+    } catch {
+        Write-Host "  [MENTOR LIVE WARN] falha ao carregar dependencias: $_" -ForegroundColor DarkYellow
+    }
+}
+
+$script:__mentorLiveLibsLoaded = $null -ne (Get-Command Invoke-V6Cascade -ErrorAction SilentlyContinue)
 $script:__mentorOverrideCallsThisRun = 0
 
 # Gates de QUALIDADE/SINAL elegiveis pra override (ver design doc, tabela
@@ -41,25 +66,6 @@ $script:MENTOR_OVERRIDE_ELIGIBLE_GATES = @(
     "multi_tf_misalignment",
     "token_structural_quality"
 )
-
-function _Import-MentorLiveDependencies {
-    if ($script:__mentorLiveLibsLoaded) { return $true }
-    if (Get-Command Invoke-V6Cascade -ErrorAction SilentlyContinue) {
-        $script:__mentorLiveLibsLoaded = $true
-        return $true
-    }
-    try {
-        . (Join-Path $PSScriptRoot "mentor_agent.ps1")
-        . (Join-Path $PSScriptRoot "mesa_agent.ps1")
-        . (Join-Path $PSScriptRoot "triagem_agent.ps1")
-        . (Join-Path $PSScriptRoot "orchestrator_v6.ps1")
-        $script:__mentorLiveLibsLoaded = $null -ne (Get-Command Invoke-V6Cascade -ErrorAction SilentlyContinue)
-        return $script:__mentorLiveLibsLoaded
-    } catch {
-        Write-Host "  [MENTOR LIVE WARN] falha ao carregar dependencias: $_" -ForegroundColor DarkYellow
-        return $false
-    }
-}
 
 function _Test-MentorOverrideGateEligible {
     param([string] $GateTag)
@@ -126,7 +132,7 @@ function Test-MentorOverride {
         return (& $deny "budget de overrides do ciclo excedido ($budget)")
     }
 
-    if (-not (_Import-MentorLiveDependencies)) {
+    if (-not $script:__mentorLiveLibsLoaded) {
         return (& $deny "dependencias do mentor (Invoke-V6Cascade) indisponiveis")
     }
 
