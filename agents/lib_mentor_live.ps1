@@ -93,14 +93,22 @@ function Test-MentorOverride {
         [string] $FlagDir = ""
     )
 
-    $deny = { param($motivo) [PSCustomObject]@{ approved = $false; motivo = $motivo } }
+    # 2026-07-25 FIX (achado no 1o ciclo real em producao): sem log explicito
+    # em cada caminho de negacao, era impossivel diferenciar no log do
+    # executor se o mentor foi consultado e negou, ou se nunca chegou a ser
+    # chamado por erro/flag ausente -- opacidade total. Todo deny agora loga.
+    $deny = {
+        param($motivo)
+        Write-Host "  [MENTOR OVERRIDE DENY] $Market/$GateTag -- $motivo" -ForegroundColor DarkGray
+        [PSCustomObject]@{ approved = $false; motivo = $motivo }
+    }.GetNewClosure()
 
     $journalDir = if ($FlagDir) { $FlagDir }
                   elseif ($global:JOURNAL_DIR) { $global:JOURNAL_DIR }
                   else { Join-Path $PSScriptRoot "..\journal" }
 
     $flagPath = Join-Path $journalDir "MENTOR_OVERRIDE_ENABLED.flag"
-    if (-not (Test-Path $flagPath)) { return (& $deny "flag MENTOR_OVERRIDE_ENABLED ausente") }
+    if (-not (Test-Path $flagPath)) { return (& $deny "flag MENTOR_OVERRIDE_ENABLED ausente ($flagPath)") }
 
     if (-not (_Test-MentorOverrideGateEligible -GateTag $GateTag)) {
         return (& $deny "gate '$GateTag' nao elegivel para override (seguranca/infra/calculo)")
