@@ -1835,6 +1835,27 @@ jobs:
   # trade_rejections pra ver quais mercados/condicoes geram isso, antes de
   # considerar qualquer mudanca de gate. Read-only.
   # ============================================================================
+  diag-claude-400-readonly:
+    name: Diag Claude 400 Read-Only (one-shot)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:ANTHROPIC_API_KEY = '${{ secrets.ANTHROPIC_API_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run diagnostic
+        shell: pwsh
+        run: |
+          & ./scripts/diag_claude_400_readonly_2026_07_25.ps1
+
   diag-short-neutro-cases-readonly:
     name: Diag Short-Neutro Cases Read-Only (one-shot)
     runs-on: ubuntu-latest
