@@ -480,13 +480,57 @@ function New-SignalSnapshot {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
-# Write-SignalSnapshot (I/O) -- append JSONL. Default journal/signal_snapshots.jsonl.
-# ─────────────────────────────────────────────────────────────────────────────
+# Write-SignalSnapshot (I/O) -- persiste em Supabase (trade_rejections) com
+# fallback local JSONL. Default journal/signal_snapshots.jsonl no fallback.
+#
+# 2026-07-25 FIX: gravava SO em journal/*.jsonl, que esta em .gitignore
+# (journal/*.jsonl, linha 96) -- nunca sobrevive entre execucoes do GitHub
+# Actions (checkout limpo a cada job). O estudo docs/ESTUDO_GATES_SHORT_2026_07_03.md
+# usou esse arquivo como fonte (n=30 unicos, BEAR_WEAK=9/BEAR_STRONG=21) --
+# desde entao, sem nenhum caller real de New-SignalSnapshot/Write-SignalSnapshot
+# em producao ate o mentor LLM ser conectado (orchestrator_v6.ps1, nunca
+# rodava antes), o dado parou de crescer e o que crescia se perdia a cada
+# ciclo. Reaproveita a tabela trade_rejections (mesmo padrao de
+# Write-SignalSkip acima) -- nao tem coluna dedicada pra mesa_consensus/
+# signals_long/signals_short/conviction/trade_id, entao esses vao
+# compactados no campo "gate" (TEXT livre) como sufixo parseável.
 function Write-SignalSnapshot {
+    [CmdletBinding()]
     param(
         [Parameter(Mandatory)] [object]$Entry,
         [string]$Path
     )
+
+    # 2026-07-25: -Path explicito = caller quer controle total do destino
+    # (comportamento de teste preservado, mesmo padrao de Get-OutcomeStats/
+    # _LoadOutcomes em lib_feedback_loop.ps1) -- pula Supabase, vai direto
+    # pro arquivo pedido.
+    $usedExplicitPath = $PSBoundParameters.ContainsKey('Path')
+
+    # Try Supabase first (if available e nao foi pedido path explicito) --
+    # so grava decisoes utilizaveis pro estudo (APROVAR/VETAR ambos importam:
+    # contam pro n de casos avaliados).
+    if (-not $usedExplicitPath -and (Get-Command Save-StateRecords -ErrorAction SilentlyContinue)) {
+        try {
+            $gateExtra = "snapshot decision=$($Entry.decision) mesa=$($Entry.mesa_consensus) " +
+                         "sigL=$($Entry.signals_long) sigS=$($Entry.signals_short) conv=$($Entry.conviction)" +
+                         $(if ($Entry.gate) { " | $($Entry.gate)" } else { "" })
+            $row = [ordered]@{
+                ts          = $Entry.ts
+                market      = $Entry.market
+                direction   = $Entry.direction
+                gate        = $gateExtra
+                entry_price = $Entry.entry_price
+                regime      = $Entry.regime
+                source      = $Entry.source
+            }
+            Save-StateRecords -Table "trade_rejections" -Records @($row) -PrimaryKey "ts"
+            return $true
+        } catch {
+            # Supabase failed, fallback to local
+        }
+    }
+
     if (-not $Path) {
         $base = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path (Join-Path $PSScriptRoot "..") "journal" }
         $Path = Join-Path $base "signal_snapshots.jsonl"

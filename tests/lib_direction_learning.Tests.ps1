@@ -339,6 +339,44 @@ Describe "Learning: Write-SignalSnapshot (I/O) -- persiste JSONL" {
         $lines.Count | Should Be 2
         Remove-Item $tmp -Force -ErrorAction SilentlyContinue
     }
+
+    It "-Path explicito PULA Supabase (comportamento de teste preservado)" {
+        # 2026-07-25: garante que passar -Path nao aciona Save-StateRecords --
+        # se acionasse, este teste quebraria (Save-StateRecords real nao
+        # existe/nao tem credenciais neste contexto de teste).
+        Mock -CommandName Save-StateRecords -MockWith { throw "NAO deveria ser chamado com -Path explicito" }
+        $tmp = Join-Path $env:TEMP "sig_snap_explicit.jsonl"
+        Remove-Item $tmp -Force -ErrorAction SilentlyContinue
+        $s = New-SignalSnapshot -Market "C" -Direction "SHORT" -Source "regime" -Regime "BEAR_STRONG" -Decision "VETAR" -EntryPrice 3
+        { Write-SignalSnapshot -Entry $s -Path $tmp } | Should Not Throw
+        Assert-MockCalled -CommandName Save-StateRecords -Times 0 -Exactly -Scope It
+        (Test-Path $tmp) | Should Be $true
+        Remove-Item $tmp -Force -ErrorAction SilentlyContinue
+    }
+
+    It "SEM -Path tenta Supabase primeiro (trade_rejections)" {
+        # 2026-07-25 FIX: antes gravava SO em journal/*.jsonl (gitignored,
+        # nunca sobrevive no runner efemero do GH Actions) -- agora tenta
+        # Supabase (trade_rejections, mesmo padrao de Write-SignalSkip)
+        # quando -Path nao e' passado explicitamente.
+        Mock -CommandName Save-StateRecords -MockWith { $true }
+        $s = New-SignalSnapshot -Market "D" -Direction "SHORT" -Source "regime" -Regime "BEAR_WEAK" -Decision "APROVAR" -EntryPrice 4 -MesaConsensus "FORTE_3" -Conviction 72
+        $ok = Write-SignalSnapshot -Entry $s
+        $ok | Should Be $true
+        Assert-MockCalled -CommandName Save-StateRecords -Times 1 -Exactly -Scope It -ParameterFilter { $Table -eq "trade_rejections" }
+    }
+
+    It "fallback local se Supabase falhar (sem -Path)" {
+        Mock -CommandName Save-StateRecords -MockWith { throw "simulated Supabase failure" }
+        $global:JOURNAL_DIR = Join-Path $env:TEMP ("sig_snap_fb_" + [guid]::NewGuid().ToString('N').Substring(0,8))
+        New-Item -ItemType Directory -Path $global:JOURNAL_DIR -Force | Out-Null
+        $s = New-SignalSnapshot -Market "E" -Direction "LONG" -Source "regime" -Regime "NEUTRO" -Decision "VETAR" -EntryPrice 5
+        $ok = Write-SignalSnapshot -Entry $s
+        $ok | Should Be $true
+        (Test-Path (Join-Path $global:JOURNAL_DIR "signal_snapshots.jsonl")) | Should Be $true
+        Remove-Item $global:JOURNAL_DIR -Recurse -Force -ErrorAction SilentlyContinue
+        Remove-Variable -Name JOURNAL_DIR -Scope Global -ErrorAction SilentlyContinue
+    }
 }
 
 Describe "Learning: Read-JsonLines (I/O tolerante)" {
