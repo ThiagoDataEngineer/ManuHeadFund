@@ -34,7 +34,11 @@ Describe "New-SignalSnapshot grava entry_date" {
             -Regime "BULL_WEAK" -Decision "APROVAR" -EntryPrice 65000
         $s.Contains("entry_date") | Should Be $true
         # entry_date deve bater com a porcao de data do ts
-        $tsDate = ([datetime]::Parse($s.ts)).ToString("yyyy-MM-dd")
+        # 2026-07-25 FIX: [datetime]::Parse sem AdjustToUniversal converte
+        # o "Z" (UTC) pro horario LOCAL da maquina -- diverge do entry_date
+        # (sempre UTC) numa janela de ~3h/dia (21h-00h local = 00h-03h UTC
+        # do dia seguinte). Fix: parse preservando UTC explicitamente.
+        $tsDate = ([datetime]::Parse($s.ts, $null, [System.Globalization.DateTimeStyles]::AdjustToUniversal -bor [System.Globalization.DateTimeStyles]::AssumeUniversal)).ToString("yyyy-MM-dd")
         $s.entry_date | Should Be $tsDate
     }
 }

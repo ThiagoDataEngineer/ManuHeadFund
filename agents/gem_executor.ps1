@@ -49,6 +49,14 @@ if (Test-Path $__boosterPath) { . $__boosterPath }
 # Invoke-MentorShadowObservation abaixo e lib_mentor_shadow.ps1.
 $__mentorShadowPath = Join-Path $PSScriptRoot "lib_mentor_shadow.ps1"
 if (Test-Path $__mentorShadowPath) { . $__mentorShadowPath }
+# 2026-07-24: Mentor LLM com poder REAL de destravar gates de qualidade/sinal
+# (ver docs/DESIGN_MENTOR_LLM_OVERRIDE_2026_07_24.md). Gated por
+# journal/MENTOR_OVERRIDE_ENABLED.flag -- ausencia = no-op total, gates
+# continuam bloqueando exatamente como hoje. Test-MentorOverride NUNCA e'
+# chamada pelos gates de SEGURANCA/INFRAESTRUTURA nem CALCULO/VALIDACAO
+# (whitelist interna, defesa em profundidade).
+$__mentorLivePath = Join-Path $PSScriptRoot "lib_mentor_live.ps1"
+if (Test-Path $__mentorLivePath) { . $__mentorLivePath }
 # 2026-05-21: B9 cache TTL (Add-GemRejection + Test-GemRecentlyRejected).
 # Bug encontrado: scan_master dot-sourced gem_executor mas NAO lib_gem_decision_cache,
 # entao Get-Command Test-GemRecentlyRejected returnava null silently -> cache check
@@ -577,7 +585,21 @@ function Invoke-GemExecute {
             } catch { }
         }
 
-        return [PSCustomObject]@{ blocked = $true; blocked_by = $gatesBlocked; market = $mkt; gates_info = @{ breadth = $breadthGate; pump = $pumpGate; entry = $entryTiming } }
+        # 2026-07-24: gate com maior volume de edge medido no blueprint audit
+        # (BEAR|LONG|breadth_long_blocked: n=62, hit_rate 67.7%) -- elegivel
+        # pra override do mentor LLM. Ver docs/DESIGN_MENTOR_LLM_OVERRIDE_2026_07_24.md.
+        if (Get-Command Test-MentorOverride -ErrorAction SilentlyContinue -and $skipPrice -gt 0) {
+            $override = Test-MentorOverride -Market $mkt -GateTag ($gatesBlocked -join "+") `
+                -GateReason "$($gatesBlocked -join ', ')" -Direction $direction -Price $skipPrice `
+                -Change24h $gemChange24h -Regime "$($btcScenario.scenario)"
+            if ($override.approved) {
+                Write-Host "  [MENTOR OVERRIDE] $mkt -- $($override.motivo)" -ForegroundColor Magenta
+            } else {
+                return [PSCustomObject]@{ blocked = $true; blocked_by = $gatesBlocked; market = $mkt; gates_info = @{ breadth = $breadthGate; pump = $pumpGate; entry = $entryTiming } }
+            }
+        } else {
+            return [PSCustomObject]@{ blocked = $true; blocked_by = $gatesBlocked; market = $mkt; gates_info = @{ breadth = $breadthGate; pump = $pumpGate; entry = $entryTiming } }
+        }
     }
 
     # Log gates aprovado
@@ -1079,7 +1101,16 @@ function Invoke-GemExecute {
                 if (Get-Command Add-GemRejection -ErrorAction SilentlyContinue) {
                     try { Add-GemRejection -Path (Join-Path $global:JOURNAL_DIR "gem_recent_decisions.json") -Market $mkt -Reason "cenario:$($scen.scenario)" } catch {}
                 }
-                return [PSCustomObject]@{ blocked = $true; blocked_by = @("cenario:$($scen.scenario)"); market = $mkt }
+                $__override = $null
+                if (Get-Command Test-MentorOverride -ErrorAction SilentlyContinue) {
+                    $__override = Test-MentorOverride -Market $mkt -GateTag "cenario" -GateReason "cenario=$($scen.scenario) bloqueia $reason ($($scen.reason))" `
+                        -Direction $direction -Price $price -Change24h $gemChange24h -Regime "$($scen.scenario)"
+                }
+                if ($__override -and $__override.approved) {
+                    Write-Host "  [MENTOR OVERRIDE] $mkt -- $($__override.motivo)" -ForegroundColor Magenta
+                } else {
+                    return [PSCustomObject]@{ blocked = $true; blocked_by = @("cenario:$($scen.scenario)"); market = $mkt }
+                }
             }
             Write-Host "  [CENARIO OK] ${mkt}: $($scen.scenario) -> $($scen.strategy) (libera $dirForGate)" -ForegroundColor DarkGray
         } catch { Write-Host "  [CENARIO] ${mkt}: check falhou (fallback allow): $_" -ForegroundColor Yellow }
@@ -1108,7 +1139,16 @@ function Invoke-GemExecute {
                     if (Get-Command Add-GemRejection -ErrorAction SilentlyContinue) {
                         try { Add-GemRejection -Path (Join-Path $global:JOURNAL_DIR "gem_recent_decisions.json") -Market $mkt -Reason "crowding:$($crowd.crowding)" } catch {}
                     }
-                    return [PSCustomObject]@{ blocked = $true; blocked_by = @("crowding:$($crowd.crowding)"); market = $mkt }
+                    $__override = $null
+                    if (Get-Command Test-MentorOverride -ErrorAction SilentlyContinue) {
+                        $__override = Test-MentorOverride -Market $mkt -GateTag "crowding" -GateReason "$($crowd.crowding) funding=$($crowd.funding_pct)%" `
+                            -Direction $dirCrowd -Price $price -Change24h $gemChange24h -Regime "$($btcScenario.scenario)"
+                    }
+                    if ($__override -and $__override.approved) {
+                        Write-Host "  [MENTOR OVERRIDE] $mkt -- $($__override.motivo)" -ForegroundColor Magenta
+                    } else {
+                        return [PSCustomObject]@{ blocked = $true; blocked_by = @("crowding:$($crowd.crowding)"); market = $mkt }
+                    }
                 }
                 if ($dirCrowd -eq "SHORT" -and $crowd.short_boost) {
                     Write-Host "  [CROWDING] ${mkt}: short_boost ativo ($($crowd.crowding) funding=$($crowd.funding_pct)%) -- telemetria v1, sem alterar conviction" -ForegroundColor DarkYellow
@@ -1128,7 +1168,16 @@ function Invoke-GemExecute {
                 if (Get-Command Add-GemRejection -ErrorAction SilentlyContinue) {
                     try { Add-GemRejection -Path (Join-Path $global:JOURNAL_DIR "gem_recent_decisions.json") -Market $mkt -Reason "chart_pattern:$($chart.reason)" } catch {}
                 }
-                return [PSCustomObject]@{ blocked = $true; blocked_by = @("chart_pattern_$($chart.reason)"); market = $mkt }
+                $__override = $null
+                if (Get-Command Test-MentorOverride -ErrorAction SilentlyContinue) {
+                    $__override = Test-MentorOverride -Market $mkt -GateTag "chart_pattern" -GateReason "$($chart.reason) (confidence $($chart.confidence)%)" `
+                        -Direction $direction -Price $price -Change24h $gemChange24h -Regime "$($btcScenario.scenario)"
+                }
+                if ($__override -and $__override.approved) {
+                    Write-Host "  [MENTOR OVERRIDE] $mkt -- $($__override.motivo)" -ForegroundColor Magenta
+                } else {
+                    return [PSCustomObject]@{ blocked = $true; blocked_by = @("chart_pattern_$($chart.reason)"); market = $mkt }
+                }
             } else {
                 Write-Host "  [CHART OK] ${mkt}: $($chart.reason)" -ForegroundColor DarkGray
             }
@@ -1183,7 +1232,16 @@ function Invoke-GemExecute {
                     Write-Host "  [TORI AUDIT]`n$($toriConfluence.audit_log)" -ForegroundColor DarkGray
                 }
 
-                return [PSCustomObject]@{ blocked = $true; blocked_by = @("tori_confluence_$($toriConfluence.confluence_score)_lt_80"); market = $mkt }
+                $__override = $null
+                if (Get-Command Test-MentorOverride -ErrorAction SilentlyContinue) {
+                    $__override = Test-MentorOverride -Market $mkt -GateTag "tori_confluence" -GateReason "confluence=$($toriConfluence.confluence_score) < 80" `
+                        -Direction $direction -Price $price -Change24h $gemChange24h -Regime "$($btcScenario.scenario)"
+                }
+                if ($__override -and $__override.approved) {
+                    Write-Host "  [MENTOR OVERRIDE] $mkt -- $($__override.motivo)" -ForegroundColor Magenta
+                } else {
+                    return [PSCustomObject]@{ blocked = $true; blocked_by = @("tori_confluence_$($toriConfluence.confluence_score)_lt_80"); market = $mkt }
+                }
             }
 
             Write-Host "  [TORI CONFLUENCE OK] ${mkt}: technical entry validated (confluence=$($toriConfluence.confluence_score))" -ForegroundColor Green
@@ -1232,7 +1290,16 @@ function Invoke-GemExecute {
 
             if (-not (Test-ConvictionGate -conviction $conviction -mesa_score $mesa_score)) {
                 Write-Host "  [CONVICTION BLOCKED] ${mkt}: conviction=$conviction mesa=$mesa_score (fails dynamic threshold)" -ForegroundColor Yellow
-                return [PSCustomObject]@{ blocked = $true; blocked_by = @("conviction_gate_failed_$conviction`_mesa_$mesa_score"); market = $mkt }
+                $__override = $null
+                if (Get-Command Test-MentorOverride -ErrorAction SilentlyContinue) {
+                    $__override = Test-MentorOverride -Market $mkt -GateTag "conviction_gate_failed" -GateReason "conviction=$conviction mesa=$mesa_score" `
+                        -Direction $direction -Price $price -Change24h $gemChange24h -Regime "$($btcScenario.scenario)"
+                }
+                if ($__override -and $__override.approved) {
+                    Write-Host "  [MENTOR OVERRIDE] $mkt -- $($__override.motivo)" -ForegroundColor Magenta
+                } else {
+                    return [PSCustomObject]@{ blocked = $true; blocked_by = @("conviction_gate_failed_$conviction`_mesa_$mesa_score"); market = $mkt }
+                }
             } else {
                 Write-Host "  [CONVICTION PASS] ${mkt}: conviction=$conviction mesa=$mesa_score" -ForegroundColor DarkGray
             }
@@ -1486,7 +1553,21 @@ function Invoke-GemExecute {
     # Block se SKIP (falha-fechado: sem direção clara = não entra)
     if ($direction -eq "SKIP") {
         Write-Host "  BLOQUEADO: Nenhuma direção com confidence suficiente" -ForegroundColor Red
-        return [PSCustomObject]@{ blocked = $true; blocked_by = @("no_direction_confidence"); market = $mkt }
+        $__override = $null
+        if (Get-Command Test-MentorOverride -ErrorAction SilentlyContinue) {
+            # Sem direcao clara pra passar ao mentor -- usa a de maior conviction
+            # entre LONG/SHORT so pra montar o Setup da consulta (nao afeta o
+            # resultado real, so o mentor decide se aprova ou nao).
+            $__dirCandidate = if ($shortConv -gt $longConv) { "SHORT" } else { "LONG" }
+            $__override = Test-MentorOverride -Market $mkt -GateTag "no_direction_confidence" -GateReason "L=$longConv S=$shortConv, nenhuma com confidence suficiente" `
+                -Direction $__dirCandidate -Price $price -Change24h $gemChange24h -Regime "$($btcScenario.scenario)"
+        }
+        if ($__override -and $__override.approved) {
+            $direction = $__dirCandidate
+            Write-Host "  [MENTOR OVERRIDE] $mkt -- $($__override.motivo) -- direction=$direction" -ForegroundColor Magenta
+        } else {
+            return [PSCustomObject]@{ blocked = $true; blocked_by = @("no_direction_confidence"); market = $mkt }
+        }
     }
     $direction = if ($direction -in @("LONG","SHORT")) { $direction } else { "LONG" }  # safety check
 
@@ -1578,7 +1659,16 @@ function Invoke-GemExecute {
                 $regimeQ = if ($global:MARKET_REGIME) { "$($global:MARKET_REGIME)" } else { "UNKNOWN" }
                 try { Write-SignalSkip -Market $mkt -Direction $direction -Gate "quality_gate" -EntryPrice $price -Regime $regimeQ -Source "entry_quality_gate" | Out-Null } catch {}
             }
-            return [PSCustomObject]@{ blocked = $true; blocked_by = @("quality_gate:$qreason"); market = $mkt }
+            $__override = $null
+            if (Get-Command Test-MentorOverride -ErrorAction SilentlyContinue) {
+                $__override = Test-MentorOverride -Market $mkt -GateTag "quality_gate" -GateReason $qreason `
+                    -Direction $direction -Price $price -Change24h $gemChange24h -Regime "$($btcScenario.scenario)"
+            }
+            if ($__override -and $__override.approved) {
+                Write-Host "  [MENTOR OVERRIDE] $mkt -- $($__override.motivo)" -ForegroundColor Magenta
+            } else {
+                return [PSCustomObject]@{ blocked = $true; blocked_by = @("quality_gate:$qreason"); market = $mkt }
+            }
         }
         Write-Host "  [QUALITY GATE PASS] ${mkt}: dir=$direction tech=$tori_tech_sinal conv=$gConv mesa=$gMesa" -ForegroundColor DarkGray
     }
@@ -1770,7 +1860,16 @@ function Invoke-GemExecute {
                     Write-Host "  [GEM BLOQUEADO] Multi-TF misalignment: 1D=$trend1D | 4H=$trend4H | 1H=$trend1H | Dir=$direction | Aligned=$aligned" -ForegroundColor Red
                     $blockMsg = "*GEM BLOQUEADO* -- $mkt`nMotivo: Multi-TF misalignment`nTrend 1D: $trend1D | 4H: $trend4H | 1H: $trend1H`nDirection: $direction"
                     try { Send-TelegramAlert -Message $blockMsg | Out-Null } catch {}
-                    return [PSCustomObject]@{ blocked = $true; blocked_by = @("multi_tf_misalignment:$direction-$trend1D-$trend4H"); market = $mkt }
+                    $__override = $null
+                    if (Get-Command Test-MentorOverride -ErrorAction SilentlyContinue) {
+                        $__override = Test-MentorOverride -Market $mkt -GateTag "multi_tf_misalignment" -GateReason "1D=$trend1D 4H=$trend4H 1H=$trend1H dir=$direction" `
+                            -Direction $direction -Price $price -Change24h $gemChange24h -Regime "$($btcScenario.scenario)"
+                    }
+                    if ($__override -and $__override.approved) {
+                        Write-Host "  [MENTOR OVERRIDE] $mkt -- $($__override.motivo)" -ForegroundColor Magenta
+                    } else {
+                        return [PSCustomObject]@{ blocked = $true; blocked_by = @("multi_tf_misalignment:$direction-$trend1D-$trend4H"); market = $mkt }
+                    }
                 }
 
                 Write-Host "  [MULTI-TF OK] $mkt aligned: 1D=$trend1D | 4H=$trend4H | 1H=$trend1H | Dir=$direction" -ForegroundColor Green
@@ -1858,7 +1957,16 @@ function Invoke-GemExecute {
                 if (Get-Command Write-SignalSkip -ErrorAction SilentlyContinue) {
                     try { Write-SignalSkip -Market $mkt -Direction $direction -Gate "token_structural_quality_block" -EntryPrice $price -Regime "$($btcScenario.scenario)" -Source "structural_gate" | Out-Null } catch {}
                 }
-                return [PSCustomObject]@{ blocked = $true; blocked_by = @("token_structural_quality:$($structQuality.reason)"); market = $mkt; gates_info = @{ structural = $structQuality } }
+                $__override = $null
+                if (Get-Command Test-MentorOverride -ErrorAction SilentlyContinue) {
+                    $__override = Test-MentorOverride -Market $mkt -GateTag "token_structural_quality" -GateReason "$($structQuality.reason) (liquidez=$($structQuality.liquidity_usd) preco=$($structQuality.unit_price))" `
+                        -Direction $direction -Price $price -Change24h $gemChange24h -Regime "$($btcScenario.scenario)"
+                }
+                if ($__override -and $__override.approved) {
+                    Write-Host "  [MENTOR OVERRIDE] $mkt -- $($__override.motivo)" -ForegroundColor Magenta
+                } else {
+                    return [PSCustomObject]@{ blocked = $true; blocked_by = @("token_structural_quality:$($structQuality.reason)"); market = $mkt; gates_info = @{ structural = $structQuality } }
+                }
             } elseif ($structQuality.verdict -eq "CAUTION") {
                 $usd_size = [math]::Round($usd_size * 0.5, 2)
                 Write-Host "  [STRUCTURAL CAUTION] $mkt -- $($structQuality.reason) -- sizing reduzido pela metade (`$$usd_size)" -ForegroundColor Yellow
