@@ -378,13 +378,29 @@ function Get-PrePumpFingerprintScore {
 function Resolve-ConvictionOverride {
     # Decide se a conviccao do ensemble destrava um veto do Tori (SKIP/WAIT).
     # FAIL-SAFE: so com FlagOn; nunca overrida DataAbsent; ENTER nao se aplica.
+    #
+    # 2026-07-26: THRESHOLD DINAMICO por momentum (owner pediu -- "depende do
+    # momentum"). Threshold=75 fixo nunca teve calibracao real (conviction_
+    # observations so comecou a persistir dado hoje, tabela recem-criada).
+    # Achado real em producao: SOLUSDT teve conviction=60.7 (bloqueado por
+    # 75), mas 2 eixos individuais do MESMO ensemble ja estavam fortes
+    # (multitf e btc_rs concordando, nao so a media diluida por eixos fracos
+    # tipo funding/historical). Regra: se 2+ eixos individuais >=80 (momentum
+    # confirmado em multiplas dimensoes ortogonais independentes, nao so
+    # media), threshold cai de 75 para 60 -- ainda exige conviccao real, so
+    # reconhece que a MEDIA pode diluir um sinal forte quando poucos eixos
+    # tem peso alto. Sem StrongAxesCount (chamadas antigas), comportamento
+    # 100% preservado (Threshold explicito continua valendo sozinho).
     [CmdletBinding()]
     param(
         [string] $ToriSignal,
         [double] $Conviction,
         [bool]   $DataAbsent = $false,
         [bool]   $FlagOn = $false,
-        [double] $Threshold = 75
+        [double] $Threshold = 75,
+        [int]    $StrongAxesCount = -1,   # -1 = nao avaliado (preserva Threshold fixo)
+        [double] $StrongAxesReducedThreshold = 60,
+        [int]    $StrongAxesMinCount = 2
     )
 
     $sig = "$ToriSignal".ToUpper()
@@ -398,10 +414,18 @@ function Resolve-ConvictionOverride {
     if ($DataAbsent) {
         return @{ allow = $false; reason = "data_absent (sem base p/ override)" }
     }
-    if ($Conviction -ge $Threshold) {
-        return @{ allow = $true; reason = "conviction_override: $Conviction >= $Threshold (tori $sig vencido)" }
+
+    $effectiveThreshold = $Threshold
+    $momentumTag = ""
+    if ($StrongAxesCount -ge $StrongAxesMinCount -and $StrongAxesReducedThreshold -lt $Threshold) {
+        $effectiveThreshold = $StrongAxesReducedThreshold
+        $momentumTag = " [momentum: $StrongAxesCount eixos fortes >= $StrongAxesMinCount, threshold reduzido $Threshold->$effectiveThreshold]"
     }
-    return @{ allow = $false; reason = "conviction $Conviction < $Threshold (respeita veto Tori)" }
+
+    if ($Conviction -ge $effectiveThreshold) {
+        return @{ allow = $true; reason = "conviction_override: $Conviction >= $effectiveThreshold (tori $sig vencido)$momentumTag" }
+    }
+    return @{ allow = $false; reason = "conviction $Conviction < $effectiveThreshold (respeita veto Tori)$momentumTag" }
 }
 
 function Get-MarketConviction {

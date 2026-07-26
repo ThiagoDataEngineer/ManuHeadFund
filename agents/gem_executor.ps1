@@ -1416,13 +1416,26 @@ function Invoke-GemExecute {
                 $convM = if ($convictionEnsembleResult) { $convictionEnsembleResult } else { Get-MarketConviction -Market $mkt -Direction $direction -IsFutures $hasFutures }
                 if ($convM) {
                     $convictionEvaluated = $true
-                    $ovr = Resolve-ConvictionOverride -ToriSignal $tori_signal -Conviction $convM.conviction -DataAbsent $false -FlagOn $true -Threshold 75
+                    # 2026-07-26: threshold dinamico por momentum (pedido do owner).
+                    # A MEDIA ponderada (conviction) pode diluir um sinal forte quando
+                    # so 1-2 dos 6-7 eixos tem peso alto -- caso real SOLUSDT:
+                    # conviction=60.7 (bloqueado em 75) mas multitf/btc_rs ja fortes
+                    # individualmente. Conta quantos eixos PRESENTES bateram >=80
+                    # (confirmacao em multiplas dimensoes ortogonais independentes,
+                    # nao so a media unica) -- com 2+, threshold cai 75->60.
+                    $__strongAxes = 0
+                    if ($convM.axes_detail) {
+                        foreach ($__axKey in $convM.axes_detail.Keys) {
+                            if ([double]$convM.axes_detail[$__axKey] -ge 80) { $__strongAxes++ }
+                        }
+                    }
+                    $ovr = Resolve-ConvictionOverride -ToriSignal $tori_signal -Conviction $convM.conviction -DataAbsent $false -FlagOn $true -Threshold 75 -StrongAxesCount $__strongAxes
                     if ($ovr.allow) {
                         $toriOverridden = $true
                         Write-Host "  [CONVICTION OVERRIDE] ${mkt}: $($ovr.reason) (eixos: $($convM.axes_detail.Keys -join ','))" -ForegroundColor Green
                         try { Send-TelegramAlert -Message "CONVICCAO venceu Tori: $mkt $direction conv=$($convM.conviction)/100 (Tori dizia $tori_signal)" | Out-Null } catch {}
                     } else {
-                        Write-Host "  [CONVICTION] ${mkt}: nao override ($($ovr.reason))" -ForegroundColor DarkGray
+                        Write-Host "  [CONVICTION] ${mkt}: nao override ($($ovr.reason)) -- axes_detail: $($convM.axes_detail | ConvertTo-Json -Compress)" -ForegroundColor DarkGray
                     }
                 }
             } catch { Write-Host "  [CONVICTION ERROR] ${mkt}: $_" -ForegroundColor DarkGray }
