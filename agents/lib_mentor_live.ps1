@@ -139,6 +139,32 @@ function Test-MentorOverride {
     try {
         $script:__mentorOverrideCallsThisRun++
 
+        # 2026-07-26 FIX: mentor_agent.ps1 tenta ler beta_history do Supabase
+        # ANTES de montar o prompt do Mentor, mas nada nunca escrevia nessa
+        # tabela em producao real -- Sync-AllBetasMultiTF (lib_beta_calculator_
+        # multitf.ps1) so era chamado por scan_master.ps1, que NAO roda em
+        # nenhum job do pipeline atual desde o refactor de 07-15 (substituido
+        # por gem_scanner_executor_live.ps1/gem_loop.ps1). Resultado: "beta
+        # ausente" aparecia em quase todo veto do Mentor. Fix: sincroniza o
+        # beta do MERCADO ESPECIFICO aqui -- so quando o Mentor de fato vai
+        # ser consultado (ja passou flag/gate-eligible/budget acima), nao
+        # para todo candidato escaneado. Fail-soft: falha aqui nao bloqueia
+        # a consulta ao Mentor, so significa que ele decide sem esse dado
+        # (comportamento identico ao que ja acontecia antes deste fix).
+        if (-not (Get-Command Get-BetaMultiTF -ErrorAction SilentlyContinue)) {
+            try { . (Join-Path $PSScriptRoot "lib_beta_calculator_multitf.ps1") } catch {}
+        }
+        if (Get-Command Get-BetaMultiTF -ErrorAction SilentlyContinue) {
+            try {
+                $betaData = Get-BetaMultiTF -Market $Market
+                if ($betaData.beta_weighted -and (Get-Command Publish-BetaToSupabase -ErrorAction SilentlyContinue)) {
+                    Publish-BetaToSupabase -Market $Market -BetaData $betaData | Out-Null
+                }
+            } catch {
+                Write-Host "  [MENTOR LIVE] beta sync falhou p/ ${Market} (nao bloqueia consulta): $_" -ForegroundColor DarkYellow
+            }
+        }
+
         $context = [PSCustomObject]@{
             pair_change_24h  = $Change24h
             mode             = "GEM"

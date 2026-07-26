@@ -18,6 +18,10 @@
 $ErrorActionPreference = "Stop"
 Set-Location $PSScriptRoot\..
 
+# Get-BetaMultiTF/Publish-BetaToSupabase precisam existir no escopo ANTES do
+# Mock (Pester so mocka comandos ja carregados) -- lib_mentor_live.ps1 so
+# carrega lib_beta_calculator_multitf.ps1 lazy, dentro de Test-MentorOverride.
+. ".\agents\lib_beta_calculator_multitf.ps1"
 . ".\agents\lib_mentor_live.ps1"
 
 Describe "Test-MentorOverride" {
@@ -26,6 +30,15 @@ Describe "Test-MentorOverride" {
         $script:testFlagDir = Join-Path $env:TEMP ("mentorlive_" + [guid]::NewGuid().ToString('N').Substring(0,8))
         New-Item -ItemType Directory -Path $script:testFlagDir -Force | Out-Null
         $script:__mentorOverrideCallsThisRun = 0
+        # 2026-07-26: isola de rede real -- Test-MentorOverride agora tenta
+        # sincronizar beta (Get-BetaMultiTF/Publish-BetaToSupabase) antes de
+        # consultar o LLM. Mock aqui evita chamada HTTP real de teste (que
+        # falhava com code=4004 invalid argument pro mercado fake TESTUSDT,
+        # fail-soft mas desnecessario nos testes).
+        Mock -CommandName Get-BetaMultiTF -MockWith {
+            [PSCustomObject]@{ beta_1d = 1.0; beta_4h = 1.0; beta_1h = 1.0; beta_weighted = 1.0 }
+        }
+        Mock -CommandName Publish-BetaToSupabase -MockWith { $true }
     }
     AfterEach {
         if (Test-Path $script:testFlagDir) { Remove-Item $script:testFlagDir -Recurse -Force }

@@ -22,6 +22,9 @@
 if (-not (Get-Command Save-StateRecords -ErrorAction SilentlyContinue)) {
     . (Join-Path $PSScriptRoot "lib_state_store.ps1")
 }
+if (-not (Get-Command CoinEx-GetCandles -ErrorAction SilentlyContinue)) {
+    . (Join-Path $PSScriptRoot "lib_coinex.ps1")
+}
 
 function Get-BetaMultiTF {
     <#
@@ -41,7 +44,14 @@ function Get-BetaMultiTF {
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)] [string] $Market,
-        [int] $LookbackCandles = 20
+        [int] $LookbackCandles = 20,
+        # 2026-07-26: opcional -- permite ao caller (Sync-AllBetasMultiTF) buscar
+        # candles do BTC UMA VEZ por ciclo e reusar entre mercados, em vez de
+        # cada chamada individual refazer as mesmas 3 requisicoes de BTC
+        # (economiza 3 chamadas de API por mercado extra no batch).
+        [object[]] $BtcCandles1D = $null,
+        [object[]] $BtcCandles4H = $null,
+        [object[]] $BtcCandles1H = $null
     )
 
     # Normaliza símbolo (remove USDT se necessário)
@@ -52,13 +62,19 @@ function Get-BetaMultiTF {
         # Fetch candles: 1D, 4H, 1H
         Write-Host "  [Beta] Fetching candles: 1D, 4H, 1H para $Market..." -ForegroundColor Gray
 
-        $candles1D = @(Get-CoinexCandles -Market $Market -Timeframe "1D" -Limit $LookbackCandles -ErrorAction Stop)
-        $candles4H = @(Get-CoinexCandles -Market $Market -Timeframe "4H" -Limit $LookbackCandles -ErrorAction Stop)
-        $candles1H = @(Get-CoinexCandles -Market $Market -Timeframe "1H" -Limit $LookbackCandles -ErrorAction Stop)
+        # 2026-07-26 FIX: Get-CoinexCandles (-Market/-Timeframe) NUNCA existiu em
+        # lib_coinex.ps1 -- a funcao real e CoinEx-GetCandles(-market,-period,-limit),
+        # period minusculo (1d/4h/1h). Confirmado: Sync-AllBetasMultiTF nunca
+        # funcionou desde a criacao (2026-07-07), mesmo dentro de scan_master.ps1
+        # (que so faz dot-source de lib_coinex.ps1, sem essa funcao) -- beta
+        # sempre retornava null/erro, silenciado pelo catch abaixo.
+        $candles1D = @(CoinEx-GetCandles $Market "1d" $LookbackCandles)
+        $candles4H = @(CoinEx-GetCandles $Market "4h" $LookbackCandles)
+        $candles1H = @(CoinEx-GetCandles $Market "1h" $LookbackCandles)
 
-        $btcCandles1D = @(Get-CoinexCandles -Market "BTCUSDT" -Timeframe "1D" -Limit $LookbackCandles -ErrorAction Stop)
-        $btcCandles4H = @(Get-CoinexCandles -Market "BTCUSDT" -Timeframe "4H" -Limit $LookbackCandles -ErrorAction Stop)
-        $btcCandles1H = @(Get-CoinexCandles -Market "BTCUSDT" -Timeframe "1H" -Limit $LookbackCandles -ErrorAction Stop)
+        $btcCandles1D = if ($BtcCandles1D) { @($BtcCandles1D) } else { @(CoinEx-GetCandles "BTCUSDT" "1d" $LookbackCandles) }
+        $btcCandles4H = if ($BtcCandles4H) { @($BtcCandles4H) } else { @(CoinEx-GetCandles "BTCUSDT" "4h" $LookbackCandles) }
+        $btcCandles1H = if ($BtcCandles1H) { @($BtcCandles1H) } else { @(CoinEx-GetCandles "BTCUSDT" "1h" $LookbackCandles) }
 
         if ($candles1D.Count -lt 2 -or $btcCandles1D.Count -lt 2) {
             return @{
@@ -213,7 +229,8 @@ function Sync-AllBetasMultiTF {
     #>
     [CmdletBinding()]
     param(
-        [string[]] $Markets = @("BTCUSDT", "ETHUSDT", "SOLUSDT", "LINKUSDT", "NEARUSDT", "BNBUSDT", "TONUSDT", "XMRUSDT")
+        [string[]] $Markets = @("BTCUSDT", "ETHUSDT", "SOLUSDT", "LINKUSDT", "NEARUSDT", "BNBUSDT", "TONUSDT", "XMRUSDT"),
+        [int] $LookbackCandles = 20
     )
 
     Write-Host "[Beta Sync] Starting multi-TF beta calculation for $($Markets.Count) markets..." -ForegroundColor Cyan
@@ -221,10 +238,31 @@ function Sync-AllBetasMultiTF {
     $successful = 0
     $failed = 0
 
+    # 2026-07-26: busca candles do BTC UMA VEZ pro ciclo inteiro (nao por
+    # mercado) -- reduz de 6 chamadas de API/mercado para 3 chamadas/mercado
+    # + 3 chamadas unicas de BTC no total do batch. Fail-soft: se BTC falhar,
+    # cada Get-BetaMultiTF cai no fallback individual (fetch proprio).
+    $btc1D = $null; $btc4H = $null; $btc1H = $null
+    try {
+        $btc1D = @(CoinEx-GetCandles "BTCUSDT" "1d" $LookbackCandles)
+        $btc4H = @(CoinEx-GetCandles "BTCUSDT" "4h" $LookbackCandles)
+        $btc1H = @(CoinEx-GetCandles "BTCUSDT" "1h" $LookbackCandles)
+    } catch {
+        Write-Host "  [Beta Sync] BTC batch fetch falhou (fallback por-mercado): $_" -ForegroundColor Yellow
+    }
+
     foreach ($mkt in $Markets) {
         if ($mkt -eq "BTCUSDT") { continue }  # BTC vs BTC = 1.0 sempre
 
-        $betaData = Get-BetaMultiTF -Market $mkt
+        $betaData = $null
+        try {
+            $betaData = Get-BetaMultiTF -Market $mkt -LookbackCandles $LookbackCandles `
+                -BtcCandles1D $btc1D -BtcCandles4H $btc4H -BtcCandles1H $btc1H
+        } catch {
+            Write-Host "  [Beta] ${mkt}: excecao nao tratada -- $_" -ForegroundColor Red
+            $failed++
+            continue
+        }
         if ($betaData.beta_weighted) {
             $ok = Publish-BetaToSupabase -Market $mkt -BetaData $betaData
             if ($ok) { $successful++ } else { $failed++ }
