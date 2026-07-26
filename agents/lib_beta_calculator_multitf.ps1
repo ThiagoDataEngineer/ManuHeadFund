@@ -207,8 +207,13 @@ function Publish-BetaToSupabase {
         }
 
         # Escrever em Supabase (se disponível)
+        # 2026-07-26 FIX: sem -PrimaryKey, cada sync fazia INSERT novo (nunca
+        # upsert) -- tabela cresceria sem limite e Get-StateRecords -Filter
+        # @{market=X} (sem ORDER BY explicito) podia retornar qualquer linha
+        # historica, nao a mais recente. -PrimaryKey "market" garante 1 linha
+        # por mercado, sempre atualizada (mesmo padrao de trailing_positions).
         if (Get-Command Save-StateRecords -ErrorAction SilentlyContinue) {
-            Save-StateRecords -Table "beta_history" -Records @($record)
+            Save-StateRecords -Table "beta_history" -Records @($record) -PrimaryKey "market"
             Write-Host "  [Beta] Published: $Market = $([math]::Round($BetaData.beta_weighted, 4))" -ForegroundColor Green
         } else {
             Write-Host "  [Beta] WARNING: Save-StateRecords not available (Supabase offline?)" -ForegroundColor Yellow

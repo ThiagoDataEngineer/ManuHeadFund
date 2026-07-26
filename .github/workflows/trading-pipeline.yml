@@ -2136,6 +2136,23 @@ jobs:
         run: |
           & ./scripts/apply_fix_mce_gate_2026_07_17.ps1
 
+  apply-beta-history-schema:
+    name: Apply beta_history Schema (one-shot)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply migration
+        shell: pwsh
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          & ./scripts/apply_beta_history_2026_07_26.ps1
+
 
   # ============================================================================
   # JOB (one-shot): DIAGNOSTIC -- confirma de verdade se close_reason existe
