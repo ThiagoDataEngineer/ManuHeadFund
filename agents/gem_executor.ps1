@@ -588,7 +588,12 @@ function Invoke-GemExecute {
         # 2026-07-24: gate com maior volume de edge medido no blueprint audit
         # (BEAR|LONG|breadth_long_blocked: n=62, hit_rate 67.7%) -- elegivel
         # pra override do mentor LLM. Ver docs/DESIGN_MENTOR_LLM_OVERRIDE_2026_07_24.md.
-        if (Get-Command Test-MentorOverride -ErrorAction SilentlyContinue -and $skipPrice -gt 0) {
+        # 2026-07-26 FIX: sem parenteses, "-and $skipPrice -gt 0" era absorvido
+        # como parametros extras de Get-Command (nao existem, PowerShell os
+        # ignora silenciosamente sem erro) -- o if avaliava SO a existencia da
+        # funcao, nunca checava skipPrice>0 de fato. Confirmado com repro
+        # isolado: skipPrice=0 + funcao existente entrava no if mesmo assim.
+        if ((Get-Command Test-MentorOverride -ErrorAction SilentlyContinue) -and ($skipPrice -gt 0)) {
             $override = Test-MentorOverride -Market $mkt -GateTag ($gatesBlocked -join "+") `
                 -GateReason "$($gatesBlocked -join ', ')" -Direction $direction -Price $skipPrice `
                 -Change24h $gemChange24h -Regime "$($btcScenario.scenario)"

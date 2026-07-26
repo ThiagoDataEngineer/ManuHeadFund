@@ -483,7 +483,11 @@ function Invoke-GemCycle {
         # R4 fix 2026-05-21: filtrar gems com cache hit ANTES de emitir log/alert.
         # Pre-fix: PEAQ/PROVE re-detected cycle apos cycle. Cache hit acontecia
         # so dentro de Invoke-GemExecute (apos log GemScan), gerando spam.
-        if (Get-Command Test-GemRecentlyRejected -ErrorAction SilentlyContinue -and $gems.Count -gt 0) {
+        # 2026-07-26 FIX: sem parenteses, "-and $gems.Count -gt 0" era absorvido
+        # como parametro extra de Get-Command (ignorado silenciosamente) -- o if
+        # so checava a funcao existir, nunca $gems.Count de fato (mesmo bug
+        # achado em gem_executor.ps1 no mesmo dia).
+        if ((Get-Command Test-GemRecentlyRejected -ErrorAction SilentlyContinue) -and ($gems.Count -gt 0)) {
             $cachePath = Join-Path $global:JOURNAL_DIR "gem_recent_decisions.json"
             # 2026-06-17: bypass tori_skip/wait com CONVICTION_GATE on (re-avalia via ensemble)
             $bypass = @()
