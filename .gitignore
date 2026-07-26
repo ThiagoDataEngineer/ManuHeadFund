@@ -97,6 +97,11 @@ journal/*.jsonl
 journal/*.jsonl.bak*
 journal/*.json
 journal/*.json.bak*
+# 2026-07-25: evolution_params.json e overlay de config real (parametros
+# aprovados pelo owner via Evolution Engine), nao dado operacional efemero --
+# precisa chegar no cloud (clone limpo do GitHub Actions). Mesmo padrao ja
+# corrigido antes p/ flags de cutover (CLOUD_ONLY_MODE.flag etc).
+!journal/evolution_params.json
 journal/tg_listener_hb
 journal/watchdog_respawn_state.json
 journal/tori_proximity_state.json

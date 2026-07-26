@@ -1835,6 +1835,29 @@ jobs:
   # trade_rejections pra ver quais mercados/condicoes geram isso, antes de
   # considerar qualquer mudanca de gate. Read-only.
   # ============================================================================
+  apply-evolution-gem-max-exposure:
+    name: Apply Evolution gem_max_exposure_pct (one-shot)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run apply
+        shell: pwsh
+        run: |
+          & ./scripts/apply_evolution_gem_max_exposure_2026_07_25.ps1
+
   diag-claude-400-readonly:
     name: Diag Claude 400 Read-Only (one-shot)
     runs-on: ubuntu-latest

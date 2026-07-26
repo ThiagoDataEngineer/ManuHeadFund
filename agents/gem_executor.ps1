@@ -762,10 +762,19 @@ function Invoke-GemExecute {
                 # as 10 posicoes baterem stop ao mesmo tempo = ~$76 (1.5% do capital
                 # total), exposicao maxima ~30% do capital -- documentado como novo
                 # baseline, nao mais 1%/5.
+                # 2026-07-25: MaxConcurrentTrades 10 -> 15, coerente com
+                # gem_max_exposure_pct (Test-GemSafetyGuards, lib_gem_safety.ps1)
+                # subido de 15% para 25% no mesmo commit (canal real: tabela
+                # Supabase evolution_params, via apply_evolution_gem_max_exposure).
+                # Com risco 3%/trade, 25% de exposicao cabe ~8 posicoes simultaneas
+                # de fato (o gate real que limita concorrencia); 15 aqui so ajusta
+                # o tamanho da fatia por trade nesta funcao de sizing, com folga
+                # sobre o gate real. Simulado: perda maxima teorica se 8-9 posicoes
+                # baterem stop ao mesmo tempo = ~25% do capital (~$1259 em $5037.6).
                 $riskPct = 0.03
                 $allocForTrade = $allocForTrade * $riskPct / 0.01  # normalize para o calc
 
-                $dynamicSize = Get-SizePerTrade -AllocatedCapital $allocForTrade -MaxConcurrentTrades 10 -StopLossPct ([double]$__stpEarly.stop_pct)
+                $dynamicSize = Get-SizePerTrade -AllocatedCapital $allocForTrade -MaxConcurrentTrades 15 -StopLossPct ([double]$__stpEarly.stop_pct)
 
                 if ($dynamicSize -gt 0) {
                     $usd_size = $dynamicSize

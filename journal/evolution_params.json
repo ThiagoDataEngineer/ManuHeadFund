@@ -1,0 +1,8 @@
+﻿{
+    "pumpfade_min_pump_pct":  12,
+    "sentinel_ignition_pct":  12,
+    "pumpfade_dump_pct":  -10,
+    "sentinel_move_pct":  3.25,
+    "gem_sizing_pct":  0.5,
+    "gem_max_exposure_pct":  25
+}
