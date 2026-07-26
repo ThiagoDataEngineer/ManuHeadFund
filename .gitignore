@@ -102,6 +102,21 @@ journal/*.json.bak*
 # precisa chegar no cloud (clone limpo do GitHub Actions). Mesmo padrao ja
 # corrigido antes p/ flags de cutover (CLOUD_ONLY_MODE.flag etc).
 !journal/evolution_params.json
+# 2026-07-26: coin_registry.json e curadoria manual real de qualidade
+# fundamental (FQS) de ~30 moedas (Get-FundamentalScore, lib_fundamental_quality.ps1)
+# -- nao dado operacional. Confirmado via diagnostico real (scripts/diag_fqs_
+# registry_readonly_2026_07_26.ps1): sem este arquivo, TODO ativo cai em
+# fqs=0/AVOID no cloud, fazendo o Mentor LLM vetar por "FQS indisponivel"
+# mesmo em ativos de boa qualidade real (XRP, ARB, RENDER etc).
+!journal/coin_registry.json
+# 2026-07-26: per_asset_whitelist_*.json (mais recente por LastWriteTime,
+# ver Get-QuantWhitelistPath em lib_quant_whitelist.ps1) e curadoria real de
+# tiers (TIER_A_LIVE/B/C) de um backtest quant -- ja documentado como gap
+# conhecido desde 2026-07-23 (nunca existia no cloud, scan_master/short_scanner
+# sempre caiam no fallback vazio). So versiona a versao vigente (20260701_
+# 101921_RESTORED), nao o historico de versoes antigas (essas continuam
+# corretamente fora do git).
+!journal/per_asset_whitelist_20260701_101921_RESTORED.json
 journal/tg_listener_hb
 journal/watchdog_respawn_state.json
 journal/tori_proximity_state.json
@@ -110,7 +125,6 @@ journal/funding_history/
 journal/candles_external/
 journal/beta_vs_btc.json
 journal/capital_context.json
-journal/coin_registry.json
 journal/correlation_matrix.json
 journal/dsr_trials.jsonl
 journal/gem_safety_state.json

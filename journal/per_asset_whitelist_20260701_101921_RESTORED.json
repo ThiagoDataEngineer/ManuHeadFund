@@ -1,0 +1,44 @@
+{
+  "TIER_A_LIVE": [
+    {
+      "market": "BTCUSDT",
+      "date_added": "2026-07-01",
+      "reason": "Core BTC — sempre elegível BULL/BEAR",
+      "score_pred": 92,
+      "direction": "LONG",
+      "fqs": {
+        "safety": 7,
+        "quality": 5,
+        "liquidity": 6
+      }
+    },
+    {
+      "market": "ETHUSDT",
+      "date_added": "2026-07-01",
+      "reason": "Core ETH — tier_a stable",
+      "score_pred": 88,
+      "direction": "LONG",
+      "fqs": {
+        "safety": 6,
+        "quality": 5,
+        "liquidity": 6
+      }
+    }
+  ],
+  "TIER_A_PAPER": [
+    {
+      "market": "SOLUSDT",
+      "date_added": "2026-07-01",
+      "reason": "SOL pump recovery — BEAR_WEAK favorable",
+      "score_pred": 82,
+      "direction": "LONG",
+      "fqs": {
+        "safety": 5,
+        "quality": 5,
+        "liquidity": 5
+      }
+    }
+  ],
+  "TIER_B_PAPER": [],
+  "TIER_C_SKIP": []
+}
