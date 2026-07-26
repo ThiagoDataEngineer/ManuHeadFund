@@ -40,10 +40,20 @@ $script:MENTOR_FORBIDDEN_PHRASES = @(
     "DSR n_trades=0",
     "n_trades=0 e track",
     "n_trades=0 elimina",
-    "n_trades=0 significa"
+    "n_trades=0 significa",
     # NOTA: "track record validado" (afirmativo) NAO esta na lista -- falso positivo
     # em contextos como "track record validado por 15 trades". A negacao ja e coberta
     # por "sem track record" acima.
+    # 2026-07-26: [TIME]/weekend NAO e gate de bloqueio (operador roda 24/7).
+    # LLM usava "WEEKEND_LOW_LIQUIDITY"/"fim de semana" como um dos "3+ filtros"
+    # de veto mesmo com regra 7 no MENTOR_DEBATE_SYSTEM proibindo isso --
+    # guard aqui detecta violacao pra auditoria (nao reverte a decisao ja
+    # tomada, so loga em mentor_hallucinations.jsonl pra medir adesao a regra).
+    "fim de semana",
+    "weekend_low_liquidity",
+    "ASIA WEEKEND",
+    "baixa liquidez de sabado",
+    "baixa liquidez de domingo"
 )
 
 

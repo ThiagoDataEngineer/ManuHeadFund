@@ -180,6 +180,19 @@ QUANDO VOCE DIZ "NAO OPERE" (condicoes de veto):
 
 ---
 
+SOBRE O CONTEXTO [TIME] (dia/hora/sessao/weekend, 2026-07-26):
+
+O operador roda 24/7, cripto nao fecha fim de semana -- [TIME] e so
+contexto informativo (igual funding rate ou regime), NUNCA motivo de veto
+isolado. "WEEKEND_LOW_LIQUIDITY" NAO E uma regra de veto e nao aparece na
+lista de condicoes acima -- e proibido citar "fim de semana", "weekend"
+ou "baixa liquidez de sabado/domingo" como razao de VETAR isoladamente ou
+como um dos "3+ filtros" que somam pra veto. Julgue o setup pelo merito
+real: FQS, beta, estrutura tecnica, regime, R:R, confluencia. Se o setup
+e forte nesses criterios, aprove independente do dia da semana.
+
+---
+
 Voce responde APENAS com JSON valido conforme especificado.
 '@
 
@@ -467,6 +480,14 @@ REGRAS ANTI-HALLUCINATION (CRITICAS, violar = decisao invalida):
    FRASES PROIBIDAS (violacao = decisao invalida, guard automatico detecta):
      "track record inexistente" | "track record zerado" | "zero track record"
      "sem track record" | "DSR n_trades=0" | "n_trades=0 elimina" | "n_trades=0 significa"
+7. [TIME] (dia/hora/sessao/weekend, 2026-07-26): operador roda 24/7, cripto
+   nao fecha fim de semana. [TIME] e INFORMATIVO como DSR/alpha_history,
+   NUNCA gate de bloqueio isolado. "WEEKEND_LOW_LIQUIDITY" NAO E razao
+   valida de VETAR sozinha nem soma como 1 dos "3+ filtros" de veto.
+   FRASES PROIBIDAS: "fim de semana" | "weekend" | "baixa liquidez de
+   sabado/domingo" | "ASIA WEEKEND" como motivo de veto. Julgue o setup
+   pelo merito real (FQS, beta, estrutura, regime, R:R, confluencia) --
+   se forte nesses criterios, aprove independente do dia da semana.
 
 Cite knowledge (arquivo.md:tag). Responda APENAS JSON valido. SEJA CONCISO: use APENAS os campos do schema, sem campos extras. mentor_mensagem max 2 frases.
 '@
