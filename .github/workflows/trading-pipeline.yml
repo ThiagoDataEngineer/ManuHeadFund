@@ -1423,12 +1423,21 @@ jobs:
           $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
           $content | Out-File "agents/config.local.ps1" -Encoding UTF8
 
-      - name: Run Conviction Scan (hourly at :20, observe)
+      - name: Run Conviction Scan (hourly, observe)
         shell: pwsh
         continue-on-error: true
         run: |
-          $minute = (Get-Date).Minute
-          if ($minute -ge 20 -and $minute -lt 25) {
+          # 2026-07-27 FIX: gate "$minute -ge 20 -and $minute -lt 25" NUNCA casava
+          # (GH Actions throttle nao cai numa janela de 5min exata -- mesmo bug ja
+          # documentado/corrigido em short_scanner.ps1 07-25). Confirmado real:
+          # 19 disparos consecutivos das ultimas 15h, ZERO no minuto 20-24 --
+          # conviction_observations ficou vazia mesmo apos criar a tabela (fix
+          # 2026-07-26), porque o job "existia" mas nunca de fato rodava.
+          # cron_guard.ps1 (mesmo padrao ja usado por mce_counterfactual/
+          # staleness_audit) persiste o ultimo run real no Supabase, robusto a
+          # throttle.
+          & ./scripts/cron_guard.ps1 -JobId "cloud_conviction_scan" -Schedule "interval:60"
+          if ($LASTEXITCODE -eq 0) {
             Write-Host "=== CLOUD CONVICTION SCAN (OBSERVE) ===" -ForegroundColor Cyan
             try {
               & ./scripts/cloud_conviction_scan.ps1
@@ -1436,8 +1445,6 @@ jobs:
             } catch {
               Write-Host "WARN: $_" -ForegroundColor Yellow
             }
-          } else {
-            Write-Host "Skipped (runs hourly at :20)" -ForegroundColor Yellow
           }
 
   # ============================================================================
