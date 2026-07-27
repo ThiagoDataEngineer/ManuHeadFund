@@ -25,7 +25,16 @@ $OVERRIDE = 75
 # ── Top movers (mesma fonte do backtest) ───────────────────────────────────────
 $rows = @()
 try {
-    $r = Invoke-RestMethod -Uri "$($global:COINEX_BASE_URL)/v2/futures/ticker" -Method GET -TimeoutSec 20
+    # 2026-07-27 FIX: agents/config.ps1 define $COINEX_BASE_URL SEM $global:
+    # (escopo de script) -- $global:COINEX_BASE_URL nunca era populado neste
+    # caminho (so gem_executor.ps1/tori_daemon_simple.ps1 setam a versao
+    # global). Causava "Invalid URI: The hostname could not be parsed" em
+    # toda execucao real (confirmado run 30267155223), silenciado pelo
+    # try/catch -- o job "rodava" mas nunca buscava ticker nenhum.
+    $__baseUrl = if ($global:COINEX_BASE_URL) { $global:COINEX_BASE_URL }
+                 elseif ($COINEX_BASE_URL) { $COINEX_BASE_URL }
+                 else { "https://api.coinex.com" }
+    $r = Invoke-RestMethod -Uri "$__baseUrl/v2/futures/ticker" -Method GET -TimeoutSec 20
     foreach ($t in $r.data) {
         $open = [double]$t.open; $last = [double]$t.last; $val = [double]$t.value
         if ($open -le 0 -or $val -lt $MIN_VOL) { continue }
