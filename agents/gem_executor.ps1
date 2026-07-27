@@ -427,9 +427,24 @@ function Invoke-GemExecute {
 
     # ── CIRCUIT BREAKER: -2% daily loss pause ──────────────────────────────────
     # 2026-06-09: bloqueia trades se PnL < -2% do capital hoje
+    # 2026-07-27 FIX (achado real: 11/11 candidatos bloqueados hoje por PnL de
+    # so -$7.75, incluindo XRPUSDT com FQS QUALITY): $global:CAPITAL_TOTAL
+    # NUNCA e setado neste caminho de execucao ($CAPITAL_TOTAL existe so em
+    # escopo de SCRIPT em config.ps1, sem $global: -- so gem_agent.ps1, nunca
+    # chamado por producao real, seta a versao global). PowerShell coage o
+    # $null resultante pra 0 no parametro [double]$Capital -- o default de
+    # 3645.0 NUNCA e usado pq o parametro foi passado explicitamente (ainda
+    # que vazio). threshold = 0 * -0.02 = 0, entao QUALQUER pnl negativo
+    # (mesmo centavos) travava o dia inteiro. Fix: usa o capital REAL da
+    # conta (Get-ExecutableCapitalUSDT, mesmo cache de 30min ja usado mais
+    # adiante nesta funcao pro sizing real).
     if (Get-Command Test-CircuitBreakerTriggered -ErrorAction SilentlyContinue) {
-        if (Test-CircuitBreakerTriggered -Capital $global:CAPITAL_TOTAL -DailyLossThreshold -0.02) {
-            Write-Host "CIRCUIT BREAKER ATIVADO: -2% daily loss. Nenhum trade hoje." -ForegroundColor Red
+        $__cbCapital = if (Get-Command Get-ExecutableCapitalUSDT -ErrorAction SilentlyContinue) {
+            (Get-ExecutableCapitalUSDT -MarketType "FUTURES" -MarginMode "cross").capital
+        } else { 0 }
+        if ($__cbCapital -le 0) { $__cbCapital = 3645.0 }
+        if (Test-CircuitBreakerTriggered -Capital $__cbCapital -DailyLossThreshold -0.02) {
+            Write-Host "CIRCUIT BREAKER ATIVADO: -2% daily loss (capital=$__cbCapital). Nenhum trade hoje." -ForegroundColor Red
             try { Send-TelegramAlert -Message "🚨 **CIRCUIT BREAKER ATIVADO** — Perdemos -2% do capital hoje. Sistema pausado." | Out-Null } catch {}
             return [PSCustomObject]@{ blocked = $true; blocked_by = @("circuit_breaker_daily_loss"); market = $mkt }
         }

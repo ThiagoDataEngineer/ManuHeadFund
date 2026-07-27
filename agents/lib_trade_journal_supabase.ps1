@@ -55,8 +55,23 @@ function Save-TradeOutcome {
             [datetime]::Parse([string]$TradeRecord.entry_ts)
         }
 
+        # 2026-07-27 FIX: quando o CALLER ja monta um id ESTAVEL (ex:
+        # _Convert-ClosedTradeToOutcome usa position_id da CoinEx, unico por
+        # posicao fechada -- ver lib_position_sync_live.ps1), preservar esse
+        # id em vez de sempre gerar um GUID novo aqui. O GUID aleatorio
+        # quebrava a idempotencia do upsert (PrimaryKey "id"): toda vez que
+        # Reconcile-AppToJournal reprocessava as MESMAS ultimas 10 posicoes
+        # fechadas (CoinEx-GetClosedPositions nao filtra so as novas), cada
+        # chamada gerava um id diferente e regravava o mesmo fechamento de
+        # novo -- achado real: 8 valores de PnL duplicados 3-5x cada em
+        # trade_outcomes, inflando qualquer soma de PnL diario (inclusive o
+        # circuit breaker -2%, que disparou hoje com -$7.75 de PnL nao-real).
+        # Sem id estavel no caller, mantem o comportamento antigo (GUID) --
+        # nao quebra os outros 2 callers que nunca passavam id (fallback
+        # seguro, mesmo risco de duplicata que ja existia antes do fix).
+        $stableId = if ($TradeRecord.id) { [string]$TradeRecord.id } else { $null }
         $record = @{
-            id = "{0}|{1}|{2}|{3}" -f $ts.Ticks, $TradeRecord.symbol, $TradeRecord.direction, ([guid]::NewGuid()).ToString().Substring(0, 8)
+            id = if ($stableId) { $stableId } else { "{0}|{1}|{2}|{3}" -f $ts.Ticks, $TradeRecord.symbol, $TradeRecord.direction, ([guid]::NewGuid()).ToString().Substring(0, 8) }
             entry_ts = $ts.ToUniversalTime()
             symbol = [string]$TradeRecord.symbol
             direction = [string]$TradeRecord.direction  # LONG|SHORT

@@ -87,6 +87,76 @@
             $result = Save-TradeOutcome -TradeRecord $record
             $result | Should Be $true
         }
+
+        # 2026-07-27: achado real -- Reconcile-AppToJournal (lib_position_sync_live.ps1)
+        # ja monta um id ESTAVEL (position_id da CoinEx) via _Convert-ClosedTradeToOutcome,
+        # mas Save-TradeOutcome sempre sobrescrevia com um GUID novo, quebrando a
+        # idempotencia do upsert (mesmo fechamento reprocessado a cada ciclo virava
+        # registro duplicado, inflando PnL diario/circuit breaker).
+        It "preserva o id estavel do TradeRecord quando presente (idempotencia)" {
+            $mirrorPath = Join-Path $global:STATE_STORE_LOCAL_DIR "trade_outcomes.jsonl"
+            if (Test-Path $mirrorPath) { Remove-Item $mirrorPath -Force }
+
+            $record = @{
+                id = "SOLUSDT|SHORT|position_sync|123456789"
+                entry_ts = (Get-Date)
+                symbol = "SOLUSDT"
+                direction = "SHORT"
+                source = "app_import"
+                entry_price = 150.0
+                pnl_realized = -0.31
+                status = "closed"
+            }
+
+            Save-TradeOutcome -TradeRecord $record | Should Be $true
+            $lines = @(Get-Content $mirrorPath | Where-Object { $_ -match '^\{' })
+            $saved = $lines[-1] | ConvertFrom-Json
+            $saved.id | Should Be "SOLUSDT|SHORT|position_sync|123456789"
+        }
+
+        It "gera id via GUID quando TradeRecord nao tem id (comportamento antigo preservado)" {
+            $mirrorPath = Join-Path $global:STATE_STORE_LOCAL_DIR "trade_outcomes.jsonl"
+            if (Test-Path $mirrorPath) { Remove-Item $mirrorPath -Force }
+
+            $record = @{
+                entry_ts = (Get-Date)
+                symbol = "ADAUSDT"
+                direction = "LONG"
+                source = "gem_executor"
+                entry_price = 0.5
+                quantity = 100
+            }
+
+            Save-TradeOutcome -TradeRecord $record | Should Be $true
+            $lines = @(Get-Content $mirrorPath | Where-Object { $_ -match '^\{' })
+            $saved = $lines[-1] | ConvertFrom-Json
+            $saved.id | Should Not BeNullOrEmpty
+            $saved.id | Should Not Be "SOLUSDT|SHORT|position_sync|123456789"
+        }
+
+        It "reprocessar o MESMO id estavel 2x nao gera ids diferentes (simula Reconcile-AppToJournal reprocessando as ultimas N posicoes fechadas)" {
+            $mirrorPath = Join-Path $global:STATE_STORE_LOCAL_DIR "trade_outcomes.jsonl"
+            if (Test-Path $mirrorPath) { Remove-Item $mirrorPath -Force }
+
+            $record = @{
+                id = "DASHUSDT|LONG|position_sync|987654321"
+                entry_ts = (Get-Date)
+                symbol = "DASHUSDT"
+                direction = "LONG"
+                source = "app_import"
+                entry_price = 30.0
+                pnl_realized = -0.24
+                status = "closed"
+            }
+
+            Save-TradeOutcome -TradeRecord $record | Should Be $true
+            Save-TradeOutcome -TradeRecord $record | Should Be $true
+
+            $lines = @(Get-Content $mirrorPath | Where-Object { $_ -match '^\{' })
+            $ids = @($lines | ForEach-Object { ($_ | ConvertFrom-Json).id } | Select-Object -Unique)
+            $ids.Count | Should Be 1
+            $ids[0] | Should Be "DASHUSDT|LONG|position_sync|987654321"
+        }
     }
 
     Context "Get-RecentTrades" {

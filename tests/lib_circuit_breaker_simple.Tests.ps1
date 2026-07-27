@@ -111,6 +111,48 @@ Describe "CircuitBreaker: Set/Reset" {
     }
 }
 
+# 2026-07-27: achado real em producao -- gem_executor.ps1 chamava
+# Test-CircuitBreakerTriggered -Capital $global:CAPITAL_TOTAL, mas essa
+# variavel NUNCA e setada no caminho real de execucao ($CAPITAL_TOTAL existe
+# so em escopo de SCRIPT em config.ps1, sem $global:). PowerShell coage o
+# $null explicitamente passado pra 0 no parametro [double]$Capital -- o
+# default (3645.0) NUNCA e usado nesse caso, porque so se aplica quando o
+# parametro NAO e passado. Resultado real: threshold = 0 * -0.02 = 0, entao
+# qualquer PnL negativo (mesmo -$0.01) disparava o circuit breaker e
+# bloqueava TODOS os candidatos do dia (confirmado: 11/11 bloqueados por
+# PnL de so -$7.75, nem perto de -2% real de ~$4985).
+Describe "CircuitBreaker: regressao -- capital nulo/vazio nao pode zerar o threshold" {
+    It "documenta o bug: passar \$null explicito no parametro double vira 0, ignorando o default" {
+        function Test-CapitalCoercion { param([double]$Capital = 3645.0) return $Capital }
+        $nullCapital = $null
+        (Test-CapitalCoercion -Capital $nullCapital) | Should Be 0.0
+    }
+
+    It "threshold com capital=0 dispara com QUALQUER pnl negativo (o bug real)" {
+        $capital = 0.0
+        $threshold = $capital * -0.02
+        $threshold | Should Be 0.0
+        (-0.01 -lt $threshold) | Should Be $true
+    }
+
+    It "fix: fallback para capital real (ou default seguro) quando o capital calculado e <= 0" {
+        function Resolve-CircuitBreakerCapital {
+            param([double]$ComputedCapital)
+            if ($ComputedCapital -le 0) { return 3645.0 }
+            return $ComputedCapital
+        }
+        (Resolve-CircuitBreakerCapital -ComputedCapital 0) | Should Be 3645.0
+        (Resolve-CircuitBreakerCapital -ComputedCapital 4985.0) | Should Be 4985.0
+    }
+
+    It "com capital real (~4985), PnL de -7.75 NAO deveria disparar -2% (-99.70)" {
+        $capital = 4985.0
+        $threshold = $capital * -0.02
+        $dailyPnL = -7.75
+        ($dailyPnL -lt $threshold) | Should Be $false
+    }
+}
+
 Describe "CircuitBreaker: Integration" {
     It "detecta e pausa na perda -2%" {
         $capital = 1000
