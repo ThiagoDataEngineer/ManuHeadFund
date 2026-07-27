@@ -94,21 +94,56 @@ function Invoke-MentorShadowObservation {
                        elseif ($cascade.mentor -and $cascade.mentor.decision) { [string]$cascade.mentor.decision }
                        else { "UNKNOWN" }
 
+        # 2026-07-27: mentor_confidence nunca era extraido aqui (so decisao
+        # binaria) -- owner quer usar a nota real do Mentor pra validar se
+        # correlaciona com resultado, precisa do numero persistido.
+        $mentorConfidence = if ($cascade.mentor -and $null -ne $cascade.mentor.confidence) {
+            try { [double]$cascade.mentor.confidence } catch { $null }
+        } else { $null }
+
+        $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
         $entry = [ordered]@{
-            ts_utc         = (Get-Date).ToUniversalTime().ToString("o")
-            market         = $Market
-            real_direction = $RealDirection
-            real_usd_size  = $RealUsdSize
-            llm_decision   = $llmDecision
-            llm_motivo     = [string]$cascade.motivo
-            triagem_tier   = if ($cascade.triagem) { [string]$cascade.triagem.tier } else { $null }
-            mesa_consensus = if ($cascade.mesa) { [string]$cascade.mesa.consensus } else { $null }
-            elapsed_ms     = $elapsedMs
-            agrees_with_real = ($llmDecision -eq "APROVAR")
+            ts_utc            = $tsUtc
+            market            = $Market
+            real_direction    = $RealDirection
+            real_usd_size     = $RealUsdSize
+            llm_decision      = $llmDecision
+            mentor_confidence = $mentorConfidence
+            llm_motivo        = [string]$cascade.motivo
+            triagem_tier      = if ($cascade.triagem) { [string]$cascade.triagem.tier } else { $null }
+            mesa_consensus    = if ($cascade.mesa) { [string]$cascade.mesa.consensus } else { $null }
+            elapsed_ms        = $elapsedMs
+            agrees_with_real  = ($llmDecision -eq "APROVAR")
         }
 
         $logPath = Join-Path $PSScriptRoot "..\journal\mentor_shadow_log.jsonl"
         Add-Content -Path $logPath -Value ($entry | ConvertTo-Json -Compress -Depth 5) -Encoding UTF8
+
+        # 2026-07-27: persiste no Supabase (cloud-persistente) -- o jsonl local
+        # e efemero no runner do GitHub Actions e se perde a cada job (mesmo
+        # bug ja corrigido para conviction_observations/beta_history). Fail-
+        # gracious: shadow e Fase 0, nunca deve quebrar por falha de rede/schema.
+        if (Get-Command Save-StateRecords -ErrorAction SilentlyContinue) {
+            try {
+                $record = [PSCustomObject]@{
+                    pk_id             = "${Market}_${RealDirection}_${tsUtc}"
+                    ts_utc            = $tsUtc
+                    market            = $Market
+                    real_direction    = $RealDirection
+                    real_usd_size     = $RealUsdSize
+                    llm_decision      = $llmDecision
+                    mentor_confidence = $mentorConfidence
+                    llm_motivo        = [string]$cascade.motivo
+                    triagem_tier      = if ($cascade.triagem) { [string]$cascade.triagem.tier } else { $null }
+                    mesa_consensus    = if ($cascade.mesa) { [string]$cascade.mesa.consensus } else { $null }
+                    elapsed_ms        = $elapsedMs
+                    agrees_with_real  = ($llmDecision -eq "APROVAR")
+                }
+                Save-StateRecords -Table "mentor_shadow_observations" -Records @($record) -PrimaryKey "pk_id"
+            } catch {
+                # persist na nuvem falhando nao deve afetar a observacao local nem a execucao real
+            }
+        }
     } catch {
         # Fase 0 e' observacao pura -- qualquer falha aqui NUNCA deve
         # propagar pro executor real. So loga um warning leve.

@@ -1930,6 +1930,23 @@ jobs:
         run: |
           & ./scripts/apply_conviction_observations_2026_07_26.ps1
 
+  apply-mentor-shadow-observations-schema:
+    name: Apply mentor_shadow_observations Schema (one-shot)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply migration
+        shell: pwsh
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          & ./scripts/apply_mentor_shadow_observations_2026_07_27.ps1
+
   diag-fqs-registry-readonly:
     name: Diag FQS Registry Read-Only (one-shot)
     runs-on: ubuntu-latest

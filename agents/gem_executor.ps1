@@ -2303,6 +2303,34 @@ function Invoke-GemExecute {
                 asset_class = if ($hasFutures) { "FUTURES" } else { "SPOT" }
                 trade_style = if ($__isScalpAtReg) { "SCALP" } else { "SWING" }
             }
+            # 2026-07-27: "score de nascimento" -- owner pediu que cada trade
+            # seja acompanhado conforme como nasceu, nao com regra fixa igual
+            # p/ todos. Combina os sinais REAIS que decidiram esta entrada
+            # (nao o Mentor LLM -- esse roda so em shadow, nunca decide o
+            # real, ver lib_mentor_shadow.ps1). Usa os campos opt-in que
+            # Add-TrailingPosition ja tinha (MentorConfidence/Tier/MesaSinal),
+            # nunca preenchidos por nenhum dos 3 motores de execucao ate hoje.
+            # Score 0-100: conviction ensemble (peso maior) + bonus por eixo
+            # forte confirmado (>=80 em axes_detail, mesmo criterio do
+            # threshold dinamico de 2026-07-26) + bonus/penalidade por FQS.
+            $__birthConviction = if ($convictionEnsembleResult -and $null -ne $convictionEnsembleResult.conviction) {
+                [double]$convictionEnsembleResult.conviction
+            } else { 50.0 }
+            $__birthStrongAxes = if (Get-Variable -Name __strongAxes -ErrorAction SilentlyContinue) { [int]$__strongAxes } else { 0 }
+            $__birthFqsCategory = if ($fqsResult -and $fqsResult.success -and $fqsResult.new_fqs_category) {
+                [string]$fqsResult.new_fqs_category
+            } else { "UNKNOWN" }
+            $__fqsBonus = switch ($__birthFqsCategory) {
+                "GEM"  { 10 }
+                "SOLID" { 5 }
+                "RISKY" { -10 }
+                default { 0 }
+            }
+            $__birthScore = [math]::Round(
+                [math]::Max(0, [math]::Min(100, $__birthConviction + ($__birthStrongAxes * 5) + $__fqsBonus)), 1
+            )
+            $__birthRegime = if ($btcScenario -and $btcScenario.scenario) { [string]$btcScenario.scenario } else { "UNKNOWN" }
+            $__birthMesaSinal = "regime=$__birthRegime|strong_axes=$__birthStrongAxes|fqs=$__birthFqsCategory"
             Add-TrailingPosition `
                 -Market  $mkt `
                 -Side    "LONG" `
@@ -2312,8 +2340,11 @@ function Invoke-GemExecute {
                 -OrderId $__orderId `
                 -Source  "gem" `
                 -Mode    "GEM" `
-                -Origin  $__origin
-            Write-Host "  [TRAILING] Registrado: $mkt entry=$avg_price stop=$stop_price target=$tgt_price origin=$($__origin.asset_class)/$($__origin.trade_style)" -ForegroundColor Green
+                -Origin  $__origin `
+                -MentorConfidence ([int]$__birthScore) `
+                -Tier    $__birthFqsCategory `
+                -MesaSinal $__birthMesaSinal
+            Write-Host "  [TRAILING] Registrado: $mkt entry=$avg_price stop=$stop_price target=$tgt_price origin=$($__origin.asset_class)/$($__origin.trade_style) birth_score=$__birthScore ($__birthMesaSinal)" -ForegroundColor Green
         } catch {
             Write-Host "  [TRAILING WARN] Falha ao registrar trailing: $_" -ForegroundColor Yellow
         }

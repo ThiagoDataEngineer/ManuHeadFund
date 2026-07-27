@@ -40,6 +40,15 @@
 # Defaults calibrados pra nao cortar o trade antes dele respirar: L2 (RSI e
 # ruidoso, pode bater 70 cedo) exige +8%; L3 (reversal 3-candle, sinal mais
 # forte, e vende 70% do bag) exige +15%.
+#
+# 2026-07-27 (pedido do owner: "cada trade acompanhado conforme como
+# nasceu"): L4 e protetor por padrao (correto p/ trade fraco -- realiza
+# qualquer ganho>0 perto do stop, sem arriscar reverter pro vermelho). Mas
+# um trade "runner" (Resolve-ExitPolicyGated ja confirma tendencia forte +
+# regime nao-bear, lib_trailing_policy.ps1 -- validado walk-forward
+# +0.18R) merece mais folego antes de zerar 100% no primeiro toque do
+# stop. -IsRunner (opt-in, default $false = comportamento identico ao de
+# antes) eleva o piso do L4 de "qualquer ganho>0" para MinGainPctL4Runner.
 # ============================================================================
 
 # --- NUCLEO PURO (TDD, sem I/O) -------------------------------------------------
@@ -68,7 +77,9 @@ function Resolve-ExitAutoDecision {
         [double]  $DayOpen = 0,       # open do DIA atual. <=0 => Layer 5 (climax) inativa
         [double]  $ClimaxThresholdPct = 25.0, # pump do dia que dispara o harvest de climax
         [double]  $MinGainPctL2 = 8.0,  # piso de ganho p/ L2 (RSI) disparar -- ver nota 2026-07-17
-        [double]  $MinGainPctL3 = 15.0  # piso de ganho p/ L3 (reversal) disparar
+        [double]  $MinGainPctL3 = 15.0, # piso de ganho p/ L3 (reversal) disparar
+        [bool]    $IsRunner = $false,   # 2026-07-27: trade classificado runner (tendencia forte confirmada)
+        [double]  $MinGainPctL4Runner = 1.0  # piso de ganho p/ L4 quando IsRunner (default = comportamento antigo se $false)
     )
 
     $mk = { param($a,$p,$q,$r) [pscustomobject]@{
@@ -131,7 +142,11 @@ function Resolve-ExitAutoDecision {
             return (& $decide 'SELL' 5 100 0.997 'climax_dissipacao')
         }
     }
-    if (($distToSL -le 2.5) -and ($gain -gt 0)) {
+    if ($IsRunner) {
+        if (($distToSL -le 2.5) -and ($gain -ge $MinGainPctL4Runner)) {
+            return (& $decide 'SELL' 4 100 0.997 'perto_SL_com_ganho_runner')
+        }
+    } elseif (($distToSL -le 2.5) -and ($gain -gt 0)) {
         return (& $decide 'SELL' 4 100 0.997 'perto_SL_com_ganho')
     }
     if ($isReversal -and ($gain -ge $MinGainPctL3)) {
@@ -182,6 +197,16 @@ function Invoke-ExitIntelligenceAuto {
         } catch {}
     }
 
+    # 2026-07-27: classificacao runner por mercado -- reusa o mesmo motor de
+    # policy ja ativo em lib_trailing_policy_live.ps1 (Resolve-ExitPolicyGated,
+    # validado walk-forward +0.18R em uptrend+nao-bear). So LEITURA da
+    # classificacao (selected=="runner"); nunca mexe em stop/size aqui -- essa
+    # continua sendo responsabilidade exclusiva do motor de policy (single
+    # owner, evita venda duplicada). Fail-safe: sem infra -> IsRunner=$false
+    # em todo mercado (comportamento identico ao de antes do fix).
+    $__l4Regime = if (Get-Command Get-RegimeFromState -ErrorAction SilentlyContinue) { Get-RegimeFromState } else { "" }
+    $__canClassifyRunner = (Get-Command Get-TrailingCandleMetrics -ErrorAction SilentlyContinue) -and (Get-Command Resolve-ExitPolicyGated -ErrorAction SilentlyContinue)
+
     # 2) Saldo REAL = ground truth da quantidade.
     $bal = try { CoinEx-Get "/v2/assets/spot/balance" } catch { $null }
     if (-not $bal -or $bal.code -ne 0) { return $executed }
@@ -218,10 +243,24 @@ function Invoke-ExitIntelligenceAuto {
                 if ($dayResp -and $dayResp.data) { $dayOpen = [double](@($dayResp.data)[-1].open) }
             } catch {}
 
-            $d = Resolve-ExitAutoDecision -Closes $closes -Current $current -Entry $entry -Sl $sl -RealQty $realQty -MinNotionalUsd $MinNotionalUsd -DayOpen $dayOpen
+            # 2026-07-27: classifica runner com o mesmo motor de policy que
+            # lib_trailing_policy_live.ps1 usa de verdade -- reusa os
+            # candles 1h ja buscados acima (sem custo extra de API).
+            $__isRunnerThis = $false
+            if ($__canClassifyRunner) {
+                try {
+                    $__cm = Get-TrailingCandleMetrics -Candles $candles
+                    if ($__cm) {
+                        $__pol = Resolve-ExitPolicyGated -TrendUp ([bool]$__cm.trend_up) -Regime $__l4Regime -Direction "LONG"
+                        $__isRunnerThis = ($__pol.selected -eq "runner")
+                    }
+                } catch { $__isRunnerThis = $false }
+            }
 
-            Write-Host ("[{0}] {1} | preco={2} ganho={3}% RSI={4} distSL={5}% rev={6} -> {7} {8}" -f `
-                $ccy, $d.action, $current, $d.gain, $d.rsi, $d.distToSL, $d.reversal, $d.action, $d.reason) -ForegroundColor Gray
+            $d = Resolve-ExitAutoDecision -Closes $closes -Current $current -Entry $entry -Sl $sl -RealQty $realQty -MinNotionalUsd $MinNotionalUsd -DayOpen $dayOpen -IsRunner $__isRunnerThis
+
+            Write-Host ("[{0}] {1} | preco={2} ganho={3}% RSI={4} distSL={5}% rev={6} runner={7} -> {8} {9}" -f `
+                $ccy, $d.action, $current, $d.gain, $d.rsi, $d.distToSL, $d.reversal, $__isRunnerThis, $d.action, $d.reason) -ForegroundColor Gray
 
             if ($d.action -ne 'SELL') { continue }
 

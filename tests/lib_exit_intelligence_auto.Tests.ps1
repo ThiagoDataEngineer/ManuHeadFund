@@ -54,6 +54,36 @@ Describe "Resolve-ExitAutoDecision (Exit Intelligence Auto - nucleo puro)" {
         }
     }
 
+    # 2026-07-27: owner pediu que cada trade seja acompanhado conforme como
+    # nasceu -- um trade "runner" (tendencia forte confirmada por
+    # Resolve-ExitPolicyGated) merece mais folego antes do L4 zerar 100%
+    # no primeiro toque do stop, em vez do piso "qualquer ganho>0" generico.
+    Context "Layer 4 com IsRunner -- piso de ganho elevado" {
+        It "com IsRunner=false (default), comportamento identico ao original: dispara com qualquer ganho>0" {
+            $d = Resolve-ExitAutoDecision -Closes $closesUp -Current 1.001 -Entry 1.00 -Sl 0.98 -RealQty 1000
+            $d.action | Should Be 'SELL'
+            $d.layer  | Should Be 4
+        }
+        It "com IsRunner=true, NAO dispara se ganho < MinGainPctL4Runner (default 1.0%)" {
+            # ganho = (1.001-1.00)/1.00 = 0.1% < piso 1.0%
+            $d = Resolve-ExitAutoDecision -Closes $closesUp -Current 1.001 -Entry 1.00 -Sl 0.98 -RealQty 1000 -IsRunner $true
+            $d.action | Should Not Be 'SELL'
+        }
+        It "com IsRunner=true, dispara SELL 100% (perto_SL_com_ganho_runner) quando ganho >= piso" {
+            # ganho = (1.02-1.00)/1.00 = 2.0% >= piso 1.0%, distToSL = (1.02-1.00)/1.02 = 1.96% <= 2.5%
+            $d = Resolve-ExitAutoDecision -Closes $closesUp -Current 1.02 -Entry 1.00 -Sl 1.00 -RealQty 1000 -IsRunner $true
+            $d.action | Should Be 'SELL'
+            $d.layer  | Should Be 4
+            $d.pct    | Should Be 100
+            $d.reason | Should Be 'perto_SL_com_ganho_runner'
+        }
+        It "piso de L4 runner e configuravel via MinGainPctL4Runner" {
+            $d = Resolve-ExitAutoDecision -Closes $closesUp -Current 1.001 -Entry 1.00 -Sl 0.98 -RealQty 1000 -IsRunner $true -MinGainPctL4Runner 0.05
+            $d.action | Should Be 'SELL'
+            $d.layer  | Should Be 4
+        }
+    }
+
     Context "Layer 3 - reversal com ganho -> vende 70%" {
         It "dispara SELL 70% em reversal + ganho (longe do SL)" {
             $d = Resolve-ExitAutoDecision -Closes $closesRev -Current 1.12 -Entry 0.80 -Sl 0.50 -RealQty 1000
