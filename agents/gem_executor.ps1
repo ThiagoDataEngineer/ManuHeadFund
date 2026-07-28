@@ -2407,9 +2407,20 @@ function Invoke-GemExecute {
             )
             $__birthRegime = if ($btcScenario -and $btcScenario.scenario) { [string]$btcScenario.scenario } else { "UNKNOWN" }
             $__birthMesaSinal = "regime=$__birthRegime|strong_axes=$__birthStrongAxes|fqs=$__birthFqsCategory"
+            # 2026-07-28 FIX (achado real critico: SUIUSDT SHORT real executado
+            # e registrado no trailing como "LONG" -- Side estava HARDCODED
+            # aqui, ignorando $direction ja resolvida corretamente por toda a
+            # cadeia de fixes anteriores 8ba227a/dfc518c/edd4789/26e8254).
+            # Motor de saida (Resolve-ExitAutoDecision, lib_trailing_policy*)
+            # calcula ganho/stop de forma INVERTIDA conforme o lado -- um
+            # SHORT real monitorado como LONG pode nunca fechar corretamente
+            # (ganho e perda trocados). $direction ja e "LONG"|"SHORT" valido
+            # neste ponto (safety check linha ~1647), cobre SPOT (sempre LONG
+            # na pratica, short_requires_futures_spot_only bloqueia SHORT+spot
+            # antes daqui) e FUTURES (LONG ou SHORT).
             Add-TrailingPosition `
                 -Market  $mkt `
-                -Side    "LONG" `
+                -Side    $direction `
                 -Entry   $avg_price `
                 -Stop    $stop_price `
                 -Target  $tgt_price `
