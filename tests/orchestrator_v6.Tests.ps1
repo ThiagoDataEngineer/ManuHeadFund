@@ -39,10 +39,23 @@ function Invoke-MentorDebate {
     return $global:STUB_MENTOR
 }
 
+# 2026-07-28: captura o Direction recebido por Build-MentorFullContext --
+# achado real: orchestrator_v6 passava $wlDirection (direcao da TRIAGEM) em
+# vez da direcao EFETIVA (Mesa > Triagem, mesma precedencia de Resolve-
+# MentorDirection), entao Test-BetaWithinCap nunca via Direction=SHORT
+# quando a Triagem dizia LONG mas a Mesa mudava pra SHORT (caso comum:
+# LONG bloqueado por breadth, Mentor reavalia SHORT).
+$global:CAPTURED_FULLCTX_DIRECTION = $null
+function Build-MentorFullContext {
+    param([string]$Market, [string]$Mode = "STANDARD", [string]$RegimeBias = "", [string]$Direction = "")
+    $global:CAPTURED_FULLCTX_DIRECTION = $Direction
+    return $null
+}
+
 # Helpers
-function Set-Triagem { param([string]$Tier="B",[int]$Score=65,[string]$Razao="")
+function Set-Triagem { param([string]$Tier="B",[int]$Score=65,[string]$Razao="",[string]$Direction="")
     $global:STUB_TRIAGEM = [PSCustomObject]@{
-        tier=$Tier; score_predicted=$Score; razao=$Razao
+        tier=$Tier; score_predicted=$Score; razao=$Razao; direction=$Direction
         flags=@(); knowledge_cited=@(); setup=$null
     }
 }
@@ -170,5 +183,40 @@ Describe "Invoke-V6Cascade - cascata Triagem -> Mesa -> Mentor" {
         Set-Triagem -Tier "B"; Set-Mesa "CAOS" "MISTO" 50
         $out = Invoke-V6Cascade -Market "BTCUSDT" -Context $ctx -Setup $setup
         ($out.mentor -eq $null) | Should Be $true
+    }
+}
+
+# 2026-07-28: achado real em producao -- Test-BetaWithinCap so aplica a
+# excecao "SHORT em bear = beta alto e edge" quando recebe Direction=SHORT,
+# mas Build-MentorFullContext era chamada com $wlDirection (direcao da
+# TRIAGEM), nao a direcao EFETIVA que o Mentor de fato avalia (Mesa tem
+# precedencia sobre Triagem, mesma regra de Resolve-MentorDirection). Caso
+# real: Triagem=LONG (breadth_long_blocked), Mesa muda pra SHORT -- o
+# contexto do beta ficava calculado pra LONG, entao o guard corretivo nunca
+# tinha chance de disparar mesmo com o Mentor vetando SHORT incorretamente.
+Describe "Invoke-V6Cascade - Direction efetiva passada pro Build-MentorFullContext" {
+    BeforeEach {
+        $global:CALLED_MESA = $false
+        $global:CALLED_MENTOR = $false
+        $global:CAPTURED_FULLCTX_DIRECTION = $null
+        Set-Mentor "APROVAR" 80 "ok"
+    }
+
+    It "Triagem=LONG + Mesa=SHORT -> Direction efetiva passada e SHORT (Mesa vence)" {
+        Set-Triagem -Tier "B" -Direction "LONG"; Set-Mesa "FORTE_3" "SHORT" 70
+        Invoke-V6Cascade -Market "BTCUSDT" -Context $ctx -Setup $setup | Out-Null
+        $global:CAPTURED_FULLCTX_DIRECTION | Should Be "SHORT"
+    }
+
+    It "Triagem=SHORT + Mesa=LONG -> Direction efetiva passada e LONG (Mesa vence)" {
+        Set-Triagem -Tier "B" -Direction "SHORT"; Set-Mesa "FORTE_3" "LONG" 70
+        Invoke-V6Cascade -Market "BTCUSDT" -Context $ctx -Setup $setup | Out-Null
+        $global:CAPTURED_FULLCTX_DIRECTION | Should Be "LONG"
+    }
+
+    It "Tier A (sem Mesa) usa Direction da Triagem" {
+        Set-Triagem -Tier "A" -Score 85 -Direction "SHORT"
+        Invoke-V6Cascade -Market "BTCUSDT" -Context $ctx -Setup $setup | Out-Null
+        $global:CAPTURED_FULLCTX_DIRECTION | Should Be "SHORT"
     }
 }

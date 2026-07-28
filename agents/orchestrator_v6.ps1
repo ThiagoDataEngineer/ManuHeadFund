@@ -347,10 +347,27 @@ function Invoke-V6Cascade {
     
     if ($Context.source -eq "GEM" -or $Context.mode -eq "GEM") { $mentorMode = "GEM" }
 
+    # 2026-07-28 FIX: $wlDirection e a direcao da TRIAGEM, nao a direcao
+    # EFETIVA que Invoke-MentorDebate vai de fato avaliar (Resolve-MentorDirection
+    # prioriza Explicit > Mesa > Triagem). Caso real observado: Triagem diz LONG
+    # (breadth_long_blocked), Mesa muda pra SHORT, Mentor debate SHORT -- mas
+    # Build-MentorFullContext recebia Direction=$wlDirection (LONG/vazio da
+    # Triagem), entao Test-BetaWithinCap nunca aplicava a excecao SHORT-em-bear
+    # (verdict ficava BLOCK em vez de OK) e o guard corretivo nunca disparava,
+    # mesmo com o Mentor as vezes vetando SHORT por beta incorretamente. Resolve
+    # a MESMA direcao efetiva aqui, ANTES da Mesa mudar de novo dentro do debate.
+    $mesaSigForCtx = if ($mesa -and $mesa.sinal_consenso) { [string]$mesa.sinal_consenso } else { "" }
+    $triagemDirForCtx = if ($wlDirection) { [string]$wlDirection } else { "" }
+    $effectiveDirForCtx = if (Get-Command Resolve-MentorDirection -ErrorAction SilentlyContinue) {
+        Resolve-MentorDirection -ExplicitDirection "" -MesaSignal $mesaSigForCtx -TriagemDirection $triagemDirForCtx
+    } elseif ($mesaSigForCtx -in @("LONG","SHORT")) { $mesaSigForCtx }
+      elseif ($triagemDirForCtx -in @("LONG","SHORT")) { $triagemDirForCtx }
+      else { "LONG" }
+
     $fullCtx = $null
     if (Get-Command Build-MentorFullContext -ErrorAction SilentlyContinue) {
         try {
-            $fullCtx = Build-MentorFullContext -Market $Market -Mode $mentorMode -RegimeBias ([string]$wlRegime) -Direction $wlDirection
+            $fullCtx = Build-MentorFullContext -Market $Market -Mode $mentorMode -RegimeBias ([string]$wlRegime) -Direction $effectiveDirForCtx
         } catch { $fullCtx = $null }
     }
 
