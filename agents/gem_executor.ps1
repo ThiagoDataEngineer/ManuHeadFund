@@ -1007,11 +1007,25 @@ function Invoke-GemExecute {
         # para que gate BTC-core tome decisao com direção CORRETA.
         $dirForGate = "LONG"  # default se nao conseguir calcular
 
+        # 2026-07-28 FIX (achado real: SUIUSDT com direction=LONG->SHORT no gate
+        # breadth_long_blocked, mas [CENARIO BLOCK] logo depois ainda dizia
+        # "bloqueia LONG"): quando o gate breadth_long_blocked (linha ~611-635)
+        # ja resolveu $direction via override do Mentor, essa e a fonte de
+        # verdade mais recente -- $dirForGate NAO deve recalcular do zero e
+        # contradize-la. So aplica quando $direction ja saiu do estado inicial
+        # "LONG" default (Gem.direction), preservando o pre-calculo original
+        # (comentario 2026-07-08 acima) pra todos os outros casos sem override.
+        if ($direction -eq "SHORT") {
+            $dirForGate = "SHORT"
+        }
+
         # 2026-07-09 FIX: gems chegam como HASHTABLE (triggers, TORI_SHORT sweep) e
         # PSObject.Properties['direction'] NAO enxerga chaves de hashtable -> direction
         # SHORT era ignorada e o gate avaliava LONG. Check por VALOR funciona p/ ambos.
         $gemDirRaw = "$($Gem.direction)".ToUpper()
-        if ($gemDirRaw -in @("LONG","SHORT")) {
+        if ($dirForGate -eq "SHORT") {
+            # ja resolvido acima via override do Mentor -- nao sobrescrever.
+        } elseif ($gemDirRaw -in @("LONG","SHORT")) {
             # Direcao explicita no GEM - use ela
             $dirForGate = $gemDirRaw
         } else {
