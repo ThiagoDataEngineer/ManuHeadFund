@@ -1193,7 +1193,13 @@ function Invoke-GemExecute {
         try {
             $crowd = Get-CrowdingSignal -Market $mkt
             if ($crowd -and $crowd.available) {
-                $dirCrowd = "$($Gem.direction)".ToUpper()
+                # 2026-07-28 FIX (achado real: mesma classe de bug de direction=
+                # LONG->SHORT dessincronizada, ver 8ba227a/dfc518c/edd4789): esta
+                # secao lia $Gem.direction cru, o valor ORIGINAL do scanner, que
+                # nunca muda quando o Mentor aprova SHORT via override no gate
+                # breadth_long_blocked. Se $direction ja foi resolvida como SHORT,
+                # ela e a fonte de verdade mais recente -- prioriza sobre Gem.direction.
+                $dirCrowd = if ($direction -eq "SHORT") { "SHORT" } else { "$($Gem.direction)".ToUpper() }
                 if ($dirCrowd -notin @("LONG","SHORT")) { $dirCrowd = "LONG" }
                 if ($dirCrowd -eq "LONG" -and $crowd.long_caution) {
                     Write-Host "  [CROWDING BLOCK] ${mkt}: $($crowd.crowding) funding=$($crowd.funding_pct)% -- LONG edge negativo (hist 43-46% win)" -ForegroundColor Red
@@ -1259,7 +1265,17 @@ function Invoke-GemExecute {
             # 2026-07-09 FIX: check por VALOR (hashtable-safe) — PSObject.Properties
             # nao enxerga chaves de hashtable; TORI_SHORT/TRIGGER gems sao hashtables.
             $gemDirConf = "$($Gem.direction)".ToUpper()
-            if ($gemDirConf -in @("LONG","SHORT")) {
+            # 2026-07-28 FIX (achado real: DOGEUSDT com direction=LONG->SHORT
+            # resolvida e CENARIO ja liberando SHORT, mas [TORI Gate] START
+            # test-confluence ainda avaliou dir=LONG): $gemDirConf (Gem.direction
+            # cru) tinha precedencia sobre $dirForGate (que ja herda a decisao
+            # do Mentor desde dfc518c) -- o elseif abaixo nunca era alcancado
+            # quando Gem.direction ja era um valor valido (caso comum). Se
+            # $direction ja foi resolvida como SHORT via override, ela e a
+            # fonte de verdade mais recente.
+            if ($direction -eq "SHORT") {
+                $dirForConfluence = "SHORT"
+            } elseif ($gemDirConf -in @("LONG","SHORT")) {
                 $dirForConfluence = $gemDirConf
             } elseif ($dirForGate -in @("LONG","SHORT")) {
                 # coerencia com o pre-calc da section 1c (LDOUSDT flip fix)
