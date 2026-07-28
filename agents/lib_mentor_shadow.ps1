@@ -97,8 +97,15 @@ function Invoke-MentorShadowObservation {
         # 2026-07-27: mentor_confidence nunca era extraido aqui (so decisao
         # binaria) -- owner quer usar a nota real do Mentor pra validar se
         # correlaciona com resultado, precisa do numero persistido.
-        $mentorConfidence = if ($cascade.mentor -and $null -ne $cascade.mentor.confidence) {
-            try { [double]$cascade.mentor.confidence } catch { $null }
+        # 2026-07-28 FIX: o objeto retornado por Invoke-MentorDebate
+        # (mentor_agent.ps1 linha ~1227) usa a propriedade "confianca"
+        # (portugues), nunca "confidence" -- confirmado real: as 3 primeiras
+        # observacoes persistidas em mentor_shadow_observations tinham
+        # mentor_confidence sempre vazio, apesar do flag/persistencia
+        # funcionando (decision/llm_decision ja liam corretamente porque
+        # coincidentemente o campo .decision existe em ingles).
+        $mentorConfidence = if ($cascade.mentor -and $null -ne $cascade.mentor.confianca) {
+            try { [double]$cascade.mentor.confianca } catch { $null }
         } else { $null }
 
         $tsUtc = (Get-Date).ToUniversalTime().ToString("o")
