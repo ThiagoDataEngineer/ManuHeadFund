@@ -621,13 +621,20 @@ function Invoke-GemExecute {
                 # Mesa dentro dela pode mudar a direcao (breadth_long_blocked
                 # so existe p/ LONG -- a UNICA razao do Mentor aprovar esse gate
                 # especifico e a Mesa ter achado edge no lado OPOSTO, SHORT).
-                # Mas Test-MentorOverride so retorna {approved, motivo}, nunca
-                # a direcao efetiva -- $direction ficava congelada em LONG,
-                # dessincronizada do que o Mentor de fato aprovou, quebrando
-                # o gate de qualidade (tori_tech_sinal) mais adiante. Fix
-                # contido: so para este gate assimetrico (LONG-only), inverte
-                # a direcao quando o override e aprovado.
-                if ($__origDirection -eq "LONG" -and ($gatesBlocked -contains "breadth_long_blocked")) {
+                #
+                # 2026-07-28 FIX ADICIONAL (achado: doc de design 2026-07-24
+                # NUNCA disse que aprovar este gate implica converter pra
+                # SHORT -- so "destravar" o gate. Assumir cegamente SHORT
+                # descartaria o caso legitimo do Mentor aprovar mantendo
+                # LONG original -- exatamente o que o dado historico
+                # hit_rate=67.7% mede: as vezes o setup individual da moeda
+                # justifica LONG mesmo com breadth fraco. Fix real: usa
+                # $override.effective_direction (agora exposta por
+                # Test-MentorOverride via a Mesa/Mentor da cascade -- fonte
+                # estruturada, nao parsing de texto livre do LLM) pra saber
+                # se inverte pra SHORT ou mantem LONG.
+                if ($__origDirection -eq "LONG" -and ($gatesBlocked -contains "breadth_long_blocked") `
+                    -and $override.PSObject.Properties['effective_direction'] -and $override.effective_direction -eq "SHORT") {
                     $direction = "SHORT"
                     Write-Host "  [MENTOR OVERRIDE] $mkt -- $($override.motivo) -- direction=$__origDirection->$direction" -ForegroundColor Magenta
                 } else {

@@ -84,8 +84,12 @@ function Test-MentorOverride {
     substitui a estrutura de controle da funcao chamadora.
 
     .OUTPUTS
-    [PSCustomObject]@{ approved=bool; motivo=string }
+    [PSCustomObject]@{ approved=bool; motivo=string; effective_direction=string }
     approved=$false em QUALQUER cenario de duvida (fail-closed).
+    effective_direction = direcao (LONG/SHORT) que a cascade (Mesa/Mentor)
+    de fato decidiu -- fonte estruturada (Invoke-MentorDebate ja calcula via
+    Resolve-MentorDirection), nao inferida de texto livre do LLM. Vazio
+    quando approved=$false.
     #>
     [CmdletBinding()]
     param(
@@ -106,7 +110,7 @@ function Test-MentorOverride {
     $deny = {
         param($motivo)
         Write-Host "  [MENTOR OVERRIDE DENY] $Market/$GateTag -- $motivo" -ForegroundColor DarkGray
-        [PSCustomObject]@{ approved = $false; motivo = $motivo }
+        [PSCustomObject]@{ approved = $false; motivo = $motivo; effective_direction = "" }
     }.GetNewClosure()
 
     $journalDir = if ($FlagDir) { $FlagDir }
@@ -207,6 +211,20 @@ function Test-MentorOverride {
             return (& $deny "mentor decision=$mentorDec (gate original: $GateReason)")
         }
 
+        # 2026-07-28 FIX (achado: fix anterior do gate breadth_long_blocked
+        # assumia CEGAMENTE que toda aprovacao aqui era pra SHORT, sem
+        # nunca checar a decisao real da cascade -- coincidiu com os casos
+        # de hoje so por causa do regime BEAR_STRONG dominante). Invoke-
+        # MentorDebate ja calcula a direcao efetiva via Resolve-MentorDirection
+        # (precedencia ExplicitDirection > MesaSignal > TriagemDirection) e
+        # expoe em $cascade.mentor.direction -- so precisa repassar aqui,
+        # dado estruturado em vez de parsing de texto livre do LLM.
+        $effectiveDirection = if ($cascade.mentor.PSObject.Properties['direction'] -and $cascade.mentor.direction) {
+            [string]$cascade.mentor.direction
+        } else {
+            $Direction
+        }
+
         $logPath = Join-Path $journalDir "mentor_override_log.jsonl"
         try {
             $entry = [ordered]@{
@@ -215,14 +233,16 @@ function Test-MentorOverride {
                 gate_tag   = $GateTag
                 gate_reason = $GateReason
                 direction  = $Direction
-                mentor_confidence = $cascade.mentor.confidence
+                effective_direction = $effectiveDirection
+                mentor_confidence = $cascade.mentor.confianca
             }
             Add-Content -Path $logPath -Value ($entry | ConvertTo-Json -Compress -Depth 5) -Encoding UTF8
         } catch {}
 
         return [PSCustomObject]@{
             approved = $true
-            motivo   = "mentor APROVAR (confidence=$($cascade.mentor.confidence)) destravou gate '$GateTag'"
+            motivo   = "mentor APROVAR (confidence=$($cascade.mentor.confianca)) destravou gate '$GateTag'"
+            effective_direction = $effectiveDirection
         }
     } catch {
         return (& $deny "excecao na cascade: $($_.Exception.Message)")

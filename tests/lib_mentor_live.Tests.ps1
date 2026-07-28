@@ -77,6 +77,73 @@ Describe "Test-MentorOverride" {
         }
     }
 
+    Context "effective_direction -- 2026-07-28 fix (simetria breadth_long_blocked)" {
+        It "expoe effective_direction=SHORT quando a cascade (Mesa/Mentor) decidiu SHORT, mesmo com Direction=LONG na chamada" {
+            "1" | Set-Content (Join-Path $script:testFlagDir "MENTOR_OVERRIDE_ENABLED.flag") -Encoding UTF8
+            Mock -CommandName Invoke-V6Cascade -MockWith {
+                [PSCustomObject]@{
+                    decisao = "EXECUTAR"
+                    motivo  = "mesa achou edge SHORT"
+                    triagem = [PSCustomObject]@{ tier = "B" }
+                    mesa    = [PSCustomObject]@{ sinal_consenso = "SHORT" }
+                    mentor  = [PSCustomObject]@{ decision = "APROVAR"; confianca = 78; direction = "SHORT" }
+                }
+            }
+
+            $r = Test-MentorOverride -Market "TESTUSDT" -GateTag "breadth_long_blocked" `
+                -GateReason "breadth fraco" -Direction "LONG" -Price 100 -Change24h 3.0 -Regime "BEAR_STRONG" `
+                -FlagDir $script:testFlagDir
+            $r.approved | Should Be $true
+            $r.effective_direction | Should Be "SHORT"
+        }
+
+        It "mantem effective_direction=LONG quando a cascade decidiu manter LONG (setup individual forte apesar do breadth fraco)" {
+            "1" | Set-Content (Join-Path $script:testFlagDir "MENTOR_OVERRIDE_ENABLED.flag") -Encoding UTF8
+            Mock -CommandName Invoke-V6Cascade -MockWith {
+                [PSCustomObject]@{
+                    decisao = "EXECUTAR"
+                    motivo  = "moeda individual forte, mantem LONG apesar do breadth"
+                    triagem = [PSCustomObject]@{ tier = "A" }
+                    mesa    = [PSCustomObject]@{ sinal_consenso = "LONG" }
+                    mentor  = [PSCustomObject]@{ decision = "APROVAR"; confianca = 82; direction = "LONG" }
+                }
+            }
+
+            $r = Test-MentorOverride -Market "TESTUSDT" -GateTag "breadth_long_blocked" `
+                -GateReason "breadth fraco" -Direction "LONG" -Price 100 -Change24h 3.0 -Regime "BEAR_STRONG" `
+                -FlagDir $script:testFlagDir
+            $r.approved | Should Be $true
+            $r.effective_direction | Should Be "LONG"
+        }
+
+        It "fallback para Direction passada quando mentor nao expoe campo direction (compat com mocks antigos)" {
+            "1" | Set-Content (Join-Path $script:testFlagDir "MENTOR_OVERRIDE_ENABLED.flag") -Encoding UTF8
+            Mock -CommandName Invoke-V6Cascade -MockWith {
+                [PSCustomObject]@{
+                    decisao = "EXECUTAR"
+                    motivo  = "ok"
+                    triagem = [PSCustomObject]@{ tier = "B" }
+                    mesa    = $null
+                    mentor  = [PSCustomObject]@{ decision = "APROVAR"; confidence = 78 }
+                }
+            }
+
+            $r = Test-MentorOverride -Market "TESTUSDT" -GateTag "crowding" `
+                -GateReason "teste" -Direction "LONG" -Price 100 -Change24h 3.0 -Regime "NEUTRO" `
+                -FlagDir $script:testFlagDir
+            $r.approved | Should Be $true
+            $r.effective_direction | Should Be "LONG"
+        }
+
+        It "retorna effective_direction vazio quando approved=false" {
+            $r = Test-MentorOverride -Market "TESTUSDT" -GateTag "breadth_long_blocked" `
+                -GateReason "teste" -Direction "LONG" -Price 100 -Change24h 3.0 -Regime "BEAR_WEAK" `
+                -FlagDir $script:testFlagDir
+            $r.approved | Should Be $false
+            $r.effective_direction | Should Be ""
+        }
+    }
+
     Context "Com flag ativo -- LLM veta o override" {
         It "retorna approved=false quando mentor.decision = VETAR" {
             "1" | Set-Content (Join-Path $script:testFlagDir "MENTOR_OVERRIDE_ENABLED.flag") -Encoding UTF8
