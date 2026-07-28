@@ -51,27 +51,47 @@ function Detect-OrphanPositions {
     try {
         # 1. Buscar posiÃ§Ãµes da exchange
         $exchangePositions = @(CoinEx-GetPendingPositions)
-        
+
         if ($exchangePositions.Count -eq 0) {
             return @()
         }
-        
+
         # 2. Buscar posiÃ§Ãµes registradas localmente (ativas)
         $localPositions = @(Get-TrailingPositions | Where-Object { $_.active })
-        $localMarkets = @($localPositions | ForEach-Object { $_.market })
-        
-        # 3. Identificar Ã³rfÃ£s (na exchange mas nÃ£o no local)
+        # 2026-07-28 FIX (achado real: BTCUSDT trocou de LONG pra SHORT na
+        # exchange, mas o registro local antigo -- ainda LONG -- nunca era
+        # tratado como orfao de novo, pq a comparacao era so por NOME de
+        # mercado. O registro ficava preso com o lado ERRADO indefinidamente,
+        # ate alguem fechar/reabrir manualmente. Fix: compara market+side
+        # normalizado (a API da exchange usa long/short minusculo OU buy/sell
+        # -- ver CoinEx-GetPendingPositions/lib_position_sync_live.ps1 -- o
+        # registro local usa LONG/SHORT maiusculo).
+        $localMarketSides = @($localPositions | ForEach-Object {
+            $__s = "$($_.side)".ToUpper()
+            "$($_.market)|$__s"
+        })
+
+        # 3. Identificar Ã³rfÃ£s (na exchange mas nÃ£o no local, OU mesmo market
+        # com side diferente -- registro desatualizado que precisa reconciliar)
         $orphans = @()
         foreach ($exPos in $exchangePositions) {
             $market = $exPos.market
-            
-            if ($localMarkets -notcontains $market) {
-                # Ã“rfÃ£ detectada: adicionar flag
+            $exSideRaw = "$($exPos.side)".ToUpper()
+            $exSide = switch ($exSideRaw) {
+                "BUY"  { "LONG" }
+                "SELL" { "SHORT" }
+                default { $exSideRaw }  # ja "LONG"/"SHORT"
+            }
+            $key = "$market|$exSide"
+
+            if ($localMarketSides -notcontains $key) {
+                # Orfã detectada (mercado novo OU mesmo mercado com side
+                # diferente do registrado): adicionar flag
                 $exPos | Add-Member -NotePropertyName is_orphan -NotePropertyValue $true -Force
                 $orphans += $exPos
             }
         }
-        
+
         return $orphans
     }
     catch {
@@ -138,10 +158,28 @@ function Register-OrphanPosition {
         }
 
         if ($existing) {
-            return [PSCustomObject]@{
-                success = $true
-                registered = $false
-                reason = "Position already registered locally"
+            # 2026-07-28 FIX (achado real: BTCUSDT trocou de LONG pra SHORT na
+            # exchange -- registro local antigo, ainda LONG, nunca era
+            # atualizado porque esta checagem so olhava $_.market, ignorando
+            # side. O registro ficava PRESO com o lado errado indefinidamente
+            # -- motor de saida calculava stop/ganho invertido pra sempre).
+            # Se o side do registro existente diverge do que a exchange diz
+            # agora, o registro esta desatualizado (nao e duplicata real) --
+            # fecha ele explicitamente e deixa o fluxo seguir pra registrar
+            # o lado correto abaixo.
+            $existingSide = "$($existing | Select-Object -First 1 -ExpandProperty side)".ToUpper()
+            if ($existingSide -ne $side) {
+                Write-Host "  [ORPHAN SIDE MISMATCH] ${market}: registro local=$existingSide vs exchange=$side -- fechando registro desatualizado" -ForegroundColor Yellow
+                if (Get-Command Close-TrailingPosition -ErrorAction SilentlyContinue) {
+                    try { Close-TrailingPosition -Market $market -Reason "side_mismatch_orphan_reconcile" -ExitPrice $entry | Out-Null } catch {}
+                }
+                # cai adiante -- registra a posicao com o side correto
+            } else {
+                return [PSCustomObject]@{
+                    success = $true
+                    registered = $false
+                    reason = "Position already registered locally"
+                }
             }
         }
 

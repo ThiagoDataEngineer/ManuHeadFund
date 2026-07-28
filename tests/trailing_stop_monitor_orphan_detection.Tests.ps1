@@ -152,14 +152,45 @@ Describe "Detect-OrphanPositions - Detecção de posições órfãs" {
         $pos1 = New-MockPosition -Market "BTCUSDT" -Side "long" -Entry 76000
         $pos2 = New-MockPosition -Market "ETHUSDT" -Side "long" -Entry 2100
         Mock-CoinExPositions -Positions @($pos1, $pos2)
-        
+
         Add-TrailingPosition -Market "BTCUSDT" -Side "LONG" -Entry 76000 -Stop 72000 -Target 80000
         Add-TrailingPosition -Market "ETHUSDT" -Side "LONG" -Entry 2100 -Stop 2000 -Target 2300
-        
+
         # Act
         $orphans = Detect-OrphanPositions
-        
+
         # Assert
+        $orphans.Count | Should Be 0
+    }
+
+    # 2026-07-28: achado real em producao -- BTCUSDT trocou de LONG pra SHORT
+    # na exchange, mas o registro local (ainda LONG) nunca era mais detectado
+    # como orfao (comparacao antiga so olhava market, nao side). O motor de
+    # saida calculava stop/ganho invertido pra sempre nesse mercado.
+    It "Detecta como orfa quando side mudou (registro local LONG, exchange agora SHORT)" {
+        # Arrange: BTCUSDT registrado como LONG, mas exchange agora mostra SHORT
+        Add-TrailingPosition -Market "BTCUSDT" -Side "LONG" -Entry 65429 -Stop 62157 -Target 75243
+        $exchangePos = New-MockPosition -Market "BTCUSDT" -Side "short" -Entry 65429
+        Mock-CoinExPositions -Positions @($exchangePos)
+
+        # Act
+        $orphans = Detect-OrphanPositions
+
+        # Assert: deve detectar como orfa (side diverge do registro local)
+        $orphans.Count | Should Be 1
+        $orphans[0].market | Should Be "BTCUSDT"
+    }
+
+    It "NAO detecta como orfa quando side bate (mesmo LONG registrado e na exchange)" {
+        # Arrange: registro e exchange concordam (LONG)
+        Add-TrailingPosition -Market "BTCUSDT" -Side "LONG" -Entry 65429 -Stop 62157 -Target 75243
+        $exchangePos = New-MockPosition -Market "BTCUSDT" -Side "long" -Entry 65429
+        Mock-CoinExPositions -Positions @($exchangePos)
+
+        # Act
+        $orphans = Detect-OrphanPositions
+
+        # Assert: nenhuma orfa (side bate)
         $orphans.Count | Should Be 0
     }
 }
@@ -261,20 +292,41 @@ Describe "Register-OrphanPosition - Auto-registro de posições órfãs" {
     It "NÃO registra duplicata se posição já existe localmente" {
         # Arrange: registrar primeiro
         Add-TrailingPosition -Market "BTCUSDT" -Side "LONG" -Entry 76000 -Stop 72000 -Target 80000
-        
+
         $orphan = New-MockPosition -Market "BTCUSDT" -Side "long" -Entry 76000
-        
+
         # Act
         $result = Register-OrphanPosition -Position $orphan
-        
+
         # Assert: skip duplicata
         $result.success | Should Be $true
         $result.registered | Should Be $false
         $result.reason | Should Match "already registered"
-        
+
         # Verificar que há apenas 1 registro
         $all = Get-TrailingPositions | Where-Object { $_.market -eq "BTCUSDT" -and $_.active }
         @($all).Count | Should Be 1
+    }
+
+    # 2026-07-28: achado real -- registro local desatualizado (side errado)
+    # ficava preso pra sempre porque esta checagem so olhava market, tratando
+    # qualquer registro existente como "ja registrado" mesmo com side diferente.
+    It "Fecha registro desatualizado e registra o novo side quando divergem" {
+        # Arrange: BTCUSDT registrado como LONG, mas exchange agora mostra SHORT
+        Add-TrailingPosition -Market "BTCUSDT" -Side "LONG" -Entry 65429 -Stop 62157 -Target 75243
+        $orphan = New-MockPosition -Market "BTCUSDT" -Side "short" -Entry 63000
+        Mock-CoinExPositions -Positions @($orphan)
+
+        # Act
+        $result = Register-OrphanPosition -Position $orphan
+
+        # Assert: registra o SHORT (nao trata como duplicata)
+        $result.success | Should Be $true
+        $result.registered | Should Be $true
+
+        $active = Get-TrailingPositions | Where-Object { $_.market -eq "BTCUSDT" -and $_.active }
+        @($active).Count | Should Be 1
+        $active.side | Should Be "SHORT"
     }
     
     It "Registra com mode=ORPHAN_AUTO para rastreabilidade" {
