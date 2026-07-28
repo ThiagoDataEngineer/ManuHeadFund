@@ -1533,9 +1533,21 @@ function Invoke-GemExecute {
     # 2026-07-08 FIX: Remove viés LONG automático. Decide direção via conviction multi-TF.
     # Bug: entrada sem direction property default LONG, perdendo SHORTs óbvios (CRCLX case).
     # Solução: se direction explícita, use. Senão, decide via convictions + pump-fade detector.
-    $direction = "SKIP"
-
-    if ($Gem.PSObject.Properties['direction'] -and "$($Gem.direction)" -in @("LONG","SHORT")) {
+    #
+    # 2026-07-28 FIX (achado real: SUIUSDT com direction=LONG->SHORT resolvida
+    # via MENTOR OVERRIDE no gate breadth_long_blocked -- 3 gates ja aprovaram
+    # SHORT -- mas esta secao SEMPRE resetava $direction="SKIP" e recalculava
+    # do zero via conviction multi-TF, DESCARTANDO a decisao do Mentor. O
+    # recalculo local (pump-fade/RSI/regime bias, sem LLM) reavaliou o
+    # candidato como LONG de novo, e o gate seguinte (multi_tf_misalignment)
+    # bloqueou por STRONG_DOWN nos 3 timeframes -- que so faz sentido pra
+    # LONG, nao pro SHORT que o Mentor ja tinha aprovado com contexto pleno.
+    # Fix: se $direction ja foi resolvida como SHORT (override anterior ja
+    # rodou e passou), pula o recalculo -- a decisao do Mentor (LLM com mais
+    # contexto que este calculo local) e a fonte de verdade mais recente.
+    if ($direction -eq "SHORT") {
+        Write-Host "  [DIRECTION] Preservada (ja resolvida via override anterior): $direction" -ForegroundColor DarkYellow
+    } elseif ($Gem.PSObject.Properties['direction'] -and "$($Gem.direction)" -in @("LONG","SHORT")) {
         $direction = "$($Gem.direction)".ToUpper()
         Write-Host "  [DIRECTION] Explícita no GEM: $direction" -ForegroundColor DarkYellow
     } else {
