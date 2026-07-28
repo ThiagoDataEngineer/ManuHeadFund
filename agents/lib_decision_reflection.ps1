@@ -113,6 +113,19 @@ function Add-PendingReflection {
     $dir = Split-Path $path -Parent
     if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
     Add-Content -Path $path -Value ($entry | ConvertTo-Json -Compress) -Encoding UTF8
+
+    # 2026-07-28 FIX: journal/decision_reflections.jsonl e LOCAL -- nunca
+    # sobrevive no runner efemero do GitHub Actions (checkout limpo a cada
+    # job). Get-PriorReflectionsForMarket sempre retornava vazio em producao
+    # real, entao o Mentor decidia toda vez sem NENHUM historico da moeda,
+    # apesar do mecanismo completo (geracao de licao via LLM incluida) ja
+    # estar pronto e conectado desde 2026-05-22. Mesmo padrao ja corrigido
+    # nesta sessao pra beta_history/conviction_observations/mentor_shadow_
+    # observations. Persiste no Supabase (cloud-persistente) alem do jsonl
+    # local -- fail-gracious, nunca bloqueia o fluxo real de trade.
+    if (Get-Command Save-StateRecords -ErrorAction SilentlyContinue) {
+        try { Save-StateRecords -Table "decision_reflections" -Records @($entry) -PrimaryKey "trade_id" } catch {}
+    }
 }
 
 
@@ -214,6 +227,16 @@ function Add-ResolvedReflection {
         resolved_at     = (Get-Date).ToUniversalTime().ToString("o")
     }
 
+    # 2026-07-28 FIX: mesma migracao de Add-PendingReflection -- persiste no
+    # Supabase alem do jsonl local. Upsert por trade_id so atualiza as colunas
+    # presentes neste payload (status/exit_date_utc/pnl_pct/etc) -- market/
+    # mentor_veredicto/etc gravados por Add-PendingReflection permanecem
+    # intactos na mesma linha (mesmo padrao ja usado por beta_history pra
+    # updates parciais). Fail-gracious: nunca bloqueia o fluxo real.
+    if (Get-Command Save-StateRecords -ErrorAction SilentlyContinue) {
+        try { Save-StateRecords -Table "decision_reflections" -Records @($entry) -PrimaryKey "trade_id" } catch {}
+    }
+
     $dir = Split-Path $path -Parent
     if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
     Add-Content -Path $path -Value ($entry | ConvertTo-Json -Compress) -Encoding UTF8
@@ -243,6 +266,38 @@ function Get-PriorReflectionsForMarket {
         [int] $MaxN = 5,
         [string] $ReflectionsPath = ""
     )
+
+    # 2026-07-28 FIX: tenta Supabase primeiro (cloud-persistente, sobrevive
+    # entre ciclos no runner efemero) -- so cai no jsonl local (sempre vazio
+    # em producao real) se Supabase falhar ou a chamada nao vier com override
+    # de path explicito (testes existentes usam -ReflectionsPath e devem
+    # continuar 100% locais, sem tentar rede).
+    if (-not $ReflectionsPath -and (Get-Command Get-StateRecords -ErrorAction SilentlyContinue)) {
+        try {
+            $rows = @(Get-StateRecords -Table "decision_reflections" -Filter @{ market = $Market; status = "resolved" })
+            if ($rows.Count -gt 0) {
+                $sorted = $rows | Sort-Object -Property resolved_at -Descending | Select-Object -First $MaxN
+                $out = @($sorted | ForEach-Object {
+                    [PSCustomObject]@{
+                        trade_id          = $_.trade_id
+                        market            = $_.market
+                        entry_date_utc    = $_.entry_date_utc
+                        exit_date_utc     = $_.exit_date_utc
+                        mentor_veredicto  = $_.mentor_veredicto
+                        mentor_confidence = $_.mentor_confidence
+                        pnl_pct           = $_.pnl_pct
+                        alpha_vs_btc      = $_.alpha_vs_btc
+                        holding_days      = $_.holding_days
+                        reflection        = $_.reflection
+                        resolved_at       = $_.resolved_at
+                    }
+                })
+                return ,$out
+            }
+        } catch {
+            # Supabase indisponivel -- cai pro fallback local abaixo
+        }
+    }
 
     if ($ReflectionsPath) { $script:DEFAULT_REFLECTIONS_PATH = $ReflectionsPath } else { _Init-ReflectionsPath }
     $path = $script:DEFAULT_REFLECTIONS_PATH

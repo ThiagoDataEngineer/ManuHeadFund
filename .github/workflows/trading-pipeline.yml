@@ -1972,6 +1972,23 @@ jobs:
         run: |
           & ./scripts/apply_mentor_shadow_observations_2026_07_27.ps1
 
+  apply-decision-reflections-schema:
+    name: Apply decision_reflections Schema (one-shot)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply migration
+        shell: pwsh
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          & ./scripts/apply_decision_reflections_2026_07_28.ps1
+
   diag-trailing-state-readonly:
     name: Diag Trailing State Read-Only (one-shot)
     runs-on: ubuntu-latest
