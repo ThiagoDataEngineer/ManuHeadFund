@@ -609,11 +609,30 @@ function Invoke-GemExecute {
         # funcao, nunca checava skipPrice>0 de fato. Confirmado com repro
         # isolado: skipPrice=0 + funcao existente entrava no if mesmo assim.
         if ((Get-Command Test-MentorOverride -ErrorAction SilentlyContinue) -and ($skipPrice -gt 0)) {
+            $__origDirection = $direction
             $override = Test-MentorOverride -Market $mkt -GateTag ($gatesBlocked -join "+") `
                 -GateReason "$($gatesBlocked -join ', ')" -Direction $direction -Price $skipPrice `
                 -Change24h $gemChange24h -Regime "$($btcScenario.scenario)"
             if ($override.approved) {
-                Write-Host "  [MENTOR OVERRIDE] $mkt -- $($override.motivo)" -ForegroundColor Magenta
+                # 2026-07-28 FIX (achado real: SKYUSDT bloqueado no gate de
+                # qualidade por "direction_contradiction_tech_SHORT_vs_trade_
+                # LONG" mesmo apos o Mentor aprovar SHORT aqui): Test-MentorOverride
+                # roda a cascade completa internamente (Invoke-V6Cascade), e a
+                # Mesa dentro dela pode mudar a direcao (breadth_long_blocked
+                # so existe p/ LONG -- a UNICA razao do Mentor aprovar esse gate
+                # especifico e a Mesa ter achado edge no lado OPOSTO, SHORT).
+                # Mas Test-MentorOverride so retorna {approved, motivo}, nunca
+                # a direcao efetiva -- $direction ficava congelada em LONG,
+                # dessincronizada do que o Mentor de fato aprovou, quebrando
+                # o gate de qualidade (tori_tech_sinal) mais adiante. Fix
+                # contido: so para este gate assimetrico (LONG-only), inverte
+                # a direcao quando o override e aprovado.
+                if ($__origDirection -eq "LONG" -and ($gatesBlocked -contains "breadth_long_blocked")) {
+                    $direction = "SHORT"
+                    Write-Host "  [MENTOR OVERRIDE] $mkt -- $($override.motivo) -- direction=$__origDirection->$direction" -ForegroundColor Magenta
+                } else {
+                    Write-Host "  [MENTOR OVERRIDE] $mkt -- $($override.motivo)" -ForegroundColor Magenta
+                }
             } else {
                 return [PSCustomObject]@{ blocked = $true; blocked_by = $gatesBlocked; market = $mkt; gates_info = @{ breadth = $breadthGate; pump = $pumpGate; entry = $entryTiming } }
             }
