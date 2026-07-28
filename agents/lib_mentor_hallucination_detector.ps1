@@ -58,6 +58,51 @@ function Test-MentorFqsHallucination {
     }
 }
 
+# 2026-07-28: achado real em producao -- Test-BetaWithinCap (lib_beta_cap_
+# per_phase.ps1) ja resolve corretamente "SHORT em bear = beta alto e edge,
+# nao risco" desde 2026-07-03, mas o Mentor so recebia a regra em TEXTO no
+# prompt (instrucao 5b de mentor_agent.ps1). Com Mistral (fallback por falta
+# de credito Anthropic), a instrucao era ignorada em vetos reais: TIAUSDT/
+# OPUSDT/SUIUSDT vetados citando "beta viola protecao LONG" para candidatos
+# SHORT em BEAR_STRONG -- exatamente o oposto do edge real (custava trades
+# legitimos justo no regime onde SHORT deveria ter vantagem).
+function Test-MentorBetaDirectionalHallucination {
+    <#
+    .SYNOPSIS
+        Detecta o Mentor vetando um SHORT em bear citando "beta viola
+        protecao LONG" (ou equivalente) quando o FullContext ja tinha o
+        veredito determinístico correto (Test-BetaWithinCap) dizendo que o
+        beta alto e FAVORAVEL ao short, nao um risco.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)] [string] $MentorReason,
+        [string] $Direction = "",
+        [string] $FullContextBetaVerdict = "",
+        [string] $FullContextBetaVerdictReason = ""
+    )
+
+    $isShort = ($Direction -eq "SHORT")
+    $verdictSaysOk = ($FullContextBetaVerdict -eq "OK")
+    # padrao real observado: "beta=X > cap_block=Y ... viola ... protecao LONG"
+    # citado como razao de VETAR, mesmo com verdict determinístico = OK.
+    $mentionsBetaAsRisk = $MentorReason -match "beta.*(viola|acima|excede).*(protecao|cap|BLOCK)" -or
+                          $MentorReason -match "beta.*BLOCK|BLOCK.*beta"
+
+    if (-not ($isShort -and $verdictSaysOk -and $mentionsBetaAsRisk)) {
+        return [PSCustomObject]@{
+            is_hallucination = $false
+            evidence = "no_directional_beta_contradiction"
+        }
+    }
+
+    return [PSCustomObject]@{
+        is_hallucination = $true
+        evidence = "beta_used_as_risk_for_short_in_bear"
+        context_value = $FullContextBetaVerdictReason
+    }
+}
+
 function Add-HallucinationEvent {
     <#
     .SYNOPSIS

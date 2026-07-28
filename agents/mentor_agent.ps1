@@ -500,7 +500,16 @@ function Build-MentorFullContext {
     param(
         [Parameter(Mandatory)] [string] $Market,
         [string] $Mode = "STANDARD",
-        [string] $RegimeBias = ""
+        [string] $RegimeBias = "",
+        # 2026-07-28: achado real -- Test-BetaWithinCap (lib_beta_cap_per_phase.ps1)
+        # ja resolve corretamente a excecao "SHORT em bear = beta alto e edge, nao
+        # risco" (existe desde 2026-07-03), mas nunca era chamada em producao. O
+        # Mentor recebia so cap_block/cap_warn numericos e tinha que RACIOCINAR a
+        # excecao via instrucao em texto no prompt -- com Mistral (fallback por
+        # falta de credito Anthropic), a instrucao era ignorada em varios vetos
+        # reais (TIA/OP/SUI vetados citando "beta viola protecao LONG" pra
+        # candidatos SHORT em BEAR_STRONG, exatamente o oposto do edge real).
+        [string] $Direction = ""
     )
     $journalDir = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path (Split-Path $PSScriptRoot -Parent) "journal" }
     $ctx = [PSCustomObject]@{
@@ -579,10 +588,17 @@ function Build-MentorFullContext {
                         current_cap_warn = $currentCapWarn
                         cap_phase = $capPhase
                     }
+                    if (Get-Command Test-BetaWithinCap -ErrorAction SilentlyContinue) {
+                        try {
+                            $verdict = Test-BetaWithinCap -Beta ([double]$beta) -Phase $capPhase -Direction $Direction
+                            $ctx.beta | Add-Member -MemberType NoteProperty -Name verdict -Value ([string]$verdict.level) -Force
+                            $ctx.beta | Add-Member -MemberType NoteProperty -Name verdict_reason -Value ([string]$verdict.reason) -Force
+                        } catch {}
+                    }
                 }
             } catch {}
         }
-        
+
         # Fallback to JSON if Supabase failed
         if (-not $ctx.beta) {
             $bPath = Join-Path $journalDir "beta_vs_btc.json"
@@ -611,6 +627,13 @@ function Build-MentorFullContext {
                         current_cap_block = $currentCapBlock
                         current_cap_warn = $currentCapWarn
                         cap_phase = $capPhase
+                    }
+                    if (Get-Command Test-BetaWithinCap -ErrorAction SilentlyContinue) {
+                        try {
+                            $verdict = Test-BetaWithinCap -Beta ([double]$b.beta.$Market) -Phase $capPhase -Direction $Direction
+                            $ctx.beta | Add-Member -MemberType NoteProperty -Name verdict -Value ([string]$verdict.level) -Force
+                            $ctx.beta | Add-Member -MemberType NoteProperty -Name verdict_reason -Value ([string]$verdict.reason) -Force
+                        } catch {}
                     }
                 }
             }
@@ -898,7 +921,15 @@ function Invoke-MentorDebate {
             $capStr = if ($FullContext.beta.PSObject.Properties['current_cap_block']) {
                 " | cap_phase=$($FullContext.beta.cap_phase) cap_block=$($FullContext.beta.current_cap_block) cap_warn=$($FullContext.beta.current_cap_warn)"
             } else { "" }
-            $ctxLines += "beta=$($FullContext.beta.asset) portfolio_after=$($FullContext.beta.portfolio_after)$capStr"
+            # 2026-07-28: verdict/verdict_reason vem de Test-BetaWithinCap (codigo
+            # puro, ja resolve a excecao SHORT-em-bear) -- FATO JA DECIDIDO, nao
+            # pedido pro Mentor reinterpretar. Achado real: Mistral (fallback por
+            # falta de credito) as vezes vetava SHORT achando beta alto = risco,
+            # exatamente o oposto do que a regra deterministica diz.
+            $verdictStr = if ($FullContext.beta.PSObject.Properties['verdict']) {
+                " | BETA_VERDICT_JA_DECIDIDO=$($FullContext.beta.verdict) ($($FullContext.beta.verdict_reason)) -- NAO reinterprete, use este veredito"
+            } else { "" }
+            $ctxLines += "beta=$($FullContext.beta.asset) portfolio_after=$($FullContext.beta.portfolio_after)$capStr$verdictStr"
         }
         if ($FullContext.PSObject.Properties['historical'] -and $FullContext.historical) {
             $h = $FullContext.historical
@@ -1102,6 +1133,38 @@ JSON: { "decision":"APROVAR"|"VETAR", "confianca":0-100, "mentor_mensagem":"2-3 
                     $hpath = Join-Path $global:JOURNAL_DIR "mentor_hallucinations.jsonl"
                     Add-HallucinationEvent -Path $hpath -Market $Market -Type "fqs_missing" -MentorReason $msg -ContextValue $halluc.context_value
                 }
+            }
+        }
+    } catch {}
+
+    # 2026-07-28: guard CORRETIVO (nao so audit) -- achado real: Mentor (via
+    # Mistral fallback) vetava SHORT em bear citando "beta viola protecao
+    # LONG" mesmo com Test-BetaWithinCap ja tendo resolvido verdict=OK
+    # (exceção direcional). Diferente do detector de FQS (so loga), aqui
+    # REVERTE a decisao pra APROVAR quando o UNICO fundamento citado for essa
+    # contradicao -- a regra determinística (codigo puro, testado) tem
+    # precedencia sobre a interpretacao textual de um LLM mais fraco.
+    try {
+        if ((Get-Command Test-MentorBetaDirectionalHallucination -ErrorAction SilentlyContinue) `
+            -and $FullContext -and $result.decision -ne "APROVAR") {
+            $betaVerdict = ""; $betaVerdictReason = ""
+            if ($FullContext.PSObject.Properties['beta'] -and $FullContext.beta) {
+                if ($FullContext.beta.PSObject.Properties['verdict']) { $betaVerdict = [string]$FullContext.beta.verdict }
+                if ($FullContext.beta.PSObject.Properties['verdict_reason']) { $betaVerdictReason = [string]$FullContext.beta.verdict_reason }
+            }
+            $betaHalluc = Test-MentorBetaDirectionalHallucination -MentorReason $msg -Direction $effectiveDirection `
+                -FullContextBetaVerdict $betaVerdict -FullContextBetaVerdictReason $betaVerdictReason
+            if ($betaHalluc.is_hallucination) {
+                Write-Warning "  [MentorDebate] BETA DIRECTIONAL HALLUCINATION corrigida: $($betaHalluc.evidence) (verdict real: $betaVerdictReason)"
+                if (Get-Command Add-HallucinationEvent -ErrorAction SilentlyContinue) {
+                    $hpath = Join-Path $global:JOURNAL_DIR "mentor_hallucinations.jsonl"
+                    Add-HallucinationEvent -Path $hpath -Market $Market -Type "beta_directional" -MentorReason $msg -ContextValue $betaHalluc.context_value
+                }
+                $result.decision = "APROVAR"
+                if ($result.PSObject.Properties['veredicto_5tier']) { $result.veredicto_5tier = "EXECUTAR" }
+                $msg = "CORRIGIDO (beta directional guard): $betaVerdictReason | veto original descartado por contradizer Test-BetaWithinCap"
+                if ($result.PSObject.Properties['mentor_mensagem']) { $result.mentor_mensagem = $msg }
+                Write-Host "  [MentorDebate] $($result.decision) conf=$($result.confianca) [beta_guard_override] | $msg" -ForegroundColor Green
             }
         }
     } catch {}

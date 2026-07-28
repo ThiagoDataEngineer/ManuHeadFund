@@ -350,7 +350,7 @@ function Invoke-V6Cascade {
     $fullCtx = $null
     if (Get-Command Build-MentorFullContext -ErrorAction SilentlyContinue) {
         try {
-            $fullCtx = Build-MentorFullContext -Market $Market -Mode $mentorMode -RegimeBias ([string]$wlRegime)
+            $fullCtx = Build-MentorFullContext -Market $Market -Mode $mentorMode -RegimeBias ([string]$wlRegime) -Direction $wlDirection
         } catch { $fullCtx = $null }
     }
 
