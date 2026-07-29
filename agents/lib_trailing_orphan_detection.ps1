@@ -477,10 +477,36 @@ function Reconcile-PhantomPositions {
         foreach ($p in $phantoms) {
             try {
                 $exitPrice = 0
+                $closeReason = "phantom_reconciliation"
+
+                # 2026-07-29 FIX (achado real: auditoria de trade_outcomes mostrou
+                # que TODO phantom fechava com o preco do TICKER ATUAL (momento da
+                # deteccao, que roda a cada poucos minutos), nao o preco REAL de
+                # fechamento na exchange -- o PnL registrado era uma aproximacao,
+                # nao o resultado verdadeiro do trade. CoinEx-GetFinishedPositions
+                # (/v2/futures/finished-position) tem o historico real com
+                # exit_price/pnl/closed_at do fechamento verdadeiro -- busca isso
+                # primeiro, fallback pro ticker atual so se a API nao tiver o
+                # registro (posicao fechada ha muito tempo, fora da janela retida).
                 try {
-                    $tick = CoinEx-GetTicker $p.market
-                    if ($tick -and $tick.last) { $exitPrice = [double]$tick.last }
-                } catch {}
+                    $finished = CoinEx-GetFinishedPositions -Market $p.market -Limit 5
+                    if ($finished -and $finished.success -and $finished.positions -and $finished.positions.Count -gt 0) {
+                        $match = $finished.positions | Sort-Object -Property closed_at -Descending | Select-Object -First 1
+                        if ($match -and $match.exit_price) {
+                            $exitPrice = [double]$match.exit_price
+                            $closeReason = "phantom_reconciliation_exchange_confirmed"
+                        }
+                    }
+                } catch {
+                    Write-Warning "[Reconcile-Phantom] CoinEx-GetFinishedPositions falhou p/ $($p.market) (fallback ticker): $_"
+                }
+
+                if ($exitPrice -le 0) {
+                    try {
+                        $tick = CoinEx-GetTicker $p.market
+                        if ($tick -and $tick.last) { $exitPrice = [double]$tick.last }
+                    } catch {}
+                }
 
                 # Anti-silencio (2026-07-07): sem exitPrice>0 o Close-TrailingPosition NAO
                 # dispara Add-TradeOutcome (guard ExitPrice>0 em lib_trailing) -> o trade
@@ -496,7 +522,7 @@ function Reconcile-PhantomPositions {
                     }
                 }
 
-                Close-TrailingPosition -Market $p.market -Reason "phantom_reconciliation" -ExitPrice $exitPrice
+                Close-TrailingPosition -Market $p.market -Reason $closeReason -ExitPrice $exitPrice
 
                 # Sincroniza gem_safety_state: remove exposure para que gem_loop
                 # nao recompre o mesmo ativo (causa raiz do loop ENA×5, 2026-06-04)

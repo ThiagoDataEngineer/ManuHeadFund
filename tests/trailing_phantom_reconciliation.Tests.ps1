@@ -31,6 +31,22 @@ $global:TRAILING_USE_STATE_STORE = $false
 Set-Item function:CoinEx-GetTicker -Value { param($market) return [PSCustomObject]@{ last = 100.0 } }
 Set-Item function:Send-TelegramAlert -Value { param($Message) return $true }
 Set-Item function:CoinEx-GetPendingPositions -Value { return $global:MOCK_EXCH_POSITIONS }
+# 2026-07-29: sem registro real no historico da exchange por default (fallback
+# pro ticker, comportamento legado preservado nos testes existentes).
+Set-Item function:CoinEx-GetFinishedPositions -Value { param($Market, $Limit) return [PSCustomObject]@{ success = $true; positions = @() } }
+# 2026-07-29 FIX (pre-existente, achado ao adicionar os testes acima):
+# Detect-PhantomPositions chama CoinEx-Get "/v2/assets/spot/balance" direto
+# (sem passar por CoinEx-GetPendingPositions, que ja era mockado) -- sem
+# credenciais reais no ambiente local isso lancava "Credenciais nao
+# configuradas", abortando a deteccao ANTES de qualquer logica de phantom
+# rodar (todos os testes deste arquivo retornavam 0 phantoms silenciosamente,
+# baseline pre-existente confirmado via git stash, nao regressao introduzida
+# aqui). Mock resolve o gap de isolamento.
+Set-Item function:CoinEx-Get -Value {
+    param($path)
+    if ($path -match "spot/balance") { return [PSCustomObject]@{ code = 0; data = @() } }
+    return [PSCustomObject]@{ code = 0; data = @() }
+}
 
 function Set-MockExchange {
     param([array]$Positions = @())
@@ -149,6 +165,62 @@ Describe "Reconcile-PhantomPositions anti-silencio (exitPrice=0)" {
         # fallback: peak (=entry no registro novo) = 3.5, nunca 0
         $positions[0].exitPrice | Should Be 3.5
         ($positions[0].exitPrice -gt 0) | Should Be $true
+    }
+}
+
+Describe "Reconcile-PhantomPositions -- exit price real da exchange (2026-07-29)" {
+    # Achado real (auditoria trade_outcomes 2026-07-29): todo phantom fechava
+    # com o preco do TICKER ATUAL (momento da deteccao), nao o preco real de
+    # fechamento na exchange -- PnL registrado era aproximacao, nao resultado
+    # verdadeiro. CoinEx-GetFinishedPositions tem o historico real
+    # (exit_price/pnl/closed_at do fechamento verdadeiro).
+
+    BeforeEach { Reset-TrailingFile; Set-MockExchange @() }
+    AfterEach {
+        Set-Item function:CoinEx-GetFinishedPositions -Value { param($Market, $Limit) return [PSCustomObject]@{ success = $true; positions = @() } }
+    }
+
+    It "usa exit_price do historico real da exchange quando disponivel (prioridade sobre o ticker)" {
+        Add-TrailingPosition -Market "UNIUSDT" -Side "LONG" -Entry 3.5 -Stop 3.3 -Target 3.7
+        Set-MockExchange @()
+        Set-Item function:CoinEx-GetFinishedPositions -Value {
+            param($Market, $Limit)
+            return [PSCustomObject]@{
+                success = $true
+                positions = @([PSCustomObject]@{ market = "UNIUSDT"; side = "long"; exit_price = "3.65"; pnl = "0.15"; closed_at = 1700490703564 })
+            }
+        }
+
+        $result = Reconcile-PhantomPositions
+        $result.closed | Should Be 1
+        $positions = Get-TrailingPositions | Where-Object { $_.market -eq "UNIUSDT" }
+        # exit_price real (3.65) tem prioridade sobre o ticker mock (100.0)
+        $positions[0].exitPrice | Should Be 3.65
+        $positions[0].closeReason | Should Be "phantom_reconciliation_exchange_confirmed"
+    }
+
+    It "cai pro ticker atual quando CoinEx-GetFinishedPositions nao tem registro" {
+        Add-TrailingPosition -Market "UNIUSDT" -Side "LONG" -Entry 3.5 -Stop 3.3 -Target 3.7
+        Set-MockExchange @()
+        # default do BeforeAll (positions vazio) -- sem match no historico
+
+        $result = Reconcile-PhantomPositions
+        $result.closed | Should Be 1
+        $positions = Get-TrailingPositions | Where-Object { $_.market -eq "UNIUSDT" }
+        $positions[0].exitPrice | Should Be 100.0
+        $positions[0].closeReason | Should Be "phantom_reconciliation"
+    }
+
+    It "cai pro ticker atual quando CoinEx-GetFinishedPositions lanca excecao (fail-soft)" {
+        Add-TrailingPosition -Market "UNIUSDT" -Side "LONG" -Entry 3.5 -Stop 3.3 -Target 3.7
+        Set-MockExchange @()
+        Set-Item function:CoinEx-GetFinishedPositions -Value { param($Market, $Limit) throw "API indisponivel" }
+
+        $result = Reconcile-PhantomPositions
+        $result.closed | Should Be 1
+        $positions = Get-TrailingPositions | Where-Object { $_.market -eq "UNIUSDT" }
+        $positions[0].exitPrice | Should Be 100.0
+        $positions[0].closeReason | Should Be "phantom_reconciliation"
     }
 }
 

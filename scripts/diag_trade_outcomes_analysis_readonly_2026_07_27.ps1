@@ -25,7 +25,11 @@ try {
     Write-Host "`n--- Todos os registros (ordem cronologica) ---" -ForegroundColor Yellow
     foreach ($t in $sorted) {
         $pnl = if ($t.PSObject.Properties['pnl_percent'] -and $null -ne $t.pnl_percent) { $t.pnl_percent } elseif ($t.PSObject.Properties['pnl_usd']) { $t.pnl_usd } else { "?" }
-        Write-Host ("  ts={0} market={1} side={2} pnl={3} source={4} close_reason={5}" -f $t.ts, $t.market, $t.side, $pnl, $t.source, $t.close_reason)
+        # 2026-07-29: id adicionado -- auditoria achou valores app_import repetidos
+        # (mesmo pnl varias vezes); precisa ver o id real pra saber se sao
+        # registros DISTINTOS (posicoes reais diferentes com pnl parecido por
+        # coincidencia) ou o MESMO id sendo lido/exibido mais de uma vez.
+        Write-Host ("  id={0} ts={1} market={2} side={3} pnl={4} source={5} close_reason={6}" -f $t.id, $t.ts, $t.market, $t.side, $pnl, $t.source, $t.close_reason)
     }
 
     Write-Host "`n--- Distribuicao por source ---" -ForegroundColor Yellow
