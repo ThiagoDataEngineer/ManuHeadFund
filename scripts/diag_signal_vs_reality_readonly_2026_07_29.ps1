@@ -51,9 +51,13 @@ try {
         $birthScore = if ($r.PSObject.Properties['birth_score'] -and $null -ne $r.birth_score) { $r.birth_score } else { "N/D (registrado antes do fix 2026-07-29 ou origem sem birth-score)" }
         $birthMesaSinal = if ($r.PSObject.Properties['birth_mesa_sinal']) { $r.birth_mesa_sinal } else { "" }
 
-        # preco atual real (match por market no snapshot CoinEx)
+        # preco atual real (match por market no snapshot CoinEx). Campo real
+        # da API /v2/futures/pending-position e settle_price (ver uso em
+        # lib_position_sync_realtime.ps1:142) -- close_price/current_price
+        # (tentativa anterior) nao existem no shape real, causava "indisponivel"
+        # em toda posicao.
         $live = $futPos | Where-Object { $_.market -eq $mkt } | Select-Object -First 1
-        $currentPrice = if ($live -and $live.close_price) { [double]$live.close_price } elseif ($live -and $live.current_price) { [double]$live.current_price } else { $null }
+        $currentPrice = if ($live -and $live.settle_price) { [double]$live.settle_price } else { $null }
         $pnlNowPct = if ($currentPrice -and $entry -gt 0) {
             if ($side -eq "SHORT") { [math]::Round((($entry - $currentPrice) / $entry) * 100, 2) }
             else { [math]::Round((($currentPrice - $entry) / $entry) * 100, 2) }
