@@ -638,8 +638,28 @@ function Update-TrailingStops {
                 Send-TelegramAlert -Message $msg | Out-Null
 
                 # Tenta mover stop na exchange (best-effort)
+                #
+                # 2026-07-29 FIX CRITICO (achado real: auditoria de PnL revelou
+                # 70% dos trades fechando por phantom_reconciliation em vez de
+                # decisao de estrategia): CoinEx-SetStopLoss($market,$price) so
+                # aceita 2 parametros POSICIONAIS (lib_coinex.ps1:900) -- esta
+                # chamada usava -Market/-OrderId/-StopPrice, nomeados que NAO
+                # existem na assinatura real. PowerShell nao lanca erro nesse
+                # caso (so ignora silenciosamente os nomeados invalidos),
+                # $price ficava $null, [math]::Round($null,4)=0 -- o codigo
+                # enviava stop_loss_price="0" pra CoinEx toda vez que o
+                # trailing avancava de fase. Um SL=0 numa posicao LONG nunca
+                # dispara, removendo a protecao real de stop na corretora sem
+                # erro visivel (try/catch nunca pegava nada porque a chamada
+                # "funcionava", so com o valor errado). Mesmo bug ja
+                # identificado e corrigido em lib_trailing_adaptive.ps1
+                # (2026-06-25), nunca replicado aqui. Confirmado em producao
+                # (2026-07-29): nenhuma posicao ativa tinha ainda avancado de
+                # fase (phase=0 em todas as 5), entao o dano nao havia se
+                # materializado ainda -- mas dispararia na primeira posicao
+                # que avancasse 33% em direcao ao alvo.
                 try {
-                    CoinEx-SetStopLoss -Market $pos.market -OrderId $pos.orderId -StopPrice $calc.newStop | Out-Null
+                    CoinEx-SetStopLoss -market $pos.market -price $calc.newStop | Out-Null
                 } catch {
                     Write-Host "  [Trailing] Aviso: nao foi possivel mover stop na exchange: $_" -ForegroundColor DarkYellow
                 }

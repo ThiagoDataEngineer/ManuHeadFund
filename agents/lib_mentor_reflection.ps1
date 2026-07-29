@@ -439,9 +439,18 @@ function Update-MentorReview {
                     } catch { }
                 }
 
+                # 2026-07-29 FIX CRITICO: CoinEx-SetStopLoss($market,$price) so
+                # aceita 2 parametros POSICIONAIS (lib_coinex.ps1:900) -- esta
+                # chamada usava -Market/-OrderId/-StopPrice, nomeados que NAO
+                # existem na assinatura real. PowerShell ignora silenciosamente
+                # os nomeados invalidos (sem erro), $price ficava $null,
+                # [math]::Round($null,4)=0 -- enviava stop_loss_price="0" pra
+                # CoinEx a cada "tighten_stop" do Mentor, removendo a protecao
+                # real (mesmo bug achado e corrigido em lib_trailing.ps1 no
+                # mesmo dia).
                 if (Get-Command CoinEx-SetStopLoss -ErrorAction SilentlyContinue) {
                     try {
-                        CoinEx-SetStopLoss -Market $pos.market -OrderId $pos.orderId -StopPrice $decision.newStop | Out-Null
+                        CoinEx-SetStopLoss -market $pos.market -price $decision.newStop | Out-Null
                     } catch {
                         if ($Verbose) { Write-Host "      Aviso: não foi possível mover stop na exchange: $_" -ForegroundColor DarkYellow }
                     }
