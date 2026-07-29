@@ -2056,6 +2056,23 @@ jobs:
         run: |
           & ./scripts/diag_urgent_dogeusdt_multi_sell_2026_07_29.ps1
 
+  apply-gem-position-events-schema:
+    name: Apply gem_position_events Schema (one-shot)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply migration
+        shell: pwsh
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          & ./scripts/apply_gem_position_events_2026_07_29.ps1
+
   apply-trailing-birth-score-schema:
     name: Apply trailing_state birth_score Schema (one-shot)
     runs-on: ubuntu-latest

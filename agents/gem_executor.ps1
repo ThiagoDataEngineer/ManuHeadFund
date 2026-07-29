@@ -125,7 +125,9 @@ foreach ($__convDep in @("lib_btc_relative_strength.ps1","lib_entry_conviction_e
 # 2026-07-07 ATIVAÇÃO: Learning + Evolution Motors
 # 2026-07-29: lib_regime_rr_calibration depende de _Get-LearningFromSupabase
 # (lib_direction_learning.ps1) -- carregada por ULTIMO nesta lista.
-foreach ($__learnDep in @("lib_learning_engine.ps1","lib_evolution_engine.ps1","lib_direction_learning.ps1","lib_regime_rr_calibration.ps1")) {
+# 2026-07-29: lib_gem_position_events -- fonte real (Supabase) pro guard de
+# cascata de Add Position (ver comentario completo no arquivo).
+foreach ($__learnDep in @("lib_learning_engine.ps1","lib_evolution_engine.ps1","lib_direction_learning.ps1","lib_regime_rr_calibration.ps1","lib_gem_position_events.ps1")) {
     $__learnPath = Join-Path $PSScriptRoot $__learnDep
     if (Test-Path $__learnPath) { . $__learnPath }
 }
@@ -911,16 +913,23 @@ function Invoke-GemExecute {
         $maxAddPositionsAllowed = 3
 
         # Contar quantos Add Positions já temos registrados para este market
-        $journalPath = Join-Path $global:JOURNAL_DIR "trade_outcomes.jsonl"
-        $addPositionCount = 0
-        if (Test-Path $journalPath) {
-            try {
-                $outcomes = @(Get-Content $journalPath -Encoding UTF8 | ConvertFrom-Json -ErrorAction SilentlyContinue)
-                $sixHoursAgo = (Get-Date).AddHours(-6)
-                $addPositions = @($outcomes | Where-Object { $_.market -eq $mkt -and $_.status -eq "open" -and ([datetime]$_.entry_date) -gt $sixHoursAgo })
-                $addPositionCount = @($addPositions).Count
-            } catch {}
-        }
+        #
+        # 2026-07-29 FIX CRITICO (achado real em producao: DOGEUSDT SHORT
+        # recebeu 12 Add Positions em 17h, sem o guard bloquear NENHUMA):
+        # journal/trade_outcomes.jsonl e um arquivo LOCAL -- o runner do
+        # GitHub Actions e efemero (clona limpo a cada job), esse arquivo
+        # NUNCA sobrevive entre execucoes. $addPositionCount sempre lia 0,
+        # o limite "maximo 3 Add Positions/6h" nunca bloqueava de verdade.
+        # Alem disso, os campos usados (.market/.entry_date/status="open")
+        # nunca existiram no schema real de trade_outcomes (colunas reais:
+        # symbol/entry_ts/status com valores 'pending'|'closed', nunca
+        # 'open') -- o guard nao teria funcionado nem lendo do Supabase
+        # real com esse schema. Fix: fonte dedicada e real
+        # (lib_gem_position_events.ps1, tabela gem_position_events),
+        # registrada no momento exato de cada execucao real de ordem.
+        $addPositionCount = if (Get-Command Get-RecentGemAddPositionCount -ErrorAction SilentlyContinue) {
+            Get-RecentGemAddPositionCount -Market $mkt -HoursBack 6
+        } else { 0 }
 
         # Validações de limite
         if ($currentLeverage -ge $maxLeveragePerPair) {
@@ -2213,6 +2222,16 @@ function Invoke-GemExecute {
     # Ordem ja confirmada na exchange -- posicao real existe, libera o lock
     # (o proposito dele era so evitar 2 motores enviando ordem simultaneamente).
     if ($__entryLockAcquired -and (Get-Command Unlock-EntryMarket -ErrorAction SilentlyContinue)) { Unlock-EntryMarket -Market $mkt }
+
+    # 2026-07-29: registra o evento real (OPEN vs ADD) na fonte que o guard
+    # de cascata (secao 891+) de fato consulta -- $existingPosition ja foi
+    # calculado antes deste ponto do fluxo (verifica posicao pre-existente).
+    if (Get-Command Add-GemPositionEvent -ErrorAction SilentlyContinue) {
+        try {
+            $__eventType = if ($existingPosition) { "ADD" } else { "OPEN" }
+            Add-GemPositionEvent -Market $mkt -Side $direction -UsdSize $usd_size -EventType $__eventType
+        } catch {}
+    }
     $filled_qty = if ($order.filled_amount) { [double]$order.filled_amount } else { $qty }
     $avg_price  = if ($order.avg_deal_price -and [double]$order.avg_deal_price -gt 0) { [double]$order.avg_deal_price } else { $price }
 
