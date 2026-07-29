@@ -93,6 +93,55 @@ Describe "ConvertTo-SupabaseOutcome (pura)" {
     }
 }
 
+Describe "ConvertTo-SupabaseOutcome -- id deterministico (2026-07-29)" {
+    # Achado real em producao (auditoria trade_outcomes): o mesmo trade fisico
+    # (ADAUSDT LONG +186.7471%, mesmo ts/market) aparecia repetidas vezes com
+    # ids DIFERENTES -- causa raiz era um GUID aleatorio no final do id, que
+    # fazia CADA chamada gerar um id novo mesmo com dados identicos. O upsert
+    # (on_conflict=id) nunca encontrava conflito de verdade -> toda
+    # reconciliacao/reprocesso inseria uma linha NOVA em vez de atualizar.
+
+    $baseObj = [ordered]@{
+        ts = "2026-06-20T12:00:00Z"; market = "ADAUSDT"; side = "LONG"; mode = "GEM"
+        entry_price = 0.5; exit_price = 1.4335; stop_price = 0.45; target_price = 2.0
+        r = 5; pnl_usd = 186.7471; duration_days = 10; exit_reason = "target"
+        regime = "BULL"; score = 80
+    }
+
+    It "MESMOS dados (ts+market+side+entry+exit) geram o MESMO id em chamadas repetidas" {
+        $row1 = ConvertTo-SupabaseOutcome -Outcome $baseObj
+        $row2 = ConvertTo-SupabaseOutcome -Outcome $baseObj
+        $row1.id | Should Be $row2.id
+    }
+
+    It "dados DIFERENTES (exit_price distinto) geram id DIFERENTE" {
+        $objA = [ordered]@{
+            ts = "2026-06-20T12:00:00Z"; market = "ADAUSDT"; side = "LONG"; mode = "GEM"
+            entry_price = 0.5; exit_price = 1.4335; stop_price = 0.45; target_price = 2.0
+            r = 5; pnl_usd = 186.7471; duration_days = 10; exit_reason = "target"
+            regime = "BULL"; score = 80
+        }
+        $objB = [ordered]@{
+            ts = "2026-06-20T12:00:00Z"; market = "ADAUSDT"; side = "LONG"; mode = "GEM"
+            entry_price = 0.5; exit_price = 1.5000; stop_price = 0.45; target_price = 2.0
+            r = 5; pnl_usd = 186.7471; duration_days = 10; exit_reason = "target"
+            regime = "BULL"; score = 80
+        }
+        $rowA = ConvertTo-SupabaseOutcome -Outcome $objA
+        $rowB = ConvertTo-SupabaseOutcome -Outcome $objB
+        $rowA.id | Should Not Be $rowB.id
+    }
+
+    It "id nao contem componente aleatorio (sem GUID -- determinismo real)" {
+        $row1 = ConvertTo-SupabaseOutcome -Outcome $baseObj
+        Start-Sleep -Milliseconds 50
+        $row2 = ConvertTo-SupabaseOutcome -Outcome $baseObj
+        # antes do fix, cada chamada gerava um GUID novo mesmo com ts/market
+        # identicos -- agora id e' 100% funcao pura dos dados de entrada
+        $row1.id | Should Be $row2.id
+    }
+}
+
 
 # NOTA Pester 3.x: mocks do mesmo comando ACUMULAM entre It's do mesmo Describe.
 # Por isso cada comportamento de Save-StateRecords (sucesso / no-op / throw) fica em

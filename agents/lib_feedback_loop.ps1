@@ -126,8 +126,18 @@ function ConvertTo-SupabaseOutcome {
     # 2026-07-14 fix: id e PRIMARY KEY NOT NULL em manuheadfund.trade_outcomes;
     # esta funcao nunca preenchia, toda gravacao violava a constraint (achado
     # ao investigar o phantom-loop de trailing_state -- mesmo bug de auditoria
-    # incompleta, campo obrigatorio nunca setado). Mesmo padrao de geracao de
-    # lib_trade_journal_supabase.ps1 (ticks+market+guid, garante unicidade).
+    # incompleta, campo obrigatorio nunca setado).
+    #
+    # 2026-07-29 FIX (achado real em producao: auditoria de trade_outcomes
+    # revelou o MESMO trade fisico -- ADAUSDT LONG +186.7471%, mesmo ts/market
+    # -- gravado repetidas vezes com ids diferentes): o GUID aleatorio no
+    # final do id (guid.NewGuid()...) fazia CADA chamada gerar um id novo,
+    # mesmo quando ts+market+side eram identicos -- o upsert (on_conflict=id)
+    # NUNCA encontrava conflito de verdade, entao toda reconciliacao/reprocesso
+    # do mesmo trade inseria uma linha NOVA em vez de atualizar a existente.
+    # Fix: id determinístico (sem componente aleatorio) derivado de
+    # ts+market+side+entry_price+exit_price -- a MESMA chamada com os MESMOS
+    # dados sempre gera o MESMO id, tornando o upsert genuinamente idempotente.
     $tsForId = & $get "ts"
     # 2026-07-23: defesa contra o bug de ConvertFrom-Json auto-promovendo
     # ISO 8601 pra [datetime] (ver lib_tori_proximity.ps1) -- caso este
@@ -137,7 +147,14 @@ function ConvertTo-SupabaseOutcome {
         if ($tsForId -is [datetime]) { $tsForId.Ticks } else { ([datetime]::Parse([string]$tsForId)).Ticks }
     } catch { [datetime]::UtcNow.Ticks }
     $idMarket = (& $get "market")
-    $genId = "{0}|{1}|feedback_loop|{2}" -f $ticks, $idMarket, ([guid]::NewGuid().ToString().Substring(0,8))
+    $idSide = (& $get "side")
+    $idEntry = (& $get "entry_price")
+    $idExit = (& $get "exit_price")
+    $idRaw = "{0}|{1}|{2}|{3}|{4}" -f $ticks, $idMarket, $idSide, $idEntry, $idExit
+    $idHash = [System.BitConverter]::ToString(
+        [System.Security.Cryptography.SHA256]::Create().ComputeHash([System.Text.Encoding]::UTF8.GetBytes($idRaw))
+    ).Replace("-", "").Substring(0, 16).ToLower()
+    $genId = "{0}|{1}|feedback_loop|{2}" -f $ticks, $idMarket, $idHash
 
     # 2026-07-19: pnl_percent/pnl_realized nunca eram mapeados aqui -- coluna
     # dedicada ficava sempre no DEFAULT 0 do Postgres (dado real preso so

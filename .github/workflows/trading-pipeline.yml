@@ -1989,6 +1989,23 @@ jobs:
         run: |
           & ./scripts/apply_decision_reflections_2026_07_28.ps1
 
+  cleanup-trade-outcomes-duplicates-dryrun:
+    name: Cleanup trade_outcomes Duplicates DRY-RUN (one-shot)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run dry-run
+        shell: pwsh
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          & ./scripts/cleanup_trade_outcomes_duplicates_2026_07_29.ps1 -DryRun
+
   apply-trailing-birth-score-schema:
     name: Apply trailing_state birth_score Schema (one-shot)
     runs-on: ubuntu-latest
