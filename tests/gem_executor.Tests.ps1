@@ -232,6 +232,55 @@ Describe "Invoke-GemExecute -- futures como padrao" {
     }
 }
 
+Describe "Invoke-GemExecute -- calibragem R:R por regime (2026-07-29)" {
+    # Owner pediu "calibrar conforme regime autonomo": R:R minimo agora pode
+    # ser recalibrado por Resolve-RegimeRRCalibration (lib_regime_rr_calibration.ps1)
+    # com base em edge real medido (mce_counterfactual_agg). gem_executor.ps1
+    # so recalcula target_pct (stop_pct fica intacto -- reflete volatilidade/
+    # risco por trade, nao o regime) quando a funcao esta disponivel e retorna
+    # rr_min > 0; fail-soft quando indisponivel (mantem o R:R original do
+    # sizing do candidato).
+
+    AfterEach {
+        if (Get-Command Resolve-RegimeRRCalibration -ErrorAction SilentlyContinue) {
+            Remove-Item function:Resolve-RegimeRRCalibration -ErrorAction SilentlyContinue
+        }
+    }
+
+    It "sem Resolve-RegimeRRCalibration disponivel -- usa o R:R original do sizing (comportamento legado preservado)" {
+        if (Get-Command Resolve-RegimeRRCalibration -ErrorAction SilentlyContinue) {
+            Remove-Item function:Resolve-RegimeRRCalibration -ErrorAction SilentlyContinue
+        }
+        # market unico (nao FIROUSDT) -- evita colisao com o cache de
+        # "recently rejected" (gem_recent_decisions.json, TTL 60min) gravado
+        # por outros Describe deste mesmo arquivo, que fazia Invoke-GemExecute
+        # retornar {blocked=true} sem stop/price (DivideByZero no teste).
+        $gem = New-MockGem "RRCALIBUSDT1"  # stop_pct=0.50 target_pct=2.00 -> R:R original 1:4
+        $r = Invoke-GemExecute -Gem $gem -DryRun
+        $originalRR = [math]::Round(($r.target - $r.price) / ($r.price - $r.stop), 1)
+        $originalRR | Should Be 4.0
+    }
+
+    It "com Resolve-RegimeRRCalibration retornando EDGE_FORTE (rr_min=3.0) -- recalibra o target, R:R final reflete 1:3" {
+        Set-Item function:Resolve-RegimeRRCalibration -Value {
+            param($Regime, $Direction, $DefaultRR)
+            return [PSCustomObject]@{ rr_min = 3.0; tier = "EDGE_FORTE"; reason = "mock edge forte" }
+        }
+        $gem = New-MockGem "RRCALIBUSDT2"  # stop_pct=0.50 (intacto), target recalibrado p/ 0.50*3=1.50
+        $r = Invoke-GemExecute -Gem $gem -DryRun
+        $finalRR = [math]::Round(($r.target - $r.price) / ($r.price - $r.stop), 1)
+        $finalRR | Should Be 3.0
+    }
+
+    It "quando Resolve-RegimeRRCalibration lanca excecao -- fail-soft, mantem R:R original sem quebrar o dry run" {
+        Set-Item function:Resolve-RegimeRRCalibration -Value { param($Regime, $Direction, $DefaultRR) throw "erro simulado" }
+        $gem = New-MockGem "RRCALIBUSDT3"
+        { $script:__r3 = Invoke-GemExecute -Gem $gem -DryRun } | Should Not Throw
+        $originalRR = [math]::Round(($script:__r3.target - $script:__r3.price) / ($script:__r3.price - $script:__r3.stop), 1)
+        $originalRR | Should Be 4.0
+    }
+}
+
 Describe "CoinEx-HasFuturesMarket" {
     It "retorna true para par com futures" {
         CoinEx-HasFuturesMarket "FIROUSDT" | Should Be $true

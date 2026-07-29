@@ -123,7 +123,9 @@ foreach ($__convDep in @("lib_btc_relative_strength.ps1","lib_entry_conviction_e
 }
 
 # 2026-07-07 ATIVAÇÃO: Learning + Evolution Motors
-foreach ($__learnDep in @("lib_learning_engine.ps1","lib_evolution_engine.ps1","lib_direction_learning.ps1")) {
+# 2026-07-29: lib_regime_rr_calibration depende de _Get-LearningFromSupabase
+# (lib_direction_learning.ps1) -- carregada por ULTIMO nesta lista.
+foreach ($__learnDep in @("lib_learning_engine.ps1","lib_evolution_engine.ps1","lib_direction_learning.ps1","lib_regime_rr_calibration.ps1")) {
     $__learnPath = Join-Path $PSScriptRoot $__learnDep
     if (Test-Path $__learnPath) { . $__learnPath }
 }
@@ -1731,6 +1733,34 @@ function Invoke-GemExecute {
         @{ stop_pct = (&{ if ([double]$__sizingSrc.stop_pct -gt 0 -and [double]$__sizingSrc.stop_pct -lt 1) { [double]$__sizingSrc.stop_pct } else { 0.02 } });
            target_pct = (&{ if ([double]$__sizingSrc.target_pct -gt 0) { [double]$__sizingSrc.target_pct } else { 0.10 } }) }
     }
+
+    # 2026-07-29: calibragem autonoma de R:R por regime+direcao (owner pediu
+    # "calibrar conforme regime autonomo" -- refinar dependendo do movimento/
+    # tendencia real do preco, nao um numero fixo pra todo mundo). Mantem
+    # stop_pct INTACTO (reflete volatilidade natural da categoria DISCOVERY/
+    # MOMENTUM + risco por trade ja calculado via GEM_CAPITAL_*) -- so
+    # recalibra target_pct, trocando o multiplicador fixo GEM_MIN_RR (1:5
+    # sempre) pelo R:R real medido em mce_counterfactual_agg pra este par
+    # regime+direction especifico (edge forte hit_rate>=85% -> 1:3, edge
+    # moderado 60-85% -> 1:4, sem edge medido confiavel -> mantem 1:5 --
+    # Regra de Ouro #3 nunca fica MAIS frouxa que o piso quando falta dado).
+    # Fail-soft: Get-Command guard + Resolve-RegimeRRCalibration nunca lanca
+    # (cai no default se Supabase/mce_counterfactual_agg indisponivel).
+    if (Get-Command Resolve-RegimeRRCalibration -ErrorAction SilentlyContinue) {
+        try {
+            $__regimeForRR = if ($btcScenario -and $btcScenario.scenario) { [string]$btcScenario.scenario } else { "UNKNOWN" }
+            $__rrCalib = Resolve-RegimeRRCalibration -Regime $__regimeForRR -Direction $direction -DefaultRR $global:GEM_MIN_RR
+            if ($__rrCalib -and $__rrCalib.rr_min -gt 0) {
+                $__stp = @{ stop_pct = [double]$__stp.stop_pct; target_pct = [double]$__stp.stop_pct * [double]$__rrCalib.rr_min }
+                if ($__rrCalib.tier -ne "SEM_EDGE_MEDIDO") {
+                    Write-Host "  [RR CALIBRATION] $mkt regime=$__regimeForRR dir=$direction tier=$($__rrCalib.tier) -> R:R=1:$($__rrCalib.rr_min) ($($__rrCalib.reason))" -ForegroundColor Cyan
+                }
+            }
+        } catch {
+            Write-Host "  [RR CALIBRATION] falhou p/ $mkt (mantem default): $_" -ForegroundColor DarkYellow
+        }
+    }
+
     try {
         $st = Calculate-StopTarget `
             -Entry     ([double]$price) `
