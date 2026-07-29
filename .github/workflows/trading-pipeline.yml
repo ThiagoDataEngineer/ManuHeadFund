@@ -2006,6 +2006,27 @@ jobs:
         run: |
           & ./scripts/cleanup_trade_outcomes_duplicates_2026_07_29.ps1 -DryRun
 
+  # 2026-07-29: job temporario, uso unico -- owner aprovou explicitamente o
+  # delete real dos 34 duplicados confirmados pelo dry-run acima. Remover
+  # este job apos rodar uma vez (nao deixar um botao de apagar dado
+  # permanente e facil de disparar sem querer em workflow_dispatch futuro).
+  cleanup-trade-outcomes-duplicates-apply-oneshot:
+    name: Cleanup trade_outcomes Duplicates APPLY (uso unico, remover apos rodar)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run cleanup (LIVE delete)
+        shell: pwsh
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          & ./scripts/cleanup_trade_outcomes_duplicates_2026_07_29.ps1 -DryRun:$false
+
   apply-trailing-birth-score-schema:
     name: Apply trailing_state birth_score Schema (one-shot)
     runs-on: ubuntu-latest
