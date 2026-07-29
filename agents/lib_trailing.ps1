@@ -184,6 +184,18 @@ function Add-TrailingPosition {
         [string]$MentorMensagem = "",
         [string]$MesaSinal = "",
         [string]$Tier = "",
+        # 2026-07-29: "score de nascimento" (owner pediu avaliacao real de
+        # quanto cada sinal previa ganhar) -- gem_executor.ps1 ja calculava
+        # $__birthScore mas Add-TrailingPosition descartava (so usava
+        # MentorConfidence/MesaSinal/Tier pra alimentar Add-PendingReflection,
+        # que so roda se MentorVeredicto for passado -- nunca era, entao o
+        # score nunca chegava a lugar nenhum persistente, so no log de texto
+        # do run). Params dedicados (nao reusa MentorConfidence/MesaSinal/Tier
+        # de proposito -- aqueles sao do fluxo de reflection LLM, este e o
+        # ensemble deterministico real que decidiu a entrada).
+        [double]$BirthScore = -1,
+        [string]$BirthMesaSinal = "",
+        [string]$BirthFqsCategory = "",
         # 2026-07-18: origem explicita do trade p/ lib_trailing_unified.ps1
         # (Resolve-TrailingDecision exige Position.origin -- nunca adivinha).
         # Opt-in: callers legados (ex: lib_trailing_orphan_detection.ps1, que
@@ -245,6 +257,9 @@ function Add-TrailingPosition {
         active         = $true
         openedAt       = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
         updatedAt      = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+        birth_score        = if ($BirthScore -ge 0) { $BirthScore } else { $null }
+        birth_mesa_sinal   = $BirthMesaSinal
+        birth_fqs_category = $BirthFqsCategory
     }
 
     $positions += $pos

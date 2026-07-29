@@ -90,6 +90,31 @@ Describe "Add-TrailingPosition - Origin (2026-07-18, motor unico de trailing)" {
     }
 }
 
+
+Describe "Add-TrailingPosition - birth_score (2026-07-29, avaliacao real de sinal vs resultado)" {
+    # Achado: gem_executor.ps1 calculava $__birthScore (conviction ensemble +
+    # bonus eixos fortes + bonus FQS) mas Add-TrailingPosition descartava --
+    # so usava MentorConfidence/MesaSinal/Tier pra Add-PendingReflection
+    # (que so roda com MentorVeredicto no-vazio, nunca passado pelo gem_executor).
+    # Score nunca chegava a lugar persistente nenhum, so log de texto do run.
+    It "BirthScore explicito e gravado em birth_score" {
+        Remove-Item "$script:tmpDir\trailing_positions.json" -ErrorAction SilentlyContinue
+        Add-TrailingPosition -Market "BIRTHUSDT" -Side "LONG" -Entry 100 -Stop 90 -Target 130 -Source "gem" `
+            -BirthScore 78.5 -BirthMesaSinal "regime=BEAR_STRONG|strong_axes=2|fqs=GEM" -BirthFqsCategory "GEM"
+        $p = (Get-TrailingPositions | Where-Object { $_.market -eq "BIRTHUSDT" })
+        $p.birth_score | Should Be 78.5
+        $p.birth_mesa_sinal | Should Be "regime=BEAR_STRONG|strong_axes=2|fqs=GEM"
+        $p.birth_fqs_category | Should Be "GEM"
+    }
+    It "BirthScore ausente (caller legado) grava null, nao quebra" {
+        Remove-Item "$script:tmpDir\trailing_positions.json" -ErrorAction SilentlyContinue
+        Add-TrailingPosition -Market "NOBIRTHUSDT" -Side "LONG" -Entry 100 -Stop 90 -Target 130 -Source "orphan_auto_register"
+        $p = (Get-TrailingPositions | Where-Object { $_.market -eq "NOBIRTHUSDT" })
+        $p.birth_score | Should Be $null
+        $p.birth_mesa_sinal | Should Be ""
+    }
+}
+
 Describe "Test-MaxDaysExceeded" {
     It "posicao com max_days=0 retorna false (sem limite)" {
         $pos = [PSCustomObject]@{ openedAt = "2026-01-01 00:00:00"; max_days = 0 }

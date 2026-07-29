@@ -2435,9 +2435,9 @@ function Invoke-GemExecute {
                 -Source  "gem" `
                 -Mode    "GEM" `
                 -Origin  $__origin `
-                -MentorConfidence ([int]$__birthScore) `
-                -Tier    $__birthFqsCategory `
-                -MesaSinal $__birthMesaSinal
+                -BirthScore $__birthScore `
+                -BirthFqsCategory $__birthFqsCategory `
+                -BirthMesaSinal $__birthMesaSinal
             Write-Host "  [TRAILING] Registrado: $mkt entry=$avg_price stop=$stop_price target=$tgt_price origin=$($__origin.asset_class)/$($__origin.trade_style) birth_score=$__birthScore ($__birthMesaSinal)" -ForegroundColor Green
         } catch {
             Write-Host "  [TRAILING WARN] Falha ao registrar trailing: $_" -ForegroundColor Yellow
