@@ -29,19 +29,17 @@ try {
     Write-Host "`n--- Amostra (ultimas 20, mais recentes) ---" -ForegroundColor Yellow
     $sorted = $rows | Sort-Object { try { [datetime]$_.ts } catch { [datetime]::MinValue } } -Descending | Select-Object -First 20
     foreach ($r in $sorted) {
-        Write-Host ("ts={0} market={1} side={2} real_stop={3} unified_action={4} unified_stop={5} reason={6}" -f `
-            $r.ts, $r.market, $r.side, $r.real_stop, $r.unified_action, $r.unified_stop, $r.reason)
+        Write-Host ("ts={0} market={1} side={2} real_stop={3} unified_action={4} unified_new_stop={5} reason={6}" -f `
+            $r.ts, $r.market, $r.side, $r.real_stop, $r.unified_action, $r.unified_new_stop, $r.reason)
     }
 
-    $updates = @($rows | Where-Object { $_.unified_action -eq "UPDATE" })
-    if ($updates.Count -gt 0) {
-        Write-Host "`n--- Casos UPDATE: diferenca entre real_stop e unified_stop sugerido ---" -ForegroundColor Yellow
-        foreach ($u in ($updates | Select-Object -First 15)) {
-            $realStop = [double]$u.real_stop
-            $unifiedStop = [double]$u.unified_stop
-            $diffPct = if ($realStop -gt 0) { [math]::Round((($unifiedStop - $realStop) / $realStop) * 100, 3) } else { 0 }
-            Write-Host "  $($u.market) [$($u.side)]: real=$realStop unified=$unifiedStop diff=$diffPct% reason=$($u.reason)"
-        }
+    $differed = @($rows | Where-Object { $_.would_have_differed -eq $true })
+    Write-Host "`n--- Casos onde o motor unificado teria feito DIFERENTE do real (would_have_differed=true): $($differed.Count) / $($rows.Count) ---" -ForegroundColor Yellow
+    foreach ($u in ($differed | Select-Object -First 20)) {
+        $realStop = [double]$u.real_stop
+        $unifiedStop = [double]$u.unified_new_stop
+        $diffPct = if ($realStop -gt 0) { [math]::Round((($unifiedStop - $realStop) / $realStop) * 100, 3) } else { 0 }
+        Write-Host "  $($u.market) [$($u.side)]: real=$realStop unified=$unifiedStop diff=$diffPct% reason=$($u.reason) ts=$($u.ts)"
     }
 } catch {
     Write-Host "ERRO: $_" -ForegroundColor Red
