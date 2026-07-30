@@ -39,6 +39,18 @@ Describe "trailing_stop_monitor.ps1 -- motores fragmentados desativados" {
         ($script:mon -match [regex]::Escape('Update-AllTrailingStops -DryRun $false')) | Should Be $true
         ($script:mon -match [regex]::Escape('Invoke-TrailingPolicyLive -Positions')) | Should Be $true
     }
+
+    It "Sync-TrailingToExchange NAO e mais chamado incondicionalmente -- 3o motor fragmentado achado pos-promocao (2026-07-30, guard `$false)" {
+        # Confirmado em producao (runs 30517140015/30514386549/30511299233):
+        # Sync-TrailingToExchange rodava sem guard LOGO DEPOIS do bloco UNIFIED,
+        # lia o journal que o UNIFIED tinha acabado de atualizar e empurrava o
+        # MESMO stop de novo (SL_PUSH SOLUSDT/SUIUSDT com melhora de 0.09%-4%
+        # minutos apos o UNIFIED ja ter processado a mesma posicao) -- um 2o
+        # cancelamento/recriacao de ordem por ciclo, mesma classe de bug da
+        # promocao original (2 motores concorrentes = colisao by design da API).
+        ($script:mon -match '\$false\s+-and\s+\(Get-Command\s+Sync-TrailingToExchange') | Should Be $true
+        ($script:mon -match [regex]::Escape('$sync = Sync-TrailingToExchange')) | Should Be $true
+    }
 }
 
 Describe "trailing_stop_monitor.ps1 -- motor unificado ATIVO" {

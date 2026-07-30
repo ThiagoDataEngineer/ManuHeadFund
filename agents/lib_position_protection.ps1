@@ -8,6 +8,7 @@
 #   lib_coinex.ps1                    (CoinEx-GetPendingPositions, CoinEx-Post)
 #   lib_order_validation.ps1          (Test-PositionHasStopLoss, Set-PositionStopLossFallback, Set-PositionTakeProfitFallback)
 #   lib_coinex_position_management.ps1 (CoinEx-ModifyPositionStopLoss)
+#   lib_trailing_stop_intelligent.ps1  (Get-StructuralStopTarget, opcional -- fail-safe cai pro % fixo se ausente)
 
 # ============================================================================
 # Set-PositionProtection - Garante SL + TP reais na corretora (idempotente)
@@ -288,12 +289,45 @@ function Repair-PositionProtection {
     }
 
     # Calcular SL/TP se nao fornecidos (direcao-aware)
-    if ($side -eq "long") {
-        if ($StopLoss   -le 0) { $StopLoss   = [math]::Round($entry * (1 - $StopPct), $roundPrec) }
-        if ($TakeProfit -le 0) { $TakeProfit = [math]::Round($entry * (1 + $TargetPct), $roundPrec) }
-    } else {
-        if ($StopLoss   -le 0) { $StopLoss   = [math]::Round($entry * (1 + $StopPct), $roundPrec) }
-        if ($TakeProfit -le 0) { $TakeProfit = [math]::Round($entry * (1 - $TargetPct), $roundPrec) }
+    #
+    # 2026-07-30: SL/TP fixo em % do entry (StopPct/TargetPct=32%) nunca lia
+    # suporte/resistencia real -- achado direto pelo owner olhando o grafico
+    # do DOGEUSDT ("quase impossivel de acontecer o TP", "SL bem apertado").
+    # Confirmado com dado real: TP a 32% ficava sempre FORA do range de 30
+    # dias inteiro do par. Get-StructuralStopTarget (lib_trailing_stop_
+    # intelligent.ps1) tenta achar o pivot de suporte/resistencia real mais
+    # proximo primeiro (mesma logica ja validada no motor de trailing
+    # unificado); só cai pro % fixo se nao houver candles ou pivot dentro de
+    # um raio razoavel (25% -- fail-safe, nunca fica sem numero pra usar).
+    if ($StopLoss -le 0 -or $TakeProfit -le 0) {
+        $__structural = $null
+        if (Get-Command Get-StructuralStopTarget -ErrorAction SilentlyContinue) {
+            try {
+                $__candles = $null
+                if (Get-Command CoinEx-GetFuturesCandles -ErrorAction SilentlyContinue) {
+                    $__candles = @(CoinEx-GetFuturesCandles $Market "4hour" 60)
+                } elseif (Get-Command CoinEx-GetCandles -ErrorAction SilentlyContinue) {
+                    $__candles = @(CoinEx-GetCandles $Market "4hour" 60)
+                }
+                if ($__candles) {
+                    $__structural = Get-StructuralStopTarget -Side $side -Entry $entry -Candles $__candles -StopPct $StopPct -TargetPct $TargetPct
+                }
+            } catch { $__structural = $null }
+        }
+
+        if ($__structural) {
+            if ($StopLoss   -le 0) { $StopLoss   = [math]::Round($__structural.stop_loss, $roundPrec) }
+            if ($TakeProfit -le 0) { $TakeProfit = [math]::Round($__structural.take_profit, $roundPrec) }
+            Write-Verbose "Repair-PositionProtection: $Market SL=$($__structural.sl_source) TP=$($__structural.tp_source)"
+        } else {
+            if ($side -eq "long") {
+                if ($StopLoss   -le 0) { $StopLoss   = [math]::Round($entry * (1 - $StopPct), $roundPrec) }
+                if ($TakeProfit -le 0) { $TakeProfit = [math]::Round($entry * (1 + $TargetPct), $roundPrec) }
+            } else {
+                if ($StopLoss   -le 0) { $StopLoss   = [math]::Round($entry * (1 + $StopPct), $roundPrec) }
+                if ($TakeProfit -le 0) { $TakeProfit = [math]::Round($entry * (1 - $TargetPct), $roundPrec) }
+            }
+        }
     }
 
     $protect = Set-PositionProtection -Market $Market -StopLoss $StopLoss -TakeProfit $TakeProfit -MaxRetries 3

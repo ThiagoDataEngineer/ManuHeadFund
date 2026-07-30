@@ -39,6 +39,7 @@ if (Test-Path $configLocal) { . $configLocal }
 . (Join-Path $agentsDir "lib_coinex.ps1")
 . (Join-Path $agentsDir "lib_coinex_position_management.ps1")
 . (Join-Path $agentsDir "lib_order_validation.ps1")
+. (Join-Path $agentsDir "lib_trailing_stop_intelligent.ps1")  # Get-StructuralStopTarget (SL/TP por suporte/resistencia)
 . (Join-Path $agentsDir "lib_position_protection.ps1")
 $telegramLib = Join-Path $agentsDir "lib_telegram.ps1"
 if (Test-Path $telegramLib) { . $telegramLib }

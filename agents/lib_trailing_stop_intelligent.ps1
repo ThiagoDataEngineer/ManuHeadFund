@@ -124,6 +124,151 @@ function Find-SupportLevels {
 }
 
 # ============================================================================
+# Get-StructuralStopTarget - SL/TP baseado em suporte/resistencia REAL
+# ============================================================================
+
+function Get-StructuralStopTarget {
+    <#
+    .SYNOPSIS
+        Calcula SL e TP usando suporte/resistencia real (pivots de swing,
+        Find-SupportLevels) em vez de percentual fixo do entry.
+
+    .DESCRIPTION
+        2026-07-30: achado real (owner olhando o grafico do DOGEUSDT) -- o
+        auto-repair (Repair-PositionProtection) colocava TP sempre a 32% fixo
+        do entry, sem nenhuma leitura de estrutura de mercado. Confirmado com
+        dados reais (30d de candle, 4 posicoes abertas na hora): o TP ficava
+        SEMPRE fora do range de 30 dias inteiro (~32% de distancia, quando o
+        range real do periodo era de 10-15%) -- "quase impossivel de
+        acontecer", exatamente como reportado.
+
+        LONG: TP mira a resistencia mais proxima ACIMA do preco (espelha o
+        preco pra reusar Find-SupportLevels, que só acha pivots ABAIXO).
+        SL mira o suporte mais proximo ABAIXO. SHORT e o espelho disso.
+
+        Fail-safe: se nao ha candles suficientes ou nenhum pivot e' achado
+        dentro de um raio razoavel (StructuralMaxPct), cai pro percentual
+        fixo (StopPct/TargetPct) -- MESMO comportamento de antes, garante
+        que a posicao NUNCA fica sem numero pra usar.
+
+    .PARAMETER Side
+        "long" ou "short" (case-insensitive)
+
+    .PARAMETER Entry
+        Preco de entrada
+
+    .PARAMETER Candles
+        Array de candles (OHLCV) -- mesmo formato usado por Find-SupportLevels
+
+    .PARAMETER StopPct
+        Fallback fixo de SL (usado se nao achar pivot de suporte/resistencia)
+
+    .PARAMETER TargetPct
+        Fallback fixo de TP (usado se nao achar pivot de suporte/resistencia)
+
+    .PARAMETER StructuralMaxPct
+        Raio maximo (%) em que um pivot e considerado "proximo o suficiente"
+        pra usar em vez do fallback fixo -- pivot fora desse raio geralmente
+        significa dado insuficiente/ruido, nao estrutura real
+
+    .OUTPUTS
+        PSCustomObject { stop_loss, take_profit, sl_source, tp_source }
+        source = "structural" (achou pivot real) ou "fixed_pct" (fallback)
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory=$true)]  [string] $Side,
+        [Parameter(Mandatory=$true)]  [double] $Entry,
+        [Parameter(Mandatory=$false)] [array]  $Candles = @(),
+        [Parameter(Mandatory=$false)] [double] $StopPct = 0.08,
+        [Parameter(Mandatory=$false)] [double] $TargetPct = 0.32,
+        [Parameter(Mandatory=$false)] [double] $StructuralMaxPct = 25.0
+    )
+
+    $isLong = ("$Side".ToLower() -eq "long")
+
+    $fixedSl = if ($isLong) { $Entry * (1 - $StopPct) } else { $Entry * (1 + $StopPct) }
+    $fixedTp = if ($isLong) { $Entry * (1 + $TargetPct) } else { $Entry * (1 - $TargetPct) }
+
+    $result = [PSCustomObject]@{
+        stop_loss   = $fixedSl
+        take_profit = $fixedTp
+        sl_source   = "fixed_pct"
+        tp_source   = "fixed_pct"
+    }
+
+    if (@($Candles).Count -lt 20 -or -not (Get-Command Find-SupportLevels -ErrorAction SilentlyContinue)) {
+        return $result
+    }
+
+    try {
+        if ($isLong) {
+            # Suporte real (abaixo do preco) pro SL -- pivot mais proximo do entry.
+            $supports = @(Find-SupportLevels -Candles $Candles -LookbackPeriod 20)
+            $nearestSupport = $supports | Where-Object { $_ -lt $Entry } | Select-Object -First 1
+            if ($nearestSupport) {
+                $distPct = (($Entry - $nearestSupport) / $Entry) * 100
+                if ($distPct -gt 0 -and $distPct -le $StructuralMaxPct) {
+                    $result.stop_loss = $nearestSupport
+                    $result.sl_source = "structural"
+                }
+            }
+
+            # Resistencia real (acima do preco) pro TP -- espelha o preco pra
+            # reusar Find-SupportLevels (so acha pivots abaixo por design).
+            $mirror = @($Candles | ForEach-Object {
+                [PSCustomObject]@{ open=$_.open; high=(2*$Entry - $_.low); low=(2*$Entry - $_.high); close=(2*$Entry - $_.close); volume=$_.volume }
+            })
+            $mirroredResistances = @(Find-SupportLevels -Candles $mirror -LookbackPeriod 20)
+            $mirroredNearest = $mirroredResistances | Select-Object -First 1
+            if ($mirroredNearest) {
+                $nearestResistance = 2 * $Entry - $mirroredNearest
+                $distPct = (($nearestResistance - $Entry) / $Entry) * 100
+                if ($distPct -gt 0 -and $distPct -le $StructuralMaxPct) {
+                    $result.take_profit = $nearestResistance
+                    $result.tp_source = "structural"
+                }
+            }
+        } else {
+            # SHORT: espelho exato do LONG (resistencia pro SL, suporte pro TP).
+            $mirror = @($Candles | ForEach-Object {
+                [PSCustomObject]@{ open=$_.open; high=(2*$Entry - $_.low); low=(2*$Entry - $_.high); close=(2*$Entry - $_.close); volume=$_.volume }
+            })
+            $mirroredResistances = @(Find-SupportLevels -Candles $mirror -LookbackPeriod 20)
+            $mirroredNearest = $mirroredResistances | Select-Object -First 1
+            if ($mirroredNearest) {
+                $nearestResistance = 2 * $Entry - $mirroredNearest
+                $distPct = (($nearestResistance - $Entry) / $Entry) * 100
+                if ($distPct -gt 0 -and $distPct -le $StructuralMaxPct) {
+                    $result.stop_loss = $nearestResistance
+                    $result.sl_source = "structural"
+                }
+            }
+
+            $supports = @(Find-SupportLevels -Candles $Candles -LookbackPeriod 20)
+            $nearestSupport = $supports | Where-Object { $_ -lt $Entry } | Select-Object -First 1
+            if ($nearestSupport) {
+                $distPct = (($Entry - $nearestSupport) / $Entry) * 100
+                if ($distPct -gt 0 -and $distPct -le $StructuralMaxPct) {
+                    $result.take_profit = $nearestSupport
+                    $result.tp_source = "structural"
+                }
+            }
+        }
+    } catch {
+        # Fail-safe: qualquer erro no calculo estrutural mantem o fallback fixo
+        return [PSCustomObject]@{
+            stop_loss   = $fixedSl
+            take_profit = $fixedTp
+            sl_source   = "fixed_pct"
+            tp_source   = "fixed_pct"
+        }
+    }
+
+    return $result
+}
+
+# ============================================================================
 # Calculate-TrailingStopPrice - Calcular novo stop inteligente
 # ============================================================================
 

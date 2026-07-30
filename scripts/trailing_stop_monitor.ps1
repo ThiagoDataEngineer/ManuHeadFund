@@ -438,7 +438,23 @@ try {
         } catch { Write-CrossPlatformLog "TRAILING POLICY erro: $_" -Level WARN -LogFile "trailing_stop_monitor.log" }
     }
 
-    if (Get-Command Sync-TrailingToExchange -ErrorAction SilentlyContinue) {
+    # 2026-07-30 DESATIVADO -- 3o motor fragmentado empurrando stop na mesma
+    # execucao do TRAILING UNIFIED. Sync-TrailingToExchange nasceu (2026-06-17)
+    # de quando o motor de trailing so escrevia journal sem empurrar pra
+    # corretora -- hoje o bloco UNIFIED acima ja chama CoinEx-ModifyPositionStopLoss
+    # direto e atualiza o journal no mesmo passo. Sync-TrailingToExchange rodava
+    # LOGO DEPOIS, lia o journal que o UNIFIED tinha acabado de atualizar,
+    # comparava com o stop_loss_price que a API ainda reportava (nao propagou
+    # ainda) e empurrava de NOVO -- confirmado em producao (run 30517140015,
+    # 30514386549, 30511299233): SL_PUSH SOLUSDT/SUIUSDT com melhora de
+    # 0.09%-4% minutos apos o UNIFIED ja ter processado a mesma posicao. Cada
+    # push extra = 1 cancelamento/recriacao de ordem a mais na CoinEx,
+    # dobrando a chance do padrao "seta apaga" (TP/SL some da UI por
+    # segundos) que o owner reportou ao vivo -- mesma classe de bug da
+    # promocao de ontem (2 motores concorrentes = colisao by design da API),
+    # so que esse 3o caminho sobreviveu a promocao por engano. Guard $false
+    # abaixo desliga sem apagar (rollback rapido: trocar $false por $true).
+    if ($false -and (Get-Command Sync-TrailingToExchange -ErrorAction SilentlyContinue)) {
         try {
             $sync = Sync-TrailingToExchange
             foreach ($s in @($sync)) {
