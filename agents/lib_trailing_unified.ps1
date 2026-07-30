@@ -357,7 +357,21 @@ function Resolve-TrailingDecision {
     $calculatedStop = [Math]::Round($calculatedStop, 8)
 
     # --- Guard monotonico: NUNCA recua o stop -------------------------------
+    # 2026-07-30: piso minimo de 0.05% de melhora antes de considerar UPDATE.
+    # Achado em producao (XRPUSDT real, run 30514386549): stop mudou de
+    # 1.08178406 pra 1.08168346 (0.0093% -- ruido de arredondamento/precisao
+    # de candle, nao sinal real). CoinEx-ModifyPositionStopLoss cancela e
+    # recria a ordem de stop inteira a cada chamada -- updates de magnitude
+    # irrisoria geram o padrao "seta apaga, seta aparece" que o owner reportou
+    # (TP/SL fica vazio na UI por alguns segundos ate a ordem nova aparecer)
+    # sem nenhum ganho real de protecao. Dado real de 10 updates observados em
+    # producao no mesmo dia: 9 tinham 0.37%-6.18% de mudanca (todos legitimos),
+    # so esse 1 era ruido -- 0.05% filtra o ruido com folga (~7x menor que a
+    # menor mudanca real observada) sem tocar nenhum update genuino.
+    $MIN_IMPROVEMENT_PCT = 0.05
+    $improvementPct = if ($currentStop -ne 0) { [Math]::Abs($calculatedStop - $currentStop) / [Math]::Abs($currentStop) * 100 } else { 100 }
     $improved = if ($side -eq "LONG") { $calculatedStop -gt $currentStop } else { $calculatedStop -lt $currentStop }
+    $improved = $improved -and ($improvementPct -ge $MIN_IMPROVEMENT_PCT)
 
     if (-not $improved) {
         return (& $hold "stop_calculado_nao_melhora" @{

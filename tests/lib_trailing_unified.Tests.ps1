@@ -97,6 +97,34 @@ Describe "Resolve-TrailingDecision -- assinatura e fail-safes" {
         $r = Resolve-TrailingDecision -Position $pos -CurrentPrice 99.0 -Candles $candles
         ($r.new_stop -le 101.0) | Should Be $true
     }
+
+    It "melhora irrisoria (< 0.05%) fica HOLD -- evita push desnecessario na corretora (2026-07-30, caso real XRPUSDT)" {
+        # Caso real de producao (run 30514386549): stop calculado melhorou so
+        # 0.0093% (1.08178406 -> 1.08168346) e ainda assim foi empurrado pra
+        # CoinEx, causando cancelamento/recriacao de ordem sem ganho real de
+        # protecao (padrao "seta apaga" reportado pelo owner). stopCurrent
+        # escolhido de proposito bem perto do stop que o calculo produziria,
+        # pra forcar uma melhora minuscula dentro do range real observado.
+        $pos = [PSCustomObject]@{
+            market="TESTUSDT"; side="LONG"; entry=100.0; stopCurrent=99.999
+            origin = @{ asset_class="FUTURES"; trade_style="SWING" }
+        }
+        $candles = New-HealthyUptrendCandles -Count 30 -StartPrice 100 -StepPct 0.05
+        $r = Resolve-TrailingDecision -Position $pos -CurrentPrice 100.5 -Candles $candles
+        $r.action | Should Be "HOLD"
+        $r.reason | Should Be "stop_calculado_nao_melhora"
+    }
+
+    It "melhora real (>= 0.05%) ainda gera UPDATE normalmente -- piso nao trava sinal legitimo" {
+        $pos = [PSCustomObject]@{
+            market="TESTUSDT"; side="LONG"; entry=100.0; stopCurrent=95.0
+            origin = @{ asset_class="FUTURES"; trade_style="SWING" }
+        }
+        $candles = New-HealthyUptrendCandles -Count 30 -StartPrice 100 -StepPct 0.5
+        $r = Resolve-TrailingDecision -Position $pos -CurrentPrice 110.0 -Candles $candles
+        $r.action | Should Be "UPDATE"
+        ($r.new_stop -gt 95.0) | Should Be $true
+    }
 }
 
 Describe "Resolve-TrailingDecision -- resolver por trade_style" {
