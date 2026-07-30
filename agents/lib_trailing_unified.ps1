@@ -34,9 +34,34 @@
 # (lib_trailing_stop_intelligent.ps1), Get-ToriProximityFromArrays/
 # Get-ToriShortProximityFromArrays (lib_tori_proximity.ps1).
 #
+# 2026-07-29 (parte 2, mesmo dia): portadas as capacidades REAIS e validadas
+# dos 2 motores fragmentados desligados na promocao (Update-AllTrailingStops,
+# Invoke-TrailingPolicyLive), pra nao perder nada ao unificar:
+#   - Multi-timeframe (1D/4H/1H) conviction-aware + selecao runner-vs-atual
+#     (Resolve-ExitPolicyGated, lib_trailing_policy.ps1) -- validado com
+#     walk-forward real: runner (trail largo) so vence em uptrend confirmado
+#     (+0.183R), perde em downtrend (-0.111R). Ativa quando -HtfTrend fornecido.
+#   - Saidas PARCIAIS reais em R-multiple + time-stop + ladder de reversao
+#     por sinais (Get-ExitDecision, lib_trailing_policy.ps1) -- 4a acao possivel
+#     agora: PARTIAL (com size_pct), alem de HOLD/UPDATE/EXIT. Ativa quando
+#     -BarsHeld/-ReversalSignals fornecidos (senao comportamento pre-existente,
+#     so HOLD/UPDATE, preservado 100%).
+#   - Find-SupportLevels (lib_trailing_stop_intelligent.ps1, pivots de swing
+#     low/high) como fator adicional de aperto -- diferente e complementar
+#     da trendline Tori (regressao linear continua vs pivot discreto).
+# Tudo ADITIVO/opt-in: sem os parametros novos, Resolve-TrailingDecision se
+# comporta EXATAMENTE como antes (contrato dos 18 testes pre-existentes
+# preservado). Owner: "nao queremos perder nada" + "SPOT ou FUTURES da melhor
+# forma possivel" -- por isso optativo, nao substituicao forcada.
+#
 # Dot-source ordem exigida pelo caller (ver tests/lib_trailing_unified.Tests.ps1):
 #   lib_trailing_exhaustion.ps1, lib_multiframe_analysis.ps1,
-#   lib_trailing_stop_intelligent.ps1, lib_tori_proximity.ps1, lib_trailing_unified.ps1
+#   lib_trailing_stop_intelligent.ps1, lib_tori_proximity.ps1,
+#   lib_trailing_baseline.ps1, lib_trailing_policy.ps1, lib_trailing_unified.ps1
+#   (lib_trailing_baseline define Get-CurrentTrailingPolicy, dependencia de
+#   Resolve-ExitPolicyGated no ramo "atual" -- sem ela, Resolve-ExitPolicyGated
+#   lanca excecao capturada pelo catch fail-soft do enriquecimento e
+#   profile_selected fica sempre vazio, silenciosamente).
 
 $script:MIN_CANDLES_REQUIRED = 24   # Get-ExhaustionScore exige 24 p/ volume drying
 
@@ -146,15 +171,51 @@ function Resolve-TrailingDecision {
     Array de candles (>= 24, mesmo shape de Get-ExhaustionScore/Calculate-ATR:
     open/high/low/close/volume).
 
+    .PARAMETER HtfTrend
+    OPCIONAL (2026-07-29). Hashtable/PSCustomObject { t1D; t4H; t1H } (strings
+    "STRONG_UP"|"UP"|"NEUTRAL"|"DOWN"|"STRONG_DOWN"). Quando fornecido, ativa
+    a selecao de perfil runner-vs-atual (Resolve-ExitPolicyGated) via
+    conviccao multi-timeframe real, substituindo o calculo generico de
+    trailing_pct por leverage/ATR. Ausente = comportamento pre-existente
+    (100% preservado).
+
+    .PARAMETER Regime
+    OPCIONAL. Regime corrente (ex: "BEAR_STRONG"). So usado se -HtfTrend
+    tambem for fornecido (alimenta Resolve-ExitPolicyGated).
+
+    .PARAMETER BarsHeld
+    OPCIONAL. Dias/barras que a posicao esta aberta. Quando fornecido (>=0),
+    ativa o motor de decisao completo (Get-ExitDecision): habilita time-stop
+    e a 4a acao possivel (PARTIAL, saida parcial real em R-multiple). Ausente
+    = comportamento pre-existente (so HOLD/UPDATE).
+
+    .PARAMETER RemainingSizePct
+    OPCIONAL. Fracao da posicao original ainda aberta (1.0 = 100%, nunca
+    reduzida por parciais anteriores). Default 1.0.
+
+    .PARAMETER ReversalSignals
+    OPCIONAL. Contagem de sinais de reversao confirmados nesta barra (ex:
+    exhaustion + trendline + divergencia -- quem chama decide o que conta
+    como "sinal"). Alimenta o ladder ja validado (reversal_tighten_signals/
+    reversal_exit_signals) em Get-ExitDecision. Default 0.
+
     .OUTPUTS
-    PSCustomObject: action (HOLD|UPDATE), new_stop, reason, exhaustion_score,
-    atr_period, atr_pct, trailing_pct, leverage_applied (bool).
+    PSCustomObject: action (HOLD|UPDATE|PARTIAL|EXIT), new_stop, reason,
+    exhaustion_score, atr_period, atr_pct, trailing_pct, leverage_applied
+    (bool), trendline_factor, trendline_reason, size_pct (so relevante se
+    action=PARTIAL|EXIT -- fracao da posicao a fechar AGORA), profile_selected
+    ("runner"|"atual"|$null se -HtfTrend nao fornecido).
     #>
     [CmdletBinding()]
     param(
         [Parameter(Mandatory)] [PSCustomObject] $Position,
         [Parameter(Mandatory)] [double] $CurrentPrice,
-        [Parameter(Mandatory)] [array] $Candles
+        [Parameter(Mandatory)] [array] $Candles,
+        [object] $HtfTrend = $null,
+        [string] $Regime = "",
+        [Nullable[int]] $BarsHeld = $null,
+        [double] $RemainingSizePct = 1.0,
+        [int] $ReversalSignals = 0
     )
 
     if (-not $Position.origin -or -not $Position.origin.asset_class -or -not $Position.origin.trade_style) {
@@ -174,6 +235,8 @@ function Resolve-TrailingDecision {
             exhaustion_score = 0; atr_period = 0; atr_pct = 0.0
             trailing_pct = 0.0; leverage_applied = $false
             trendline_factor = 1.0; trendline_reason = "nao_avaliado"
+            support_factor = 1.0; support_reason = "nao_avaliado"
+            size_pct = 0.0; profile_selected = $null
         }
         if ($extra) { foreach ($k in $extra.Keys) { $o.$k = $extra[$k] } }
         return $o
@@ -239,10 +302,52 @@ function Resolve-TrailingDecision {
         }
     }
 
-    # Trailing % efetivo: exhaustion alto E proximidade da trendline real
-    # reduzem a distancia do stop ao preco (produto dos 2 fatores -- ambos
-    # 1.0 = sem aperto, ambos 0.5/0.4 = aperta bastante mais que so um).
-    $effectiveTrailingPct = $trailingPct * $tighteningFactor * $trendlineFactor
+    # --- Support/Resistance por pivots reais (2026-07-29, 4o fator) ----------
+    # Find-SupportLevels (lib_trailing_stop_intelligent.ps1) detecta swing
+    # lows/highs discretos (pivots locais) -- complementar a trendline Tori
+    # (regressao linear continua). Um mercado pode ter um pivot de suporte
+    # forte SEM formar uma reta de tendencia limpa (poucos toques/slope fora
+    # do range) -- os 2 fatores cobrem casos diferentes, produto dos 2.
+    $supportFactor = 1.0
+    $supportReason = "sem_suporte_relevante"
+    if (Get-Command Find-SupportLevels -ErrorAction SilentlyContinue) {
+        try {
+            # Find-SupportLevels so conhece "suporte" (lows) -- p/ SHORT
+            # (resistencia = highs), espelha o preco em torno da media pra
+            # reusar a mesma funcao sem duplicar logica de pivot.
+            if ($side -eq "LONG") {
+                $supports = @(Find-SupportLevels -Candles $Candles -LookbackPeriod 20)
+                if ($supports.Count -gt 0) {
+                    $nearestSupport = $supports[0]
+                    $distToSupportPct = if ($CurrentPrice -gt 0) { (($CurrentPrice - $nearestSupport) / $CurrentPrice) * 100 } else { 999 }
+                    if ($distToSupportPct -ge 0 -and $distToSupportPct -le 2.0) {
+                        $supportFactor = [Math]::Max(0.5, ($distToSupportPct / 2.0))
+                        $supportReason = "perto_suporte_pivot=$([Math]::Round($nearestSupport,6))_dist=$([Math]::Round($distToSupportPct,2))pct"
+                    }
+                }
+            } else {
+                $mirrorCandles = @($Candles | ForEach-Object { [PSCustomObject]@{ open=$_.open; high=(2*$CurrentPrice - $_.low); low=(2*$CurrentPrice - $_.high); close=(2*$CurrentPrice - $_.close); volume=$_.volume } })
+                $resistances = @(Find-SupportLevels -Candles $mirrorCandles -LookbackPeriod 20)
+                if ($resistances.Count -gt 0) {
+                    $mirroredNearest = $resistances[0]
+                    $nearestResistance = 2 * $CurrentPrice - $mirroredNearest
+                    $distToResPct = if ($CurrentPrice -gt 0) { (($nearestResistance - $CurrentPrice) / $CurrentPrice) * 100 } else { 999 }
+                    if ($distToResPct -ge 0 -and $distToResPct -le 2.0) {
+                        $supportFactor = [Math]::Max(0.5, ($distToResPct / 2.0))
+                        $supportReason = "perto_resistencia_pivot=$([Math]::Round($nearestResistance,6))_dist=$([Math]::Round($distToResPct,2))pct"
+                    }
+                }
+            }
+        } catch {
+            $supportFactor = 1.0
+            $supportReason = "support_erro"
+        }
+    }
+
+    # Trailing % efetivo: exhaustion alto, proximidade da trendline real, e
+    # proximidade de pivot de suporte/resistencia reduzem a distancia do
+    # stop ao preco (produto dos 3 fatores).
+    $effectiveTrailingPct = $trailingPct * $tighteningFactor * $trendlineFactor * $supportFactor
 
     $calculatedStop = if ($side -eq "LONG") {
         $CurrentPrice * (1 - ($effectiveTrailingPct / 100))
@@ -260,19 +365,21 @@ function Resolve-TrailingDecision {
             atr_pct = [Math]::Round($atrPct, 2); trailing_pct = [Math]::Round($effectiveTrailingPct, 2)
             leverage_applied = $leverageApplied
             trendline_factor = $trendlineFactor; trendline_reason = $trendlineReason
+            support_factor = $supportFactor; support_reason = $supportReason
         })
     }
 
-    # Trendline perto (factor < 1.0) domina a razao reportada quando e o
-    # fator mais apertado -- owner quer visibilidade de QUAL sinal real
-    # (exhaustion de volume vs proximidade de suporte/resistencia) motivou
-    # o aperto, nao so um numero generico.
-    $reason = if ($trendlineFactor -lt 1.0 -and $trendlineFactor -le $tighteningFactor) { "trendline_$trendlineReason" }
+    # Fator mais apertado domina a razao reportada -- owner quer visibilidade
+    # de QUAL sinal real (exhaustion de volume, trendline por regressao, ou
+    # pivot de suporte/resistencia) motivou o aperto, nao so um numero generico.
+    $tightestFactor = [Math]::Min([Math]::Min($tighteningFactor, $trendlineFactor), $supportFactor)
+    $reason = if ($supportFactor -le $tightestFactor -and $supportFactor -lt 1.0) { "support_$supportReason" }
+              elseif ($trendlineFactor -le $tightestFactor -and $trendlineFactor -lt 1.0) { "trendline_$trendlineReason" }
               elseif ($exhaustionScore -ge 66) { "exhaustion_alto_aperta_forte" }
               elseif ($exhaustionScore -ge 33) { "exhaustion_moderado_aperta" }
               else { "trail_normal" }
 
-    return [PSCustomObject]@{
+    $baseDecision = [PSCustomObject]@{
         action = "UPDATE"
         new_stop = $calculatedStop
         reason = $reason
@@ -283,7 +390,86 @@ function Resolve-TrailingDecision {
         leverage_applied = $leverageApplied
         trendline_factor = $trendlineFactor
         trendline_reason = $trendlineReason
+        support_factor = $supportFactor
+        support_reason = $supportReason
+        size_pct = 0.0
+        profile_selected = $null
     }
+
+    # --- Enriquecimento opcional: multi-TF + perfil runner/atual + partials -
+    # (2026-07-29, portado de lib_trailing_policy.ps1/lib_trailing_policy_live.ps1)
+    # So ativa quando $BarsHeld e fornecido pelo caller -- preserva 100% o
+    # comportamento pre-existente (contrato dos 18 testes originais) quando
+    # ausente. Fail-soft: qualquer excecao aqui devolve $baseDecision (ATR+
+    # exhaustion+trendline+support), nunca quebra o ciclo do trailing.
+    if ($null -ne $BarsHeld -and (Get-Command Get-ExitDecision -ErrorAction SilentlyContinue) -and (Get-Command Resolve-ExitPolicyGated -ErrorAction SilentlyContinue)) {
+        try {
+            $risk = if ($side -eq "LONG") { $entry - $currentStop } else { $currentStop - $entry }
+            if ($risk -gt 0) {
+                $rNow = if ($side -eq "LONG") { ($CurrentPrice - $entry) / $risk } else { ($entry - $CurrentPrice) / $risk }
+                $peak = if ($Position.PSObject.Properties['peak'] -and [double]$Position.peak -gt 0) { [double]$Position.peak } else { $CurrentPrice }
+
+                $trendUp = $false
+                if ($HtfTrend -and (Get-Command Get-MultiTimeframeConviction -ErrorAction SilentlyContinue)) {
+                    $t1D = if ($HtfTrend.t1D) { [string]$HtfTrend.t1D } else { "NEUTRAL" }
+                    $t4H = if ($HtfTrend.t4H) { [string]$HtfTrend.t4H } else { "NEUTRAL" }
+                    $t1H = if ($HtfTrend.t1H) { [string]$HtfTrend.t1H } else { "NEUTRAL" }
+                    $htfConviction = Get-MultiTimeframeConviction -Trend1D $t1D -Trend4H $t4H -Trend1H $t1H -Direction $side
+                    $trendUp = ($htfConviction -ge 40)
+                }
+
+                $policy = Resolve-ExitPolicyGated -TrendUp $trendUp -Regime $Regime -Direction $side
+                $ctx = @{
+                    side = $side; entry = $entry; risk = $risk; r_now = $rNow
+                    peak = $peak; current_stop = $currentStop; remaining_size = $RemainingSizePct
+                    bars_held = $BarsHeld; signals = $ReversalSignals; atr = $atrAbs
+                }
+                $exitDec = Get-ExitDecision -Policy $policy -Context $ctx
+
+                $enrichedAction = switch ($exitDec.action) {
+                    "exit"    { "EXIT" }
+                    "partial" { "PARTIAL" }
+                    default   { "HOLD" }
+                }
+                $enrichedNewStop = if ($null -ne $exitDec.new_stop) {
+                    $stopImproves = if ($side -eq "LONG") { [double]$exitDec.new_stop -gt $currentStop } else { [double]$exitDec.new_stop -lt $currentStop }
+                    if ($stopImproves) { [double]$exitDec.new_stop } else { $currentStop }
+                } else { $currentStop }
+
+                # So substitui o veredito base se o motor enriquecido decidir
+                # algo ACIONAVEL (PARTIAL/EXIT, ou UPDATE com stop melhor que
+                # o ja calculado por ATR/exhaustion/trendline/support) --
+                # nunca AFROUXA em relacao ao $baseDecision (ratchet preservado
+                # em ambas as camadas).
+                if ($enrichedAction -in @("PARTIAL","EXIT")) {
+                    return [PSCustomObject]@{
+                        action = $enrichedAction; new_stop = $enrichedNewStop
+                        reason = "policy_$($policy.selected)_$($policy.gate_reason)"
+                        exhaustion_score = $exhaustionScore; atr_period = $atrPeriod
+                        atr_pct = [Math]::Round($atrPct, 2); trailing_pct = [Math]::Round($effectiveTrailingPct, 2)
+                        leverage_applied = $leverageApplied
+                        trendline_factor = $trendlineFactor; trendline_reason = $trendlineReason
+                        support_factor = $supportFactor; support_reason = $supportReason
+                        size_pct = [double]$exitDec.size_pct; profile_selected = $policy.selected
+                    }
+                }
+                # profile_selected reflete o perfil AVALIADO (runner/atual),
+                # independente do stop enriquecido vencer ou nao o ja calculado
+                # -- e' informacao de contexto (qual regra decidiu), nao uma
+                # decisao condicional. So o new_stop/reason mudam condicionalmente.
+                $baseDecision.profile_selected = $policy.selected
+                $enrichedImproves = if ($side -eq "LONG") { $enrichedNewStop -gt $calculatedStop } else { $enrichedNewStop -lt $calculatedStop }
+                if ($enrichedImproves) {
+                    $baseDecision.new_stop = $enrichedNewStop
+                    $baseDecision.reason = "policy_$($policy.selected)_$($reason)"
+                }
+            }
+        } catch {
+            # fail-soft: mantem $baseDecision (ATR+exhaustion+trendline+support)
+        }
+    }
+
+    return $baseDecision
 }
 
 # Exportadas: Resolve-TrailingDecision

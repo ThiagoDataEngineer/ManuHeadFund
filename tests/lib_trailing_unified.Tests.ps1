@@ -19,6 +19,8 @@ $agentsDir = Join-Path $projectRoot "agents"
 . (Join-Path $agentsDir "lib_multiframe_analysis.ps1")
 . (Join-Path $agentsDir "lib_trailing_stop_intelligent.ps1")
 . (Join-Path $agentsDir "lib_tori_proximity.ps1")
+. (Join-Path $agentsDir "lib_trailing_baseline.ps1")
+. (Join-Path $agentsDir "lib_trailing_policy.ps1")
 . (Join-Path $agentsDir "lib_trailing_unified.ps1")
 
 function New-Candle {
@@ -335,5 +337,139 @@ Describe "Resolve-TrailingDecision -- trendline integrada (2026-07-29)" {
         $r.trendline_reason | Should Be "trendline_indisponivel"
         # recarrega a lib real pros testes seguintes
         . (Join-Path $agentsDir "lib_tori_proximity.ps1")
+    }
+}
+
+# Gera candles com pivot de suporte claro (swing low): sobe, forma um "V"
+# (low isolado menor que vizinhos) perto do fim, sobe de novo. Find-SupportLevels
+# detecta o low do meio como pivot -- ultimo close fica perto dele.
+function New-CandlesWithSupportPivot {
+    param([double]$SupportPrice = 95.0, [double]$FinalClose = 96.5)
+    $candles = @()
+    # candles de subida suave antes do pivot -- total precisa bater
+    # MIN_CANDLES_REQUIRED (24, exigido por Get-ExhaustionScore dentro de
+    # Resolve-TrailingDecision) E LookbackPeriod (20, exigido por
+    # Find-SupportLevels) simultaneamente.
+    $price = 90.0
+    for ($i = 0; $i -lt 21; $i++) {
+        $candles += New-Candle -Open $price -High ($price * 1.01) -Low ($price * 0.99) -Close ($price * 1.005) -Volume 1000
+        $price = $price * 1.01
+    }
+    # pivot: low isolado (menor que vizinhos)
+    $candles += New-Candle -Open ($SupportPrice * 1.02) -High ($SupportPrice * 1.03) -Low ($SupportPrice * 1.01) -Close ($SupportPrice * 1.02) -Volume 1000
+    $candles += New-Candle -Open ($SupportPrice * 1.01) -High ($SupportPrice * 1.015) -Low $SupportPrice -Close ($SupportPrice * 1.005) -Volume 1000
+    $candles += New-Candle -Open ($SupportPrice * 1.02) -High ($SupportPrice * 1.03) -Low ($SupportPrice * 1.015) -Close $FinalClose -Volume 1000
+    return $candles
+}
+
+Describe "Resolve-TrailingDecision -- 4o fator support/resistance por pivot (2026-07-29)" {
+
+    It "LONG perto de um pivot de suporte real aperta o trailing (support_factor < 1.0)" {
+        $candles = New-CandlesWithSupportPivot -SupportPrice 95.0 -FinalClose 95.8
+        $pos = [PSCustomObject]@{
+            market="PIVOTUSDT"; side="LONG"; entry=90.0; stopCurrent=88.0
+            origin = @{ asset_class="FUTURES"; trade_style="SWING"; }
+            leverage = 1
+        }
+        $r = Resolve-TrailingDecision -Position $pos -CurrentPrice 95.8 -Candles $candles
+        ($r.support_factor -lt 1.0) | Should Be $true
+    }
+
+    It "sem Find-SupportLevels disponivel -- fail-soft, support_factor=1.0" {
+        if (Get-Command Find-SupportLevels -ErrorAction SilentlyContinue) {
+            Remove-Item function:Find-SupportLevels -ErrorAction SilentlyContinue
+        }
+        $candles = New-HealthyUptrendCandles -Count 30
+        $pos = [PSCustomObject]@{
+            market="TESTUSDT"; side="LONG"; entry=100.0; stopCurrent=98.0
+            origin = @{ asset_class="SPOT"; trade_style="SWING" }
+        }
+        $r = Resolve-TrailingDecision -Position $pos -CurrentPrice 105.0 -Candles $candles
+        $r.support_factor | Should Be 1.0
+        # recarrega a lib real pros testes seguintes
+        . (Join-Path $agentsDir "lib_trailing_stop_intelligent.ps1")
+    }
+}
+
+Describe "Resolve-TrailingDecision -- enriquecimento opcional multi-TF + perfil + partials (2026-07-29)" {
+    # Portado de lib_trailing_policy.ps1/lib_trailing_policy_live.ps1 -- so
+    # ativa quando -BarsHeld e fornecido. Sem ele, comportamento 100%
+    # preservado (ja coberto pelos Describe acima, sem -BarsHeld em nenhum).
+
+    It "sem -BarsHeld fornecido -- profile_selected=null, comportamento identico ao pre-existente" {
+        $candles = New-HealthyUptrendCandles -Count 30
+        $pos = [PSCustomObject]@{
+            market="TESTUSDT"; side="LONG"; entry=100.0; stopCurrent=98.0
+            origin = @{ asset_class="SPOT"; trade_style="SWING" }
+        }
+        $r = Resolve-TrailingDecision -Position $pos -CurrentPrice 105.0 -Candles $candles
+        $r.profile_selected | Should Be $null
+    }
+
+    It "com -BarsHeld + -HtfTrend uptrend forte (LONG) -- ativa perfil runner (validado walk-forward)" {
+        $candles = New-HealthyUptrendCandles -Count 30
+        $pos = [PSCustomObject]@{
+            market="RUNNERUSDT"; side="LONG"; entry=100.0; stopCurrent=98.0
+            origin = @{ asset_class="SPOT"; trade_style="SWING" }
+            peak = 108.0
+        }
+        $htf = [PSCustomObject]@{ t1D="STRONG_UP"; t4H="STRONG_UP"; t1H="UP" }
+        $r = Resolve-TrailingDecision -Position $pos -CurrentPrice 108.0 -Candles $candles -HtfTrend $htf -Regime "BULL_STRONG" -BarsHeld 5
+        $r.profile_selected | Should Be "runner"
+    }
+
+    It "com -BarsHeld + downtrend (LONG contra a tendencia) -- usa perfil 'atual' (mais conservador, nao libera runner)" {
+        $candles = New-HealthyUptrendCandles -Count 30
+        $pos = [PSCustomObject]@{
+            market="ATUALUSDT"; side="LONG"; entry=100.0; stopCurrent=98.0
+            origin = @{ asset_class="SPOT"; trade_style="SWING" }
+            peak = 108.0
+        }
+        $htf = [PSCustomObject]@{ t1D="STRONG_DOWN"; t4H="DOWN"; t1H="DOWN" }
+        $r = Resolve-TrailingDecision -Position $pos -CurrentPrice 108.0 -Candles $candles -HtfTrend $htf -Regime "BULL_STRONG" -BarsHeld 5
+        $r.profile_selected | Should Be "atual"
+    }
+
+    It "time_stop_bars excedido -- retorna action=EXIT (portado de Get-ExitDecision, precedencia sobre partial)" {
+        $candles = New-HealthyUptrendCandles -Count 30
+        $pos = [PSCustomObject]@{
+            market="TIMESTOPUSDT"; side="LONG"; entry=100.0; stopCurrent=95.0
+            origin = @{ asset_class="SPOT"; trade_style="SWING" }
+            peak = 110.0
+        }
+        # Sem -HtfTrend -> Resolve-ExitPolicyGated cai no perfil "atual"
+        # (Get-CurrentTrailingPolicy, lib_trailing_baseline.ps1): time_stop_bars=60.
+        # BarsHeld=61 excede -- EXIT tem precedencia sobre partial mesmo com
+        # r_now alto o suficiente pra bater os niveis de parcial tambem.
+        $r = Resolve-TrailingDecision -Position $pos -CurrentPrice 110.0 -Candles $candles -BarsHeld 61
+        $r.action | Should Be "EXIT"
+    }
+
+    It "R-multiple >= 1.0 com policy swing (partials [1R=0.33, 2R=0.33]) -- retorna action=PARTIAL com size_pct > 0" {
+        $candles = New-HealthyUptrendCandles -Count 30
+        $pos = [PSCustomObject]@{
+            market="PARTIALUSDT"; side="LONG"; entry=100.0; stopCurrent=95.0
+            origin = @{ asset_class="FUTURES"; trade_style="SWING" }
+            leverage = 1; peak = 105.0
+        }
+        # r_now = (105-100)/(100-95) = 1.0 -> bate o 1o nivel de parcial (1R, 0.33)
+        $r = Resolve-TrailingDecision -Position $pos -CurrentPrice 105.0 -Candles $candles -BarsHeld 3
+        $r.action | Should Be "PARTIAL"
+        ($r.size_pct -gt 0) | Should Be $true
+    }
+
+    It "excecao dentro do enriquecimento (Get-ExitDecision indisponivel) -- fail-soft, mantem baseDecision (ATR+exhaustion+trendline+support)" {
+        if (Get-Command Get-ExitDecision -ErrorAction SilentlyContinue) {
+            Remove-Item function:Get-ExitDecision -ErrorAction SilentlyContinue
+        }
+        $candles = New-HealthyUptrendCandles -Count 30
+        $pos = [PSCustomObject]@{
+            market="TESTUSDT"; side="LONG"; entry=100.0; stopCurrent=98.0
+            origin = @{ asset_class="SPOT"; trade_style="SWING" }
+        }
+        { $script:__r = Resolve-TrailingDecision -Position $pos -CurrentPrice 105.0 -Candles $candles -BarsHeld 5 } | Should Not Throw
+        ($script:__r.action -in @("HOLD","UPDATE")) | Should Be $true
+        # recarrega a lib real pros testes seguintes
+        . (Join-Path $agentsDir "lib_trailing_policy.ps1")
     }
 }

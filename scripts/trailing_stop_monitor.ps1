@@ -60,10 +60,16 @@ try {
     . (Join-Path $agentsDir "lib_feedback_loop.ps1")
     . (Join-Path $agentsDir "lib_trailing_stop_intelligent.ps1")
     . (Join-Path $agentsDir "lib_trailing_orphan_detection.ps1")
-    # 2026-07-18: motor unico de trailing (shadow mode -- so loga, nao executa
-    # ainda). Ver "2.6 TRAILING UNIFIED (shadow)" abaixo.
+    # 2026-07-18: motor unico de trailing. PROMOVIDO pra ATIVO em 2026-07-29
+    # (owner aprovado apos 1000 observacoes reais de shadow desde 2026-07-19
+    # mostrarem 73.7% would_have_differed=true, sempre na direcao de proteger
+    # o lucro MAIS CEDO/MAIS FORTE que os motores fragmentados -- nunca o
+    # contrario). Ver "2.55b TRAILING UNIFIED (ATIVO)" abaixo. lib_tori_proximity
+    # e nova (2026-07-29): trendline real de suporte/resistencia, 3o fator do
+    # motor unificado (Get-TrendlineTighteningFactor).
     . (Join-Path $agentsDir "lib_trailing_exhaustion.ps1")
     . (Join-Path $agentsDir "lib_multiframe_analysis.ps1")
+    . (Join-Path $agentsDir "lib_tori_proximity.ps1")
     . (Join-Path $agentsDir "lib_trailing_unified.ps1")
     # 2026-05-29: auto-reparo de protecao (SL+TP reais na corretora)
     . (Join-Path $agentsDir "lib_coinex_position_management.ps1")
@@ -144,10 +150,16 @@ try {
         Write-CrossPlatformLog "ORPHAN DETECTION ERROR: $($orphanSync.error)" -Level ERROR -LogFile "trailing_stop_monitor.log"
     }
     
-    # 2. TRAILING STOP UPDATE (se lib disponível)
-    Write-CrossPlatformLog "--- TRAILING STOP UPDATE ---" -LogFile "trailing_stop_monitor.log"
-    
-    if (Get-Command Update-AllTrailingStops -ErrorAction SilentlyContinue) {
+    # 2. TRAILING STOP UPDATE (DESATIVADO 2026-07-29 -- substituido por TRAILING
+    # UNIFIED mais abaixo, ver "2.55c TRAILING UNIFIED (ATIVO)". Update-AllTrailingStops
+    # (ATR+suporte, gatilho fixo 3% lucro) e Invoke-TrailingPolicyLive (chandelier
+    # ATR) eram 2 motores fragmentados calculando o stop de forma independente e
+    # as vezes conflitante -- causa raiz confirmada do "seta apaga seta apaga"
+    # reportado pelo owner ao vivo. Guard $false abaixo desliga sem apagar o
+    # codigo (rollback rapido: trocar $false por $true reativa este motor).
+    Write-CrossPlatformLog "--- TRAILING STOP UPDATE (legado, desativado -- ver TRAILING UNIFIED) ---" -LogFile "trailing_stop_monitor.log"
+
+    if ($false -and (Get-Command Update-AllTrailingStops -ErrorAction SilentlyContinue)) {
         $result = Update-AllTrailingStops -DryRun $false
         
         if ($result.success) {
@@ -187,18 +199,33 @@ try {
         }
     }
     
-    # 2.55c TRAILING UNIFIED -- SHADOW MODE (2026-07-18, motor unico de trailing)
-    # So LOGA a decisao de Resolve-TrailingDecision (lib_trailing_unified.ps1) ao
-    # lado da decisao real (Update-AllTrailingStops acima), pra comparar N ciclos
-    # antes de promover. NAO escreve na exchange, NAO altera stopCurrent -- 100%
-    # observacional. Gated por journal/TRAILING_UNIFIED_SHADOW.flag (mesmo padrao
-    # de TRAILING_POLICY_ENABLED.flag). Posicao sem origin gravado (registros
-    # antigos, pre-2026-07-18) usa fallback UNKNOWN -- Resolve-TrailingDecision
-    # lanca excecao nesse caso, capturada e logada como skip (nao quebra o ciclo).
-    $tuJournalDir = Join-Path (Split-Path $agentsDir -Parent) "journal"
-    $tuFlag = Join-Path $tuJournalDir "TRAILING_UNIFIED_SHADOW.flag"
-    if ((Test-Path $tuFlag) -and (Get-Command Resolve-TrailingDecision -ErrorAction SilentlyContinue)) {
-        Write-CrossPlatformLog "--- TRAILING UNIFIED (shadow, so log) ---" -LogFile "trailing_stop_monitor.log"
+    # 2.55c TRAILING UNIFIED -- ATIVO (2026-07-18 desenhado, PROMOVIDO 2026-07-29)
+    # Resolve-TrailingDecision (lib_trailing_unified.ps1, ATR + exhaustion +
+    # trendline real Tori) agora EMPURRA o stop de verdade na corretora,
+    # substituindo Update-AllTrailingStops (lib_trailing_stop_intelligent.ps1)
+    # e Invoke-TrailingPolicyLive (lib_trailing_policy_live.ps1) -- os 2 motores
+    # fragmentados que calculavam stop de forma independente e as vezes
+    # conflitante ("seta apaga seta apaga" reportado pelo owner ao vivo, 2026-07-29).
+    # Owner aprovado apos 1000 observacoes reais de shadow desde 2026-07-19
+    # mostrarem 73.7% would_have_differed=true, SEMPRE na direcao de proteger
+    # o lucro mais cedo/mais forte (nunca o contrario nos casos observados).
+    # Guard monotonico "nunca afrouxa" ja embutido em Resolve-TrailingDecision
+    # (linha ~254 de lib_trailing_unified.ps1) -- e' o que garante seguranca
+    # aqui, mesmo com o motor decidindo ao vivo. Posicao sem origin gravado
+    # (registros antigos, pre-2026-07-18) usa fallback UNKNOWN -- Resolve-
+    # TrailingDecision lanca excecao nesse caso, capturada e logada como skip
+    # (fail-safe, nao quebra o ciclo, nao mexe no stop dessa posicao).
+    #
+    # Kill-switch: journal/TRAILING_UNIFIED_SHADOW.flag agora e o gate de
+    # ATIVACAO (nome preservado por continuidade historica -- inverte o
+    # sentido: presente = motor unificado ATIVO e escreve; ausente = motor
+    # unificado desligado, cai de volta pro Update-AllTrailingStops/
+    # Invoke-TrailingPolicyLive antigos).
+    if (Get-Command Resolve-TrailingDecision -ErrorAction SilentlyContinue) {
+        $tuJournalDir = Join-Path (Split-Path $agentsDir -Parent) "journal"
+        $tuFlag = Join-Path $tuJournalDir "TRAILING_UNIFIED_SHADOW.flag"
+        $tuActive = Test-Path $tuFlag
+        Write-CrossPlatformLog "--- TRAILING UNIFIED ($(if ($tuActive) { 'ATIVO' } else { 'desligado, flag ausente' })) ---" -LogFile "trailing_stop_monitor.log"
         try {
             $tuPositions = @(Get-TrailingPositions | Where-Object { $_.active })
             foreach ($tuPos in $tuPositions) {
@@ -211,15 +238,88 @@ try {
                     $tuIsFutures = ($tuPos.origin -and "$($tuPos.origin.asset_class)".ToUpper() -eq "FUTURES")
                     $tuCandles = @(Get-CoinExCandles -Market $tuMarket -Period "4hour" -Limit 30 -IsFutures $tuIsFutures)
 
-                    $tuDecision = Resolve-TrailingDecision -Position $tuPos -CurrentPrice $tuPrice -Candles $tuCandles
+                    # 2026-07-29 (parte 2): enriquecimento opcional -- multi-TF
+                    # (1D/4H/1H) pra ativar o perfil runner-vs-atual validado, e
+                    # bars_held/regime pro time-stop/ladder de reversao real
+                    # (portado de Invoke-TrailingPolicyLive/Get-PositionExitDecision,
+                    # o 2o motor fragmentado desligado nesta promocao). Fail-soft:
+                    # candles multi-TF insuficientes -> $tuHtfTrend fica $null,
+                    # Resolve-TrailingDecision cai no comportamento base (ATR+
+                    # exhaustion+trendline+support), sem enriquecimento.
+                    $tuHtfTrend = $null
+                    if ($tuIsFutures -and (Get-Command Get-TrendDirection -ErrorAction SilentlyContinue)) {
+                        try {
+                            $tuC1D = @(Get-CoinExCandles -Market $tuMarket -Period "1day" -Limit 60 -IsFutures $true)
+                            $tuC4H = @(Get-CoinExCandles -Market $tuMarket -Period "4hour" -Limit 60 -IsFutures $true)
+                            $tuC1H = @(Get-CoinExCandles -Market $tuMarket -Period "1hour" -Limit 60 -IsFutures $true)
+                            if ($tuC1D.Count -ge 20 -and $tuC4H.Count -ge 20 -and $tuC1H.Count -ge 20) {
+                                $tuHtfTrend = [PSCustomObject]@{
+                                    t1D = (Get-TrendDirection -Candles $tuC1D -Timeframe "1D")
+                                    t4H = (Get-TrendDirection -Candles $tuC4H -Timeframe "4H")
+                                    t1H = (Get-TrendDirection -Candles $tuC1H -Timeframe "1H")
+                                }
+                            }
+                        } catch { $tuHtfTrend = $null }
+                    }
+                    $tuRegime = if (Get-Command Get-RegimeFromState -ErrorAction SilentlyContinue) { Get-RegimeFromState } else { "" }
+                    $tuBarsHeld = $null
+                    if ($tuPos.PSObject.Properties['openedAt'] -and $tuPos.openedAt) {
+                        try { $tuBarsHeld = [Math]::Max(0, [int][Math]::Floor(((Get-Date) - [datetime]$tuPos.openedAt).TotalDays)) } catch { $tuBarsHeld = $null }
+                    }
+
+                    $tuDecision = Resolve-TrailingDecision -Position $tuPos -CurrentPrice $tuPrice -Candles $tuCandles -HtfTrend $tuHtfTrend -Regime $tuRegime -BarsHeld $tuBarsHeld
+                    $tuPushed = $false
+                    $tuPushErr = $null
+
                     if ($tuDecision.action -eq "UPDATE") {
-                        Write-CrossPlatformLog "  SHADOW $tuMarket [$($tuPos.side)]: real_stop=$($tuPos.stopCurrent) unified_sugere=$($tuDecision.new_stop) (exhaustion=$($tuDecision.exhaustion_score) reason=$($tuDecision.reason))" -LogFile "trailing_stop_monitor.log"
+                        Write-CrossPlatformLog "  UNIFIED $tuMarket [$($tuPos.side)]: real_stop=$($tuPos.stopCurrent) unified_sugere=$($tuDecision.new_stop) (exhaustion=$($tuDecision.exhaustion_score) trendline_factor=$($tuDecision.trendline_factor) reason=$($tuDecision.reason))" -LogFile "trailing_stop_monitor.log"
+
+                        if ($tuActive -and $tuIsFutures -and (Get-Command CoinEx-ModifyPositionStopLoss -ErrorAction SilentlyContinue)) {
+                            try {
+                                $tuResp = CoinEx-ModifyPositionStopLoss -Market $tuMarket -Price ([decimal]$tuDecision.new_stop)
+                                $tuPushed = ($tuResp -and $tuResp.success -eq $true)
+                                if (-not $tuPushed) { $tuPushErr = "api_falhou" }
+                            } catch { $tuPushErr = $_.Exception.Message }
+
+                            if (-not $tuPushed) {
+                                Write-CrossPlatformLog "  UNIFIED ${tuMarket}: push FUTURES falhou ($tuPushErr) -- journal NAO atualizado (evita dessincronia journal-vs-corretora)" -Level WARN -LogFile "trailing_stop_monitor.log"
+                            }
+                        }
+
+                        # 2026-07-29: atualiza o journal (trailing_state) sempre que a
+                        # decisao e' UPDATE e (FUTURES com push confirmado) OU (SPOT --
+                        # sem push direto aqui, mesma inteligencia de saida do FUTURES
+                        # via ATR/exhaustion/trendline, execucao real fica por conta de
+                        # Sync-SpotStopsToExchange mais abaixo, que ja le stopCurrent
+                        # daqui via Get-SpotHoldingsForStop -- owner pediu explicitamente
+                        # que SPOT tenha a MESMA logica de saida, so o TIPO de ordem
+                        # (spot stop-order vs futures modify-position) e diferente).
+                        # Sem isso pro FUTURES com push falho, o proximo ciclo comparia
+                        # contra um valor que a corretora nunca recebeu -> dessincronia.
+                        if ((-not $tuIsFutures) -or $tuPushed) {
+                            $tuPos.stopCurrent = $tuDecision.new_stop
+                            $tuPos.updatedAt = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+                            try { Save-TrailingPositions -Positions @($tuPositions) | Out-Null } catch {}
+                            $tuDest = if ($tuIsFutures) { "corretora (FUTURES, push direto)" } else { "journal (SPOT, Sync-SpotStopsToExchange executa a seguir)" }
+                            Write-CrossPlatformLog "  UNIFIED ${tuMarket}: stop $($tuPos.stopCurrent) -> $($tuDecision.new_stop) atualizado em $tuDest" -LogFile "trailing_stop_monitor.log"
+                        }
+                    } elseif ($tuDecision.action -in @("PARTIAL","EXIT")) {
+                        # 2026-07-29: PARTIAL/EXIT sao NOVAS acoes possiveis (portadas
+                        # de Get-ExitDecision -- saida parcial real em R-multiple,
+                        # time-stop, ladder de reversao). Por seguranca, SO LOGA por
+                        # enquanto (nao executa venda automatica ainda) -- executar
+                        # fechamento parcial/total real precisa de wiring proprio
+                        # (CoinEx-ClosePosition parcial + trade_outcomes + alertas),
+                        # escopo maior que esta promocao. Visibilidade real do que o
+                        # motor recomendaria, sem acao automatica ainda.
+                        Write-CrossPlatformLog "  UNIFIED $tuMarket [$($tuPos.side)]: $($tuDecision.action) recomendado (size_pct=$($tuDecision.size_pct) profile=$($tuDecision.profile_selected) reason=$($tuDecision.reason)) -- SO LOG, execucao automatica ainda nao implementada" -Level WARN -LogFile "trailing_stop_monitor.log"
                     } else {
-                        Write-CrossPlatformLog "  SHADOW $tuMarket [$($tuPos.side)]: HOLD ($($tuDecision.reason))" -LogFile "trailing_stop_monitor.log"
+                        Write-CrossPlatformLog "  UNIFIED $tuMarket [$($tuPos.side)]: HOLD ($($tuDecision.reason))" -LogFile "trailing_stop_monitor.log"
                     }
                     # 2026-07-19: persiste no Supabase (nao so log local, que o runner
-                    # efemero do GH Actions descarta a cada ciclo -- sem isso, "shadow mode"
-                    # nao produzia nenhum dado consultavel pra decidir promover ou nao).
+                    # efemero do GH Actions descarta a cada ciclo) -- mantido apos a
+                    # promocao pra ativo tambem, agora incluindo se o push realmente
+                    # aconteceu (nao so o que o motor decidiu).
                     if (Get-Command Save-StateRecords -ErrorAction SilentlyContinue) {
                         try {
                             Save-StateRecords -Table "trailing_unified_shadow" -Records @([PSCustomObject]@{
@@ -232,18 +332,20 @@ try {
                                 exhaustion_score    = $tuDecision.exhaustion_score
                                 atr_pct             = $tuDecision.atr_pct
                                 trailing_pct        = $tuDecision.trailing_pct
+                                trendline_factor    = $tuDecision.trendline_factor
                                 reason              = $tuDecision.reason
                                 would_have_differed = ($tuDecision.action -eq "UPDATE") -and ($tuDecision.new_stop -ne [double]$tuPos.stopCurrent)
+                                pushed_live         = $tuPushed
                             })
                         } catch {
-                            Write-CrossPlatformLog "  SHADOW ${tuMarket}: persist falhou ($_)" -Level WARN -LogFile "trailing_stop_monitor.log"
+                            Write-CrossPlatformLog "  UNIFIED ${tuMarket}: persist falhou ($_)" -Level WARN -LogFile "trailing_stop_monitor.log"
                         }
                     }
                 } catch {
-                    Write-CrossPlatformLog "  SHADOW ${tuMarket}: skip ($_)" -Level WARN -LogFile "trailing_stop_monitor.log"
+                    Write-CrossPlatformLog "  UNIFIED ${tuMarket}: skip ($_)" -Level WARN -LogFile "trailing_stop_monitor.log"
                 }
             }
-        } catch { Write-CrossPlatformLog "TRAILING UNIFIED shadow erro: $_" -Level WARN -LogFile "trailing_stop_monitor.log" }
+        } catch { Write-CrossPlatformLog "TRAILING UNIFIED erro: $_" -Level WARN -LogFile "trailing_stop_monitor.log" }
     }
 
     # 2.5 PEAK UPDATE FINO + EXECUTOR DE SL (2026-06-18 Fase 1 online)
@@ -274,13 +376,18 @@ try {
         } catch { Write-CrossPlatformLog "peak update: $_" -Level WARN -LogFile "trailing_stop_monitor.log" }
     }
 
-    # 2.55 TRAILING POLICY GATED (ATIVO 2026-06-21) -- runner em uptrend (walk-forward validado).
+    # 2.55 TRAILING POLICY GATED (DESATIVADO 2026-07-29 -- substituido por
+    # TRAILING UNIFIED, ver "2.55c" abaixo). Era o 2o dos 2 motores fragmentados
+    # (chandelier ATR multi-timeframe) que, junto com Update-AllTrailingStops,
+    # causava o "seta apaga" -- cada um calculava o stop com logica propria,
+    # sem coordenacao. Guard $false abaixo desliga sem apagar o codigo
+    # (rollback rapido: trocar $false por $true reativa este motor).
     # Ratchet-only no stopCurrent (nunca afrouxa); Sync abaixo empurra (push UNICO -> sem duplicata).
     # NAO executa parciais/saidas (dono = exit_intelligence_auto -> sem double-sell).
     # Gate defere ao trailing ATUAL no regime bear corrente. Kill-switch: remover TRAILING_POLICY_ENABLED.flag
     $tpJournalDir = Join-Path (Split-Path $agentsDir -Parent) "journal"
     $tpFlag = Join-Path $tpJournalDir "TRAILING_POLICY_ENABLED.flag"
-    if ((Test-Path $tpFlag) -and (Get-Command Invoke-TrailingPolicyLive -ErrorAction SilentlyContinue)) {
+    if ($false -and (Test-Path $tpFlag) -and (Get-Command Invoke-TrailingPolicyLive -ErrorAction SilentlyContinue)) {
         Write-CrossPlatformLog "--- TRAILING POLICY (gated, ATIVO) ---" -LogFile "trailing_stop_monitor.log"
         try {
             $tpRegime = Get-RegimeFromState
