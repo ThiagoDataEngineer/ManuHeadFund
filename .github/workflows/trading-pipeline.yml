@@ -2073,6 +2073,29 @@ jobs:
         run: |
           & ./scripts/apply_gem_position_events_2026_07_29.ps1
 
+  diag-trailing-unified-shadow-readonly:
+    name: Diag Trailing Unified Shadow Read-Only (one-shot)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run diagnostic
+        shell: pwsh
+        run: |
+          & ./scripts/diag_trailing_unified_shadow_readonly_2026_07_29.ps1
+
   apply-trailing-birth-score-schema:
     name: Apply trailing_state birth_score Schema (one-shot)
     runs-on: ubuntu-latest

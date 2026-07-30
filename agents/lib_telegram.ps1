@@ -292,7 +292,7 @@ function Send-TelegramAlert {
     if (-not $Token)          { return $false }
     if (-not $ChatId)         { return $false }
 
-    # ── 2026-06-17: FILTRO RADICAL — APENAS 6 MENSAGENS CRÍTICAS ─────────────────
+    # ── 2026-06-17: FILTRO RADICAL — APENAS MENSAGENS CRÍTICAS ─────────────────
     # Usuário recebe APENAS:
     # 1. ENTRADA (trade aberto)
     # 2. FECHAMENTO (trade fechado)
@@ -300,6 +300,8 @@ function Send-TelegramAlert {
     # 4. ERROR (falha crítica)
     # 5. CIRCUIT BREAKER (limite de perda)
     # 6. REGIME CHANGE (shift de mercado)
+    # 7. BLOQUEIOS que representam capital real represado (cascata Add
+    #    Position, gem safety, exposure cap) -- adicionado 2026-07-29
     # Tudo mais = BLOQUEADO. Log continua.
 
     $msg = $Message
@@ -311,6 +313,17 @@ function Send-TelegramAlert {
     #   - "🚨 CRÍTICO: SL/TP FALHOU" nao casava ("⚠️.*CRÍTICO" exigia ⚠️)
     #   -> BLUAI abriu autonomo e user NAO recebeu NADA (so viu no app CoinEx).
     # Padroes agora cobrem os formatos REAIS de open/close/critico/moon-bag.
+    #
+    # 2026-07-29 FIX (owner reportou: "parece que algo foi bloqueado, nao
+    # entendo, estava recebendo isso"): confirmado que TODAS as mensagens de
+    # "GEM bloqueado" (motivo do bloqueio -- cascata Add Position, gem safety,
+    # exposure cap) sao engolidas silenciosamente ha semanas, sem erro
+    # visivel -- nunca batiam com nenhum padrao da whitelist. Com 10+ trades
+    # simultaneos rodando, owner quer visibilidade de POR QUE um candidato
+    # foi bloqueado, especialmente quando ha capital real represado (cascata
+    # de Add Position, guard de exposicao). Padroes novos cobrem esses casos
+    # sem reabrir a torneira pros bloqueios de baixo valor (Tori/cenario/
+    # crowding/quality gate -- alto volume, log ja e suficiente).
     $isActionable = (
         ($msg -match "🎯.*ENTRADA|EXECUTAR.*trade|ordem.*aberta|ENTRADA.*executada") -or
         ($msg -match "TRADE ABERTO|TRADE EXECUTADO|GEM EXECUTADO") -or
@@ -321,7 +334,9 @@ function Send-TelegramAlert {
         ($msg -match "CRÍTICO|CRITICO|CRITICAL|PROTEÇÃO ATIVA|PROTECAO ATIVA") -or
         ($msg -match "Moon Bag.*vend|CLIMAX.*vend|HARVEST") -or
         ($msg -match "RESUMO DIÁRIO|RESUMO DIARIO|DAILY SUMMARY") -or
-        ($msg -match "🚀.*PUMP.*SCALP|PUMP.*EXECUTADO|PUMP.*SCALP.*LIVE")
+        ($msg -match "🚀.*PUMP.*SCALP|PUMP.*EXECUTADO|PUMP.*SCALP.*LIVE") -or
+        ($msg -match "🚫.*GEM bloqueado \(cascata\)|Add Positions, limite atingido") -or
+        ($msg -match "anti trade-gigante")
     )
 
     # BLACKLIST RADICAL: TUDO MAIS É RUÍDO

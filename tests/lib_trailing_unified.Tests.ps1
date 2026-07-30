@@ -18,6 +18,7 @@ $agentsDir = Join-Path $projectRoot "agents"
 . (Join-Path $agentsDir "lib_trailing_exhaustion.ps1")
 . (Join-Path $agentsDir "lib_multiframe_analysis.ps1")
 . (Join-Path $agentsDir "lib_trailing_stop_intelligent.ps1")
+. (Join-Path $agentsDir "lib_tori_proximity.ps1")
 . (Join-Path $agentsDir "lib_trailing_unified.ps1")
 
 function New-Candle {
@@ -245,5 +246,94 @@ Describe "Resolve-TrailingDecision -- output shape (contrato estavel p/ downstre
         $flatCandles = 1..30 | ForEach-Object { New-Candle -Open 100 -High 100.1 -Low 99.9 -Close 100 -Volume 1000 }
         $r = Resolve-TrailingDecision -Position $pos -CurrentPrice 100.0 -Candles $flatCandles
         $r.action | Should Be "HOLD"
+    }
+}
+
+# Gera candles com um suporte ascendente real (lows sobem numa reta clara,
+# com toques) -- slope dentro de 5-35deg, >=2 toques, exigido por
+# Get-ToriProximityFromArrays. Fecha (close) opcionalmente perto da linha
+# de suporte no ultimo candle, pra simular preco testando o nivel.
+function New-AscendingSupportCandles {
+    param([int]$Count = 30, [double]$StartLow = 100.0, [double]$SlopePerCandle = 0.15, [double]$LastCloseNearSupportPct = $null)
+    $candles = @()
+    for ($i = 0; $i -lt $Count; $i++) {
+        $low = $StartLow + ($SlopePerCandle * $i)
+        $high = $low * 1.03
+        $close = $low * 1.015
+        # a cada 5 candles, toca bem perto do suporte (touches >= 2)
+        if ($i % 5 -eq 0) { $close = $low * 1.005 }
+        $candles += New-Candle -Open $close -High $high -Low $low -Close $close -Volume 1000
+    }
+    if ($null -ne $LastCloseNearSupportPct) {
+        $lastLow = $StartLow + ($SlopePerCandle * ($Count - 1))
+        $candles[-1].close = $lastLow * (1 + $LastCloseNearSupportPct / 100)
+    }
+    return $candles
+}
+
+Describe "Get-TrendlineTighteningFactor -- 3o fator (2026-07-29)" {
+
+    It "trendline invalida (candles insuficientes) -- factor=1.0, nao aperta" {
+        $shortCandles = New-HealthyUptrendCandles -Count 10
+        $closes = @($shortCandles | ForEach-Object { $_.close })
+        $highs  = @($shortCandles | ForEach-Object { $_.high })
+        $lows   = @($shortCandles | ForEach-Object { $_.low })
+        $vols   = @($shortCandles | ForEach-Object { $_.volume })
+        $r = Get-TrendlineTighteningFactor -Side "LONG" -Closes $closes -Highs $highs -Lows $lows -Volumes $vols
+        $r.factor | Should Be 1.0
+        $r.trendline_valid | Should Be $false
+    }
+
+    It "LONG: preco MUITO perto do suporte ascendente real -- factor aperta forte (<=0.6)" {
+        $candles = New-AscendingSupportCandles -Count 30 -LastCloseNearSupportPct 0.2
+        $closes = @($candles | ForEach-Object { $_.close })
+        $highs  = @($candles | ForEach-Object { $_.high })
+        $lows   = @($candles | ForEach-Object { $_.low })
+        $vols   = @($candles | ForEach-Object { $_.volume })
+        $r = Get-TrendlineTighteningFactor -Side "LONG" -Closes $closes -Highs $highs -Lows $lows -Volumes $vols
+        $r.trendline_valid | Should Be $true
+        ($r.factor -le 0.6) | Should Be $true
+    }
+
+    It "LONG: preco LONGE do suporte (ainda subindo confortavel) -- factor=1.0, sem aperto extra" {
+        $candles = New-AscendingSupportCandles -Count 30 -LastCloseNearSupportPct 8.0
+        $closes = @($candles | ForEach-Object { $_.close })
+        $highs  = @($candles | ForEach-Object { $_.high })
+        $lows   = @($candles | ForEach-Object { $_.low })
+        $vols   = @($candles | ForEach-Object { $_.volume })
+        $r = Get-TrendlineTighteningFactor -Side "LONG" -Closes $closes -Highs $highs -Lows $lows -Volumes $vols
+        $r.trendline_valid | Should Be $true
+        $r.factor | Should Be 1.0
+    }
+}
+
+Describe "Resolve-TrailingDecision -- trendline integrada (2026-07-29)" {
+
+    It "posicao LONG perto do suporte real aperta o trailing_pct MAIS que sem trendline (caso real DOGEUSDT: lucro sobe, preco testa suporte, stop deve travar mais)" {
+        $candlesNearSupport = New-AscendingSupportCandles -Count 30 -LastCloseNearSupportPct 0.2
+        $pos = [PSCustomObject]@{
+            market="DOGEUSDT"; side="LONG"; entry=100.0; stopCurrent=98.0
+            origin = @{ asset_class="FUTURES"; trade_style="SWING" }
+        }
+        $lastClose = [double]$candlesNearSupport[-1].close
+        $r = Resolve-TrailingDecision -Position $pos -CurrentPrice $lastClose -Candles $candlesNearSupport
+        $r.trendline_factor | Should Not Be 1.0
+        ($r.trendline_factor -lt 1.0) | Should Be $true
+    }
+
+    It "sem lib_tori_proximity carregada (Get-Command indisponivel) -- fail-soft, trendline_factor=1.0, comportamento identico ao pre-2026-07-29" {
+        if (Get-Command Get-ToriProximityFromArrays -ErrorAction SilentlyContinue) {
+            Remove-Item function:Get-ToriProximityFromArrays -ErrorAction SilentlyContinue
+        }
+        $candles = New-HealthyUptrendCandles -Count 30
+        $pos = [PSCustomObject]@{
+            market="TESTUSDT"; side="LONG"; entry=100.0; stopCurrent=98.0
+            origin = @{ asset_class="SPOT"; trade_style="SWING" }
+        }
+        $r = Resolve-TrailingDecision -Position $pos -CurrentPrice 105.0 -Candles $candles
+        $r.trendline_factor | Should Be 1.0
+        $r.trendline_reason | Should Be "trendline_indisponivel"
+        # recarrega a lib real pros testes seguintes
+        . (Join-Path $agentsDir "lib_tori_proximity.ps1")
     }
 }
