@@ -2073,6 +2073,23 @@ jobs:
         run: |
           & ./scripts/apply_gem_position_events_2026_07_29.ps1
 
+  apply-llm-usage-schema:
+    name: Apply llm_usage Schema (one-shot)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply migration
+        shell: pwsh
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          & ./scripts/apply_llm_usage_2026_07_30.ps1
+
   apply-trailing-unified-shadow-columns:
     name: Apply trailing_unified_shadow trendline_factor/pushed_live Schema (one-shot)
     runs-on: ubuntu-latest
