@@ -140,23 +140,65 @@ function Register-PartialExitLadder {
         return [PSCustomObject]@{ success = $false; reason = "ladder_fn_unavailable"; ladder_result = $null }
     }
 
-    # 2026-07-31 FIX (causa raiz de "ladder_call_failed"): _MultiLadder-ResolvePrice
-    # le $Level.PSObject.Properties['type'] -- em hashtable puro (@{...}) essa
-    # colecao expoe membros do PSObject (Keys/Values/Count), NAO as chaves do
-    # hashtable, entao $type ficava sempre $null e caia no branch "default"
-    # (throw "tipo de level desconhecido"). PSCustomObject funciona corretamente
-    # (confirmado via teste isolado). CoinEx-PlaceMultiExitLadder ja usada em
-    # producao (abertura de posicao) sempre recebeu PSCustomObject -- por isso
-    # o bug so apareceu agora, na 1a chamada com hashtable.
+    # 2026-07-31 FIX #1 (causa raiz de "ladder_call_failed"): _MultiLadder-
+    # ResolvePrice le $Level.PSObject.Properties['type'] -- em hashtable puro
+    # (@{...}) essa colecao expoe membros do PSObject (Keys/Values/Count),
+    # NAO as chaves do hashtable, entao $type ficava sempre $null e caia no
+    # branch "default" (throw "tipo de level desconhecido"). Os levels abaixo
+    # usam [PSCustomObject] (confirmado via teste isolado que funciona).
+    $positionSide = ([string]$Position.side).ToLower()
+    $isLong = ($positionSide -eq "long")
+    $totalAmount = [decimal]$Position.open_interest
+    $entry = [decimal]$Position.entry
+
+    # 2026-07-31 FIX #2 (achado real DOGEUSDT, run 30660720356): rr_multiple
+    # calcula o trigger a partir do ENTRY, mas se o preco ja andou a favor
+    # MAIS do que aquele nivel de R (posicao ja em lucro > nivel pedido), o
+    # trigger calculado fica ENTRE entry e preco atual -- do lado ERRADO pra
+    # TP (CoinEx rejeita: code=3137 "Take-Profit price cannot be higher than
+    # the current price" pra SHORT, equivalente invertido pra LONG). Ex real:
+    # entry=0.070493, preco atual=0.0698, StopDistance(1R)=0.0000785 -- rr=1
+    # e rr=2 resolvem pra 0.070415/0.070336, AMBOS ainda acima do preco atual
+    # (SHORT ja rodou ~9x mais que 1R). Fix: resolve o preco de cada nivel
+    # AQUI (nao dentro de CoinEx-PlaceMultiExitLadder), busca o preco de
+    # mercado atual, e ANCORA no preco atual (nao no entry) quando o nivel
+    # baseado em entry ja foi ultrapassado -- preserva a intencao (sair em
+    # fatias conforme o lucro cresce) sem nunca gerar um TP do lado errado.
+    # Os niveis viram type="absolute" (price ja resolvido) em vez de
+    # "rr_multiple" -- CoinEx-PlaceMultiExitLadder ja suporta esse type
+    # nativamente (so usa o valor de $Level.price direto, sem recalcular).
+    $currentPrice = $entry
+    if (Get-Command CoinEx-GetTicker -ErrorAction SilentlyContinue) {
+        try {
+            $ticker = CoinEx-GetTicker -market $market
+            if ($ticker -and $ticker.last) { $currentPrice = [decimal]$ticker.last }
+        } catch {}
+    }
+
     $tpLevels = @($Partials | ForEach-Object {
-        [PSCustomObject]@{ type = "rr_multiple"; rr_multiple = [double]$_.at_r; qty_pct = [double]$_.pct * 100 }
+        $rr = [double]$_.at_r
+        $qtyPct = [double]$_.pct * 100
+        $entryBasedLevel = [PSCustomObject]@{ type = "rr_multiple"; rr_multiple = $rr; qty_pct = $qtyPct }
+        $entryBasedPrice = _MultiLadder-ResolvePrice -Level $entryBasedLevel -Entry $entry -StopDistance $StopDistance -IsLong $isLong -IsStop:$false
+        $isValidSide = if ($isLong) { $entryBasedPrice -gt $currentPrice } else { $entryBasedPrice -lt $currentPrice }
+        $finalPrice = if ($isValidSide) {
+            $entryBasedPrice
+        } else {
+            $dir = if ($isLong) { 1 } else { -1 }
+            $currentPrice + ($dir * [decimal][math]::Abs($rr) * $StopDistance)
+        }
+        [PSCustomObject]@{ type = "absolute"; price = [double]$finalPrice; qty_pct = $qtyPct }
     })
 
-    # stop_distance embutido no Ladder -- _MultiLadder-ResolvePrice usa isso
-    # pra resolver o preco de cada nivel "rr_multiple" (1R = StopDistance em
-    # preco absoluto). Sem isso, cairia no fallback de inferir do 1o SL, que
-    # nao existe aqui (sl_levels vazio de proposito -- SL nao e tocado por
-    # esta funcao).
+    foreach ($lvl in $tpLevels) {
+        if ($lvl.price -le 0) {
+            return [PSCustomObject]@{ success = $false; reason = "ladder_level_invalid_price"; ladder_result = $null }
+        }
+    }
+
+    # stop_distance embutido no Ladder por completude (nao usado pelos
+    # niveis "absolute" acima, mas SL nao e tocado por esta funcao entao
+    # sl_levels fica vazio de proposito).
     $ladder = [PSCustomObject]@{
         template_id    = "partial_exit_$market"
         tp_levels      = $tpLevels
@@ -164,35 +206,20 @@ function Register-PartialExitLadder {
         stop_distance  = $StopDistance
     }
 
-    $positionSide = ([string]$Position.side).ToLower()
-    $totalAmount = [decimal]$Position.open_interest
-    $entry = [decimal]$Position.entry
-
-    # 2026-07-31 FIX: 1a versao cancelava o TP antigo ANTES de registrar o
-    # novo ladder -- se o registro falhasse (confirmado real: DOGEUSDT ficou
-    # sem TP por alguns segundos, so' notado e corrigido por coincidencia de
-    # timing pelo auto-repair externo -- Repair-PositionProtection -- rodando
-    # depois no mesmo job), a posicao ficava sem protecao ate outra rotina
-    # notar. CoinEx-PlaceMultiExitLadder nao tem modo dry-run (nao existe
-    # -DryRun na API real, so' aceita executar de verdade), entao a validacao
-    # possivel aqui e local: garante que cada nivel resolve pra um trigger
-    # price > 0 ANTES de cancelar o TP original (essa e a causa mais provavel
-    # de "ladder_call_failed" -- StopDistance/Entry invalidos gerando preco
-    # <= 0, que CoinEx rejeitaria). Se o cancelamento em si falhar, aborta
-    # sem tentar o ladder (guard ja existente). Se o cancelamento suceder mas
-    # o ladder falhar mesmo assim (erro de rede/API no momento da chamada
-    # real), restaura o TP original imediatamente (catch abaixo) em vez de
-    # depender de outra rotina notar o gap depois.
-    foreach ($lvl in $tpLevels) {
-        $previewPrice = _MultiLadder-ResolvePrice -Level $lvl -Entry $entry -StopDistance $StopDistance -IsLong ($positionSide -eq "long") -IsStop:$false
-        if ($previewPrice -le 0) {
-            return [PSCustomObject]@{ success = $false; reason = "ladder_level_invalid_price"; ladder_result = $null }
-        }
-    }
-
     $cancelResult = CoinEx-CancelPositionTakeProfit -Market $market
     if (-not $cancelResult -or $cancelResult.success -ne $true) {
         return [PSCustomObject]@{ success = $false; reason = "cancel_tp_failed"; ladder_result = $null }
+    }
+
+    $restoreOriginalTp = {
+        $restoreBody = @{
+            market            = $market
+            market_type       = "FUTURES"
+            take_profit_type  = "mark_price"
+            take_profit_price = ([string]$Position.take_profit_price)
+            amount            = "0"
+        }
+        try { CoinEx-Post "/v2/futures/set-position-take-profit" $restoreBody | Out-Null } catch {}
     }
 
     $ladderResult = $null
@@ -202,15 +229,24 @@ function Register-PartialExitLadder {
     } catch {
         # Cancelamento ja aconteceu -- restaura o TP "cobre tudo" original
         # imediatamente em vez de depender de outra rotina notar o gap.
-        $restoreBody = @{
-            market            = $market
-            market_type       = "FUTURES"
-            take_profit_type  = "mark_price"
-            take_profit_price = ([string]$Position.take_profit_price)
-            amount            = "0"
-        }
-        try { CoinEx-Post "/v2/futures/set-position-take-profit" $restoreBody | Out-Null } catch {}
+        & $restoreOriginalTp
         return [PSCustomObject]@{ success = $false; reason = "ladder_call_failed: $($_.Exception.Message)"; ladder_result = $null }
+    }
+
+    # 2026-07-31 FIX #3: CoinEx-PlaceMultiExitLadder NAO lanca excecao por
+    # ordem individual rejeitada (so registra response.code=-1/erro no
+    # elemento tp_orders correspondente e segue) -- confirmado real:
+    # ambos os niveis retornaram code=3137 (preco do lado errado) e a funcao
+    # ainda assim retornou normalmente, fazendo Register-PartialExitLadder
+    # reportar success=true com a posicao efetivamente SEM nenhum TP novo
+    # (o antigo ja tinha sido cancelado). Checa explicitamente se TODAS as
+    # ordens do ladder foram aceitas (response.code -eq 0) -- se nenhuma foi,
+    # restaura o TP original (mesma rede de seguranca do catch acima).
+    $tpOrdersOk = @($ladderResult.tp_orders | Where-Object { $_.response -and $_.response.code -eq 0 })
+    if ($tpOrdersOk.Count -eq 0) {
+        & $restoreOriginalTp
+        $firstError = ($ladderResult.tp_orders | Select-Object -First 1).response
+        return [PSCustomObject]@{ success = $false; reason = "ladder_all_levels_rejected: code=$($firstError.code) message=$($firstError.message)"; ladder_result = $ladderResult }
     }
 
     Save-PartialExitLadderRegistered -Market $market -Details $ladder | Out-Null

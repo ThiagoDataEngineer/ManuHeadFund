@@ -141,15 +141,19 @@ Describe "Register-PartialExitLadder -- primeira execucao (caminho feliz)" {
         $global:__ladder_total | Should Be 16577.0
     }
 
-    It "converte partials (at_r/pct) para tp_levels (rr_multiple/qty_pct) corretamente" {
+    It "converte partials (at_r/pct) para tp_levels (absolute price ja resolvido/qty_pct) corretamente" {
+        # 2026-07-31 FIX #2: os niveis viram type="absolute" com price JA
+        # RESOLVIDO (ancorado no entry ou no preco atual, o que for valido
+        # pro lado da posicao) em vez de "rr_multiple" cru -- ver teste de
+        # ancoragem abaixo pra cobertura do calculo em si.
         $pos = New-TestPosition
         $r = Register-PartialExitLadder -Position $pos -Partials (New-TestPartials) -StopDistance 0.000078
         $levels = @($global:__ladder_levels)
         $levels.Count | Should Be 2
-        $levels[0].type | Should Be "rr_multiple"
-        $levels[0].rr_multiple | Should Be 1.0
+        $levels[0].type | Should Be "absolute"
+        ($levels[0].price -gt 0) | Should Be $true
         $levels[0].qty_pct | Should Be 50
-        $levels[1].rr_multiple | Should Be 2.0
+        ($levels[1].price -gt 0) | Should Be $true
         $levels[1].qty_pct | Should Be 25
     }
 
@@ -227,6 +231,84 @@ Describe "Register-PartialExitLadder -- fail-safe (nao registra ladder sem cance
         $r.success | Should Be $false
         ($r.reason -like "ladder_call_failed*") | Should Be $true
         $global:__restore_body.take_profit_price | Should Be "0.068693"
+    }
+
+    It "2026-07-31 FIX #3: se a CoinEx rejeitar TODOS os niveis (ex: preco do lado errado, code=3137), restaura o TP original em vez de reportar success=true" {
+        # Achado real (run 30660720356): CoinEx-PlaceMultiExitLadder nao
+        # lanca excecao por ordem rejeitada -- so registra o erro dentro de
+        # tp_orders[].response e retorna normalmente. Sem essa checagem
+        # explicita, Register-PartialExitLadder reportava success=true com
+        # a posicao efetivamente sem NENHUM TP novo (o antigo ja cancelado).
+        Set-Item -Path function:CoinEx-PlaceMultiExitLadder -Value {
+            param($Market, $PositionSide, $TotalAmount, $Entry, $Ladder)
+            [PSCustomObject]@{
+                tp_orders = @($Ladder.tp_levels | ForEach-Object {
+                    [PSCustomObject]@{ level_index = 1; trigger_price = $_.price; qty = 0; response = [PSCustomObject]@{ code = 3137; message = "Take-Profit price cannot be higher than the current price" } }
+                })
+            }
+        }
+        $global:__restore_body = $null
+        Set-Item -Path function:CoinEx-Post -Value {
+            param($path, $bodyObj)
+            if ($path -eq "/v2/futures/set-position-take-profit") { $global:__restore_body = $bodyObj }
+            [PSCustomObject]@{ code = 0 }
+        }
+
+        $pos = New-TestPosition
+        $pos | Add-Member -MemberType NoteProperty -Name take_profit_price -Value "0.068693" -Force
+        $r = Register-PartialExitLadder -Position $pos -Partials (New-TestPartials) -StopDistance 0.000078
+
+        $r.success | Should Be $false
+        ($r.reason -like "ladder_all_levels_rejected*3137*") | Should Be $true
+        $global:__restore_body.take_profit_price | Should Be "0.068693"
+    }
+}
+
+Describe "Register-PartialExitLadder -- ancoragem no preco atual (2026-07-31 FIX #2)" {
+
+    BeforeEach { Reset-PartialExitMocks }
+
+    It "SHORT ja rodou mais que os niveis de R pedidos -- ancora no preco atual em vez do entry (evita TP do lado errado)" {
+        # Cenario real DOGEUSDT (run 30660720356): entry=0.070493,
+        # StopDistance(1R)=0.0000785 -- rr=1 e rr=2 baseados no entry
+        # resolvem pra 0.070415/0.070336, AMBOS ainda ACIMA do preco atual
+        # real (~0.069816) porque a posicao SHORT ja rodou ~9x mais que 1R.
+        # Mockando CoinEx-GetTicker com esse preco real, o nivel final deve
+        # ficar ABAIXO do preco atual (lado correto pra TP de SHORT).
+        Set-Item -Path function:CoinEx-GetTicker -Value { param($market) [PSCustomObject]@{ last = "0.069816" } }
+        try {
+            $pos = New-TestPosition -Market "DOGEUSDT" -Side "SHORT" -Entry 0.07049319659769560234 -OpenInterest 16577.0
+            Register-PartialExitLadder -Position $pos -Partials (New-TestPartials) -StopDistance 0.00007850999999999 | Out-Null
+
+            $levels = @($global:__ladder_levels)
+            $currentPrice = 0.069816
+            foreach ($lvl in $levels) {
+                ($lvl.price -lt $currentPrice) | Should Be $true
+            }
+            # nivel 2 (rr=2, mais distante) deve ficar mais longe do preco atual que o nivel 1
+            ($levels[1].price -lt $levels[0].price) | Should Be $true
+        } finally {
+            Remove-Item -Path function:CoinEx-GetTicker -ErrorAction SilentlyContinue
+        }
+    }
+
+    It "SHORT ainda NAO rodou alem dos niveis de R pedidos -- usa o preco baseado no entry normalmente (comportamento antigo preservado)" {
+        # preco atual ainda proximo do entry (posicao mal abriu) -- os niveis
+        # rr=1/rr=2 baseados no entry ja ficam do lado certo (abaixo, pra
+        # SHORT), entao NAO precisa ancorar no preco atual.
+        Set-Item -Path function:CoinEx-GetTicker -Value { param($market) [PSCustomObject]@{ last = "0.070900" } }
+        try {
+            $pos = New-TestPosition -Market "DOGEUSDT" -Side "SHORT" -Entry 0.07049319659769560234 -OpenInterest 16577.0
+            Register-PartialExitLadder -Position $pos -Partials (New-TestPartials) -StopDistance 0.00007850999999999 | Out-Null
+
+            $levels = @($global:__ladder_levels)
+            $entry = 0.07049319659769560234
+            $stopDistance = 0.00007850999999999
+            $expectedLevel1 = $entry - (1.0 * $stopDistance)
+            ([math]::Abs($levels[0].price - $expectedLevel1) -lt 0.0000001) | Should Be $true
+        } finally {
+            Remove-Item -Path function:CoinEx-GetTicker -ErrorAction SilentlyContinue
+        }
     }
 }
 
