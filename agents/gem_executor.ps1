@@ -996,6 +996,18 @@ function Invoke-GemExecute {
                     $heldUsd = $heldQty * $px
                 }
             }
+            # 2026-07-30 FIX: cap so olhava saldo SPOT -- CEGO pra posicoes FUTURES.
+            # Achado real: DOGEUSDT SHORT (futures) acumulou $1097 -> $1165 de margem
+            # ao longo do dia via re-entradas repetidas do scanner (cada ciclo achava
+            # "sinal valido" de novo no mesmo mercado onde ja havia posicao aberta),
+            # sem NENHUM guard de teto absoluto barrar -- o cascade guard (gem_executor
+            # linha ~893) so limita 3 Add Position por janela de 6h e depois RESETA,
+            # nao e um teto. Soma a margem FUTURES real (existingPosition, ja resolvida
+            # mais acima nesta funcao) ao heldUsd antes de checar o cap -- agora reflete
+            # exposicao total (spot+futures) na moeda, nao so metade do quadro.
+            if ($existingPosition) {
+                $heldUsd += [double]$existingPosition.cml_position_value
+            }
             $cap = Test-CoinExposureCap -HeldUsd $heldUsd -TradeUsd $usd_size -PortfolioUsd $capital
             if (-not $cap.allowed) {
                 Write-Host "  [EXPOSURE CAP BLOCK] ${mkt}: $($cap.reason) (held=`$$([math]::Round($heldUsd,2)) proj=$($cap.projected_pct)%)" -ForegroundColor Red

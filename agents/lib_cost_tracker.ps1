@@ -1,19 +1,28 @@
-﻿# lib_cost_tracker.ps1 ï¿½ Tracking de custos Claude API
-# Persiste cada chamada em journal/claude_usage.csv para analise posterior.
-# Zero dependencia externa ï¿½ apenas escrita CSV.
+﻿# lib_cost_tracker.ps1 -- Tracking de custos Claude API
+# Persiste cada chamada em journal/claude_usage.csv (fallback local) OU
+# Supabase manuheadfund.llm_usage (2026-07-30, ver Track-ClaudeUsage abaixo).
 
 $COST_USAGE_FILE = (Join-Path (Join-Path (Join-Path $PSScriptRoot "..") "journal") "claude_usage.csv")
 
-# Tabela de precos Anthropic (USD por 1M tokens) ï¿½ Maio 2026
-# Atualizar se Anthropic mudar pricing
+# Tabela de precos Anthropic (USD por 1M tokens) -- Maio 2026
+# 2026-07-30 FIX: chaves nunca batiam com os modelos REAIS usados no projeto
+# ("claude-sonnet-5", "claude-haiku-4-5-20251001" -- ver agents/config.ps1)
+# -- toda chamada, mesmo de Haiku (~10x mais barato), caia no fallback
+# generico de preco de Sonnet, distorcendo qualquer analise de custo real.
+# Fix usa match por PREFIXO (nao igualdade exata) pra sobreviver a sufixos
+# de versao/data sem precisar atualizar a cada novo modelo lancado.
 $CLAUDE_PRICING = @{
+    "claude-sonnet-5"        = @{ input=3.00;  output=15.00 }
     "claude-sonnet-4"        = @{ input=3.00;  output=15.00 }
     "claude-opus-4"          = @{ input=15.00; output=75.00 }
+    "claude-opus-5"          = @{ input=15.00; output=75.00 }
+    "claude-haiku-4-5"       = @{ input=0.80;  output=4.00  }
     "claude-haiku-4"         = @{ input=0.80;  output=4.00  }
+    "claude-fable-5"         = @{ input=3.00;  output=15.00 }
 }
 
 # -----------------------------------------------------------------------------
-# Get-ClaudeCost ï¿½ calcula custo USD a partir de tokens + modelo
+# Get-ClaudeCost -- calcula custo USD a partir de tokens + modelo
 # -----------------------------------------------------------------------------
 function Get-ClaudeCost {
     param(
@@ -22,7 +31,14 @@ function Get-ClaudeCost {
         [int]   $OutputTokens
     )
     $modelKey = $Model.ToLower()
-    $pricing  = $CLAUDE_PRICING[$modelKey]
+    # Match exato primeiro, depois por prefixo (cobre sufixos de data/versao
+    # como "claude-haiku-4-5-20251001" batendo em "claude-haiku-4-5").
+    $pricing = $CLAUDE_PRICING[$modelKey]
+    if (-not $pricing) {
+        foreach ($key in $CLAUDE_PRICING.Keys) {
+            if ($modelKey.StartsWith($key)) { $pricing = $CLAUDE_PRICING[$key]; break }
+        }
+    }
     if (-not $pricing) {
         # Fallback: assume Sonnet pricing se modelo desconhecido
         $pricing = @{ input=3.00; output=15.00 }
@@ -33,7 +49,51 @@ function Get-ClaudeCost {
 }
 
 # -----------------------------------------------------------------------------
-# Track-ClaudeUsage ï¿½ registra uma chamada Claude no CSV
+# _Get-LlmUsageRows -- fonte unica de leitura (Supabase real, fallback CSV
+# local) usada por Get-CostSummary/Get-DailyCostByAgent/Test-CostAlarmThreshold/
+# Test-CostThresholdExceeded. Retorna objetos com .timestamp ([datetime]),
+# .agent, .model, .cost_usd ([double]) -- schema uniforme independente da fonte.
+# -----------------------------------------------------------------------------
+function _Get-LlmUsageRows {
+    param([string]$CostFile = $COST_USAGE_FILE)
+
+    if (Get-Command Get-StateRecords -ErrorAction SilentlyContinue) {
+        try {
+            $records = @(Get-StateRecords -Table "llm_usage")
+            if ($records.Count -gt 0) {
+                return @($records | ForEach-Object {
+                    [PSCustomObject]@{
+                        timestamp = [datetime]::Parse([string]$_.ts, $null, [System.Globalization.DateTimeStyles]::RoundtripKind)
+                        agent     = [string]$_.agent
+                        model     = [string]$_.model
+                        cost_usd  = [double]$_.cost_usd
+                    }
+                })
+            }
+        } catch {
+            Write-Host "  [CostTracker] Supabase read falhou, fallback CSV local: $_" -ForegroundColor DarkYellow
+        }
+    }
+
+    if (-not (Test-Path $CostFile)) { return @() }
+    try {
+        $inv = [System.Globalization.CultureInfo]::InvariantCulture
+        return @(Import-Csv $CostFile | ForEach-Object {
+            $costStr = ($_.cost_usd -replace ',', '.')
+            [PSCustomObject]@{
+                timestamp = [DateTime]::ParseExact($_.timestamp, "yyyy-MM-dd HH:mm:ss", $null)
+                agent     = [string]$_.agent
+                model     = [string]$_.model
+                cost_usd  = if ($costStr) { [double]::Parse($costStr, $inv) } else { 0.0 }
+            }
+        })
+    } catch {
+        return @()
+    }
+}
+
+# -----------------------------------------------------------------------------
+# Track-ClaudeUsage -- registra uma chamada de LLM (Supabase real, fallback CSV local)
 # -----------------------------------------------------------------------------
 function Track-ClaudeUsage {
     param(
@@ -43,6 +103,32 @@ function Track-ClaudeUsage {
         [string]$Agent = "unknown",
         [double]$LatencyMs = 0
     )
+    $cost = Get-ClaudeCost -Model $Model -InputTokens $InputTokens -OutputTokens $OutputTokens
+
+    # 2026-07-30 FIX: CSV local (journal/claude_usage.csv) nunca sobrevivia entre
+    # runs do GitHub Actions (runner efemero, mesma classe de bug ja documentada
+    # em gem_position_events/trade_outcomes) -- nenhum historico real de custo
+    # jamais acumulava, tornando Send-CostAlarmTelegram/Test-CostAlarmThreshold
+    # inuteis mesmo se conectados. Persiste em manuheadfund.llm_usage (Supabase,
+    # sobrevive entre runs) quando disponivel; cai pro CSV local so como
+    # fallback de ultimo recurso (dev local sem credenciais Supabase).
+    if (Get-Command Save-StateRecords -ErrorAction SilentlyContinue) {
+        try {
+            Save-StateRecords -Table "llm_usage" -Records @([PSCustomObject]@{
+                ts            = (Get-Date -Format "o")
+                agent         = $Agent
+                model         = $Model
+                input_tokens  = $InputTokens
+                output_tokens = $OutputTokens
+                cost_usd      = $cost
+                latency_ms    = [math]::Round($LatencyMs, 0)
+            })
+            return $cost
+        } catch {
+            Write-Host "  [CostTracker] Supabase falhou, fallback CSV local: $_" -ForegroundColor DarkYellow
+        }
+    }
+
     try {
         $dir = Split-Path $COST_USAGE_FILE
         if (-not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
@@ -50,7 +136,6 @@ function Track-ClaudeUsage {
             "timestamp,agent,model,input_tokens,output_tokens,cost_usd,latency_ms" |
                 Out-File -FilePath $COST_USAGE_FILE -Encoding utf8 -Force
         }
-        $cost = Get-ClaudeCost -Model $Model -InputTokens $InputTokens -OutputTokens $OutputTokens
         # Forca formato decimal com ponto (invariant culture) para nao quebrar CSV em locale pt-BR
         $inv     = [System.Globalization.CultureInfo]::InvariantCulture
         $costStr = $cost.ToString("F6", $inv)
@@ -68,34 +153,31 @@ function Track-ClaudeUsage {
 }
 
 # -----------------------------------------------------------------------------
-# Get-CostSummary ï¿½ agrega custos por periodo
+# Get-CostSummary -- agrega custos por periodo (Supabase real, fallback CSV local)
 # Retorna objeto com today, week, month, total + breakdown por agente
 # -----------------------------------------------------------------------------
 function Get-CostSummary {
-    if (-not (Test-Path $COST_USAGE_FILE)) {
-        return [PSCustomObject]@{
-            today=0; week=0; month=0; total=0
-            todayCalls=0; weekCalls=0; monthCalls=0
-            byAgent=@{}; projectedMonthly=0
-        }
-    }
     try {
-        $rows = Import-Csv $COST_USAGE_FILE
+        $rows = @(_Get-LlmUsageRows)
+        if ($rows.Count -eq 0) {
+            return [PSCustomObject]@{
+                today=0; week=0; month=0; total=0
+                todayCalls=0; weekCalls=0; monthCalls=0
+                byAgent=@{}; projectedMonthly=0
+            }
+        }
         $now  = Get-Date
         $today = $now.Date
         $weekAgo  = $now.AddDays(-7)
         $monthAgo = $now.AddDays(-30)
-        $inv = [System.Globalization.CultureInfo]::InvariantCulture
 
         $today_sum=0.0; $week_sum=0.0; $month_sum=0.0; $total_sum=0.0
         $today_n=0; $week_n=0; $month_n=0
         $byAgent = @{}
 
         foreach ($r in $rows) {
-            $ts = [DateTime]::ParseExact($r.timestamp, "yyyy-MM-dd HH:mm:ss", $null)
-            # Robusto a virgula decimal legacy (linhas pre-fix) e ponto correto
-            $costStr = ($r.cost_usd -replace ',', '.')
-            $cost = if ($costStr) { [double]::Parse($costStr, $inv) } else { 0 }
+            $ts = $r.timestamp
+            $cost = $r.cost_usd
             $total_sum += $cost
             if ($ts -ge $monthAgo) { $month_sum += $cost; $month_n++ }
             if ($ts -ge $weekAgo)  { $week_sum  += $cost; $week_n++  }
@@ -168,28 +250,17 @@ function Test-CostThresholdExceeded {
         [Parameter()] [string] $CostFile = $COST_USAGE_FILE
     )
 
-    if (-not (Test-Path $CostFile)) {
-        return $false
-    }
-
     try {
-        $rows = Import-Csv $CostFile -ErrorAction Stop
-        if ($null -eq $rows -or $rows.Count -eq 0) {
-            return $false
-        }
+        $rows = @(_Get-LlmUsageRows -CostFile $CostFile)
+        if ($rows.Count -eq 0) { return $false }
 
         $now = Get-Date
         $windowStart = $now.AddHours(-$WindowHours)
-        $inv = [System.Globalization.CultureInfo]::InvariantCulture
         $windowSum = 0.0
 
         foreach ($r in $rows) {
-            $ts = [DateTime]::ParseExact($r.timestamp, "yyyy-MM-dd HH:mm:ss", $null)
-            if ($ts -lt $windowStart) { continue }
-
-            $costStr = ($r.cost_usd -replace ',', '.')
-            $cost = if ($costStr) { [double]::Parse($costStr, $inv) } else { 0 }
-            $windowSum += $cost
+            if ($r.timestamp -lt $windowStart) { continue }
+            $windowSum += $r.cost_usd
         }
 
         return $windowSum -gt $Threshold
@@ -212,23 +283,9 @@ function Test-CostAlarmThreshold {
         [Parameter()] [string] $CostFile = $COST_USAGE_FILE
     )
 
-    if (-not (Test-Path $CostFile)) {
-        return [PSCustomObject]@{
-            alarm_triggered   = $false
-            reason            = "ok"
-            current_metrics   = @{
-                daily_cost = 0.0
-                daily_calls = 0
-                avg_cost_per_call = 0.0
-                max_call_cost = 0.0
-            }
-            suggested_action = "none"
-        }
-    }
-
     try {
-        $rows = Import-Csv $CostFile -ErrorAction Stop
-        if ($null -eq $rows -or $rows.Count -eq 0) {
+        $rows = @(_Get-LlmUsageRows -CostFile $CostFile)
+        if ($rows.Count -eq 0) {
             return [PSCustomObject]@{
                 alarm_triggered   = $false
                 reason            = "ok"
@@ -244,7 +301,6 @@ function Test-CostAlarmThreshold {
 
         $now = Get-Date
         $windowStart = $now.AddHours(-$LookbackHours)
-        $inv = [System.Globalization.CultureInfo]::InvariantCulture
 
         $dailySum = 0.0
         $dailyCount = 0
@@ -252,18 +308,16 @@ function Test-CostAlarmThreshold {
         $highCostCalls = @()
 
         foreach ($r in $rows) {
-            $ts = [DateTime]::ParseExact($r.timestamp, "yyyy-MM-dd HH:mm:ss", $null)
-            if ($ts -lt $windowStart) { continue }
+            if ($r.timestamp -lt $windowStart) { continue }
 
-            $costStr = ($r.cost_usd -replace ',', '.')
-            $cost = if ($costStr) { [double]::Parse($costStr, $inv) } else { 0 }
+            $cost = $r.cost_usd
             $dailySum += $cost
             $dailyCount++
 
             if ($cost -gt $maxCallCost) { $maxCallCost = $cost }
             if ($cost -gt $MaxCostPerTradeUsd) {
                 $highCostCalls += [PSCustomObject]@{
-                    timestamp = $ts
+                    timestamp = $r.timestamp
                     agent = $r.agent
                     cost = $cost
                     model = $r.model
@@ -324,87 +378,33 @@ function Get-DailyCostByAgent {
     param(
         [Parameter()] [string] $CostFile = $COST_USAGE_FILE
     )
-
-    if (-not (Test-Path $CostFile)) {
-        return [PSCustomObject]@{
-            triagem = 0.0
-            mesa = 0.0
-            mentor = 0.0
-            chain = 0.0
-            fund = 0.0
-            sent = 0.0
-            tech = 0.0
-            unknown = 0.0
-        }
-    }
-
+    # 2026-07-30 FIX: byCost so reconhecia 8 chaves fixas (triagem/mesa/mentor/
+    # chain/fund/sent/tech) -- agentes reais como mesa_termal/mesa_radar/
+    # mesa_lidar (cada drone loga com Agent="mesa_$Drone", ver mesa_agent.ps1)
+    # nunca batiam, caindo tudo em "unknown" e escondendo o detalhamento real
+    # por drone. Agora dinamico: agrega por QUALQUER valor de agent presente
+    # nos dados reais, sem lista fixa pre-definida.
     try {
-        $rows = Import-Csv $CostFile -ErrorAction Stop
-        if ($null -eq $rows -or $rows.Count -eq 0) {
-            return [PSCustomObject]@{
-                triagem = 0.0
-                mesa = 0.0
-                mentor = 0.0
-                chain = 0.0
-                fund = 0.0
-                sent = 0.0
-                tech = 0.0
-                unknown = 0.0
-            }
-        }
+        $rows = @(_Get-LlmUsageRows -CostFile $CostFile)
+        $byCost = @{}
+        if ($rows.Count -eq 0) { return [PSCustomObject]$byCost }
 
         $now = Get-Date
         $dayAgo = $now.AddHours(-24)
-        $inv = [System.Globalization.CultureInfo]::InvariantCulture
-
-        $byCost = @{
-            triagem = 0.0
-            mesa = 0.0
-            mentor = 0.0
-            chain = 0.0
-            fund = 0.0
-            sent = 0.0
-            tech = 0.0
-            unknown = 0.0
-        }
 
         foreach ($r in $rows) {
-            $ts = [DateTime]::ParseExact($r.timestamp, "yyyy-MM-dd HH:mm:ss", $null)
-            if ($ts -lt $dayAgo) { continue }
-
-            $costStr = ($r.cost_usd -replace ',', '.')
-            $cost = if ($costStr) { [double]::Parse($costStr, $inv) } else { 0 }
-            $agent = $r.agent.ToLower()
-
-            if ($byCost.ContainsKey($agent)) {
-                $byCost[$agent] += $cost
-            } else {
-                $byCost['unknown'] += $cost
-            }
+            if ($r.timestamp -lt $dayAgo) { continue }
+            $agent = if ($r.agent) { $r.agent.ToLower() } else { "unknown" }
+            if (-not $byCost.ContainsKey($agent)) { $byCost[$agent] = 0.0 }
+            $byCost[$agent] += $r.cost_usd
         }
 
-        return [PSCustomObject]@{
-            triagem = [math]::Round($byCost['triagem'], 4)
-            mesa = [math]::Round($byCost['mesa'], 4)
-            mentor = [math]::Round($byCost['mentor'], 4)
-            chain = [math]::Round($byCost['chain'], 4)
-            fund = [math]::Round($byCost['fund'], 4)
-            sent = [math]::Round($byCost['sent'], 4)
-            tech = [math]::Round($byCost['tech'], 4)
-            unknown = [math]::Round($byCost['unknown'], 4)
-        }
+        $result = @{}
+        foreach ($k in $byCost.Keys) { $result[$k] = [math]::Round($byCost[$k], 4) }
+        return [PSCustomObject]$result
     } catch {
         Write-Host "  [CostAlarm] Erro ao agregar custos por agente: $_" -ForegroundColor DarkYellow
-        return [PSCustomObject]@{
-            triagem = 0.0
-            mesa = 0.0
-            mentor = 0.0
-            chain = 0.0
-            fund = 0.0
-            sent = 0.0
-            tech = 0.0
-            unknown = 0.0
-        }
+        return [PSCustomObject]@{}
     }
 }
 

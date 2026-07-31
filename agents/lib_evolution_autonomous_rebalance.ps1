@@ -234,8 +234,19 @@ function Invoke-EvolutionAutoRebalance {
 # ============================================================================
 # MAIN: Executar quando chamado
 # ============================================================================
-
-if ($PSCommandPath -eq $MyInvocation.MyCommand.Path) {
+#
+# 2026-07-30 FIX CRITICO: guard "$PSCommandPath -eq $MyInvocation.MyCommand.Path"
+# nunca funcionou -- dentro de um arquivo dot-sourced, AMBOS $PSCommandPath e
+# $MyInvocation.MyCommand.Path apontam pro proprio arquivo sendo carregado
+# (confirmado: identico executado direto via -File OU dot-sourced via ". arquivo").
+# A comparacao sempre avaliava $true, entao Invoke-EvolutionAutoRebalance
+# disparava de verdade a CADA dot-source deste arquivo -- reescrevendo
+# agents/config.local.ps1 real com backup toda vez (achado real: ~190 arquivos
+# .backup.* acumulados desde 2026-07-08, gerados por qualquer comando/teste que
+# carregasse esta lib). Discriminador correto: $MyInvocation.InvocationName e
+# "." quando dot-sourced, e o caminho completo do arquivo quando executado
+# direto -- unica forma confiavel de distinguir os dois casos em PowerShell.
+if ($MyInvocation.InvocationName -ne '.') {
     # Chamado direto (não sourced)
     Invoke-EvolutionAutoRebalance
 }

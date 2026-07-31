@@ -251,12 +251,22 @@ function _Mesa_RunDrones {
     $scriptRoot = if ($script:_MESA_AGENT_DIR) { $script:_MESA_AGENT_DIR } elseif ($PSScriptRoot) { $PSScriptRoot } else { (Get-Location).Path }
     $libPath  = Join-Path $scriptRoot "lib_claude.ps1"
     $selfPath = Join-Path $scriptRoot "mesa_agent.ps1"
+    # 2026-07-30 FIX: Start-Job roda em processo/runspace ISOLADO -- nao herda
+    # funcoes do processo pai. lib_cost_tracker.ps1 (Track-ClaudeUsage) nunca
+    # era dot-sourced dentro do job, entao o guard "Get-Command Track-
+    # ClaudeUsage -ErrorAction SilentlyContinue" em lib_claude.ps1 sempre
+    # falhava silenciosamente pra TODA chamada de drone -- nenhum custo de
+    # Mesa jamais era registrado, mesmo antes do fix de persistir no Supabase.
+    $costTrackerPath = Join-Path $scriptRoot "lib_cost_tracker.ps1"
+    $stateStorePath = Join-Path $scriptRoot "lib_state_store.ps1"
 
     $jobs = @()
     foreach ($drone in @("termal","radar","lidar")) {
-        $job = Start-Job -ArgumentList $libPath, $selfPath, $drone, $UserContent -ScriptBlock {
-            param($lib, $self, $d, $u)
+        $job = Start-Job -ArgumentList $libPath, $selfPath, $drone, $UserContent, $costTrackerPath, $stateStorePath -ScriptBlock {
+            param($lib, $self, $d, $u, $costTracker, $stateStore)
             if (Test-Path $lib)  { . $lib }
+            if (Test-Path $stateStore) { . $stateStore }
+            if (Test-Path $costTracker) { . $costTracker }
             if (Test-Path $self) { . $self }
             return Invoke-MesaDrone -Drone $d -UserContent $u
         }

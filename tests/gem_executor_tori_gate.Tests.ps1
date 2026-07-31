@@ -38,6 +38,24 @@ function CoinEx-Post { param($path, $body) }
 . (Join-Path $agentsDir "gem_executor.ps1")
 . (Join-Path $agentsDir "tech_agent_ai.ps1")
 
+# 2026-07-30: mock DEPOIS do dot-source (mesmo padrao dos "Mocks de exchange"
+# abaixo) -- gem_executor.ps1 dot-sourceia lib_mentor_shadow.ps1, que
+# dot-sourceia mesa_agent.ps1 -> lib_claude.ps1, redefinindo
+# Invoke-MesaDroneCascade de verdade. Um mock declarado ANTES do dot-source
+# e sobrescrito por essa cadeia (ja testado, nao funciona). Sem este mock,
+# Invoke-GemExecute aciona a cascade Mesa de verdade (Groq/Mistral/Haiku),
+# gerando chamadas HTTP reais que falham com 401 (credenciais de teste) mas
+# ainda gastam segundos por tentativa em retry/fallback -- achado real
+# (2026-07-30): este arquivo levou de 89s (isolado) a 975s (dentro da suite
+# completa, competindo por rate-limit real de LLM com outros workers em
+# paralelo), sem nenhuma relacao com o que este teste realmente verifica
+# (integracao Tori-as-gate, nao comportamento do Mesa).
+function Invoke-MesaDroneCascade {
+    param([string]$SystemPrompt, [string]$UserContent, [string]$GroqModel,
+          [int]$MaxTokens, [double]$Temperature, [string]$Agent, [switch]$HaikuPrimary)
+    '{"sinal":"NEUTRO","forca":50,"justificativa":"mock_test_no_real_llm_call"}'
+}
+
 # Re-set journal apos dot-source
 $global:JOURNAL_DIR  = Join-Path $env:TEMP "gem_tori_gate_test_$((Get-Random).ToString())"
 $global:JOURNAL_FILE = Join-Path $global:JOURNAL_DIR "gem_signals.csv"

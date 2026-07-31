@@ -123,6 +123,28 @@ try {
     }
 } catch {}
 
+# 9. Custo LLM (2026-07-30: Track-ClaudeUsage/Get-CostSummary existiam prontos
+# mas nunca eram lidos em lugar nenhum -- primeira conexao real ao Telegram.
+# "Onde o dinheiro esta indo" respondido por agente (mentor/mesa_termal/
+# mesa_radar/mesa_lidar/triagem/tech/...) usando dado real persistido no
+# Supabase (llm_usage), nao mais o CSV local que o runner efemero apagava.
+try {
+    $costTrackerPath = Join-Path (Join-Path $projectRoot "agents") "lib_cost_tracker.ps1"
+    if (Test-Path $costTrackerPath) {
+        . $costTrackerPath
+        $costSummary = Get-CostSummary
+        if ($costSummary.total -gt 0 -or ($costSummary.byAgent -and $costSummary.byAgent.Count -gt 0)) {
+            $byAgentTop3 = if ($costSummary.byAgent -and $costSummary.byAgent.Count -gt 0) {
+                ($costSummary.byAgent.GetEnumerator() | Sort-Object -Property Value -Descending | Select-Object -First 3 |
+                    ForEach-Object { "$($_.Key):`$$([math]::Round($_.Value,3))" }) -join " "
+            } else { "(sem dados)" }
+            $lines.Add("Custo LLM 24h: `$$($costSummary.today) ($($costSummary.todayCalls) calls) | proj_mes=`$$($costSummary.projectedMonthly) | top3: $byAgentTop3")
+        } else {
+            $lines.Add("Custo LLM 24h: sem dados ainda (llm_usage vazio)")
+        }
+    }
+} catch { $lines.Add("Custo LLM: ERR $_") }
+
 $msg = $lines -join "`n"
 Write-Host $msg
 Send-TelegramAlert -Message $msg | Out-Null

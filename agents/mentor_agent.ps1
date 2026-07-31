@@ -5,6 +5,20 @@
 
 . (Join-Path $PSScriptRoot "config.ps1")
 . (Join-Path $PSScriptRoot "lib_claude.ps1")
+# 2026-07-30 FIX: Track-ClaudeUsage (lib_cost_tracker.ps1) nunca era carregada
+# em NENHUM ponto real da cadeia de producao (gem_executor -> lib_mentor_shadow
+# -> mesa_agent/orchestrator_v6 -> mentor_agent -> lib_claude) -- o guard
+# "Get-Command Track-ClaudeUsage -ErrorAction SilentlyContinue" dentro de
+# lib_claude.ps1 sempre falhava silenciosamente, entao NENHUMA chamada real
+# de LLM em producao jamais foi registrada, mesmo antes do fix de persistir
+# em Supabase. Carregar aqui (ponto de entrada real do Mentor) garante que
+# Track-ClaudeUsage exista quando lib_claude.ps1 tentar chama-la.
+if (Test-Path (Join-Path $PSScriptRoot "lib_cost_tracker.ps1")) {
+    . (Join-Path $PSScriptRoot "lib_cost_tracker.ps1")
+}
+if (Test-Path (Join-Path $PSScriptRoot "lib_state_store.ps1")) {
+    . (Join-Path $PSScriptRoot "lib_state_store.ps1")
+}
 # E2 Grounded v2 (2026-05-22): structured GATE STATUS block + forbidden phrases guard
 if (Test-Path (Join-Path $PSScriptRoot "lib_mentor_gate_block.ps1")) {
     . (Join-Path $PSScriptRoot "lib_mentor_gate_block.ps1")
