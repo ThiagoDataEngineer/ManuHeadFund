@@ -171,6 +171,24 @@ function Get-StructuralStopTarget {
         pra usar em vez do fallback fixo -- pivot fora desse raio geralmente
         significa dado insuficiente/ruido, nao estrutura real
 
+    .PARAMETER MinTargetFractionOfMode
+        2026-07-31 FIX: achado real (owner acompanhou OPUSDT MOMENTUM --
+        modo desenhado pra alvo de 150% de distancia, GEM_TARGET_MOMENTUM --
+        fechar via TP estrutural a so 1.65%, virando um scalp de 20min sem
+        querer). Investigacao confirmou padrao real (3 de 4 eventos pos-fix
+        do dia: XRPUSDT, OPUSDT, ETHUSDT todos na faixa de 1.4%-3%) --
+        Get-StructuralStopTarget pegava sempre o pivot MAIS PROXIMO dentro
+        do raio, sem nenhuma nocao do alvo original pretendido pelo modo do
+        trade (MOMENTUM/DISCOVERY/SCALP/PUMP_RIDE, ja tinha TargetPct
+        correto disponivel como parametro, so nunca usado como piso). Fix:
+        pivot de TP so e aceito no lugar do fallback fixo se a distancia
+        dele for >= (TargetPct * MinTargetFractionOfMode) -- caso contrario
+        prefere um pivot mais distante dentro do mesmo raio (se houver) ou
+        cai pro TargetPct fixo (nunca fecha o trade artificialmente cedo so
+        pq havia uma resistencia proxima, quando o modo pedia mais folego).
+        Default 0.5 = pivot precisa valer pelo menos metade do alvo original.
+        SL nao e afetado (proteger cedo continua sendo sempre desejavel).
+
     .OUTPUTS
         PSCustomObject { stop_loss, take_profit, sl_source, tp_source }
         source = "structural" (achou pivot real) ou "fixed_pct" (fallback)
@@ -182,8 +200,10 @@ function Get-StructuralStopTarget {
         [Parameter(Mandatory=$false)] [array]  $Candles = @(),
         [Parameter(Mandatory=$false)] [double] $StopPct = 0.08,
         [Parameter(Mandatory=$false)] [double] $TargetPct = 0.32,
-        [Parameter(Mandatory=$false)] [double] $StructuralMaxPct = 25.0
+        [Parameter(Mandatory=$false)] [double] $StructuralMaxPct = 25.0,
+        [Parameter(Mandatory=$false)] [double] $MinTargetFractionOfMode = 0.5
     )
+    $minTpDistPct = ($TargetPct * 100.0) * $MinTargetFractionOfMode
 
     $isLong = ("$Side".ToLower() -eq "long")
 
@@ -216,18 +236,29 @@ function Get-StructuralStopTarget {
 
             # Resistencia real (acima do preco) pro TP -- espelha o preco pra
             # reusar Find-SupportLevels (so acha pivots abaixo por design).
+            # 2026-07-31: entre os pivots dentro do raio, prefere o mais
+            # PROXIMO que ainda respeite o piso minimo (>= alvo original *
+            # MinTargetFractionOfMode) -- nao aceita cegamente o 1o da lista,
+            # que pode ser proximo demais e fechar o trade cedo demais em
+            # relacao ao modo com que foi aberto (MOMENTUM/DISCOVERY etc).
             $mirror = @($Candles | ForEach-Object {
                 [PSCustomObject]@{ open=$_.open; high=(2*$Entry - $_.low); low=(2*$Entry - $_.high); close=(2*$Entry - $_.close); volume=$_.volume }
             })
             $mirroredResistances = @(Find-SupportLevels -Candles $mirror -LookbackPeriod 20)
-            $mirroredNearest = $mirroredResistances | Select-Object -First 1
-            if ($mirroredNearest) {
-                $nearestResistance = 2 * $Entry - $mirroredNearest
-                $distPct = (($nearestResistance - $Entry) / $Entry) * 100
-                if ($distPct -gt 0 -and $distPct -le $StructuralMaxPct) {
-                    $result.take_profit = $nearestResistance
-                    $result.tp_source = "structural"
-                }
+            $resistanceCandidates = @($mirroredResistances | ForEach-Object {
+                $nearestResistance = 2 * $Entry - $_
+                [PSCustomObject]@{ price = $nearestResistance; dist = (($nearestResistance - $Entry) / $Entry) * 100 }
+            } | Where-Object { $_.dist -gt 0 -and $_.dist -le $StructuralMaxPct } | Sort-Object dist)
+            $chosen = $resistanceCandidates | Where-Object { $_.dist -ge $minTpDistPct } | Select-Object -First 1
+            if (-not $chosen -and $resistanceCandidates.Count -gt 0) {
+                # Nenhum pivot bate o piso -- prefere o mais DISTANTE disponivel
+                # (ainda estrutural, ainda melhor que % fixo arbitrario) em vez
+                # do mais proximo, que fecharia cedo demais pro modo do trade.
+                $chosen = $resistanceCandidates | Select-Object -Last 1
+            }
+            if ($chosen) {
+                $result.take_profit = $chosen.price
+                $result.tp_source = "structural"
             }
         } else {
             # SHORT: espelho exato do LONG (resistencia pro SL, suporte pro TP).
@@ -245,14 +276,19 @@ function Get-StructuralStopTarget {
                 }
             }
 
+            # 2026-07-31: mesmo piso minimo aplicado ao TP do SHORT (via
+            # suporte real) -- ver comentario espelhado no bloco LONG acima.
             $supports = @(Find-SupportLevels -Candles $Candles -LookbackPeriod 20)
-            $nearestSupport = $supports | Where-Object { $_ -lt $Entry } | Select-Object -First 1
-            if ($nearestSupport) {
-                $distPct = (($Entry - $nearestSupport) / $Entry) * 100
-                if ($distPct -gt 0 -and $distPct -le $StructuralMaxPct) {
-                    $result.take_profit = $nearestSupport
-                    $result.tp_source = "structural"
-                }
+            $supportCandidates = @($supports | Where-Object { $_ -lt $Entry } | ForEach-Object {
+                [PSCustomObject]@{ price = $_; dist = (($Entry - $_) / $Entry) * 100 }
+            } | Where-Object { $_.dist -gt 0 -and $_.dist -le $StructuralMaxPct } | Sort-Object dist)
+            $chosenTp = $supportCandidates | Where-Object { $_.dist -ge $minTpDistPct } | Select-Object -First 1
+            if (-not $chosenTp -and $supportCandidates.Count -gt 0) {
+                $chosenTp = $supportCandidates | Select-Object -Last 1
+            }
+            if ($chosenTp) {
+                $result.take_profit = $chosenTp.price
+                $result.tp_source = "structural"
             }
         }
     } catch {

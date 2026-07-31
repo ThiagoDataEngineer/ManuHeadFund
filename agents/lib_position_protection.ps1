@@ -300,6 +300,28 @@ function Repair-PositionProtection {
     # unificado); só cai pro % fixo se nao houver candles ou pivot dentro de
     # um raio razoavel (25% -- fail-safe, nunca fica sem numero pra usar).
     if ($StopLoss -le 0 -or $TakeProfit -le 0) {
+        # 2026-07-31 FIX: achado real (owner acompanhou OPUSDT aberto como
+        # MOMENTUM -- alvo de design 150% de distancia -- fechar via TP
+        # estrutural a so 1.65%, virando scalp de 20min sem ninguem decidir
+        # isso). Get-StructuralStopTarget so tinha o TargetPct DEFAULT (0.32)
+        # pra usar como piso -- nunca o alvo REAL do trade, que ja existe
+        # persistido em Add-TrailingPosition (campo Target, preco absoluto
+        # calculado na entrada). Busca o registro real do journal/Supabase
+        # (Get-TrailingPositions) e deriva o TargetPct efetivo dele quando
+        # disponivel -- assim o piso minimo reflete o modo com que o trade
+        # foi de fato aberto (MOMENTUM/DISCOVERY/SCALP/PUMP_RIDE), nao um
+        # numero generico igual pra qualquer trade.
+        $__effectiveTargetPct = $TargetPct
+        if (Get-Command Get-TrailingPositions -ErrorAction SilentlyContinue) {
+            try {
+                $__tp = @(Get-TrailingPositions | Where-Object { $_.market -eq $Market -and $_.active -eq $true }) | Select-Object -First 1
+                if ($__tp -and [double]$__tp.target -gt 0) {
+                    $__realTargetPct = [Math]::Abs([double]$__tp.target - $entry) / $entry
+                    if ($__realTargetPct -gt 0) { $__effectiveTargetPct = $__realTargetPct }
+                }
+            } catch { }
+        }
+
         $__structural = $null
         if (Get-Command Get-StructuralStopTarget -ErrorAction SilentlyContinue) {
             try {
@@ -310,7 +332,7 @@ function Repair-PositionProtection {
                     $__candles = @(CoinEx-GetCandles $Market "4hour" 60)
                 }
                 if ($__candles) {
-                    $__structural = Get-StructuralStopTarget -Side $side -Entry $entry -Candles $__candles -StopPct $StopPct -TargetPct $TargetPct
+                    $__structural = Get-StructuralStopTarget -Side $side -Entry $entry -Candles $__candles -StopPct $StopPct -TargetPct $__effectiveTargetPct
                 }
             } catch { $__structural = $null }
         }

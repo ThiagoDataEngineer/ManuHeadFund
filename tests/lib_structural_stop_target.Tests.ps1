@@ -99,6 +99,84 @@ Describe "Get-StructuralStopTarget -- LONG com estrutura real" {
     }
 }
 
+Describe "Get-StructuralStopTarget -- piso minimo de TP vs alvo do modo (2026-07-31)" {
+    # Achado real: owner acompanhou OPUSDT aberto como MOMENTUM (alvo de
+    # design 150% de distancia, GEM_TARGET_MOMENTUM) fechar via TP estrutural
+    # a so 1.65% -- virou um scalp de 20min sem ninguem ter decidido isso.
+    # Confirmado via investigacao que 3 de 4 eventos reais do dia (XRPUSDT,
+    # OPUSDT, ETHUSDT) landaram na faixa de 1.4%-3%, porque Get-
+    # StructuralStopTarget sempre pegava o pivot MAIS PROXIMO, sem nenhuma
+    # nocao do alvo original pretendido. Fix: MinTargetFractionOfMode exige
+    # que o pivot escolhido valha pelo menos essa fracao do TargetPct antes
+    # de aceita-lo no lugar de um pivot mais distante (ou do fallback fixo).
+
+    # 27 candles: pivot de resistencia PROXIMO em ~102 (2% do entry=100,
+    # abaixo do piso de 16% quando TargetPct=32%*0.5) E outro mais LONGE em
+    # ~120 (20%, acima do piso) -- caso real do OPUSDT (pivot perto demais
+    # disponivel, mas nao deveria ser aceito por violar o modo do trade).
+    function New-CandlesWithNearAndFarResistance {
+        $candles = @()
+        for ($i = 0; $i -lt 13; $i++) {
+            $p = 84 + ($i * 1.0)
+            $candles += New-Candle -Open $p -High ($p + 1) -Low ($p - 0.5) -Close ($p + 0.5)
+        }
+        $candles += New-Candle -Open 97   -High 98   -Low 97   -Close 97.5
+        $candles += New-Candle -Open 97   -High 97.5 -Low 96   -Close 96.5
+        $candles += New-Candle -Open 96.5 -High 98   -Low 96   -Close 97.5
+        # pivot de resistencia PROXIMO em 102 (2% de distancia do entry=100)
+        $candles += New-Candle -Open 98    -High 101 -Low 98   -Close 100
+        $candles += New-Candle -Open 100   -High 102 -Low 99   -Close 100.5  # pivot high = 102
+        $candles += New-Candle -Open 100.5 -High 101 -Low 99.5 -Close 100
+        # sobe de novo mais alto -- pivot de resistencia DISTANTE em 120 (20%)
+        $candles += New-Candle -Open 100 -High 101 -Low 99  -Close 100
+        $candles += New-Candle -Open 100 -High 115 -Low 99  -Close 110
+        $candles += New-Candle -Open 110 -High 120 -Low 109 -Close 118        # pivot high = 120
+        $candles += New-Candle -Open 118 -High 119 -Low 100 -Close 101
+        for ($i = 0; $i -lt 4; $i++) {
+            $candles += New-Candle -Open 100 -High 100.5 -Low 99.5 -Close 100
+        }
+        return $candles
+    }
+
+    It "caso real OPUSDT: pivot proximo demais (2%) e ignorado, prefere pivot distante (20%) que respeita o alvo do modo" {
+        $candles = New-CandlesWithNearAndFarResistance
+        $r = Get-StructuralStopTarget -Side "long" -Entry 100.0 -Candles $candles -StopPct 0.08 -TargetPct 0.32 -MinTargetFractionOfMode 0.5
+        $r.tp_source | Should Be "structural"
+        # pivot escolhido deve ser o de 120 (20%), NAO o de 102 (2%)
+        ($r.take_profit -gt 115.0) | Should Be $true
+    }
+
+    It "sem pivot alternativo mais distante -- aceita o pivot proximo mesmo assim (fail-soft, nao vira fixed_pct por engano)" {
+        # Mesmos candles do teste acima, mas cortados antes do 2o pivot (120)
+        # existir -- so o pivot proximo (102) esta disponivel.
+        $candles = @()
+        for ($i = 0; $i -lt 13; $i++) {
+            $p = 84 + ($i * 1.0)
+            $candles += New-Candle -Open $p -High ($p + 1) -Low ($p - 0.5) -Close ($p + 0.5)
+        }
+        $candles += New-Candle -Open 97   -High 98   -Low 97   -Close 97.5
+        $candles += New-Candle -Open 97   -High 97.5 -Low 96   -Close 96.5
+        $candles += New-Candle -Open 96.5 -High 98   -Low 96   -Close 97.5
+        $candles += New-Candle -Open 98    -High 101 -Low 98   -Close 100
+        $candles += New-Candle -Open 100   -High 102 -Low 99   -Close 100.5  # unico pivot high = 102
+        $candles += New-Candle -Open 100.5 -High 101 -Low 99.5 -Close 100
+        for ($i = 0; $i -lt 4; $i++) {
+            $candles += New-Candle -Open 100 -High 100.5 -Low 99.5 -Close 100
+        }
+        $r = Get-StructuralStopTarget -Side "long" -Entry 100.0 -Candles $candles -StopPct 0.08 -TargetPct 0.32 -MinTargetFractionOfMode 0.5
+        $r.tp_source | Should Be "structural"
+        ($r.take_profit -gt 100.0 -and $r.take_profit -lt 103.0) | Should Be $true
+    }
+
+    It "MinTargetFractionOfMode=0 desativa o piso -- comportamento identico ao antigo (sempre o mais proximo)" {
+        $candles = New-CandlesWithNearAndFarResistance
+        $r = Get-StructuralStopTarget -Side "long" -Entry 100.0 -Candles $candles -StopPct 0.08 -TargetPct 0.32 -MinTargetFractionOfMode 0.0
+        $r.tp_source | Should Be "structural"
+        # com piso zerado, volta a pegar o pivot mais proximo (102)
+        ($r.take_profit -gt 100.0 -and $r.take_profit -lt 103.0) | Should Be $true
+    }
+}
+
 Describe "Get-StructuralStopTarget -- SHORT com estrutura real (espelhado)" {
 
     It "acha resistencia real pro SL quando dentro do raio" {
