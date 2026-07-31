@@ -133,18 +133,23 @@ function Register-PartialExitLadder {
         return [PSCustomObject]@{ success = $true; reason = "already_registered"; ladder_result = $null }
     }
 
-    # Cancela o TP "cobre tudo" (is_all=true) ANTES de registrar o ladder
-    # parcial -- nunca deixa os dois coexistirem (protecao ambigua).
     if (-not (Get-Command CoinEx-CancelPositionTakeProfit -ErrorAction SilentlyContinue)) {
         return [PSCustomObject]@{ success = $false; reason = "cancel_tp_unavailable"; ladder_result = $null }
     }
-    $cancelResult = CoinEx-CancelPositionTakeProfit -Market $market
-    if (-not $cancelResult -or $cancelResult.success -ne $true) {
-        return [PSCustomObject]@{ success = $false; reason = "cancel_tp_failed"; ladder_result = $null }
+    if (-not (Get-Command CoinEx-PlaceMultiExitLadder -ErrorAction SilentlyContinue)) {
+        return [PSCustomObject]@{ success = $false; reason = "ladder_fn_unavailable"; ladder_result = $null }
     }
 
+    # 2026-07-31 FIX (causa raiz de "ladder_call_failed"): _MultiLadder-ResolvePrice
+    # le $Level.PSObject.Properties['type'] -- em hashtable puro (@{...}) essa
+    # colecao expoe membros do PSObject (Keys/Values/Count), NAO as chaves do
+    # hashtable, entao $type ficava sempre $null e caia no branch "default"
+    # (throw "tipo de level desconhecido"). PSCustomObject funciona corretamente
+    # (confirmado via teste isolado). CoinEx-PlaceMultiExitLadder ja usada em
+    # producao (abertura de posicao) sempre recebeu PSCustomObject -- por isso
+    # o bug so apareceu agora, na 1a chamada com hashtable.
     $tpLevels = @($Partials | ForEach-Object {
-        @{ type = "rr_multiple"; rr_multiple = [double]$_.at_r; qty_pct = [double]$_.pct * 100 }
+        [PSCustomObject]@{ type = "rr_multiple"; rr_multiple = [double]$_.at_r; qty_pct = [double]$_.pct * 100 }
     })
 
     # stop_distance embutido no Ladder -- _MultiLadder-ResolvePrice usa isso
@@ -163,8 +168,31 @@ function Register-PartialExitLadder {
     $totalAmount = [decimal]$Position.open_interest
     $entry = [decimal]$Position.entry
 
-    if (-not (Get-Command CoinEx-PlaceMultiExitLadder -ErrorAction SilentlyContinue)) {
-        return [PSCustomObject]@{ success = $false; reason = "ladder_fn_unavailable"; ladder_result = $null }
+    # 2026-07-31 FIX: 1a versao cancelava o TP antigo ANTES de registrar o
+    # novo ladder -- se o registro falhasse (confirmado real: DOGEUSDT ficou
+    # sem TP por alguns segundos, so' notado e corrigido por coincidencia de
+    # timing pelo auto-repair externo -- Repair-PositionProtection -- rodando
+    # depois no mesmo job), a posicao ficava sem protecao ate outra rotina
+    # notar. CoinEx-PlaceMultiExitLadder nao tem modo dry-run (nao existe
+    # -DryRun na API real, so' aceita executar de verdade), entao a validacao
+    # possivel aqui e local: garante que cada nivel resolve pra um trigger
+    # price > 0 ANTES de cancelar o TP original (essa e a causa mais provavel
+    # de "ladder_call_failed" -- StopDistance/Entry invalidos gerando preco
+    # <= 0, que CoinEx rejeitaria). Se o cancelamento em si falhar, aborta
+    # sem tentar o ladder (guard ja existente). Se o cancelamento suceder mas
+    # o ladder falhar mesmo assim (erro de rede/API no momento da chamada
+    # real), restaura o TP original imediatamente (catch abaixo) em vez de
+    # depender de outra rotina notar o gap depois.
+    foreach ($lvl in $tpLevels) {
+        $previewPrice = _MultiLadder-ResolvePrice -Level $lvl -Entry $entry -StopDistance $StopDistance -IsLong ($positionSide -eq "long") -IsStop:$false
+        if ($previewPrice -le 0) {
+            return [PSCustomObject]@{ success = $false; reason = "ladder_level_invalid_price"; ladder_result = $null }
+        }
+    }
+
+    $cancelResult = CoinEx-CancelPositionTakeProfit -Market $market
+    if (-not $cancelResult -or $cancelResult.success -ne $true) {
+        return [PSCustomObject]@{ success = $false; reason = "cancel_tp_failed"; ladder_result = $null }
     }
 
     $ladderResult = $null
@@ -172,7 +200,17 @@ function Register-PartialExitLadder {
         $ladderResult = CoinEx-PlaceMultiExitLadder -Market $market -PositionSide $positionSide `
             -TotalAmount $totalAmount -Entry $entry -Ladder $ladder
     } catch {
-        return [PSCustomObject]@{ success = $false; reason = "ladder_call_failed"; ladder_result = $null }
+        # Cancelamento ja aconteceu -- restaura o TP "cobre tudo" original
+        # imediatamente em vez de depender de outra rotina notar o gap.
+        $restoreBody = @{
+            market            = $market
+            market_type       = "FUTURES"
+            take_profit_type  = "mark_price"
+            take_profit_price = ([string]$Position.take_profit_price)
+            amount            = "0"
+        }
+        try { CoinEx-Post "/v2/futures/set-position-take-profit" $restoreBody | Out-Null } catch {}
+        return [PSCustomObject]@{ success = $false; reason = "ladder_call_failed: $($_.Exception.Message)"; ladder_result = $null }
     }
 
     Save-PartialExitLadderRegistered -Market $market -Details $ladder | Out-Null

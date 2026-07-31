@@ -35,6 +35,14 @@ $ErrorActionPreference = "Stop"
 
 $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"
 
+# _MultiLadder-ResolvePrice (usado pela validacao local de preco antes de
+# cancelar o TP antigo, 2026-07-31 FIX) vive em lib_coinex.ps1 -- dot-source
+# ANTES dos mocks abaixo pra pegar essa dependencia real, mas os mocks de
+# CoinEx-CancelPositionTakeProfit/CoinEx-PlaceMultiExitLadder (que TAMBEM
+# vivem em lib_coinex.ps1) precisam ser definidos DEPOIS pra sobrescrever
+# as versoes reais (que chamam CoinEx-Post de verdade e exigem credenciais).
+. (Join-Path $agentsDir "lib_coinex.ps1")
+
 # Mocks fixos (nao variam entre testes -- ficam como definicao normal, sem
 # global:, no escopo do script, ANTES do dot-source real).
 function CoinEx-CancelPositionTakeProfit {
@@ -83,6 +91,12 @@ function New-TestPartials {
 }
 
 function Reset-PartialExitMocks {
+    # 2026-07-31: CoinEx-PlaceMultiExitLadder/CoinEx-Post precisam ser
+    # restaurados aqui tambem -- um teste (restore-on-failure) sobrescreve
+    # ambos via Set-Item, e essa redefinicao VAZA pros Describe blocks
+    # seguintes no mesmo arquivo/processo Pester 3.4 se nao for resetada
+    # explicitamente em todo BeforeEach (mesma classe de bug ja documentada
+    # em memory: feedback_pester3_remove_item_function_leaks_across_describe).
     $global:__cancel_called = $false
     $global:__ladder_called = $false
     Set-Item -Path function:Get-PartialExitLadderRegistered -Value { param($Market) $false }
@@ -91,6 +105,19 @@ function Reset-PartialExitMocks {
         $global:__cancel_called = $true
         $global:__cancel_market = $Market
         [PSCustomObject]@{ success = $true }
+    }
+    Set-Item -Path function:CoinEx-PlaceMultiExitLadder -Value {
+        param($Market, $PositionSide, $TotalAmount, $Entry, $Ladder)
+        $global:__ladder_called = $true
+        $global:__ladder_market = $Market
+        $global:__ladder_side = $PositionSide
+        $global:__ladder_total = $TotalAmount
+        $global:__ladder_levels = $Ladder.tp_levels
+        [PSCustomObject]@{
+            tp_orders = @($Ladder.tp_levels | ForEach-Object {
+                [PSCustomObject]@{ level_index = 1; trigger_price = 0.05; qty = ($TotalAmount * $_.qty_pct / 100); response = [PSCustomObject]@{ code = 0 } }
+            })
+        }
     }
 }
 
@@ -177,6 +204,30 @@ Describe "Register-PartialExitLadder -- fail-safe (nao registra ladder sem cance
         $r.success | Should Be $false
         $r.reason | Should Be "no_partials"
     }
+
+    It "2026-07-31 FIX: se o ladder falhar DEPOIS do cancel, restaura o TP original (nao deixa a posicao sem protecao)" {
+        Set-Item -Path function:CoinEx-PlaceMultiExitLadder -Value {
+            param($Market, $PositionSide, $TotalAmount, $Entry, $Ladder)
+            throw "simulated CoinEx-PlaceMultiExitLadder failure"
+        }
+        $global:__restore_body = $null
+        Set-Item -Path function:CoinEx-Post -Value {
+            param($path, $bodyObj)
+            if ($path -eq "/v2/futures/set-position-take-profit") {
+                $global:__restore_body = $bodyObj
+            }
+            [PSCustomObject]@{ code = 0 }
+        }
+
+        $pos = New-TestPosition
+        $pos | Add-Member -MemberType NoteProperty -Name take_profit_price -Value "0.068693" -Force
+        $r = Register-PartialExitLadder -Position $pos -Partials (New-TestPartials) -StopDistance 0.000078
+
+        $global:__cancel_called | Should Be $true
+        $r.success | Should Be $false
+        ($r.reason -like "ladder_call_failed*") | Should Be $true
+        $global:__restore_body.take_profit_price | Should Be "0.068693"
+    }
 }
 
 Describe "Register-PartialExitLadder -- caso real DOGEUSDT (2026-07-31)" {
@@ -194,5 +245,24 @@ Describe "Register-PartialExitLadder -- caso real DOGEUSDT (2026-07-31)" {
         $r.success | Should Be $true
         $global:__ladder_total | Should Be 16577.0
         $global:__ladder_side | Should Be "short"
+    }
+
+    It "REGRESSAO 2026-07-31: primeiro deploy real (run 30658447856/30658795216) falhou com ladder_call_failed -- causa raiz era tp_levels como hashtable puro (@{...}), nao PSCustomObject" {
+        # _MultiLadder-ResolvePrice (lib_coinex.ps1) le $Level.PSObject.Properties['type']
+        # -- em hashtable puro essa colecao expoe membros do PSObject (Keys/Values/
+        # Count), NAO as chaves do hashtable, entao $type ficava sempre $null e
+        # sempre caia no branch "default" (throw "tipo de level desconhecido").
+        # A funcao mock de teste nao chama _MultiLadder-ResolvePrice de verdade,
+        # entao este teste usa a funcao REAL (nao mockada) pra garantir que os
+        # levels resolvem sem excecao com os numeros reais do DOGEUSDT.
+        $pos = New-TestPosition -Market "DOGEUSDT" -Side "SHORT" -Entry 0.070985 -StopCurrent 0.07106351 -OpenInterest 16577.0
+        $risk = [Math]::Abs($pos.stopCurrent - $pos.entry)
+
+        foreach ($lvl in (New-TestPartials)) {
+            $tpLevel = [PSCustomObject]@{ type = "rr_multiple"; rr_multiple = [double]$lvl.at_r; qty_pct = [double]$lvl.pct * 100 }
+            { _MultiLadder-ResolvePrice -Level $tpLevel -Entry $pos.entry -StopDistance $risk -IsLong:$false -IsStop:$false } | Should Not Throw
+            $px = _MultiLadder-ResolvePrice -Level $tpLevel -Entry $pos.entry -StopDistance $risk -IsLong:$false -IsStop:$false
+            ($px -gt 0) | Should Be $true
+        }
     }
 }

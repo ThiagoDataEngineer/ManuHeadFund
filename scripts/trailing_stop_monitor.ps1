@@ -358,6 +358,7 @@ try {
                                         $tuLadderPos = [PSCustomObject]@{
                                             market = $tuMarket; side = "$($tuPos.side)"
                                             entry = [double]$tuPos.entry; open_interest = [double]$tuRealPos.open_interest
+                                            take_profit_price = "$($tuRealPos.take_profit_price)"
                                         }
                                         $tuLadderResult = Register-PartialExitLadder -Position $tuLadderPos -Partials $tuPartials -StopDistance $tuRisk
                                         Write-CrossPlatformLog "  UNIFIED ${tuMarket}: partial exit ladder -> success=$($tuLadderResult.success) reason=$($tuLadderResult.reason)" -LogFile "trailing_stop_monitor.log"
