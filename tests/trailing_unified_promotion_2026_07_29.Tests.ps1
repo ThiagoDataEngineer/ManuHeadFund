@@ -107,3 +107,44 @@ Describe "lib_trailing_unified.ps1 -- carregado com dependencias corretas" {
         (Get-Command Resolve-TrailingDecision -ErrorAction SilentlyContinue) | Should Not BeNullOrEmpty
     }
 }
+
+Describe "trailing_stop_monitor.ps1 -- execucao REAL de PARTIAL/EXIT (2026-07-31)" {
+
+    BeforeAll {
+        $script:mon = Get-Content ".\scripts\trailing_stop_monitor.ps1" -Raw
+    }
+
+    It "carrega lib_trailing_partial_exit.ps1 (Register-PartialExitLadder)" {
+        ($script:mon -match [regex]::Escape('lib_trailing_partial_exit.ps1')) | Should Be $true
+    }
+
+    It "gated por PARTIAL_EXIT_EXECUTION_ENABLED.flag -- ausencia = so log, comportamento antigo preservado" {
+        ($script:mon -match [regex]::Escape('PARTIAL_EXIT_EXECUTION_ENABLED.flag')) | Should Be $true
+    }
+
+    It "so executa em FUTURES (tuIsFutures) -- SPOT fica so no log por enquanto" {
+        ($script:mon -match '\$tuIsFutures\s+-and\s+\(Test-Path\s+\$tuPartialFlag\)') | Should Be $true
+    }
+
+    It "busca quantidade real via CoinEx-GetPendingPositions (nao existe no journal trailing_state)" {
+        ($script:mon -match [regex]::Escape('CoinEx-GetPendingPositions -Market $tuMarket')) | Should Be $true
+    }
+
+    It "chama Register-PartialExitLadder com a posicao real e os partials da policy atual" {
+        ($script:mon -match [regex]::Escape('Register-PartialExitLadder -Position $tuLadderPos')) | Should Be $true
+    }
+
+    It "EXIT (reversao/time-stop) fecha a posicao INTEIRA via CoinEx-ClosePosition -- nao registra ladder parcial" {
+        # 2026-07-31 FIX: perfil 'runner' tem partials=@() de proposito ("dinheiro
+        # da casa", ver lib_trailing_policy.ps1) -- so sai via EXIT (reversao
+        # confirmada/time-stop), nunca via PARTIAL. Tratar EXIT igual a PARTIAL
+        # registraria um ladder vazio em vez de fechar a posicao inteira quando
+        # o motor ja decidiu que a tese do trade acabou.
+        ($script:mon -match [regex]::Escape('$tuDecision.action -eq "EXIT"')) | Should Be $true
+        ($script:mon -match [regex]::Escape('CoinEx-ClosePosition $tuMarket')) | Should Be $true
+    }
+
+    It "PARTIAL e EXIT sao ramos DISTINTOS (elseif), nao o mesmo tratamento" {
+        ($script:mon -match [regex]::Escape('$tuDecision.action -eq "PARTIAL" -and (Get-Command Register-PartialExitLadder')) | Should Be $true
+    }
+}

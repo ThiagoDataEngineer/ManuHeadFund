@@ -86,6 +86,11 @@ try {
     . (Join-Path $agentsDir "lib_trailing_baseline.ps1")
     . (Join-Path $agentsDir "lib_trailing_policy.ps1")
     . (Join-Path $agentsDir "lib_trailing_policy_live.ps1")
+    # 2026-07-31: execucao REAL de PARTIAL/EXIT (ladder de saida parcial
+    # nativo na corretora) -- ate agora so era logado. Ver "PARTIAL EXIT
+    # EXECUTION" abaixo. Gated por journal/PARTIAL_EXIT_EXECUTION_ENABLED.flag
+    # (ausencia = so log, comportamento identico a antes).
+    . (Join-Path $agentsDir "lib_trailing_partial_exit.ps1")
 
     # ═══════════════════════════════════════════════════════════════════════════════
     # 2026-07-07 WIRED: LOAD SUPABASE INTEGRATION LIBS
@@ -306,13 +311,64 @@ try {
                     } elseif ($tuDecision.action -in @("PARTIAL","EXIT")) {
                         # 2026-07-29: PARTIAL/EXIT sao NOVAS acoes possiveis (portadas
                         # de Get-ExitDecision -- saida parcial real em R-multiple,
-                        # time-stop, ladder de reversao). Por seguranca, SO LOGA por
-                        # enquanto (nao executa venda automatica ainda) -- executar
-                        # fechamento parcial/total real precisa de wiring proprio
-                        # (CoinEx-ClosePosition parcial + trade_outcomes + alertas),
-                        # escopo maior que esta promocao. Visibilidade real do que o
-                        # motor recomendaria, sem acao automatica ainda.
-                        Write-CrossPlatformLog "  UNIFIED $tuMarket [$($tuPos.side)]: $($tuDecision.action) recomendado (size_pct=$($tuDecision.size_pct) profile=$($tuDecision.profile_selected) reason=$($tuDecision.reason)) -- SO LOG, execucao automatica ainda nao implementada" -Level WARN -LogFile "trailing_stop_monitor.log"
+                        # time-stop, ladder de reversao).
+                        Write-CrossPlatformLog "  UNIFIED $tuMarket [$($tuPos.side)]: $($tuDecision.action) recomendado (size_pct=$($tuDecision.size_pct) profile=$($tuDecision.profile_selected) reason=$($tuDecision.reason))" -Level WARN -LogFile "trailing_stop_monitor.log"
+
+                        # 2026-07-31: execucao REAL -- registra ladder de saida
+                        # parcial NATIVO na corretora (nao executa venda a
+                        # mercado repetida: Get-ExitDecision e stateless, entao
+                        # "vender agora" a cada ciclo esvaziaria a posicao sem
+                        # controle -- achado real com DOGEUSDT recomendando o
+                        # mesmo size_pct=0.75 por >1h sem mudar). Gated por
+                        # journal/PARTIAL_EXIT_EXECUTION_ENABLED.flag -- ausencia
+                        # = comportamento identico a antes (so log). So FUTURES
+                        # por enquanto (SPOT fica pra fase seguinte, escopo
+                        # menor e mais simples de validar primeiro em producao).
+                        $tuPartialFlag = Join-Path $tuJournalDir "PARTIAL_EXIT_EXECUTION_ENABLED.flag"
+                        if ($tuIsFutures -and (Test-Path $tuPartialFlag)) {
+                            try {
+                                if ($tuDecision.action -eq "EXIT") {
+                                    # 2026-07-31 FIX: EXIT = tese do trade acabou (reversao
+                                    # confirmada ou time-stop) -- fecha a posicao INTEIRA,
+                                    # nao registra ladder parcial (nao faz sentido "sair aos
+                                    # poucos" quando o motor ja decidiu sair de tudo). Reusa
+                                    # CoinEx-ClosePosition, ja em producao/testado.
+                                    if (Get-Command CoinEx-ClosePosition -ErrorAction SilentlyContinue) {
+                                        $tuCloseResp = CoinEx-ClosePosition $tuMarket
+                                        $tuCloseOk = ($tuCloseResp -and $tuCloseResp.code -eq 0)
+                                        Write-CrossPlatformLog "  UNIFIED ${tuMarket}: EXIT total -> success=$tuCloseOk" -LogFile "trailing_stop_monitor.log"
+                                    }
+                                } elseif ($tuDecision.action -eq "PARTIAL" -and (Get-Command Register-PartialExitLadder -ErrorAction SilentlyContinue)) {
+                                    # Perfil "runner" nunca gera PARTIAL de proposito (ver
+                                    # lib_trailing_policy.ps1: partials=@() -- "dinheiro da
+                                    # casa", so sai em reversao/time-stop = EXIT acima). So
+                                    # "atual"/"scalp"/"swing" chegam aqui de fato.
+                                    $tuPartials = if (Get-Command Get-CurrentTrailingPolicy -ErrorAction SilentlyContinue) {
+                                        @((Get-CurrentTrailingPolicy).partials)
+                                    } else { @() }
+
+                                    # quantidade real (open_interest) NAO existe no journal
+                                    # trailing_state -- so na posicao real da corretora.
+                                    $tuRealPos = $null
+                                    if (Get-Command CoinEx-GetPendingPositions -ErrorAction SilentlyContinue) {
+                                        $tuRealPos = @(CoinEx-GetPendingPositions -Market $tuMarket) | Select-Object -First 1
+                                    }
+                                    if ($tuRealPos -and [double]$tuRealPos.open_interest -gt 0) {
+                                        $tuRisk = [Math]::Abs([double]$tuPos.entry - [double]$tuPos.stop)
+                                        $tuLadderPos = [PSCustomObject]@{
+                                            market = $tuMarket; side = "$($tuPos.side)"
+                                            entry = [double]$tuPos.entry; open_interest = [double]$tuRealPos.open_interest
+                                        }
+                                        $tuLadderResult = Register-PartialExitLadder -Position $tuLadderPos -Partials $tuPartials -StopDistance $tuRisk
+                                        Write-CrossPlatformLog "  UNIFIED ${tuMarket}: partial exit ladder -> success=$($tuLadderResult.success) reason=$($tuLadderResult.reason)" -LogFile "trailing_stop_monitor.log"
+                                    } else {
+                                        Write-CrossPlatformLog "  UNIFIED ${tuMarket}: partial exit ladder SKIP -- posicao real nao encontrada/sem quantidade" -Level WARN -LogFile "trailing_stop_monitor.log"
+                                    }
+                                }
+                            } catch {
+                                Write-CrossPlatformLog "  UNIFIED ${tuMarket}: partial/exit execution EXCECAO: $_" -Level WARN -LogFile "trailing_stop_monitor.log"
+                            }
+                        }
                     } else {
                         Write-CrossPlatformLog "  UNIFIED $tuMarket [$($tuPos.side)]: HOLD ($($tuDecision.reason))" -LogFile "trailing_stop_monitor.log"
                     }
