@@ -1,0 +1,18 @@
+ATIVO 2026-07-31 -- execucao REAL de PARTIAL/EXIT do motor de trailing unificado
+(Resolve-TrailingDecision) em scripts/trailing_stop_monitor.ps1, gated por
+agents/lib_trailing_partial_exit.ps1 (Register-PartialExitLadder).
+
+Owner ativou explicitamente apos avaliar o trade DOGEUSDT ao vivo, TDD completo
+(15 testes novos: lib_trailing_partial_exit.Tests.ps1 + trailing_unified_promotion_2026_07_29.Tests.ps1)
+e schema partial_exit_ladders aplicado em producao (Supabase, run 30657459077).
+
+Comportamento com o flag presente (so FUTURES, $tuIsFutures):
+  - action=PARTIAL -> registra ladder de saida parcial NATIVO na CoinEx
+    (CoinEx-PlaceMultiExitLadder) uma unica vez por posicao (idempotente via
+    tabela manuheadfund.partial_exit_ladders), usando os partials de
+    Get-CurrentTrailingPolicy.
+  - action=EXIT -> fecha a posicao INTEIRA via CoinEx-ClosePosition (perfil
+    "runner" so sai por aqui, nunca por PARTIAL).
+
+Kill-switch: deletar este arquivo + commit + push. Volta imediatamente ao
+comportamento so-log (comportamento anterior a 2026-07-31, zero execucao real).
