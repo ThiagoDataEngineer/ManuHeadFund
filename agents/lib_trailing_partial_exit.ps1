@@ -239,14 +239,27 @@ function Register-PartialExitLadder {
     # ambos os niveis retornaram code=3137 (preco do lado errado) e a funcao
     # ainda assim retornou normalmente, fazendo Register-PartialExitLadder
     # reportar success=true com a posicao efetivamente SEM nenhum TP novo
-    # (o antigo ja tinha sido cancelado). Checa explicitamente se TODAS as
-    # ordens do ladder foram aceitas (response.code -eq 0) -- se nenhuma foi,
-    # restaura o TP original (mesma rede de seguranca do catch acima).
+    # (o antigo ja tinha sido cancelado).
+    #
+    # 2026-08-01 FIX #4 (owner pediu explicitamente): checar so "pelo menos
+    # 1 nivel aceito" nao basta -- um ladder com apenas parte dos niveis
+    # aceitos deixa a posicao com protecao "pela metade" (ex: 50% coberto
+    # por TP planejado, os outros 50% sem nenhum nivel de saida parcial,
+    # so o SL). Agora exige que TODOS os niveis do ladder tenham sido
+    # aceitos (response.code -eq 0) -- se algum nivel falhar (total ou
+    # parcialmente), desfaz e restaura o TP original em vez de deixar um
+    # ladder incompleto valendo.
     $tpOrdersOk = @($ladderResult.tp_orders | Where-Object { $_.response -and $_.response.code -eq 0 })
+    $tpOrdersTotal = @($ladderResult.tp_orders).Count
     if ($tpOrdersOk.Count -eq 0) {
         & $restoreOriginalTp
         $firstError = ($ladderResult.tp_orders | Select-Object -First 1).response
         return [PSCustomObject]@{ success = $false; reason = "ladder_all_levels_rejected: code=$($firstError.code) message=$($firstError.message)"; ladder_result = $ladderResult }
+    }
+    if ($tpOrdersOk.Count -lt $tpOrdersTotal) {
+        & $restoreOriginalTp
+        $firstRejected = ($ladderResult.tp_orders | Where-Object { -not ($_.response -and $_.response.code -eq 0) } | Select-Object -First 1).response
+        return [PSCustomObject]@{ success = $false; reason = "ladder_partial_rejection: aceitos=$($tpOrdersOk.Count)/$tpOrdersTotal code=$($firstRejected.code) message=$($firstRejected.message)"; ladder_result = $ladderResult }
     }
 
     Save-PartialExitLadderRegistered -Market $market -Details $ladder | Out-Null

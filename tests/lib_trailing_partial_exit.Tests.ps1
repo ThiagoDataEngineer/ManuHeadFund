@@ -262,6 +262,53 @@ Describe "Register-PartialExitLadder -- fail-safe (nao registra ladder sem cance
         ($r.reason -like "ladder_all_levels_rejected*3137*") | Should Be $true
         $global:__restore_body.take_profit_price | Should Be "0.068693"
     }
+
+    It "2026-07-31 FIX #4: se APENAS ALGUNS niveis forem aceitos (nao todos), tambem restaura o TP original em vez de reportar success=true" {
+        # Achado real (2026-08-01): mesmo depois do fix #3, o check so exigia
+        # tpOrdersOk.Count -gt 0 (PELO MENOS 1 nivel aceito) -- se 1 de 2
+        # niveis falhasse, ainda reportava success=true, deixando a posicao
+        # com um ladder "pela metade" (ex: so 50% coberto por TP, os outros
+        # 50% efetivamente sem protecao de saida parcial planejada, so o
+        # SL). Owner pediu: exigir TODOS os niveis aceitos, senao desfaz.
+        Set-Item -Path function:CoinEx-PlaceMultiExitLadder -Value {
+            param($Market, $PositionSide, $TotalAmount, $Entry, $Ladder)
+            $i = 0
+            [PSCustomObject]@{
+                tp_orders = @($Ladder.tp_levels | ForEach-Object {
+                    $i++
+                    $resp = if ($i -eq 1) {
+                        [PSCustomObject]@{ code = 0; message = "" }
+                    } else {
+                        [PSCustomObject]@{ code = 3137; message = "Take-Profit price cannot be higher than the current price" }
+                    }
+                    [PSCustomObject]@{ level_index = $i; trigger_price = $_.price; qty = 100; response = $resp }
+                })
+            }
+        }
+        $global:__restore_body = $null
+        Set-Item -Path function:CoinEx-Post -Value {
+            param($path, $bodyObj)
+            if ($path -eq "/v2/futures/set-position-take-profit") { $global:__restore_body = $bodyObj }
+            [PSCustomObject]@{ code = 0 }
+        }
+
+        $pos = New-TestPosition
+        $pos | Add-Member -MemberType NoteProperty -Name take_profit_price -Value "0.068693" -Force
+        $r = Register-PartialExitLadder -Position $pos -Partials (New-TestPartials) -StopDistance 0.000078
+
+        $r.success | Should Be $false
+        ($r.reason -like "ladder_partial_rejection*") | Should Be $true
+        ($r.reason -like "*1/2*" -or $r.reason -like "*aceitos=1*") | Should Be $true
+        $global:__restore_body.take_profit_price | Should Be "0.068693"
+    }
+
+    It "2026-07-31 FIX #4: se TODOS os niveis forem aceitos, reporta success=true normalmente (nao regride o caminho feliz)" {
+        $pos = New-TestPosition
+        $r = Register-PartialExitLadder -Position $pos -Partials (New-TestPartials) -StopDistance 0.000078
+
+        $r.success | Should Be $true
+        $r.reason | Should Be "ok"
+    }
 }
 
 Describe "Register-PartialExitLadder -- ancoragem no preco atual (2026-07-31 FIX #2)" {
