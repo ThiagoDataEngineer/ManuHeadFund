@@ -2056,31 +2056,6 @@ jobs:
         run: |
           & ./scripts/diag_urgent_dogeusdt_multi_sell_2026_07_29.ps1
 
-  diag-partial-ladder-raw-response:
-    name: Diag Partial Ladder Raw Response Read-Only (one-shot)
-    runs-on: ubuntu-latest
-    if: github.event_name == 'workflow_dispatch'
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup
-        shell: pwsh
-        run: |
-          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
-          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
-          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
-          $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
-          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
-          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
-          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
-
-      - name: Run diagnostic
-        shell: pwsh
-        run: |
-          & ./scripts/diag_partial_ladder_raw_response_2026_07_31.ps1
-
   fix-dogeusdt-stale-ladder-registration:
     name: Fix DOGEUSDT Stale Ladder Registration (one-shot)
     runs-on: ubuntu-latest
