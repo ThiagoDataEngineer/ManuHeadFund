@@ -25,6 +25,7 @@ if (Test-Path $configPath) {
 }
 
 . (Join-Path $agentsDir "gem_executor.ps1")
+. (Join-Path $agentsDir "lib_market_movers.ps1")
 
 Write-Host ""
 Write-Host "================================================" -ForegroundColor Cyan
@@ -80,6 +81,31 @@ foreach ($market in $topMarkets) {
 
 $tickers = $tickers | Sort-Object -Property change24h -Descending
 Write-Host "  Fetched $($tickers.Count) coins from config universos" -ForegroundColor Green
+
+# 2026-08-01: RADAR DINAMICO -- ate aqui o universo era 100% a curadoria manual
+# (config/short_universe.json + long_universe.json, ultima atualizacao 2026-07-09).
+# Owner notou (olhando "Top Gainers"/"Value Leaders" reais na CoinEx) que moedas
+# com spike forte de 24h (GIGGLE +74%, RATS +71%, IDOL +47%) ou queda forte
+# (MMT -32%, HTR -18%) nunca entravam no scan -- a lista fixa nao capturava
+# movimento real do mercado. Soma (nao substitui) os movers dinamicos de 24h+30d
+# de TODO o universo real da CoinEx aos candidatos curados. change_24h vem do
+# ticker nativo (open/close, 1 chamada so p/ todo o mercado); change_30d so e
+# calculado p/ quem ja passou no filtro de 24h (evita 1 candle-fetch por moeda
+# do mercado inteiro -- caro e desnecessario p/ quem ja nem e mover de 24h).
+try {
+    if ((Get-Command CoinEx-GetAllFuturesTickers -ErrorAction SilentlyContinue) -and (Get-Command Get-DynamicMarketMoversFromRawTickers -ErrorAction SilentlyContinue)) {
+        $allFutTickers = @(CoinEx-GetAllFuturesTickers)
+        $existingSymbols = @($tickers | Select-Object -ExpandProperty symbol)
+        $dynamicMovers = @(Get-DynamicMarketMoversFromRawTickers -RawTickers $allFutTickers -ExcludeSymbols $existingSymbols)
+
+        if ($dynamicMovers.Count -gt 0) {
+            Write-Host "  [Radar dinamico] +$($dynamicMovers.Count) movers de 24h (fora da curadoria manual): $(($dynamicMovers | Select-Object -First 10 -ExpandProperty symbol) -join ', ')" -ForegroundColor Magenta
+            $tickers = @($tickers) + $dynamicMovers
+        }
+    }
+} catch {
+    Write-Host "  [Radar dinamico] WARN: falhou, seguindo so com curadoria manual -- $_" -ForegroundColor Yellow
+}
 
 # =========================================================================
 # [2] GENERATE CANDIDATES (in-memory, sem Supabase)
