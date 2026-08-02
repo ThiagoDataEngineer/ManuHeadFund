@@ -105,6 +105,13 @@ if (Test-Path $__fqsQueuePath) { . $__fqsQueuePath }
 # Invoke-FqsLazyEnrich tenta CoinGecko agora (1-3s) para mercados sem registry.
 $__fqsLazyPath = Join-Path $PSScriptRoot "lib_fqs_lazy_enrich.ps1"
 if (Test-Path $__fqsLazyPath) { . $__fqsLazyPath }
+# 2026-08-02: carrega explicito (nao depende mais de Invoke-FqsLazyEnrich rodar
+# primeiro na mesma chamada pra popular Get-FundamentalScore via auto-load
+# condicional) -- usado no route override LONG-futures.
+$__fqLibPath = Join-Path $PSScriptRoot "lib_fundamental_quality.ps1"
+if (Test-Path $__fqLibPath) { . $__fqLibPath }
+$__longFuturesRoutePath = Join-Path $PSScriptRoot "lib_long_futures_route.ps1"
+if (Test-Path $__longFuturesRoutePath) { . $__longFuturesRoutePath }
 
 # 2026-05-23: Position Management - trailing stops automaticos + risk management
 $__posManagementPath = Join-Path $PSScriptRoot "lib_coinex_position_management.ps1"
@@ -1731,6 +1738,32 @@ function Invoke-GemExecute {
         } else {
             Write-Host "  BLOQUEADO: SHORT requer futures, mas $mkt so tem SPOT disponivel" -ForegroundColor Red
             return [PSCustomObject]@{ blocked = $true; blocked_by = @("short_requires_futures_spot_only"); market = $mkt }
+        }
+    }
+
+    # 2026-08-02: LONG-FUTURES "serio" (owner pediu: percebeu que LONG nunca
+    # abre em futures, so SHORT -- Get-RouteForMode com modo GEM sempre
+    # prefere spot por design, "sizing pequeno sem leverage = risco
+    # controlado"). Diferente do override SHORT acima (OBRIGATORIO -- SHORT
+    # so existe via futures), este e OPCIONAL: so promove LONG pra futures
+    # se o ativo tiver qualidade fundamentalista suficiente (FQS BLUE_CHIP
+    # ou QUALITY -- mesmo criterio ja usado pro gate TIER_A_LIVE/
+    # TIER_B_PAPER, nunca conectado ao roteamento em si ate agora). Decisao
+    # extraida pra Test-LongFuturesRouteEligible (lib_long_futures_route.ps1,
+    # logica pura testavel) -- sem FQS suficiente, mantem SPOT (comportamento
+    # atual preservado, zero regressao pro caminho GEM pequeno). Fail-closed:
+    # qualquer erro ao consultar FQS mantem SPOT (categoria fica $null).
+    $__longFqsCategory = $null
+    if (Get-Command Get-FundamentalScore -ErrorAction SilentlyContinue) {
+        try { $__longFqsCategory = (Get-FundamentalScore -Market $mkt).category } catch {}
+    }
+    if (Get-Command Test-LongFuturesRouteEligible -ErrorAction SilentlyContinue) {
+        $__promoteLongFutures = Test-LongFuturesRouteEligible -Direction $direction -MarketType $marketType `
+            -FuturesAvailable $futuresAvailable -FqsCategory $__longFqsCategory
+        if ($__promoteLongFutures) {
+            Write-Host "  [ROUTE OVERRIDE] ${mkt}: LONG com FQS=$__longFqsCategory -- promovendo rota de spot para futures" -ForegroundColor DarkYellow
+            $marketType = "FUTURES"
+            $hasFutures = $true
         }
     }
 
