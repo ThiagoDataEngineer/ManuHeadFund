@@ -6,6 +6,23 @@
 # - Retry automatico para erros transientes (4213, 3008, timeout)
 # - Backoff exponencial (300ms -> 600ms -> 1.2s -> ...)
 
+# 2026-08-02 FIX: agents/config.ps1 define $COINEX_BASE_URL em escopo de
+# SCRIPT (sem $global:) -- funcoes chamadas de dentro desta lib (dot-sourced
+# separadamente, escopo proprio) so enxergam a variavel de forma confiavel
+# via $global:. Scripts que NUNCA carregam config.ps1 (ex: short_scanner.ps1,
+# so grava config.local.ps1 com credenciais via workflow) ficavam com
+# $COINEX_BASE_URL vazio -- confirmado real: CoinEx-GetAllFuturesTickers
+# lancava "Invalid URI: The hostname could not be parsed" (radar dinamico
+# SHORT, commit d272a61). Mesmo padrao de fallback ja usado em outras 4
+# libs do projeto (lib_candle_fetcher, lib_breadth_monitor,
+# lib_entry_conviction_ensemble, lib_tori_gate_wrapper) -- centralizado aqui
+# uma vez em vez de espalhar em cada uma das ~20 chamadas Invoke-RestMethod
+# deste arquivo. Respeita $global:COINEX_BASE_URL customizado (ex: testnet)
+# se ja estiver definido antes deste dot-source.
+if (-not $COINEX_BASE_URL) {
+    $COINEX_BASE_URL = if ($global:COINEX_BASE_URL) { $global:COINEX_BASE_URL } else { "https://api.coinex.com" }
+}
+
 # Carregar dependencias de rate limiting e retry
 $rateLimiterPath = Join-Path $PSScriptRoot "lib_rate_limiter.ps1"
 $retryPath = Join-Path $PSScriptRoot "lib_coinex_retry.ps1"
