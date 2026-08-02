@@ -2081,6 +2081,28 @@ jobs:
         run: |
           & ./scripts/diag_urgent_dogeusdt_multi_sell_2026_07_29.ps1
 
+  diag-babyusdt-ticker-check:
+    name: Diag BABYUSDT Ticker Check Read-Only (one-shot)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run diagnostic
+        shell: pwsh
+        run: |
+          & ./scripts/diag_babyusdt_ticker_check_readonly_2026_08_02.ps1
+
   diag-groq-model-status:
     name: Diag Groq Model Status Read-Only (one-shot)
     runs-on: ubuntu-latest
