@@ -95,6 +95,35 @@ try {
     }
     $markets = @(Resolve-ShortUniverse -Whitelist $wl -ConfigFallback $cfgShort)
 
+    # 2026-08-02: RADAR DINAMICO -- ate aqui o universo SHORT/FUTURES era 100%
+    # a curadoria manual (config/short_universe.json, tier_a_live = 15 majors,
+    # ultima atualizacao 2026-07-09). Owner percebeu real ("diminuiu futures,
+    # aumentou spot") -- confirmado: o gem_executor.ps1 ganhou radar dinamico
+    # ontem (commit f3fdef4) mas so roteia SPOT (sem leverage, por design);
+    # este lado (FUTURES real) continuava travado na lista fixa. Soma os
+    # movers dinamicos de 24h direto no tier_a_live (owner decidiu: confiar
+    # nos gates de seguranca ja existentes -- Tori >=80, Mesa, Mentor, sizing
+    # cap, funding-squeeze guard -- em vez de criar uma classe paper-only
+    # separada). $__curatedTierALive/$__expandedUniverse ficam disponiveis
+    # pro resto do script reusar (evita reler o arquivo cru 2x mais abaixo).
+    $__curatedTierALive = @(); if ($cfgShort -and $cfgShort.tier_a_live) { $__curatedTierALive = @($cfgShort.tier_a_live) }
+    $__expandedUniverse = [PSCustomObject]@{ markets = $markets; tier_a_live = $__curatedTierALive }
+    try {
+        . (Join-Path $agentsDir "lib_market_movers.ps1")
+        . (Join-Path $agentsDir "lib_coinex.ps1") 2>$null
+        if ((Get-Command CoinEx-GetAllFuturesTickers -ErrorAction SilentlyContinue) -and (Get-Command Get-DynamicShortUniverseWithTierALive -ErrorAction SilentlyContinue)) {
+            $__allFutTickers = @(CoinEx-GetAllFuturesTickers)
+            $__expandedUniverse = Get-DynamicShortUniverseWithTierALive -CuratedMarkets $markets -CuratedTierALive $__curatedTierALive -RawTickers $__allFutTickers
+            $__newDynamic = @($__expandedUniverse.markets | Where-Object { $markets -notcontains $_ })
+            if ($__newDynamic.Count -gt 0) {
+                Log ("  [Radar dinamico SHORT] +$($__newDynamic.Count) movers de 24h direto no tier_a_live: " + ($__newDynamic -join ", "))
+            }
+            $markets = $__expandedUniverse.markets
+        }
+    } catch {
+        Log "  [Radar dinamico SHORT] WARN: falhou, seguindo so com curadoria manual -- $_"
+    }
+
     # TDD Sprint 1 (2026-05-23): Regime-specific thresholds
     # Detect current regime for adaptive thresholds
     $currentRegime = "BEAR_WEAK"  # Default fallback
@@ -309,10 +338,13 @@ try {
                     # PAPER ONLY", mesmo para mercados live (tier_a_live) que vao
                     # executar ordem real logo abaixo -- enganoso. So promete
                     # paper-only quando o mercado de fato nao esta elegivel a live.
+                    # 2026-08-02: usa $__expandedUniverse.tier_a_live (curados + movers
+                    # dinamicos) em vez de reler o arquivo cru -- senao um mover dinamico
+                    # (fora do JSON) nunca apareceria como "candidato a execucao real" aqui.
                     $__cfgSLPreview = $null
                     $__cfgSLPreviewPath = Join-Path $projectRoot "config/short_universe.json"
                     if (Test-Path $__cfgSLPreviewPath) { try { $__cfgSLPreview = Get-Content $__cfgSLPreviewPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch {} }
-                    $__tierAPreview = @(); if ($__cfgSLPreview -and $__cfgSLPreview.tier_a_live) { $__tierAPreview = @($__cfgSLPreview.tier_a_live) }
+                    $__tierAPreview = @($__expandedUniverse.tier_a_live)
                     $__liveEligible = ($__cfgSLPreview -and $__cfgSLPreview.live_enabled -eq $true -and ($__tierAPreview -contains $mkt))
                     $__execTag = if ($__liveEligible) { "candidato a execucao real (ver mensagem SHORT LIVE EXECUTADO a seguir se todos os gates passarem)" } else { "paper observatory (fora do tier_a_live)" }
                     $msg = "$bearIco [SHORT TIER S] $mkt $shortIco`nWSS=$wssScore ($__execTag)`nstrength=$($r.strength) vol_ratio=$($r.vol_ratio)x break=$($r.break_pct)% RSI=$($r.rsi)`nBTC DD=$([math]::Round($btcRegime.drawdown_pct,1))% vol_20d=$([math]::Round($btcRegime.vol_20d,2))%`nT6 backtest: EV +2.85pp em 505 signals."
@@ -342,7 +374,10 @@ try {
                         $cfgSLPath = Join-Path $projectRoot "config/short_universe.json"
                         if (Test-Path $cfgSLPath) { try { $cfgSL = Get-Content $cfgSLPath -Raw -Encoding UTF8 | ConvertFrom-Json } catch {} }
                         $liveOn = ($cfgSL -and $cfgSL.live_enabled -eq $true)
-                        $tierA  = @(); if ($cfgSL -and $cfgSL.tier_a_live) { $tierA = @($cfgSL.tier_a_live) }
+                        # 2026-08-02: usa $__expandedUniverse.tier_a_live (curados + movers
+                        # dinamicos de 24h) em vez de reler so o JSON cru -- senao um mover
+                        # dinamico nunca passaria no gate de execucao real abaixo.
+                        $tierA  = @($__expandedUniverse.tier_a_live)
 
                         # So computa/loga p/ markets do tier_a_live (relevantes p/ live).
                         if ($tierA -contains $mkt) {
