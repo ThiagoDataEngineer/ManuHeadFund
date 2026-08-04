@@ -36,6 +36,20 @@ function Get-TunableRegistry {
         [PSCustomObject]@{ name="gem_max_exposure_pct";  class="risk";      default=15;  min=10;  max=25;   step=1 }
         [PSCustomObject]@{ name="trailing_be_buffer_pct"; class="risk";     default=0.02; min=0.01; max=0.05; step=0.005 }
     )
+    # 2026-08-04 (nao implementado ainda, so contexto pra quando retomar):
+    # owner pediu estender este registry pro stop_pct fixo por Mode
+    # (Calculate-StopTarget, gem_executor.ps1) e o fallback fixo de
+    # Get-StructuralStopTarget (StopPct=0.08/TargetPct=0.32 default) --
+    # ambos hoje calibrados uma vez, nunca ajustados por resultado real.
+    # Bloqueado por falta de dado: a origem do SL/TP (fixed_pct vs
+    # structural) nunca sobrevivia ate o fechamento do trade, entao era
+    # impossivel medir qual fonte rende melhor. Instrumentacao fechada
+    # (commit 2c20d71): trade_outcomes agora grava sl_source/tp_source/
+    # stop_pct_used no payload. Retomar quando houver ~1-2 semanas de
+    # trades fechados com o campo populado (query manuheadfund.trade_outcomes
+    # payload->>'sl_source' is not null) -- so entao desenhar bounds/step
+    # com base em dado real, nao estimativa. Ver CLAUDE.md "Estado atual"
+    # pro contexto completo da investigacao.
 }
 
 function Get-EvolutionParams {
