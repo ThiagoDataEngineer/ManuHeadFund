@@ -24,6 +24,14 @@ if (Test-Path $configPath) {
     . $configPath
 }
 
+# 2026-08-04: config.ps1 NAO e carregado aqui de proposito -- tentei
+# carregar, mas ele define ~20 constantes (GEM_VOL_SPIKE_MIN, GEM_STOP_*,
+# etc) que DIVERGEM dos fallbacks calibrados em gem_agent.ps1 (ex:
+# GEM_VOL_SPIKE_MIN=2.0 aqui vs 1.5 la, reduzido deliberadamente em
+# 2026-06-10 "for +3x candidates" -- carregar config.ps1 reverteria essa
+# calibragem silenciosamente). RISK_MAX_PCT_PER_TRADE=0.07 (Regra de Ouro
+# #2 atual) e passado via o fallback hardcoded dentro do proprio
+# gem_executor.ps1 (linha ~831) em vez disso -- ver comentario la.
 . (Join-Path $agentsDir "gem_executor.ps1")
 . (Join-Path $agentsDir "lib_market_movers.ps1")
 

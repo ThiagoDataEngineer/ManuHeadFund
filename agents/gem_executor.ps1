@@ -828,7 +828,13 @@ function Invoke-GemExecute {
                 # o tamanho da fatia por trade nesta funcao de sizing, com folga
                 # sobre o gate real. Simulado: perda maxima teorica se 8-9 posicoes
                 # baterem stop ao mesmo tempo = ~25% do capital (~$1259 em $5037.6).
-                $riskPct = 0.03
+                # 2026-08-04 FIX: este valor estava HARDCODED como 0.03, ignorando
+                # $global:RISK_MAX_PCT_PER_TRADE por completo (a variavel de
+                # config.ps1 -- 2026-07-22 dizia "1%", nunca foi atualizada quando
+                # o hardcode virou 3% no mesmo commit, ficando morta/desincronizada
+                # ha dias). Owner decidiu subir pra 7% -- agora le a variavel real
+                # em vez de hardcode duplicado, config.ps1 e a UNICA fonte.
+                $riskPct = if ($global:RISK_MAX_PCT_PER_TRADE) { [double]$global:RISK_MAX_PCT_PER_TRADE } else { 0.07 }
                 $allocForTrade = $allocForTrade * $riskPct / 0.01  # normalize para o calc
 
                 # 2026-08-04: owner pediu pesar o sizing pela FORCA do sinal --

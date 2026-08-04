@@ -14,7 +14,7 @@ $global:GEM_LISTING_DAYS_MAX = if ($GEM_LISTING_DAYS_MAX) { $GEM_LISTING_DAYS_MA
 # chumbado) -- mesma politica de config.ps1 (risco max 1%, R:R min 1:5), so
 # entra em jogo se config.ps1 nao tiver carregado antes (nao deveria acontecer
 # em producao, mas nao pode silenciosamente divergir da politica real se acontecer).
-$global:RISK_MAX_PCT_PER_TRADE = if ($RISK_MAX_PCT_PER_TRADE) { $RISK_MAX_PCT_PER_TRADE } else { 0.01 }
+$global:RISK_MAX_PCT_PER_TRADE = if ($RISK_MAX_PCT_PER_TRADE) { $RISK_MAX_PCT_PER_TRADE } else { 0.07 }
 $global:GEM_MIN_RR             = if ($GEM_MIN_RR)             { $GEM_MIN_RR             } else { 5.0 }
 $global:GEM_STOP_DISCOVERY   = if ($GEM_STOP_DISCOVERY)   { $GEM_STOP_DISCOVERY   } else { 0.50 }
 $global:GEM_STOP_MOMENTUM    = if ($GEM_STOP_MOMENTUM)    { $GEM_STOP_MOMENTUM    } else { 0.30 }

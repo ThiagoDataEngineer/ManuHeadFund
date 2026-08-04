@@ -228,7 +228,14 @@ $global:GEM_LISTING_DAYS_MAX = 10          # Gate 5: max dias desde listagem (no
 # stop, entao qualquer mudanca de stop realinha os dois automaticamente:
 #   target_pct = stop_pct * GEM_MIN_RR          (R:R sempre >= minimo)
 #   sizing_pct = RISK_MAX_PCT_PER_TRADE / stop_pct  (risco sempre = teto, nao mais)
-$global:RISK_MAX_PCT_PER_TRADE = 0.01   # Regra de Ouro #2: risco max 1% do capital por trade
+# 2026-08-04: evoluido de 1% -> 3% (2026-07-22) -> 7% (decisao explicita do
+# owner, apos ver sizing real ~$100/trade LONG numa conta de ~$5057 --
+# achado no mesmo dia: o caminho PRIMARIO de sizing (dynamic_feedback,
+# gem_executor.ps1) usava $riskPct=0.03 HARDCODED, ignorando esta variavel
+# por completo (so o fallback legado GEM_CAPITAL_DISCOVERY/MOMENTUM abaixo
+# de fato lia ela) -- variavel ficou "morta" havia dias. Corrigido: esta e
+# agora a UNICA fonte de risco por trade, lida pelos 2 caminhos.
+$global:RISK_MAX_PCT_PER_TRADE = 0.07   # Regra de Ouro #2: risco max 7% do capital por trade
 $global:GEM_MIN_RR             = 5.0    # Regra de Ouro #3: R:R minimo 1:5
 
 $global:GEM_STOP_DISCOVERY   = 0.50   # -50% DISCOVERY (micro-cap: stop largo por natureza)
