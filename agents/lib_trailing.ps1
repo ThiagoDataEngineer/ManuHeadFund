@@ -201,7 +201,16 @@ function Add-TrailingPosition {
         # Opt-in: callers legados (ex: lib_trailing_orphan_detection.ps1, que
         # reconstroi a posicao a partir da exchange e nao sabe a origem real)
         # continuam funcionando, caem no fallback UNKNOWN abaixo.
-        [hashtable]$Origin = $null
+        [hashtable]$Origin = $null,
+        # 2026-08-04: instrumentacao (ver Add-TradeOutcome) -- de onde veio
+        # o SL/TP desta posicao. Callers de abertura fresca (gem_executor via
+        # Calculate-StopTarget) sempre usam fixed_pct por design (nunca le
+        # pivot). Callers de reparo (Repair-PositionProtection) sabem a
+        # origem real (Get-StructuralStopTarget). Opt-in, default "" preserva
+        # comportamento de callers legados que nao informam.
+        [string]$SlSource = "",
+        [string]$TpSource = "",
+        [double]$StopPctUsed = 0
     )
 
     $positions = @(Get-TrailingPositions)
@@ -260,6 +269,9 @@ function Add-TrailingPosition {
         birth_score        = if ($BirthScore -ge 0) { $BirthScore } else { $null }
         birth_mesa_sinal   = $BirthMesaSinal
         birth_fqs_category = $BirthFqsCategory
+        sl_source          = $SlSource
+        tp_source          = $TpSource
+        stop_pct_used      = $StopPctUsed
     }
 
     $positions += $pos
@@ -338,6 +350,18 @@ function Close-TrailingPosition {
                 ExitReason = $Reason
             }
             if ($OutcomePath) { $kwargs.OutcomePath = $OutcomePath }
+            # 2026-08-04: repassa instrumentacao (ver Add-TradeOutcome) se o
+            # registro original a tinha -- posicoes abertas antes deste fix
+            # nao terao o campo (PSObject.Properties ausente), fica "" (legado).
+            if ($script:closedPos.PSObject.Properties['sl_source'] -and $script:closedPos.sl_source) {
+                $kwargs.SlSource = [string]$script:closedPos.sl_source
+            }
+            if ($script:closedPos.PSObject.Properties['tp_source'] -and $script:closedPos.tp_source) {
+                $kwargs.TpSource = [string]$script:closedPos.tp_source
+            }
+            if ($script:closedPos.PSObject.Properties['stop_pct_used'] -and [double]$script:closedPos.stop_pct_used -gt 0) {
+                $kwargs.StopPctUsed = [double]$script:closedPos.stop_pct_used
+            }
             Add-TradeOutcome @kwargs
         } catch {
             Write-Host "  [Trailing] Add-TradeOutcome falhou (nao bloqueia): $_" -ForegroundColor DarkYellow

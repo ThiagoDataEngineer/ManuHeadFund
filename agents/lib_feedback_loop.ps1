@@ -51,7 +51,16 @@ function Add-TradeOutcome {
         [Parameter(Mandatory)] [double] $DurationDays,
         [Parameter(Mandatory)] [string] $ExitReason,  # "target" | "stop_hit" | "trail_stop" | "max_days" | "manual"
         [string] $Regime = "",
-        [double] $Score = 0
+        [double] $Score = 0,
+        # 2026-08-04: instrumentacao pra futura auto-calibragem de stop_pct
+        # (owner pediu "visao de quanto vamos evoluir em ganhos" antes de
+        # qualquer auto-ajuste -- hoje e IMPOSSIVEL medir se o fallback fixo
+        # de Get-StructuralStopTarget ou o stop_pct fixo por Mode rendem
+        # melhor/pior, porque essa origem nunca foi persistida ate o
+        # fechamento. So gravacao -- nenhum consumidor ainda le estes campos.
+        [string] $SlSource = "",      # "fixed_pct" | "structural" | "" (desconhecido/legado)
+        [string] $TpSource = "",      # idem
+        [double] $StopPctUsed = 0     # fracao real aplicada no SL (|entry-stop|/entry), 0 = nao informado
     )
     $dir = Split-Path $OutcomePath
     if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
@@ -71,6 +80,9 @@ function Add-TradeOutcome {
         exit_reason    = $ExitReason
         regime         = $Regime
         score          = $Score
+        sl_source      = $SlSource
+        tp_source      = $TpSource
+        stop_pct_used  = $StopPctUsed
     }
     $line = $obj | ConvertTo-Json -Compress
     Add-Content -Path $OutcomePath -Value $line -Encoding UTF8

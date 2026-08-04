@@ -84,6 +84,24 @@ Describe "ConvertTo-SupabaseOutcome (pura)" {
         $row.payload.regime        | Should Be "BEAR_WEAK"
     }
 
+    # 2026-08-04: instrumentacao pra futura auto-calibragem de stop_pct --
+    # confirma que sl_source/tp_source/stop_pct_used sobrevivem no payload
+    # (nenhuma coluna dedicada nova; a mesma copia lossless generica ja
+    # cobre, mas guarda contra alguem "limpar" o payload e derrubar isso).
+    It "Preserva sl_source/tp_source/stop_pct_used no payload" {
+        $obj = [ordered]@{
+            ts = "2026-08-04T12:00:00Z"; market = "SOLUSDT"; side = "SHORT"; mode = "GEM"
+            entry_price = 73.23; exit_price = 70.59; stop_price = 74.29; target_price = 70.59
+            r = 1; pnl_usd = 10; duration_days = 1; exit_reason = "target"
+            regime = "BEAR"; score = 70
+            sl_source = "structural"; tp_source = "structural"; stop_pct_used = 0.0145
+        }
+        $row = ConvertTo-SupabaseOutcome -Outcome $obj
+        $row.payload.sl_source     | Should Be "structural"
+        $row.payload.tp_source     | Should Be "structural"
+        $row.payload.stop_pct_used | Should Be 0.0145
+    }
+
     It "Funciona com PSCustomObject (vindo de ConvertFrom-Json)" {
         $json = '{"ts":"2026-06-20T12:00:00Z","market":"SOLUSDT","side":"LONG","mode":"GEM","entry_price":10,"exit_price":12,"stop_price":9,"target_price":15,"r":2,"pnl_usd":5,"duration_days":1,"exit_reason":"target","regime":"BULL","score":80}'
         $obj = $json | ConvertFrom-Json

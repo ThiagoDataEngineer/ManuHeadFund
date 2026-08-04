@@ -115,6 +115,31 @@ Describe "Add-TrailingPosition - birth_score (2026-07-29, avaliacao real de sina
     }
 }
 
+Describe "Add-TrailingPosition - sl_source/tp_source/stop_pct_used (2026-08-04, instrumentacao)" {
+    # Owner pediu (estudando o Evolution Engine junto) instrumentacao ANTES de
+    # qualquer auto-calibragem de stop_pct -- hoje impossivel medir se stop
+    # fixo por Mode (Calculate-StopTarget, gem_executor.ps1) rende melhor ou
+    # pior que pivot estrutural (Get-StructuralStopTarget, so no reparo),
+    # porque a origem nunca sobrevivia ate o fechamento do trade.
+    It "SlSource/TpSource/StopPctUsed explicitos sao gravados" {
+        Remove-Item "$script:tmpDir\trailing_positions.json" -ErrorAction SilentlyContinue
+        Add-TrailingPosition -Market "INSTRUSDT" -Side "LONG" -Entry 100 -Stop 92 -Target 150 -Source "gem" `
+            -SlSource "fixed_pct" -TpSource "fixed_pct" -StopPctUsed 0.08
+        $p = (Get-TrailingPositions | Where-Object { $_.market -eq "INSTRUSDT" })
+        $p.sl_source | Should Be "fixed_pct"
+        $p.tp_source | Should Be "fixed_pct"
+        $p.stop_pct_used | Should Be 0.08
+    }
+    It "ausentes (caller legado) gravam string vazia / zero, nao quebra" {
+        Remove-Item "$script:tmpDir\trailing_positions.json" -ErrorAction SilentlyContinue
+        Add-TrailingPosition -Market "NOINSTRUSDT" -Side "LONG" -Entry 100 -Stop 90 -Target 130 -Source "orphan_auto_register"
+        $p = (Get-TrailingPositions | Where-Object { $_.market -eq "NOINSTRUSDT" })
+        $p.sl_source | Should Be ""
+        $p.tp_source | Should Be ""
+        $p.stop_pct_used | Should Be 0
+    }
+}
+
 Describe "Test-MaxDaysExceeded" {
     It "posicao com max_days=0 retorna false (sem limite)" {
         $pos = [PSCustomObject]@{ openedAt = "2026-01-01 00:00:00"; max_days = 0 }
@@ -179,6 +204,30 @@ Describe "Close-TrailingPosition - emits feedback outcome" {
         $obj = $line | ConvertFrom-Json
         # SHORT entry 100, exit 80, gain 20; risk = |100-105| = 5; R = 20/5 = 4
         $obj.r | Should Be 4
+    }
+
+    # 2026-08-04: instrumentacao repassada do trailing_state ate o outcome
+    # final -- e o elo que faltava pra medir sl_source/tp_source vs resultado.
+    It "sl_source/tp_source/stop_pct_used sao repassados da posicao para o outcome" {
+        Remove-Item "$script:tmpDir\trailing_positions.json" -ErrorAction SilentlyContinue
+        Add-TrailingPosition -Market "WUSDT" -Side "LONG" -Entry 100 -Stop 92 -Target 150 -Source "gem" `
+            -SlSource "structural" -TpSource "fixed_pct" -StopPctUsed 0.08
+        Close-TrailingPosition -Market "WUSDT" -Reason "target" -ExitPrice 150 -OutcomePath $outcomeFile
+        $line = Get-Content $outcomeFile -Encoding UTF8 | Select-Object -Last 1
+        $obj = $line | ConvertFrom-Json
+        $obj.sl_source | Should Be "structural"
+        $obj.tp_source | Should Be "fixed_pct"
+        $obj.stop_pct_used | Should Be 0.08
+    }
+    It "posicao legada sem instrumentacao fecha normalmente (campos vazios no outcome)" {
+        Remove-Item "$script:tmpDir\trailing_positions.json" -ErrorAction SilentlyContinue
+        Add-TrailingPosition -Market "VUSDT" -Side "LONG" -Entry 100 -Stop 95 -Target 120 -Source "tier_a"
+        Close-TrailingPosition -Market "VUSDT" -Reason "target" -ExitPrice 120 -OutcomePath $outcomeFile
+        $line = Get-Content $outcomeFile -Encoding UTF8 | Select-Object -Last 1
+        $obj = $line | ConvertFrom-Json
+        $obj.sl_source | Should Be ""
+        $obj.tp_source | Should Be ""
+        $obj.stop_pct_used | Should Be 0
     }
 }
 

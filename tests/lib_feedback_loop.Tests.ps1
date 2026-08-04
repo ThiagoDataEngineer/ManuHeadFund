@@ -39,6 +39,33 @@ Describe "Add-TradeOutcome" {
             -ExitReason "target" -Regime "BEAR" -Score 70
         (Get-Content $f).Count | Should Be 2
     }
+
+    # 2026-08-04: instrumentacao pra futura auto-calibragem de stop_pct (owner
+    # pediu "visao de quanto vamos evoluir em ganhos" -- hoje impossivel medir
+    # se stop fixo por Mode ou pivot estrutural (Get-StructuralStopTarget)
+    # rende melhor, porque a origem nunca era persistida ate o fechamento).
+    It "grava sl_source/tp_source/stop_pct_used quando informados" {
+        $f = Join-Path $tmp "outcomes_instrumentation.jsonl"
+        Add-TradeOutcome -OutcomePath $f -Market "C" -Side "LONG" -Mode "MOMENTUM" `
+            -EntryPrice 100 -ExitPrice 110 -StopPrice 92 -TargetPrice 150 -R 1 -Pnl 10 -DurationDays 1 `
+            -ExitReason "target" -Regime "BULL" -Score 80 `
+            -SlSource "structural" -TpSource "fixed_pct" -StopPctUsed 0.08
+        $obj = (Get-Content $f -Encoding UTF8 | Select-Object -Last 1) | ConvertFrom-Json
+        $obj.sl_source | Should Be "structural"
+        $obj.tp_source | Should Be "fixed_pct"
+        $obj.stop_pct_used | Should Be 0.08
+    }
+
+    It "sem instrumentacao informada, campos ficam vazios/zero (nao quebra callers legados)" {
+        $f = Join-Path $tmp "outcomes_no_instrumentation.jsonl"
+        Add-TradeOutcome -OutcomePath $f -Market "D" -Side "SHORT" -Mode "STANDARD" `
+            -EntryPrice 50 -ExitPrice 45 -StopPrice 55 -TargetPrice 30 -R 1 -Pnl 5 -DurationDays 1 `
+            -ExitReason "target" -Regime "BEAR" -Score 60
+        $obj = (Get-Content $f -Encoding UTF8 | Select-Object -Last 1) | ConvertFrom-Json
+        $obj.sl_source | Should Be ""
+        $obj.tp_source | Should Be ""
+        $obj.stop_pct_used | Should Be 0
+    }
 }
 
 

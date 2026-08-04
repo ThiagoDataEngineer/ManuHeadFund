@@ -337,9 +337,18 @@ function Repair-PositionProtection {
             } catch { $__structural = $null }
         }
 
+        # 2026-08-04: instrumentacao (ver Add-TradeOutcome/Add-TrailingPosition)
+        # -- antes so ia pro Write-Verbose e se perdia. Default fixed_pct pro
+        # ramo sem pivot (linhas abaixo), sobrescrito p/ "structural" se
+        # $__structural realmente tiver achado pivot pra aquele lado.
+        $__slSourceResolved = "fixed_pct"
+        $__tpSourceResolved = "fixed_pct"
+
         if ($__structural) {
             if ($StopLoss   -le 0) { $StopLoss   = [math]::Round($__structural.stop_loss, $roundPrec) }
             if ($TakeProfit -le 0) { $TakeProfit = [math]::Round($__structural.take_profit, $roundPrec) }
+            $__slSourceResolved = [string]$__structural.sl_source
+            $__tpSourceResolved = [string]$__structural.tp_source
             Write-Verbose "Repair-PositionProtection: $Market SL=$($__structural.sl_source) TP=$($__structural.tp_source)"
         } else {
             if ($side -eq "long") {
@@ -351,6 +360,7 @@ function Repair-PositionProtection {
             }
         }
     }
+    $__stopPctUsedResolved = if ($entry -gt 0) { [math]::Abs($entry - $StopLoss) / $entry } else { 0 }
 
     $protect = Set-PositionProtection -Market $Market -StopLoss $StopLoss -TakeProfit $TakeProfit -MaxRetries 3
 
@@ -364,11 +374,26 @@ function Repair-PositionProtection {
                 $found = $false
                 foreach ($item in $arr) {
                     if ($item.market -eq $Market -and $item.active -eq $true) {
-                        $item.stop         = $StopLoss
-                        $item.stopCurrent  = $StopLoss
-                        $item.target       = $TakeProfit
-                        $item.trailing     = $true
-                        $item.updatedAt    = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+                        # 2026-08-04 FIX: dot-assign ($item.stopCurrent = ...) LANCA
+                        # se a propriedade nao existir no PSCustomObject (registros
+                        # minimos/reconstruidos, ex: orphan-detection) -- achado ao
+                        # escrever o teste de instrumentacao abaixo: o catch deste
+                        # bloco engolia o erro silenciosamente, entao NENHUM campo
+                        # era gravado (nem os antigos, nem sl_source/tp_source
+                        # novos). Add-Member -Force em TODOS os campos atribuidos
+                        # aqui (nao so os novos) torna o bloco robusto ao shape
+                        # real do registro, igual ja fazia pros campos novos.
+                        $item | Add-Member -MemberType NoteProperty -Name stop -Value $StopLoss -Force
+                        $item | Add-Member -MemberType NoteProperty -Name stopCurrent -Value $StopLoss -Force
+                        $item | Add-Member -MemberType NoteProperty -Name target -Value $TakeProfit -Force
+                        $item | Add-Member -MemberType NoteProperty -Name trailing -Value $true -Force
+                        $item | Add-Member -MemberType NoteProperty -Name updatedAt -Value (Get-Date -Format "yyyy-MM-dd HH:mm:ss") -Force
+                        # 2026-08-04: instrumentacao -- de onde veio o SL/TP deste
+                        # reparo (fixed_pct | structural), pra futura auto-calibragem
+                        # medir com dado real qual fonte rende melhor.
+                        $item | Add-Member -MemberType NoteProperty -Name sl_source -Value $__slSourceResolved -Force
+                        $item | Add-Member -MemberType NoteProperty -Name tp_source -Value $__tpSourceResolved -Force
+                        $item | Add-Member -MemberType NoteProperty -Name stop_pct_used -Value $__stopPctUsedResolved -Force
                         $found = $true
                     }
                 }
