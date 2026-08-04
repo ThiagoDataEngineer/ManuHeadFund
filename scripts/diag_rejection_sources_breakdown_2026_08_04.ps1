@@ -20,8 +20,16 @@ Write-Host "=== DIAG: breakdown real de trade_rejections.source (ultimas 2h) ===
 try {
     $cfg = Get-SupabaseRequestHeaders -Method "GET"
     $uri = "$($cfg.url)/rest/v1/trade_rejections?select=*&order=ts.desc&limit=1000"
-    $rows = @(Invoke-RestMethod -Uri $uri -Method GET -Headers $cfg.headers -TimeoutSec 30)
+    $rawResponse = Invoke-RestMethod -Uri $uri -Method GET -Headers $cfg.headers -TimeoutSec 30
+    Write-Host "DEBUG rawResponse type: $($rawResponse.GetType().FullName)"
+    Write-Host "DEBUG rawResponse is array: $($rawResponse -is [array])"
+    if ($rawResponse -is [array]) { Write-Host "DEBUG rawResponse.Count: $($rawResponse.Count)" }
+    $rows = @($rawResponse)
     Write-Host "Total puxado: $($rows.Count)"
+    if ($rows.Count -gt 0) {
+        Write-Host "DEBUG rows[0] type: $($rows[0].GetType().FullName)"
+        Write-Host "DEBUG rows[0] raw: $($rows[0] | ConvertTo-Json -Compress -Depth 3)"
+    }
 
     $cutoff = (Get-Date).ToUniversalTime().AddHours(-2)
     $recent = @($rows | Where-Object {
