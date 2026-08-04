@@ -65,4 +65,22 @@ Describe "CoinEx-GetPendingPositions - filtra fantasmas" {
             ($r | Where-Object { -not $_.market }).Count | Should Be 0
         }
     }
+
+    Context "2026-08-04 FIX CRITICO: paginacao default da CoinEx truncava posicoes (SOLUSDT achado real)" {
+
+        It "chama pending-position com limit explicito (nao usa default da API)" {
+            Mock CoinEx-Get { @{ code = 0; data = @() } } -ParameterFilter { $Path -like "*limit=*" }
+            Mock CoinEx-Get { throw "chamada sem limit explicito -- regressao do bug de truncamento" }
+            CoinEx-GetPendingPositions | Out-Null
+            Assert-MockCalled CoinEx-Get -Times 1 -ParameterFilter { $Path -like "*limit=*" }
+        }
+
+        It "com 11 posicoes retornadas pela API (alem do default de 10), todas sobrevivem" {
+            $onze = 1..11 | ForEach-Object { [PSCustomObject]@{ market = "COIN${_}USDT"; side = "short" } }
+            Mock CoinEx-Get { @{ code = 0; data = $onze } } -ParameterFilter { $Path -like "*pending-position*" }
+            $r = @(CoinEx-GetPendingPositions)
+            $r.Count | Should Be 11
+            ($r | Where-Object { $_.market -eq "COIN11USDT" }).Count | Should Be 1
+        }
+    }
 }

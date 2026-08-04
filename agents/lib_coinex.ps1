@@ -538,7 +538,19 @@ function CoinEx-GetPendingPositions {
     }
 
     # Caso contrario, busca todas as posicoes abertas
-    $r = CoinEx-Get "/v2/futures/pending-position?market_type=FUTURES"
+    #
+    # 2026-08-04 FIX CRITICO: sem &limit=, a CoinEx aplica paginacao default
+    # (page=1, poucos itens) e trunca silenciosamente -- confirmado real: com
+    # 11 posicoes FUTURES abertas, esta chamada so devolvia 10, sempre
+    # omitindo a mais recente. Todo consumidor que depende desta funcao pra
+    # varrer "todas as posicoes" (auditoria de protecao TP/SL, exposure cap,
+    # trailing monitor) ficava cego pra posicao mais nova sempre que o total
+    # passava do limite default -- achado ao investigar SOLUSDT SHORT aberto
+    # ha 5h30 sem TP/SL: o auto-repair nunca rodou nela porque ela nunca
+    # aparecia na varredura bulk (so via CoinEx-GetPosition -market direto).
+    # limit=100 cobre qualquer volume realista de posicoes simultaneas deste
+    # sistema (cap de exposicao ja impede escala muito maior).
+    $r = CoinEx-Get "/v2/futures/pending-position?market_type=FUTURES&limit=100"
     if ($r.code -ne 0) { return @() }
 
     # 2026-06-18 fix: FILTRA fantasmas (entradas sem market). A API devolvia 1
