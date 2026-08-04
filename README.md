@@ -1,25 +1,29 @@
 # 🚀 ManuHeadFund — CoinEx AI Trading System
 
-Sistema automatizado multi-agente (Backend PowerShell + Mentor LLM) que executa trading em CoinEx Futures/Spot com aprendizado contínuo. **Estado**: ✅ **NUVEM 24/7 (GitHub Actions) — LIVE TRADING REAL ATIVO**.
+Sistema automatizado multi-agente (Backend PowerShell + Mentor LLM) que executa trading em CoinEx Futures/Spot com aprendizado contínuo. **Estado**: ✅ **NUVEM 24/7 (GitHub Actions) — LIVE TRADING REAL ATIVO** (LONG+SHORT em SPOT e FUTURES).
 
 ---
 
-## 🔋 Estado Atual (2026-07-25)
+## 🔋 Estado Atual (2026-08-04)
 
 | Componente | Status | Detalhe |
 |-----------|--------|---------|
-| **Nuvem (GitHub Actions)** | ✅ LIVE | gem_loop/gem_executor a cada 5min, live trading real (SPOT + FUTURES) |
+| **Nuvem (GitHub Actions)** | ✅ LIVE | `gem_scanner_executor_live.ps1` + `short_scanner.ps1` a cada 5min, live trading real (SPOT + FUTURES, LONG + SHORT) |
+| **Risco por trade** | ✅ 7% do capital | Regra de Ouro #2 evoluída 1%→3% (07-22)→**7%** (08-04, `RISK_MAX_PCT_PER_TRADE`, `agents/config.ps1`) — 1 fonte real, sem hardcode duplicado |
+| **Sizing por força de sinal** | ✅ LIVE | `Get-SignalStrengthWeight` (`agents/lib_sizing_dynamics.ps1`): score≥90 → peso 1.5x, 75-89 → 1.0x, <75 → 0.6x — capital redistribuído por convicção, não fatia igual |
+| **Radar dinâmico (24h movers)** | ✅ LIVE | `Get-DynamicMarketMoversFromRawTickers`/`Get-DynamicShortUniverseWithTierALive` — universo de descoberta amplia além da lista curada manual, tanto no lado SPOT quanto FUTURES/SHORT |
+| **LONG-futures "sério"** | ✅ LIVE | `Test-LongFuturesRouteEligible` (`agents/lib_long_futures_route.ps1`): promove LONG de SPOT→FUTURES quando FQS=BLUE_CHIP/QUALITY — antes LONG nunca abria em FUTURES (modo GEM sempre SPOT por design) |
 | **Gates de Entrada** | ✅ LIVE | Breadth (parallel) + Pump/Dump classifier + Entry Timing 15m |
 | **FARO V3** | ✅ LIVE | pre-pump 7-signal detector, dado real (nao mais Get-Random), LONG+SHORT |
 | **TORI SHORT/LONG sweep** | ✅ LIVE | candidatos reais com confluence, gated por cenario (bear_severity ao vivo) |
-| **Trailing** | 🟡 CONSOLIDANDO | motor unico em SHADOW MODE (so log) — ~20 libs concorrentes identificadas (Oracle Detector 16) |
+| **Trailing** | ✅ UNIFICADO | motor único ativo (promovido de shadow, commit `bc89952`) — substituiu ~3 motores concorrentes que colidiam na mesma posição |
 | **Leverage FUTURES** | ✅ FIX CRITICO | hard cap 5x em todo caminho de ordem real (achado: SUIUSDT/ADA/XRP iam a 50x) |
 | **Evolution Engine** | ✅ LIVE | auto-tuning de thresholds de deteccao (tori_confluence_threshold etc), risk params sempre manual |
-| **Mentor LLMs** | ✅ LIVE (override real) | 2026-07-25: conectado ao executor real via `Test-MentorOverride` (`agents/lib_mentor_live.ps1`) — chamado ANTES do bloqueio de 9 gates de qualidade/sinal (breadth/pump/cenario/crowding/chart_pattern/tori_confluence/conviction/multi_tf/token_structural), pode destravar se aprovar. Stop loss obrigatorio e cap de 3%/trade NUNCA passam por LLM (invariantes protegidas, `agents/gem_executor.ps1`). Gated por `journal/MENTOR_OVERRIDE_ENABLED.flag` (reversivel). Confirmado rodando com credenciais reais em producao (run 30146856394) — cascade Sonnet/Groq/Mistral/Haiku, budget 3 chamadas/ciclo. Ver `docs/DESIGN_MENTOR_LLM_OVERRIDE_2026_07_24.md` |
+| **Mentor LLMs** | ✅ LIVE (override real) | Conectado ao executor real via `Test-MentorOverride` (`agents/lib_mentor_live.ps1`) — chamado ANTES do bloqueio de gates de qualidade/sinal (breadth/pump/cenario/crowding/chart_pattern/tori_confluence/conviction/multi_tf/token_structural), pode destravar se aprovar. Stop loss obrigatório e cap de risco por trade NUNCA passam por LLM (invariantes protegidas, `agents/gem_executor.ps1`). Gated por `journal/MENTOR_OVERRIDE_ENABLED.flag` (reversível). Cascade Sonnet→Groq→Mistral→Haiku, budget **10** chamadas/ciclo (`journal/MENTOR_OVERRIDE_BUDGET.flag`, git-tracked) — custo real medido ~$0,0145/chamada. Ver `docs/DESIGN_MENTOR_LLM_OVERRIDE_2026_07_24.md` |
 | **Root Cause Oracle** | ✅ 16 detectores | scanner de padroes conhecidos (regex), manual/query_engine, nao roda em cron |
 | **Regime** | 📊 | ver bear_severity calculado ao vivo em Get-MarketScenario (SMA200 real + momentum) |
 
-**Resumo**: Sistema rodando 100% na nuvem via GitHub Actions (frota local descontinuada). Ciclo recente de auditoria (07-16 a 07-19) fechou bugs estruturais reais em sizing (stop real em vez de 0.02 cravado), leverage (cap 5x), e schema drift no Supabase (Evolution Engine ficou meses "fail-safe sem efeito" por colunas faltando).
+**Resumo**: Sistema rodando 100% na nuvem via GitHub Actions (frota local descontinuada). Capital atual: SPOT ~$2.341 + FUTURES ~$2.714 = **~$5.055 USDT**. Histórico real medido (25 dias, 40 trades fechados): hit rate 40%, PnL médio +$2,29/trade, +$3,67/dia (sizing antigo 3%) — projeção proporcional com o novo sizing 7% (fator 2,33x): ~$8,56/dia. `mce_counterfactual_agg` já identifica edge real não capturado em alguns cenários específicos (ex: LONG bloqueado por breadth em regime BEAR, n=62, hit_rate=67,7%) — investigação em andamento, sem mudança de gate aplicada ainda.
 
 ---
 
@@ -105,9 +109,9 @@ Principais (ver `.github/workflows/trading-pipeline.yml` para a lista completa, 
 | Job | Função |
 |-----|--------|
 | **gem-scanner-executor** | Live trading real: triagem→gates→mentor override pontual→execução (SPOT+FUTURES). Mentor so' consultado quando um gate de qualidade/sinal ja bloqueou (ver tabela de estado acima) |
-| **trailing-stop-monitor** | Atualiza peaks, empurra SL (motor real; motor unificado em shadow ao lado) |
+| **trailing-stop-monitor** | Atualiza peaks, empurra SL via motor unificado (`Resolve-TrailingDecision`) — trendline + suporte/resistência + multi-TF |
 | **position-risk** | Guarda de risco por posição aberta |
-| **short-scanner** | Wyckoff Buying Climax invertido (`Detect-ShortSignal`) + WSS tier S/A/B → Tier S em `tier_a_live` (15 majors, `config/short_universe.json`) executa ordem real. Thresholds por regime (`Get-ShortThresholdsForRegime`, incl. case `NEUTRO` calibrado 2026-07-25 com hit_rate real 87.5%); funding-squeeze guard (`Test-ShortFundingSafe`) bloqueia se funding < -0.05%/8h |
+| **short-scanner** | Wyckoff Buying Climax invertido (`Detect-ShortSignal`) + WSS tier S/A/B → Tier S em `tier_a_live` (15 majors curados + movers dinâmicos de 24h via radar, `config/short_universe.json` + `Get-DynamicShortUniverseWithTierALive`) executa ordem real. Thresholds por regime (`Get-ShortThresholdsForRegime`, incl. case `NEUTRO` calibrado com hit_rate real 87.5%); funding-squeeze guard (`Test-ShortFundingSafe`) bloqueia se funding < -0.05%/8h |
 | **tori-scanner** / **vol-climax** | Sinais de entrada complementares |
 | **gate-replay-study** | Mede edge real de candidatos rejeitados (contrafactual) |
 | **mce-counterfactual** | Agrega contrafactual por gate/regime/direction p/ Evolution Engine |
@@ -247,9 +251,9 @@ Get-Content logs/master_*.log -Tail 100 | grep ERROR
 - **Objetivo**: Validar gates em papel antes de capital real
 
 ### Capital Progression
-- **Hoje**: SPOT $2.425 + FUT $2.741 = $5.166
+- **Hoje** (2026-08-04): SPOT $2.341 + FUT $2.714 = **$5.055**
 - **Meta**: $5k/mês (3-5 anos de compounding)
-- **Risco/Trade**: 1% hard cap
+- **Risco/Trade**: **7%** do capital (evoluído de 1%→3%→7%, `RISK_MAX_PCT_PER_TRADE`), pesado por força de sinal (score) e escalonado de 0.6x a 1.5x
 
 ---
 
@@ -370,23 +374,26 @@ Histórico de commits (git log) documenta cada decisão de design.
 
 ## 🎯 Status Summary
 
-✅ **Sistema Integro**
+✅ **Sistema Íntegro**
 - Live trading real ativo 24/7 via nuvem (GitHub Actions), frota local descontinuada
 - Gates de entrada (breadth+pump/dump+timing) + FARO V3 + TORI sweep LONG/SHORT rodando com dado real
 - Leverage FUTURES com hard cap 5x em todo caminho de ordem real
 - Evolution Engine + Mentor grading auto-tunando thresholds de detecção
+- Motor único de trailing ativo em produção (promovido de shadow)
+- Risco por trade em 7% do capital, pesado por força de sinal (score) — LONG-futures conectado quando FQS justifica
+- Radar dinâmico de movers 24h ampliando o universo de descoberta em SPOT e FUTURES
 
 🟡 **Em Consolidação**
-- Motor único de trailing em SHADOW MODE (substituindo ~20 libs concorrentes, Oracle Detector 16)
-- Schema Supabase teve 2 incidentes de drift silencioso em 2 semanas (07-14, 07-17) — sem guard-rail de CI ainda
+- Edge real identificado via `mce_counterfactual_agg` em cenários específicos (ex: LONG bloqueado por breadth em BEAR, n=62, hit_rate 67,7%) ainda sob avaliação caso a caso pelo Mentor — sem mudança de gate aplicada
+- Schema Supabase teve incidentes de drift silencioso no passado — sem guard-rail de CI ainda
 
 🔮 **Roadmap Próximo**
-- Promover motor único de trailing de shadow → produção
-- CI check de schema Supabase esperado vs real (evitar 3º incidente de drift)
+- Avaliar se vale calibrar o gate de breadth especificamente para LONG em regime BEAR (dado real já medido, decisão pendente)
+- CI check de schema Supabase esperado vs real (evitar novo incidente de drift)
 - Layer 5 CLIMAX consolidar (bag ≥+25% exit)
 - Multi-exchange backbone (Binance fallback)
 
 ---
 
-**Última atualização**: 2026-07-19 (revisão de contexto — ver `git log` para o detalhe de cada fix)  
-**Status**: ✅ NUVEM LIVE — trailing em consolidação, schema drift sob observação
+**Última atualização**: 2026-08-04 (revisão de contexto — ver `git log` para o detalhe de cada fix)  
+**Status**: ✅ NUVEM LIVE — trailing unificado ativo, risco/trade em 7% com sizing por força de sinal, LONG-futures conectado
