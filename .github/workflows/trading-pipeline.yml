@@ -28,6 +28,14 @@ on:
         description: 'Teto hard em USD pro forced test trade'
         type: string
         default: '15'
+      run_repair_position_protection:
+        description: 'URGENTE: registra TP/SL real na corretora pra uma posicao especifica sem protecao. Default false -- so ativa se explicitamente true.'
+        type: boolean
+        default: false
+      repair_market:
+        description: 'Market pra reparar TP/SL (ex: SOLUSDT)'
+        type: string
+        default: 'SOLUSDT'
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -2055,6 +2063,32 @@ jobs:
         shell: pwsh
         run: |
           & ./scripts/diag_urgent_solusdt_tpsl_check_2026_08_04.ps1
+
+  repair-position-protection:
+    name: URGENTE Repair Position Protection (one-shot, capital real)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch' && github.event.inputs.run_repair_position_protection == 'true'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:COINEX_PASSPHRASE = '${{ secrets.COINEX_PASSPHRASE }}'" + "`n"
+          $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Repair TP/SL
+        shell: pwsh
+        run: |
+          & ./scripts/repair_position_protection.ps1 -Market "${{ github.event.inputs.repair_market }}" -EnableTrailing
 
   diag-btc-full-history:
     name: Diag BTC Full History Read-Only (one-shot)
