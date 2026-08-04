@@ -33,9 +33,20 @@ try {
 # [2] trade_rejections: candidatos bloqueados HOJE, com gate (schema real:
 # ts/market/direction/gate/entry_price/regime/source -- NAO tem coluna
 # "reason"/"mode" dedicada, "gate" carrega o texto livre com o motivo).
-Write-Host "`n[2] trade_rejections das ultimas 24h (por gate)" -ForegroundColor Yellow
+#
+# 2026-08-04 FIX: Get-StateRecords sem -Filter nao pede order/limit -- cai
+# no default de paginacao do PostgREST (1000 linhas, ORDEM NAO GARANTIDA).
+# Com a tabela tendo mais de 1000 linhas totais, "ultimas 24h" filtrado
+# DEPOIS de um GET sem order=ts.desc pode devolver 0 mesmo havendo
+# registros recentes de verdade -- o corte de 1000 pode ter pego linhas
+# antigas. Bypassa Get-StateRecords aqui, chama REST direto com
+# order=ts.desc&limit= pra garantir que as ultimas 24h realmente aparecam
+# se existirem.
+Write-Host "`n[2] trade_rejections das ultimas 24h (por gate, query direta com order=ts.desc)" -ForegroundColor Yellow
 try {
-    $rejections = @(Get-StateRecords -Table "trade_rejections" -ErrorAction Stop)
+    $cfg = Get-SupabaseRequestHeaders -Method "GET"
+    $uri = "$($cfg.url)/rest/v1/trade_rejections?select=*&order=ts.desc&limit=500"
+    $rejections = @(Invoke-RestMethod -Uri $uri -Method GET -Headers $cfg.headers -TimeoutSec 30)
     $cutoff = (Get-Date).ToUniversalTime().AddHours(-24)
     $recent = @($rejections | Where-Object {
         $raw = $_.ts
@@ -43,7 +54,10 @@ try {
         $ts = try { if ($raw -is [datetime]) { $raw } else { [datetime]::Parse([string]$raw) } } catch { $null }
         $ts -and $ts -gt $cutoff
     })
-    Write-Host "Total rejections (todas): $($rejections.Count) | ultimas 24h: $($recent.Count)"
+    Write-Host "Total puxado (500 mais recentes, order=ts.desc): $($rejections.Count) | dentro das ultimas 24h: $($recent.Count)"
+    if ($rejections.Count -gt 0) {
+        Write-Host "Mais recente da tabela: $($rejections[0].ts) $($rejections[0].market)"
+    }
     $recent | Group-Object { $_.source } | Sort-Object Count -Descending | Select-Object -First 15 | ForEach-Object {
         Write-Host ("  source={0,-25} count={1}" -f $_.Name, $_.Count)
     }
@@ -60,10 +74,13 @@ try {
 } catch { Write-Host "ERRO: $_" -ForegroundColor Red }
 
 # [4] trailing_state: quando foi a ULTIMA vez que algo abriu com mode=GEM
+# (mesma cautela do [2]: query direta com order=openedAt.desc, nao confia
+# no default de paginacao sem ordem do Get-StateRecords bulk).
 Write-Host "`n[4] Ultima posicao mode=GEM (ativa ou nao) no trailing_state" -ForegroundColor Yellow
 try {
-    $allTrailing = @(Get-StateRecords -Table "trailing_state" -ErrorAction Stop)
-    $gemPositions = @($allTrailing | Where-Object { "$($_.mode)" -eq "GEM" })
+    $cfg2 = Get-SupabaseRequestHeaders -Method "GET"
+    $uri2 = "$($cfg2.url)/rest/v1/trailing_state?select=*&mode=eq.GEM&order=openedAt.desc&limit=20"
+    $gemPositions = @(Invoke-RestMethod -Uri $uri2 -Method GET -Headers $cfg2.headers -TimeoutSec 30)
     Write-Host "Total registros mode=GEM (todos, ativos+fechados): $($gemPositions.Count)"
     $withTs = @($gemPositions | ForEach-Object {
         $raw = $_.openedAt
