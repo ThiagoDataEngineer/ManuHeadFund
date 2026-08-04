@@ -97,11 +97,18 @@ journal/*.jsonl
 journal/*.jsonl.bak*
 journal/*.json
 journal/*.json.bak*
-# 2026-07-25: evolution_params.json e overlay de config real (parametros
-# aprovados pelo owner via Evolution Engine), nao dado operacional efemero --
-# precisa chegar no cloud (clone limpo do GitHub Actions). Mesmo padrao ja
-# corrigido antes p/ flags de cutover (CLOUD_ONLY_MODE.flag etc).
-!journal/evolution_params.json
+# 2026-08-04 REVERTIDO (era !journal/evolution_params.json desde 2026-07-25):
+# achado real -- diferente de coin_registry.json/per_asset_whitelist (dado
+# de curadoria manual, nunca escrito em runtime), este arquivo E' escrito
+# pelo proprio Invoke-EvolutionCycle a cada ciclo (Out-File -Force). Manter
+# commitado significa que TODO checkout limpo (cron a cada 6h) reseta o
+# overlay pro valor congelado no commit de 07-25 (sentinel_move_pct=3.25),
+# apagando o progresso do ciclo anterior -- confirmado real: historico
+# mostrava a MESMA proposta "3.25 -> 3" se repetindo 41x seguidas sem nunca
+# colar. O espelho Supabase (evolution_params, id=current) ja e o source
+# of truth funcional pro cloud (Get-EvolutionParams cai nele quando NAO ha
+# overlay local) -- so precisa que o arquivo local pare de mascarar esse
+# fallback. journal/*.json (regra generica acima) volta a cobrir este arquivo.
 # 2026-07-26: coin_registry.json e curadoria manual real de qualidade
 # fundamental (FQS) de ~30 moedas (Get-FundamentalScore, lib_fundamental_quality.ps1)
 # -- nao dado operacional. Confirmado via diagnostico real (scripts/diag_fqs_
