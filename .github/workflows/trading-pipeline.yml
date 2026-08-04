@@ -2264,6 +2264,29 @@ jobs:
         run: |
           & ./scripts/diag_why_spot_not_entering_2026_08_04.ps1
 
+  diag-rejection-sources-breakdown:
+    name: Diag Rejection Sources Breakdown Read-Only (one-shot)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run diagnostic
+        shell: pwsh
+        run: |
+          & ./scripts/diag_rejection_sources_breakdown_2026_08_04.ps1
+
   repair-position-protection:
     name: URGENTE Repair Position Protection (one-shot, capital real)
     runs-on: ubuntu-latest
