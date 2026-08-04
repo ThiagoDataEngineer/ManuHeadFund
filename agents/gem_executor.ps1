@@ -831,11 +831,26 @@ function Invoke-GemExecute {
                 $riskPct = 0.03
                 $allocForTrade = $allocForTrade * $riskPct / 0.01  # normalize para o calc
 
-                $dynamicSize = Get-SizePerTrade -AllocatedCapital $allocForTrade -MaxConcurrentTrades 15 -StopLossPct ([double]$__stpEarly.stop_pct)
+                # 2026-08-04: owner pediu pesar o sizing pela FORCA do sinal --
+                # ate aqui todo trade recebia a mesma fatia (dividida por
+                # MaxConcurrentTrades=15 fixo, mesmo com poucas posicoes reais
+                # abertas de fato). Get-SignalStrengthWeight (lib_sizing_dynamics.ps1)
+                # usa $Gem.score (0-100, ja disponivel neste ponto -- passou no
+                # gate scoreMin mais acima) pra dar fatia maior a sinais fortes
+                # (score>=90 -> 1.5x) e menor a sinais no piso do gate (score<75
+                # -> 0.6x), sem mudar o teto de risco de 3%/trade nem o divisor
+                # de concorrencia -- so redistribui a fatia entre trades da
+                # mesma janela conforme conviccao.
+                $__signalWeight = if (Get-Command Get-SignalStrengthWeight -ErrorAction SilentlyContinue) {
+                    Get-SignalStrengthWeight -Score ([double]$Gem.score)
+                } else { 1.0 }
+
+                $dynamicSize = Get-SizePerTrade -AllocatedCapital $allocForTrade -MaxConcurrentTrades 15 `
+                    -StopLossPct ([double]$__stpEarly.stop_pct) -SignalWeight $__signalWeight
 
                 if ($dynamicSize -gt 0) {
                     $usd_size = $dynamicSize
-                    $sizingMethod = "dynamic_feedback_${regime}_3pct"
+                    $sizingMethod = "dynamic_feedback_${regime}_3pct_weight${__signalWeight}"
                 }
             }
         }
