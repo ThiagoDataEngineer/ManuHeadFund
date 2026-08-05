@@ -115,6 +115,37 @@ try {
     Write-Host "  [Radar dinamico] WARN: falhou, seguindo so com curadoria manual -- $_" -ForegroundColor Yellow
 }
 
+# 2026-08-05: RADAR DINAMICO SPOT -- owner notou (real, prints da CoinEx)
+# moedas SPOT-only com movimento forte de 24h (EVRMORE +142%, CYS +94%,
+# HEI +66%, SKYAI +46%...) que NUNCA apareciam no scan -- o radar acima
+# (2026-08-01) so consulta CoinEx-GetAllFuturesTickers. Medido em producao
+# (diag_spot_radar_impact_2026_08_04): 35 moedas SPOT-only com |change_24h|
+# >=10% ficavam 100% invisiveis (vs so 3 via futures nesse mesmo ciclo).
+# Universo SPOT real (~1300 tickers) e bem maior que futures (~228) -- top
+# 10 por forca de movimento (MaxResults, ver lib_market_movers.ps1) evita
+# ciclo de scan lento demais. Owner pediu explicitamente: sem piso de volume
+# extra aqui (os gates de liquidez/estrutura ja existentes filtram depois),
+# mas com teto de quantidade por ciclo.
+try {
+    if ((Get-Command CoinEx-GetAllSpotTickers -ErrorAction SilentlyContinue) -and (Get-Command Get-DynamicMarketMoversFromRawTickers -ErrorAction SilentlyContinue)) {
+        $allSpotTickers = @(CoinEx-GetAllSpotTickers)
+        $futSymbolSet = @{}
+        if ($allFutTickers) { foreach ($t in $allFutTickers) { $futSymbolSet[[string]$t.market] = $true } }
+        # so SPOT-only real (symbol sem contrato futures) -- quem tem futures
+        # ja e coberto pelo radar de futures acima, nao duplicar aqui.
+        $spotOnlyTickers = @($allSpotTickers | Where-Object { -not $futSymbolSet.ContainsKey([string]$_.market) })
+        $existingSymbolsForSpot = @($tickers | Select-Object -ExpandProperty symbol)
+        $dynamicSpotMovers = @(Get-DynamicMarketMoversFromRawTickers -RawTickers $spotOnlyTickers -ExcludeSymbols $existingSymbolsForSpot -MaxResults 10)
+
+        if ($dynamicSpotMovers.Count -gt 0) {
+            Write-Host "  [Radar dinamico SPOT] +$($dynamicSpotMovers.Count) movers SPOT-only de 24h (fora da curadoria manual e sem contrato futures): $(($dynamicSpotMovers | Select-Object -First 10 -ExpandProperty symbol) -join ', ')" -ForegroundColor Magenta
+            $tickers = @($tickers) + $dynamicSpotMovers
+        }
+    }
+} catch {
+    Write-Host "  [Radar dinamico SPOT] WARN: falhou, seguindo sem radar SPOT -- $_" -ForegroundColor Yellow
+}
+
 # =========================================================================
 # [2] GENERATE CANDIDATES (in-memory, sem Supabase)
 # =========================================================================

@@ -82,4 +82,52 @@ Describe "Get-DynamicMarketMoversFromRawTickers -- transforma ticker cru CoinEx 
         $result[0].PSObject.Properties['change24h'] | Should Not BeNullOrEmpty
         $result[0].change24h | Should Be $result[0].change_24h
     }
+
+    # 2026-08-05: MaxResults -- owner pediu ao estender o radar dinamico pra
+    # SPOT (universo real >1000 tickers, vs ~228 de futures) um teto por
+    # ciclo pra nao deixar o scan lento, mas SEM piso de volume extra (gates
+    # de liquidez existentes continuam filtrando depois). Ordena por forca
+    # de movimento (|change_24h| desc) antes de truncar -- os mais fortes
+    # sempre entram primeiro, nunca corta arbitrariamente por ordem de API.
+    Context "MaxResults (teto ordenado por forca de movimento)" {
+        It "sem MaxResults (default 0) retorna TODOS os movers -- comportamento existente preservado" {
+            $raw = @(
+                (New-RawTicker -Market "A1USDT" -Open 100 -Close 111)   # +11%
+                (New-RawTicker -Market "A2USDT" -Open 100 -Close 112)   # +12%
+                (New-RawTicker -Market "A3USDT" -Open 100 -Close 113)   # +13%
+            )
+            $result = @(Get-DynamicMarketMoversFromRawTickers -RawTickers $raw)
+            $result.Count | Should Be 3
+        }
+
+        It "MaxResults trunca pros N mais fortes (|change_24h| desc), nao pela ordem de entrada" {
+            $raw = @(
+                (New-RawTicker -Market "FRACOUSDT" -Open 100 -Close 111)     # +11% (mais fraco, primeiro na lista)
+                (New-RawTicker -Market "FORTEUSDT" -Open 100 -Close 200)     # +100% (mais forte, ultimo na lista)
+                (New-RawTicker -Market "MEDIOUSDT" -Open 100 -Close 130)     # +30%
+            )
+            $result = @(Get-DynamicMarketMoversFromRawTickers -RawTickers $raw -MaxResults 2)
+            $result.Count | Should Be 2
+            $symbols = @($result | Select-Object -ExpandProperty symbol)
+            ($symbols -contains "FORTEUSDT") | Should Be $true
+            ($symbols -contains "MEDIOUSDT") | Should Be $true
+            ($symbols -contains "FRACOUSDT") | Should Be $false
+        }
+
+        It "MaxResults maior que o total de movers nao trunca nem quebra" {
+            $raw = @( (New-RawTicker -Market "SOLOUSDT" -Open 100 -Close 115) )
+            $result = @(Get-DynamicMarketMoversFromRawTickers -RawTickers $raw -MaxResults 50)
+            $result.Count | Should Be 1
+        }
+
+        It "considera loser forte tambem no ranking (|change_24h|, nao so gainers)" {
+            $raw = @(
+                (New-RawTicker -Market "GANHOUSDT" -Open 100 -Close 112)    # +12%
+                (New-RawTicker -Market "PERDAUSDT" -Open 100 -Close 55)     # -45% (mais forte em modulo)
+            )
+            $result = @(Get-DynamicMarketMoversFromRawTickers -RawTickers $raw -MaxResults 1)
+            $result.Count | Should Be 1
+            $result[0].symbol | Should Be "PERDAUSDT"
+        }
+    }
 }

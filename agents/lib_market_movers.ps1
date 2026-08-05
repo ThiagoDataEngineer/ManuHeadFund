@@ -80,7 +80,14 @@ function Get-DynamicMarketMoversFromRawTickers {
         [object[]] $RawTickers,
         [string[]] $ExcludeSymbols = @(),
         [double] $GainerThreshold24h = 10,
-        [double] $LoserThreshold24h = -10
+        [double] $LoserThreshold24h = -10,
+        # 2026-08-05: teto opcional de resultados, ordenado por forca de
+        # movimento (|change_24h| desc) antes de truncar -- owner pediu ao
+        # estender o radar dinamico pra SPOT (universo real >1000 tickers,
+        # bem maior que FUTURES ~228) pra nao deixar o ciclo de scan lento
+        # demais. Default 0 = sem teto, preserva 100% o comportamento atual
+        # dos callers existentes (radar FUTURES, lib_short_universe.ps1).
+        [int] $MaxResults = 0
     )
 
     $excludeSet = @{}
@@ -101,7 +108,13 @@ function Get-DynamicMarketMoversFromRawTickers {
 
     # so 24h nesta fase (30d fica pro filtro subsequente, so p/ quem ja passou
     # aqui -- evita 1 candle-fetch por moeda do mercado inteiro).
-    return @(Get-PrioritizedMarketsDualRadar -AllMarkets $normalized `
+    $movers = @(Get-PrioritizedMarketsDualRadar -AllMarkets $normalized `
         -GainerThreshold24h $GainerThreshold24h -LoserThreshold24h $LoserThreshold24h `
         -GainerThreshold30d ([double]::MaxValue) -LoserThreshold30d ([double]::MinValue))
+
+    if ($MaxResults -gt 0 -and $movers.Count -gt $MaxResults) {
+        $movers = @($movers | Sort-Object { [math]::Abs($_.change_24h) } -Descending | Select-Object -First $MaxResults)
+    }
+
+    return @($movers)
 }
