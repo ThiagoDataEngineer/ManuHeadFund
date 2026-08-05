@@ -154,6 +154,18 @@ try {
 
         if ($dynamicSpotMovers.Count -gt 0) {
             Write-Host "  [Radar dinamico SPOT] +$($dynamicSpotMovers.Count) movers SPOT-only de 24h (vol>=`$$SPOT_RADAR_MIN_VOLUME_USD, fora da curadoria manual e sem contrato futures): $(($dynamicSpotMovers | Select-Object -First 10 -ExpandProperty symbol) -join ', ')" -ForegroundColor Magenta
+            # 2026-08-05 FIX (validado em producao, run 31018311559): sem esta
+            # marca, o filtro generico volume24h<$100k em [2] GENERATE
+            # CANDIDATES (linha ~174) roda de novo em cima de TODOS os
+            # tickers -- descartando os 5 candidatos SPOT que ja passaram
+            # pelo piso proprio de $30k (BLESSUSDT $48k, UBUSDT $86k etc,
+            # todos <$100k). "Generated 13" no log parecia incluir os 5, mas
+            # o segundo filtro os comia de volta antes do executor -- 0
+            # chegavam. is_spot_radar marca a origem pra [2] pular o piso
+            # generico so nesses, respeitando o piso proprio ja aplicado aqui.
+            foreach ($m in $dynamicSpotMovers) {
+                $m | Add-Member -MemberType NoteProperty -Name is_spot_radar -Value $true -Force
+            }
             $tickers = @($tickers) + $dynamicSpotMovers
         }
     }
@@ -171,7 +183,12 @@ $candidates = @()
 
 foreach ($ticker in $tickers) {
     if ($ticker.symbol -match "^(USDT|USDC|BUSD|TUSD)$") { continue }
-    if ([double]$ticker.volume24h -lt 100000) { continue }
+    # 2026-08-05: candidatos do radar SPOT ja passaram pelo piso proprio
+    # ($SPOT_RADAR_MIN_VOLUME_USD, ver secao [1] acima) -- pular o piso
+    # generico de $100k so pra esses (is_spot_radar), senao o piso mais
+    # alto os descarta de novo aqui (achado real em producao).
+    $isSpotRadarTicker = ($ticker.PSObject.Properties['is_spot_radar'] -and $ticker.is_spot_radar)
+    if (-not $isSpotRadarTicker -and [double]$ticker.volume24h -lt 100000) { continue }
 
     $change = [double]$ticker.change24h
     $direction = "LONG"
