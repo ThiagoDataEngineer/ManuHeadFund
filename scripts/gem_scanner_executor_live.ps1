@@ -123,9 +123,21 @@ try {
 # >=10% ficavam 100% invisiveis (vs so 3 via futures nesse mesmo ciclo).
 # Universo SPOT real (~1300 tickers) e bem maior que futures (~228) -- top
 # 10 por forca de movimento (MaxResults, ver lib_market_movers.ps1) evita
-# ciclo de scan lento demais. Owner pediu explicitamente: sem piso de volume
-# extra aqui (os gates de liquidez/estrutura ja existentes filtram depois),
-# mas com teto de quantidade por ciclo.
+# ciclo de scan lento demais.
+#
+# 2026-08-05 FIX (mesmo dia, validado em producao real run 31017396381):
+# 1a versao nao tinha piso de volume proprio, so o filtro generico de
+# volume24h<$100k em [2] GENERATE CANDIDATES (aplicado igual a curadoria
+# manual + radar futures). TODOS os 10 movers SPOT-only puxados (HEIUSDT
+# $28k, EVRMOREUSDT $2.8k, CYSUSDT $51k...) foram descartados por esse piso
+# -- nenhum chegou no executor. Medido (diag_spot_volume_threshold_
+# scenarios_2026_08_05): piso $100k=0 candidatos, $30k=5 candidatos reais
+# (BLESSUSDT +78%/$48k, UBUSDT -40%/$86k, CYSUSDT +34%/$51k, BANKUSDT
+# -20%/$39k, HOMEUSDT -12%/$31k). Owner escolheu $30k SO pro radar SPOT
+# (curadoria manual + radar futures continuam com o piso $100k existente,
+# sem mudanca) -- equilibrio entre capturar movimento real e manter
+# liquidez suficiente pra sair da posicao sem spread ruim.
+$SPOT_RADAR_MIN_VOLUME_USD = 30000
 try {
     if ((Get-Command CoinEx-GetAllSpotTickers -ErrorAction SilentlyContinue) -and (Get-Command Get-DynamicMarketMoversFromRawTickers -ErrorAction SilentlyContinue)) {
         $allSpotTickers = @(CoinEx-GetAllSpotTickers)
@@ -133,12 +145,15 @@ try {
         if ($allFutTickers) { foreach ($t in $allFutTickers) { $futSymbolSet[[string]$t.market] = $true } }
         # so SPOT-only real (symbol sem contrato futures) -- quem tem futures
         # ja e coberto pelo radar de futures acima, nao duplicar aqui.
-        $spotOnlyTickers = @($allSpotTickers | Where-Object { -not $futSymbolSet.ContainsKey([string]$_.market) })
+        $spotOnlyTickers = @($allSpotTickers | Where-Object {
+            -not $futSymbolSet.ContainsKey([string]$_.market) -and
+            ([double]$(if ($_.PSObject.Properties['value'] -and $_.value) { $_.value } else { 0 })) -ge $SPOT_RADAR_MIN_VOLUME_USD
+        })
         $existingSymbolsForSpot = @($tickers | Select-Object -ExpandProperty symbol)
         $dynamicSpotMovers = @(Get-DynamicMarketMoversFromRawTickers -RawTickers $spotOnlyTickers -ExcludeSymbols $existingSymbolsForSpot -MaxResults 10)
 
         if ($dynamicSpotMovers.Count -gt 0) {
-            Write-Host "  [Radar dinamico SPOT] +$($dynamicSpotMovers.Count) movers SPOT-only de 24h (fora da curadoria manual e sem contrato futures): $(($dynamicSpotMovers | Select-Object -First 10 -ExpandProperty symbol) -join ', ')" -ForegroundColor Magenta
+            Write-Host "  [Radar dinamico SPOT] +$($dynamicSpotMovers.Count) movers SPOT-only de 24h (vol>=`$$SPOT_RADAR_MIN_VOLUME_USD, fora da curadoria manual e sem contrato futures): $(($dynamicSpotMovers | Select-Object -First 10 -ExpandProperty symbol) -join ', ')" -ForegroundColor Magenta
             $tickers = @($tickers) + $dynamicSpotMovers
         }
     }
