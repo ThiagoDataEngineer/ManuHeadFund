@@ -25,15 +25,28 @@ $cutoff = (Get-Date).ToUniversalTime().AddDays(-7)
 # exata da epoca, mas indicativo real).
 . (Join-Path $agentsDir "lib_market_type_detector.ps1")
 
-Write-Host "`n[1] trade_outcomes fechados (query direta, order=ts.desc)" -ForegroundColor Yellow
+Write-Host "`n[1] trade_outcomes fechados (query direta, order=closed_at.desc)" -ForegroundColor Yellow
 try {
     $cfg = Get-SupabaseRequestHeaders -Method "GET"
-    $uri = "$($cfg.url)/rest/v1/trade_outcomes?select=*&order=entry_ts.desc&limit=500"
-    $outcomes = @(Invoke-RestMethod -Uri $uri -Method GET -Headers $cfg.headers -TimeoutSec 30)
+    # 2026-08-05 FIX: coluna real gravada por Add-TradeOutcome/ConvertTo-
+    # SupabaseOutcome e closed_at, NAO entry_ts (esse so existe no writer
+    # separado lib_trade_journal_supabase.ps1/Save-TradeOutcome). order=
+    # numa coluna que nao existe em todas as linhas faz o PostgREST
+    # devolver erro -- e Invoke-RestMethod nao lanca em corpo de erro JSON
+    # com HTTP 200/4xx tratado como sucesso, entao "Total puxado: 1" era
+    # o objeto de erro sendo contado como 1 registro, nao dado real.
+    $uri = "$($cfg.url)/rest/v1/trade_outcomes?select=*&order=closed_at.desc&limit=500"
+    $rawResp = Invoke-RestMethod -Uri $uri -Method GET -Headers $cfg.headers -TimeoutSec 30
+    if ($rawResp -isnot [array] -and $rawResp.PSObject.Properties['message']) {
+        Write-Host "  [ERRO PostgREST] $($rawResp.message) (code=$($rawResp.code))" -ForegroundColor Red
+        $outcomes = @()
+    } else {
+        $outcomes = @($rawResp)
+    }
     Write-Host "Total puxado: $($outcomes.Count)"
 
     $recent = @($outcomes | Where-Object {
-        $raw = $_.entry_ts
+        $raw = if ($_.PSObject.Properties['closed_at']) { $_.closed_at } else { $_.entry_ts }
         $ts = try { if ($raw -is [datetime]) { $raw } else { [datetime]::Parse([string]$raw) } } catch { $null }
         $ts -and $ts -gt $cutoff
     })
@@ -76,7 +89,13 @@ Write-Host "`n[2] trailing_state -- posicoes SPOT (origin.asset_class=SPOT) ulti
 try {
     $cfg2 = Get-SupabaseRequestHeaders -Method "GET"
     $uri2 = "$($cfg2.url)/rest/v1/trailing_state?select=*&order=openedAt.desc&limit=200"
-    $allPos = @(Invoke-RestMethod -Uri $uri2 -Method GET -Headers $cfg2.headers -TimeoutSec 30)
+    $rawResp2 = Invoke-RestMethod -Uri $uri2 -Method GET -Headers $cfg2.headers -TimeoutSec 30
+    if ($rawResp2 -isnot [array] -and $rawResp2.PSObject.Properties['message']) {
+        Write-Host "  [ERRO PostgREST] $($rawResp2.message) (code=$($rawResp2.code))" -ForegroundColor Red
+        $allPos = @()
+    } else {
+        $allPos = @($rawResp2)
+    }
     Write-Host "Total puxado: $($allPos.Count)"
 
     $recentPos = @($allPos | Where-Object {
