@@ -322,6 +322,19 @@ function Close-TrailingPosition {
     Save-TrailingPositions $updated
     Write-Host "  [Trailing] Fechado: $Market ($Reason)" -ForegroundColor Yellow
 
+    # 2026-08-06 FIX: limpa o registro de ladder parcial junto com o fechamento
+    # da posicao -- sem isso, o registro active=true sobrevive indefinidamente
+    # e bloqueia qualquer ladder real numa posicao FUTURA no mesmo market
+    # (achado real: ARBUSDT registrado em 07-31 travou uma posicao nova aberta
+    # em 08-04, sempre "already_registered", nunca um ladder de verdade).
+    if ($script:closedPos -and (Get-Command Remove-PartialExitLadder -ErrorAction SilentlyContinue)) {
+        try {
+            Remove-PartialExitLadder -Market $Market | Out-Null
+        } catch {
+            Write-Host "  [Trailing] Remove-PartialExitLadder falhou (nao bloqueia): $_" -ForegroundColor DarkYellow
+        }
+    }
+
     # Feedback emit (best-effort; tolerante a falha)
     if ($script:closedPos -and $ExitPrice -gt 0 -and (Get-Command Add-TradeOutcome -ErrorAction SilentlyContinue)) {
         try {

@@ -81,6 +81,43 @@ function Save-PartialExitLadderRegistered {
     }
 }
 
+# 2026-08-06 FIX CRITICO: nenhum caller desativava o registro quando a
+# posicao FECHAVA (achado real: ARBUSDT registrado em 2026-07-31 20:12:57,
+# aquela posicao fechou ha dias, uma posicao NOVA no mesmo market abriu em
+# 2026-08-04 -- Get-PartialExitLadderRegistered so olha market+active=true,
+# entao a posicao nova "herdava" o registro fantasma da antiga e nunca
+# tentava registrar um ladder de verdade (sempre already_registered, ciclo
+# apos ciclo, owner reportou "multi TPSL nunca funciona"). Mesmo padrao ja
+# corrigido manualmente 1x pra DOGEUSDT (scripts/fix_dogeusdt_stale_
+# ladder_registration_2026_07_31.ps1) mas a causa raiz nunca foi fechada --
+# so aquele market especifico foi limpo na mao, o bug generico continuou.
+function Remove-PartialExitLadder {
+    [CmdletBinding()]
+    param([Parameter(Mandatory)] [string] $Market)
+
+    if (-not (Get-Command Get-StateRecords -ErrorAction SilentlyContinue)) { return $false }
+    if (-not (Get-Command Save-StateRecords -ErrorAction SilentlyContinue)) { return $false }
+    try {
+        $rows = @(Get-StateRecords -Table "partial_exit_ladders" -Filter @{ market = $Market })
+        $activeRows = @($rows | Where-Object { $_.active -eq $true })
+        if ($activeRows.Count -eq 0) { return $true }  # nada pra desativar, nao e erro
+
+        foreach ($r in $activeRows) {
+            $updated = [PSCustomObject]@{
+                id            = $r.id
+                market        = $r.market
+                active        = $false
+                registered_at = $r.registered_at
+                levels_json   = $r.levels_json
+            }
+            Save-StateRecords -Table "partial_exit_ladders" -Records @($updated) -PrimaryKey "id" | Out-Null
+        }
+        return $true
+    } catch {
+        return $false
+    }
+}
+
 # ============================================================================
 # Register-PartialExitLadder -- ponto de entrada real
 # ============================================================================

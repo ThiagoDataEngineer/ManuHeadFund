@@ -231,4 +231,60 @@ Describe "Close-TrailingPosition - emits feedback outcome" {
     }
 }
 
+Describe "Close-TrailingPosition - limpa registro de partial exit ladder (2026-08-06)" {
+    # Achado real: partial_exit_ladders nunca era desativado ao fechar a
+    # posicao -- um registro active=true de uma posicao ANTIGA (ex:
+    # ARBUSDT 2026-07-31) bloqueava Register-PartialExitLadder pra sempre
+    # em qualquer posicao NOVA no mesmo market (sempre already_registered).
+    # Close-TrailingPosition agora chama Remove-PartialExitLadder (guardado
+    # por Get-Command, best-effort) apos marcar a posicao active=false.
+    BeforeEach {
+        Remove-Item "$script:tmpDir\trailing_positions.json" -ErrorAction SilentlyContinue
+        $global:__rpel_calls = @()
+    }
+    AfterEach {
+        Remove-Item -Path function:Remove-PartialExitLadder -ErrorAction SilentlyContinue
+    }
+
+    It "Remove-PartialExitLadder disponivel -- e chamado com o Market correto ao fechar" {
+        Set-Item -Path function:Remove-PartialExitLadder -Value {
+            param($Market)
+            $global:__rpel_calls += $Market
+            $true
+        }
+        Add-TrailingPosition -Market "LADDERUSDT" -Side "LONG" -Entry 100 -Stop 95 -Target 120 -Source "tier_a"
+        Close-TrailingPosition -Market "LADDERUSDT" -Reason "target" -ExitPrice 120
+
+        $global:__rpel_calls.Count | Should Be 1
+        $global:__rpel_calls[0] | Should Be "LADDERUSDT"
+    }
+
+    It "Remove-PartialExitLadder ausente (lib nao carregada nesse contexto) -- fecha normalmente, sem erro" {
+        Remove-Item -Path function:Remove-PartialExitLadder -ErrorAction SilentlyContinue
+        Add-TrailingPosition -Market "NOLADDERUSDT" -Side "LONG" -Entry 100 -Stop 95 -Target 120 -Source "tier_a"
+        { Close-TrailingPosition -Market "NOLADDERUSDT" -Reason "target" -ExitPrice 120 } | Should Not Throw
+        $p = (Get-TrailingPositions | Where-Object { $_.market -eq "NOLADDERUSDT" })
+        $p.active | Should Be $false
+    }
+
+    It "Remove-PartialExitLadder lanca excecao -- fechamento da posicao NAO e afetado (best-effort)" {
+        Set-Item -Path function:Remove-PartialExitLadder -Value { param($Market) throw "supabase down" }
+        Add-TrailingPosition -Market "FAILUSDT" -Side "LONG" -Entry 100 -Stop 95 -Target 120 -Source "tier_a"
+        { Close-TrailingPosition -Market "FAILUSDT" -Reason "target" -ExitPrice 120 } | Should Not Throw
+        $p = (Get-TrailingPositions | Where-Object { $_.market -eq "FAILUSDT" })
+        $p.active | Should Be $false
+        $p.closeReason | Should Be "target"
+    }
+
+    It "market sem posicao active correspondente (no-op close) -- NAO chama Remove-PartialExitLadder" {
+        Set-Item -Path function:Remove-PartialExitLadder -Value {
+            param($Market)
+            $global:__rpel_calls += $Market
+            $true
+        }
+        Close-TrailingPosition -Market "NUNCAABERTOUSDT" -Reason "target" -ExitPrice 120
+        $global:__rpel_calls.Count | Should Be 0
+    }
+}
+
 Remove-Item $script:tmpDir -Recurse -Force -ErrorAction SilentlyContinue

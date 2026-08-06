@@ -359,6 +359,98 @@ Describe "Register-PartialExitLadder -- ancoragem no preco atual (2026-07-31 FIX
     }
 }
 
+Describe "Remove-PartialExitLadder -- desativa registro ao fechar posicao (2026-08-06)" {
+    # Achado real: ARBUSDT registrado em partial_exit_ladders em 2026-07-31
+    # (active=true) para uma posicao que ja fechou -- uma posicao NOVA no
+    # mesmo market aberta em 2026-08-04 herdou o registro fantasma via
+    # Get-PartialExitLadderRegistered (so filtra market+active=true, sem
+    # nocao de "essa e a MESMA posicao?"), sempre reason=already_registered,
+    # nunca um ladder real. Close-TrailingPosition precisa desativar o
+    # registro no fechamento pra proxima posicao no mesmo market comecar
+    # do zero.
+
+    BeforeEach {
+        $global:__gsr_calls = @()
+        $global:__ssr_records = @()
+        Set-Item -Path function:Get-StateRecords -Value {
+            param($Table, $Filter)
+            $global:__gsr_calls += [PSCustomObject]@{ Table = $Table; Filter = $Filter }
+            $global:__gsr_result
+        }
+        Set-Item -Path function:Save-StateRecords -Value {
+            param($Table, $Records, $PrimaryKey)
+            $global:__ssr_records += ,$Records
+            $true
+        }
+    }
+    AfterEach {
+        Remove-Item -Path function:Get-StateRecords -ErrorAction SilentlyContinue
+        Remove-Item -Path function:Save-StateRecords -ErrorAction SilentlyContinue
+    }
+
+    It "existe 1 linha active=true -- desativa (active=false) preservando id/market/registered_at/levels_json" {
+        $global:__gsr_result = @([PSCustomObject]@{
+            id = 42; market = "ARBUSDT"; active = $true
+            registered_at = "2026-07-31T20:12:57Z"; levels_json = '{"foo":1}'
+        })
+
+        $ok = Remove-PartialExitLadder -Market "ARBUSDT"
+
+        $ok | Should Be $true
+        $global:__ssr_records.Count | Should Be 1
+        $saved = $global:__ssr_records[0][0]
+        $saved.id | Should Be 42
+        $saved.market | Should Be "ARBUSDT"
+        $saved.active | Should Be $false
+        $saved.registered_at | Should Be "2026-07-31T20:12:57Z"
+        $saved.levels_json | Should Be '{"foo":1}'
+    }
+
+    It "multiplas linhas active=true (triggers manuais repetidos) -- desativa TODAS" {
+        $global:__gsr_result = @(
+            [PSCustomObject]@{ id = 1; market = "DOGEUSDT"; active = $true; registered_at = "t1"; levels_json = "{}" },
+            [PSCustomObject]@{ id = 2; market = "DOGEUSDT"; active = $true; registered_at = "t2"; levels_json = "{}" }
+        )
+
+        $ok = Remove-PartialExitLadder -Market "DOGEUSDT"
+
+        $ok | Should Be $true
+        $global:__ssr_records.Count | Should Be 2
+    }
+
+    It "nenhuma linha active=true -- nao chama Save-StateRecords, retorna true (nada a fazer, nao e erro)" {
+        $global:__gsr_result = @([PSCustomObject]@{ id = 1; market = "SOONUSDT"; active = $false; registered_at = "t"; levels_json = "{}" })
+
+        $ok = Remove-PartialExitLadder -Market "SOONUSDT"
+
+        $ok | Should Be $true
+        $global:__ssr_records.Count | Should Be 0
+    }
+
+    It "nenhum registro no market -- nao chama Save-StateRecords, retorna true" {
+        $global:__gsr_result = @()
+
+        $ok = Remove-PartialExitLadder -Market "NUNCAREGISTRADOUSDT"
+
+        $ok | Should Be $true
+        $global:__ssr_records.Count | Should Be 0
+    }
+
+    It "Get-StateRecords lanca excecao -- fail-safe, retorna false, nao propaga" {
+        Set-Item -Path function:Get-StateRecords -Value { param($Table, $Filter) throw "supabase down" }
+
+        $ok = Remove-PartialExitLadder -Market "ARBUSDT"
+
+        $ok | Should Be $false
+    }
+
+    It "filtra por market ao consultar Get-StateRecords" {
+        $global:__gsr_result = @()
+        Remove-PartialExitLadder -Market "OPUSDT" | Out-Null
+        $global:__gsr_calls[0].Filter.market | Should Be "OPUSDT"
+    }
+}
+
 Describe "Register-PartialExitLadder -- caso real DOGEUSDT (2026-07-31)" {
 
     BeforeEach { Reset-PartialExitMocks }
