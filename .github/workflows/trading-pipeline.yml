@@ -2950,6 +2950,23 @@ jobs:
         run: |
           & ./scripts/apply_trailing_birth_score_2026_07_29.ps1
 
+  apply-trailing-sltp-source-schema:
+    name: Apply trailing_state sl_source/tp_source/stop_pct_used Schema (one-shot, URGENTE)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply migration
+        shell: pwsh
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          & ./scripts/apply_trailing_sltp_source_2026_08_06.ps1
+
   diag-signal-vs-reality-readonly:
     name: Diag Signal vs Reality Read-Only (one-shot)
     runs-on: ubuntu-latest
