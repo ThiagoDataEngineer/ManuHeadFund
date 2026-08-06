@@ -2547,7 +2547,9 @@ jobs:
       - name: Run backfill (DryRun default true)
         shell: pwsh
         run: |
-          & ./scripts/apply_trailing_origin_backfill_2026_08_06.ps1 -DryRun ${{ github.event.inputs.origin_backfill_dry_run || 'true' }}
+          $dryRunInput = "${{ github.event.inputs.origin_backfill_dry_run }}"
+          $dryRunBool = ($dryRunInput -ne "false")
+          & ./scripts/apply_trailing_origin_backfill_2026_08_06.ps1 -DryRun $dryRunBool
 
   repair-position-protection:
     name: URGENTE Repair Position Protection (one-shot, capital real)
