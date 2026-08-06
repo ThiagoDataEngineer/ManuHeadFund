@@ -149,7 +149,7 @@ Describe "Resolve-TrailingDecision -- resolver por trade_style" {
         $r.atr_period | Should Be 14
     }
 
-    It "trade_style desconhecido -> HOLD explicito (fail-safe, nao assume SWING)" {
+    It "trade_style desconhecido (valor genuinamente invalido) -> HOLD explicito (fail-safe)" {
         $pos = [PSCustomObject]@{
             market="TESTUSDT"; side="LONG"; entry=100.0; stopCurrent=98.0
             origin = @{ asset_class="SPOT"; trade_style="BANANA" }
@@ -158,6 +158,41 @@ Describe "Resolve-TrailingDecision -- resolver por trade_style" {
         $r = Resolve-TrailingDecision -Position $pos -CurrentPrice 105.0 -Candles $candles
         $r.action | Should Be "HOLD"
         $r.reason | Should Be "trade_style_desconhecido"
+    }
+
+    # 2026-08-06: achado real em producao -- ARBUSDT/NEARUSDT/OPUSDT abertas
+    # via regime_surf/orchestrator (callers que nunca passavam -Origin pra
+    # Register-PositionTrailing) nasciam com origin=UNKNOWN/UNKNOWN (fallback
+    # conhecido e documentado de Add-TrailingPosition, NAO dado corrompido) e
+    # ficavam 42h+ travadas em HOLD, trailing nunca avancando fase mesmo com
+    # preco favoravel. Diferente do caso "BANANA" acima (erro genuino,
+    # continua HOLD de proposito): "UNKNOWN" e estado conhecido do sistema,
+    # entao aplica fallback SWING (mais comum/conservador nesta base) em vez
+    # de deixar a posicao sem gestao ativa pra sempre.
+    It "trade_style=UNKNOWN (fallback conhecido, nao erro) -> aplica SWING, NAO fica preso em trade_style_desconhecido" {
+        # SHORT com preco caindo a favor (StepPct negativo, mesmo padrao do
+        # teste "stop NUNCA recua (SHORT)" acima) -- garante que ha melhora
+        # real disponivel, senao o motor legitimamente devolve HOLD por
+        # "sem melhora" (outro motivo, nao o que este teste cobre).
+        $pos = [PSCustomObject]@{
+            market="ARBUSDT"; side="SHORT"; entry=100.0; stopCurrent=110.0
+            origin = @{ asset_class="FUTURES"; trade_style="UNKNOWN" }
+        }
+        $candles = New-HealthyUptrendCandles -Count 30 -StartPrice 100 -StepPct -0.3
+        $r = Resolve-TrailingDecision -Position $pos -CurrentPrice ([double]$candles[-1].close) -Candles $candles
+        $r.reason | Should Not Be "trade_style_desconhecido"
+        $r.atr_period | Should Be 14   # SWING
+    }
+
+    It "asset_class=UNKNOWN com trade_style=UNKNOWN -- nao trava mais em trade_style_desconhecido" {
+        $posUnknown = [PSCustomObject]@{
+            market="TESTUSDT"; side="SHORT"; entry=100.0; stopCurrent=110.0
+            origin = @{ asset_class="UNKNOWN"; trade_style="UNKNOWN" }
+        }
+        $candles = New-HealthyUptrendCandles -Count 30 -StartPrice 100 -StepPct -0.3
+        $rUnknown = Resolve-TrailingDecision -Position $posUnknown -CurrentPrice ([double]$candles[-1].close) -Candles $candles
+        $rUnknown.atr_period | Should Be 14
+        $rUnknown.reason | Should Not Be "trade_style_desconhecido"
     }
 }
 

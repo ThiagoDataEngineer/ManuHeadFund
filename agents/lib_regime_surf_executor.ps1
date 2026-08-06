@@ -117,8 +117,16 @@ function Invoke-RegimeSurfShort {
 
         if (Get-Command Register-PositionTrailing -ErrorAction SilentlyContinue) {
             try {
+                # 2026-08-06 FIX: sem -Origin, este trade nascia com
+                # origin=UNKNOWN/UNKNOWN (fallback de Add-TrailingPosition) e
+                # travava pra sempre em HOLD no motor unificado -- achado
+                # real (ARBUSDT/NEARUSDT/OPUSDT 42h+ sem trailing avancar).
+                # regime_surf SEMPRE abre FUTURES via CoinEx-PlaceOrder sell
+                # (linha acima); SWING porque a posicao fica aberta dias, nao
+                # e scalp de minutos.
                 Register-PositionTrailing -Market $Market -Side "SHORT" -Entry $d.entry `
-                    -Stop $d.stop -Target $d.target -OrderId $orderId -Source "regime_surf" | Out-Null
+                    -Stop $d.stop -Target $d.target -OrderId $orderId -Source "regime_surf" `
+                    -Origin @{ asset_class = "FUTURES"; trade_style = "SWING" } | Out-Null
             } catch {}
         }
         if (Get-Command Send-TelegramAlert -ErrorAction SilentlyContinue) {

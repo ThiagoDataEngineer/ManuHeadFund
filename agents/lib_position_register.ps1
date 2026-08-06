@@ -85,7 +85,19 @@ function Register-PositionTrailing {
         [int]   $MentorConfidence = 0,
         [string]$MentorMensagem = "",
         [string]$MesaSinal = "",
-        [string]$Tier = ""
+        [string]$Tier = "",
+        # 2026-08-06 FIX: Register-PositionTrailing nunca teve -Origin desde
+        # que o campo foi introduzido em Add-TrailingPosition (2026-07-18) --
+        # achado real: lib_regime_surf_executor.ps1/scan_master.ps1 chamam
+        # esta funcao SEM Origin, mesmo sabendo a origem real do trade (ex:
+        # regime_surf sempre abre FUTURES/SWING), entao toda posicao desses
+        # callers nascia com origin=UNKNOWN/UNKNOWN -- travando pra sempre em
+        # HOLD no motor unificado (Resolve-TrailingDecision exige trade_style
+        # SCALP|SWING, "UNKNOWN" nunca bate). ARBUSDT/NEARUSDT/OPUSDT ficaram
+        # 42h+ sem trailing avancar fase por causa disso. Optativo (default
+        # $null): callers que ja nao passavam continuam com o mesmo
+        # comportamento de antes (fallback UNKNOWN em Add-TrailingPosition).
+        [hashtable]$Origin = $null
     )
 
     $useMoonBag = $false
@@ -139,22 +151,25 @@ function Register-PositionTrailing {
     }
 
     # Trailing classico (default ou fallback)
-    Add-TrailingPosition `
-        -Market $Market `
-        -Side $Side `
-        -Entry $Entry `
-        -Stop $Stop `
-        -Target $Target `
-        -OrderId $OrderId `
-        -Source $Source `
-        -Mode $Mode `
-        -MaxDays $MaxDays `
-        -DdThresholdPct $DdThresholdPct `
-        -MentorVeredicto $MentorVeredicto `
-        -MentorConfidence $MentorConfidence `
-        -MentorMensagem $MentorMensagem `
-        -MesaSinal $MesaSinal `
-        -Tier $Tier
+    $addTrailingArgs = @{
+        Market = $Market
+        Side = $Side
+        Entry = $Entry
+        Stop = $Stop
+        Target = $Target
+        OrderId = $OrderId
+        Source = $Source
+        Mode = $Mode
+        MaxDays = $MaxDays
+        DdThresholdPct = $DdThresholdPct
+        MentorVeredicto = $MentorVeredicto
+        MentorConfidence = $MentorConfidence
+        MentorMensagem = $MentorMensagem
+        MesaSinal = $MesaSinal
+        Tier = $Tier
+    }
+    if ($Origin) { $addTrailingArgs.Origin = $Origin }
+    Add-TrailingPosition @addTrailingArgs
 }
 
 # Functions exported:

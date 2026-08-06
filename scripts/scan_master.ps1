@@ -655,7 +655,15 @@ function Invoke-GemCycle {
                                 # Quando flag OFF: trailing classico (back-compat).
                                 # Quando flag ON e Size>0: Moon Bag split harvest+moon.
                                 $gemSize = if ($execResult.sizing_usd) { [double]$execResult.sizing_usd } else { 0 }
-                                Register-PositionTrailing -Market $g.market -Side "LONG" -Entry $execResult.price -Stop $execResult.stop -Target $execResult.target -OrderId $execResult.order_id -Source "gem" -Size $gemSize
+                                # 2026-08-06 FIX: sem -Origin, este trade nascia com
+                                # origin=UNKNOWN/UNKNOWN e travava pra sempre em HOLD no
+                                # motor unificado (achado real: ARBUSDT/NEARUSDT/OPUSDT).
+                                # $execResult.market_type ja vem certo de gem_executor.ps1
+                                # (SPOT|FUTURES, decidido por Get-RouteForMode) -- so faltava
+                                # repassar. GEM = trade_style SWING (nao scalp).
+                                $gemAssetClass = if ($execResult.market_type) { [string]$execResult.market_type } else { "SPOT" }
+                                Register-PositionTrailing -Market $g.market -Side "LONG" -Entry $execResult.price -Stop $execResult.stop -Target $execResult.target -OrderId $execResult.order_id -Source "gem" -Size $gemSize `
+                                    -Origin @{ asset_class = $gemAssetClass; trade_style = "SWING" }
                                 # Auto-approve audit log (se foi auto)
                                 if ($autoApprove -and (Get-Command Add-GemAutoApproveLog -ErrorAction SilentlyContinue)) {
                                     try { Add-GemAutoApproveLog -Gem $gemForAuto -ApprovalResult $autoApprovalResult -OrderId $execResult.order_id } catch {}
@@ -1332,6 +1340,13 @@ function Invoke-MasterCycle {
                             # 1% default sizing, conservador pra Moon Bag opt-in
                             $orchSize = [double]$result.capital * 0.01
                         }
+                        # 2026-08-06 FIX: sem -Origin, este trade nascia com
+                        # origin=UNKNOWN/UNKNOWN e travava pra sempre em HOLD no
+                        # motor unificado (achado real: ARBUSDT/NEARUSDT/OPUSDT
+                        # 42h+ sem trailing avancar fase). orchestrator_v6/Mode
+                        # STANDARD default e FUTURES (Get-RouteForMode, so GEM
+                        # prefere spot) -- SWING porque este orchestrator nao e
+                        # scalp de segundos/minutos.
                         Register-PositionTrailing `
                             -Market  $result.market `
                             -Side    $result.sinalTech `
@@ -1340,7 +1355,8 @@ function Invoke-MasterCycle {
                             -Target  $result.alvo1 `
                             -OrderId $result.ordemId `
                             -Source  "orchestrator" `
-                            -Size    $orchSize
+                            -Size    $orchSize `
+                            -Origin  @{ asset_class = "FUTURES"; trade_style = "SWING" }
                     }
                 } catch {
                     $errMsg = "$_"

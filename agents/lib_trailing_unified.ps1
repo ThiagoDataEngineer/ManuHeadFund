@@ -246,6 +246,21 @@ function Resolve-TrailingDecision {
         return (& $hold "candles_insuficientes")
     }
 
+    # 2026-08-06 FIX: "UNKNOWN" e o fallback EXPLICITO e conhecido gravado por
+    # Add-TrailingPosition/Register-PositionTrailing quando o caller nao
+    # informa -Origin (achado real: regime_surf/scan_master nunca passavam
+    # -Origin, travando ARBUSDT/NEARUSDT/OPUSDT em HOLD por 42h+ mesmo com
+    # preco favoravel, trailing nunca avancando fase nem protegendo lucro).
+    # Diferente de um valor REALMENTE corrompido/inesperado (ex: "BANANA",
+    # cenario do teste "trade_style desconhecido" abaixo, que continua HOLD
+    # de proposito -- fail-safe pra dado genuinamente invalido). "UNKNOWN"
+    # e um estado CONHECIDO do sistema, entao aplica o fallback mais
+    # conservador (SWING, o estilo mais comum e de reacao mais lenta desta
+    # base) em vez de deixar a posicao sem gestao ativa pra sempre.
+    if ($tradeStyle -eq "UNKNOWN") {
+        $tradeStyle = "SWING"
+    }
+
     if (-not $script:ATR_PERIOD_BY_STYLE.ContainsKey($tradeStyle)) {
         return (& $hold "trade_style_desconhecido")
     }

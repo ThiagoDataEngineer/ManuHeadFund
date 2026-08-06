@@ -62,10 +62,13 @@ Describe "Register-PositionTrailing - flag OFF (default behavior)" {
         $global:MOON_BAG_ENABLED = $false
         $script:trailingCalled = $false
         $script:moonBagCalled = $false
+        $script:trailingOriginReceived = $null
 
         function Add-TrailingPosition {
-            param($Market, $Side, $Entry, $Stop, $Target, $OrderId, $Source, $Mode, $MaxDays, $DdThresholdPct)
+            param($Market, $Side, $Entry, $Stop, $Target, $OrderId, $Source, $Mode, $MaxDays, $DdThresholdPct, $Origin,
+                  $MentorVeredicto, $MentorConfidence, $MentorMensagem, $MesaSinal, $Tier)
             $script:trailingCalled = $true
+            $script:trailingOriginReceived = $Origin
         }
         function Add-MoonBagPair {
             param($Market, $Side, $Entry, $Size, $OrderId, $HarvestTargetPct, $MoonTargetPct)
@@ -95,6 +98,47 @@ Describe "Register-PositionTrailing - flag OFF (default behavior)" {
         Register-PositionTrailing -Market "BTC" -Side "LONG" -Entry 100 -Stop 95 -Target 110 -Size 1000 -Source "orphan_auto_register"
         $script:trailingCalled | Should Be $true
         $script:moonBagCalled | Should Be $false
+    }
+}
+
+# 2026-08-06: achado real em producao -- Register-PositionTrailing nunca
+# teve -Origin desde que o campo foi introduzido em Add-TrailingPosition
+# (2026-07-18). Callers reais (lib_regime_surf_executor.ps1, scan_master.ps1
+# x2) sabem a origem real do trade (regime_surf sempre FUTURES; GEM usa
+# market_type do execResult; orchestrator sempre FUTURES) mas nao tinham
+# como repassar -- toda posicao desses 3 caminhos nascia com
+# origin=UNKNOWN/UNKNOWN (fallback de Add-TrailingPosition), travando pra
+# sempre em HOLD no motor unificado (Resolve-TrailingDecision exige
+# trade_style SCALP|SWING). ARBUSDT/NEARUSDT/OPUSDT ficaram 42h+ sem
+# trailing avancar fase por causa disso.
+Describe "Register-PositionTrailing -- Origin (2026-08-06, fecha o gap real)" {
+
+    BeforeEach {
+        $global:MOON_BAG_ENABLED = $false
+        $script:trailingOriginReceived = $null
+
+        function Add-TrailingPosition {
+            param($Market, $Side, $Entry, $Stop, $Target, $OrderId, $Source, $Mode, $MaxDays, $DdThresholdPct, $Origin,
+                  $MentorVeredicto, $MentorConfidence, $MentorMensagem, $MesaSinal, $Tier)
+            $script:trailingOriginReceived = $Origin
+        }
+    }
+
+    AfterEach {
+        Remove-Variable -Name MOON_BAG_ENABLED -Scope Global -ErrorAction SilentlyContinue
+    }
+
+    It "Origin explicito e repassado integralmente pro Add-TrailingPosition" {
+        Register-PositionTrailing -Market "ARBUSDT" -Side "SHORT" -Entry 100 -Stop 105 -Target 90 `
+            -Source "regime_surf" -Origin @{ asset_class = "FUTURES"; trade_style = "SWING" }
+        $script:trailingOriginReceived | Should Not BeNullOrEmpty
+        $script:trailingOriginReceived.asset_class | Should Be "FUTURES"
+        $script:trailingOriginReceived.trade_style | Should Be "SWING"
+    }
+
+    It "Origin ausente (caller legado que ainda nao foi atualizado) -- nao quebra, comportamento antigo preservado" {
+        { Register-PositionTrailing -Market "LEGACYUSDT" -Side "LONG" -Entry 100 -Stop 95 -Target 110 -Source "gem" } | Should Not Throw
+        $script:trailingOriginReceived | Should Be $null
     }
 }
 
