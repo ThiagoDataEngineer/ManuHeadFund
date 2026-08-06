@@ -57,12 +57,30 @@ if ($posActive.Count -eq 0) {
 try {
     switch ($Layer) {
         "1" {
-            Write-Host "[Layer 1] Update-TrailingStopsAdaptive..." -ForegroundColor Cyan
-            if (Get-Command Update-TrailingStopsAdaptive -ErrorAction SilentlyContinue) {
+            # 2026-08-06 FIX CRITICO (achado real em producao): Update-TrailingStopsAdaptive
+            # (lib_trailing_adaptive.ps1) usa ATR "placeholder" HARDCODED 100.0/100.0
+            # (linha ~321, comentario no proprio codigo admite "placeholder; em prod
+            # usaria ultimas barras" -- nunca foi implementado de verdade desde a
+            # criacao). Pra qualquer ativo de preco baixo (a maioria deste sistema,
+            # ex: PIPPINUSDT entry~$0.018), o buffer calculado a partir de ATR=100
+            # e MUITO maior que o proprio preco -- breakeven (entry - buffer) vira
+            # numero absurdamente negativo (reproduzido real: -129.9818 pra
+            # PIPPINUSDT, -129.77 pra SOONUSDT, ambas SHORT fechadas por
+            # stop_atingido em 2026-08-04, phase 0->1). O motor unificado
+            # (lib_trailing_unified.ps1, Resolve-TrailingDecision, ATIVO desde
+            # 2026-07-29) ja cobre 100% do que este motor legado fazia -- ATR REAL
+            # via Calculate-ATR + exhaustion + trendline + suporte/resistencia,
+            # estritamente mais completo. Desligado (nao apagado -- guard $false
+            # permite rollback rapido trocando pra $true, mesmo padrao ja usado em
+            # scripts/trailing_stop_monitor.ps1 pro motor legado antigo). NAO afeta
+            # Sync-TrailingPositionsWithExchange (mesma lib, funcao DIFERENTE, ainda
+            # chamada por scripts/scan_master.ps1 -- essa continua ativa).
+            if ($false -and (Get-Command Update-TrailingStopsAdaptive -ErrorAction SilentlyContinue)) {
+                Write-Host "[Layer 1] Update-TrailingStopsAdaptive..." -ForegroundColor Cyan
                 Update-TrailingStopsAdaptive
                 Write-Host "[Layer 1] OK" -ForegroundColor Green
             } else {
-                Write-Host "[Layer 1] Update-TrailingStopsAdaptive nao disponivel" -ForegroundColor Yellow
+                Write-Host "[Layer 1] DESATIVADO (ATR placeholder bug -- ver comentario 2026-08-06). Motor unificado (lib_trailing_unified.ps1) ja cobre isso." -ForegroundColor Yellow
             }
         }
         "2" {

@@ -245,6 +245,72 @@ Describe "Get-TrailingNewStopAdaptive" {
             $result.changed | Should Be $true
         }
     }
+
+    # 2026-08-06 FIX CRITICO: achado real em producao -- PIPPINUSDT/SOONUSDT
+    # (posicoes SHORT reais, source=regime_surf) tiveram stopCurrent corrompido
+    # pra -129.9818/-129.77 respectivamente, ambas na transicao fase 0->1
+    # (breakeven). Causa raiz: Update-TrailingStopsAdaptive (caller real, nao
+    # coberto aqui) usa ATR "placeholder" HARDCODED 100.0/100.0 (nunca
+    # implementado de verdade -- comentario no proprio codigo admite isso).
+    # Todos os testes ACIMA deste ponto usam BTCUSDT (entry ~60000) -- o bug
+    # so aparece com ativos de preco baixo, nunca coberto ate agora. Este
+    # Context documenta o comportamento REAL da funcao hoje (motor desativado
+    # em scripts/layers_review_runner.ps1 por causa disso, mas a funcao em si
+    # permanece no codigo -- alguem pode reativar sem saber do bug se isto nao
+    # ficar documentado em teste).
+    Context "BUG REAL 2026-08-06: ATR placeholder fixo quebra ativos de preco baixo" {
+        It "reproduz o valor EXATO corrompido em producao (PIPPINUSDT, -129.9818)" {
+            $pos = [PSCustomObject]@{
+                market = "PIPPINUSDT"
+                side = "SHORT"
+                entry = 0.01821
+                target = 0.0160248
+                phase = 0
+                peak = 0.01821
+                stopCurrent = 0.0196668
+            }
+            # CurrentAtr/HistoricalAtr NAO informados -- caem no default da
+            # assinatura (100.0/100.0), exatamente como Update-TrailingStopsAdaptive
+            # faz hoje (placeholder nunca substituido por ATR real).
+            $result = Get-TrailingNewStopAdaptive -Pos $pos -CurrentPrice 0.017414 -Regime "SIDEWAYS"
+            $result.newPhase | Should Be 1
+            $result.newStop | Should Be -129.9818
+            ($result.newStop -lt 0) | Should Be $true
+        }
+
+        It "2o bug na MESMA funcao: minBuffer hardcoded 1.0 (Get-AdaptiveBuffer) tambem quebra ativos sub-\$1, mesmo com ATR real correto" {
+            # Get-AdaptiveBuffer linha ~74: $minBuffer = [math]::Max($Range * 0.015, 1.0)
+            # -- o "1.0" e piso absoluto em escala de dolar (pensado pra BTC),
+            # nao fracao relativa. Pra PIPPINUSDT (range~0.0022), Range*0.015
+            # da ~0.0000328 -- SEMPRE perde pro piso hardcoded 1.0, que sozinho
+            # ja e maior que o ativo inteiro. Mesmo passando ATR real e pequeno
+            # (nao o placeholder 100.0), o resultado ainda fica negativo --
+            # confirma que ha 2 bugs empilhados na mesma funcao, reforcando a
+            # decisao de desativar o motor inteiro em vez de so trocar o ATR.
+            $pos = [PSCustomObject]@{
+                market = "PIPPINUSDT"
+                side = "SHORT"
+                entry = 0.01821
+                target = 0.0160248
+                phase = 0
+                peak = 0.01821
+                stopCurrent = 0.0196668
+            }
+            $result = Get-TrailingNewStopAdaptive -Pos $pos -CurrentPrice 0.017414 -Regime "SIDEWAYS" `
+                -CurrentAtr 0.0005 -HistoricalAtr 0.0005
+            $result.newPhase | Should Be 1
+            # Ainda negativo -- prova que corrigir SO o ATR nao bastaria.
+            ($result.newStop -lt 0) | Should Be $true
+        }
+    }
+}
+
+Describe "layers_review_runner.ps1 -- Layer 1 desativado (2026-08-06, ATR placeholder bug)" {
+    It "scripts/layers_review_runner.ps1 NAO chama Update-TrailingStopsAdaptive de verdade" {
+        $runnerPath = Join-Path (Split-Path $PSScriptRoot -Parent) "scripts\layers_review_runner.ps1"
+        $content = Get-Content $runnerPath -Raw
+        ($content -match '\$false\s+-and\s+\(Get-Command\s+Update-TrailingStopsAdaptive') | Should Be $true
+    }
 }
 
 Describe "Regression: Adaptive vs Legacy Fixed Buffer" {
