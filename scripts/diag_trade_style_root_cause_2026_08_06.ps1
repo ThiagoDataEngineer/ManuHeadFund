@@ -21,9 +21,9 @@ $env:STATE_STORE_SCHEMA = "manuheadfund"
 
 Write-Host "=== DIAG: valor CRU real de origin.trade_style (causa raiz do HOLD travado) ===" -ForegroundColor Cyan
 
-try {
-    $cfg = Get-SupabaseRequestHeaders -Method "GET"
-    foreach ($mkt in @("ARBUSDT", "NEARUSDT", "OPUSDT", "SOONUSDT", "PIPPINUSDT")) {
+$cfg = Get-SupabaseRequestHeaders -Method "GET"
+foreach ($mkt in @("ARBUSDT", "NEARUSDT", "OPUSDT", "SOONUSDT", "PIPPINUSDT")) {
+    try {
         $uri = "$($cfg.url)/rest/v1/trailing_state?select=*&market=eq.$mkt&active=eq.true"
         $rows = @(Invoke-RestMethod -Uri $uri -Method GET -Headers $cfg.headers -TimeoutSec 30)
         Write-Host "--- $mkt ---" -ForegroundColor Yellow
@@ -33,8 +33,9 @@ try {
         }
         $r = $rows[0]
         Write-Host "  origin (raw): $($r.origin | ConvertTo-Json -Compress -Depth 5)"
-        Write-Host "  origin TYPE: $($r.origin.GetType().FullName)"
-        if ($r.origin -is [string]) {
+        if ($null -eq $r.origin) {
+            Write-Host "  [ATENCAO] origin e NULL (nem o fallback UNKNOWN foi gravado)" -ForegroundColor Red
+        } elseif ($r.origin -is [string]) {
             Write-Host "  [ATENCAO] origin veio como STRING, nao objeto -- Resolve-TrailingDecision espera .asset_class/.trade_style direto" -ForegroundColor Red
             try {
                 $parsed = $r.origin | ConvertFrom-Json
@@ -48,9 +49,9 @@ try {
         }
         Write-Host "  mode=$($r.mode) source=$($r.source) phase=$($r.phase)"
         Write-Host ""
+    } catch {
+        Write-Host "  ERRO em ${mkt}: $_" -ForegroundColor Red
     }
-} catch {
-    Write-Host "ERRO: $_" -ForegroundColor Red
 }
 
 Write-Host "=== FIM DIAG ===" -ForegroundColor Cyan
