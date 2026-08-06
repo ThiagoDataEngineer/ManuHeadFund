@@ -36,6 +36,10 @@ on:
         description: 'Market pra reparar TP/SL (ex: SOLUSDT)'
         type: string
         default: 'SOLUSDT'
+      origin_backfill_dry_run:
+        description: 'Backfill de origin.asset_class (posicoes FUTURES ja abertas com origin=UNKNOWN legado). true=so mostra, false=aplica de verdade (so escreve journal, nunca ordem/posicao).'
+        type: boolean
+        default: true
 
 env:
   FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
@@ -2519,6 +2523,31 @@ jobs:
         shell: pwsh
         run: |
           & ./scripts/diag_active_negative_stopcurrent_2026_08_06.ps1
+
+  apply-trailing-origin-backfill:
+    name: Apply Trailing Origin Backfill (one-shot, so escreve journal)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run backfill (DryRun default true)
+        shell: pwsh
+        run: |
+          & ./scripts/apply_trailing_origin_backfill_2026_08_06.ps1 -DryRun ${{ github.event.inputs.origin_backfill_dry_run || 'true' }}
 
   repair-position-protection:
     name: URGENTE Repair Position Protection (one-shot, capital real)
