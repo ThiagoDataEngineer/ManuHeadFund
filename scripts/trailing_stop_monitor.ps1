@@ -269,6 +269,13 @@ try {
                                 if ($tuJournalAhead) {
                                     Write-CrossPlatformLog "  UNIFIED ${tuMarket}: journal.stopCurrent ($tuJournalSl) esta a frente do SL real na corretora ($tuRealSl) -- reconciliando pro valor real antes de decidir (evita HOLD permanente por 'ja melhorou' quando na verdade nunca foi enviado)" -Level WARN -LogFile "trailing_stop_monitor.log"
                                     $tuPos.stopCurrent = $tuRealSl
+                                    # 2026-08-06: persiste a reconciliacao de volta no journal
+                                    # (nao so usa em memoria pra decidir este ciclo) -- evita
+                                    # journal.stopCurrent != corretora aparecer em diagnosticos
+                                    # futuros mesmo depois da protecao real ja estar correta.
+                                    try { Save-TrailingPositions -Positions @($tuPositions) | Out-Null } catch {
+                                        Write-CrossPlatformLog "  UNIFIED ${tuMarket}: falha ao persistir reconciliacao no journal: $_" -Level WARN -LogFile "trailing_stop_monitor.log"
+                                    }
                                 }
                             }
                         } catch {
