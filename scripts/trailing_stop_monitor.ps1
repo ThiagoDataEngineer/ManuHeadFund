@@ -71,6 +71,9 @@ try {
     . (Join-Path $agentsDir "lib_multiframe_analysis.ps1")
     . (Join-Path $agentsDir "lib_tori_proximity.ps1")
     . (Join-Path $agentsDir "lib_trailing_unified.ps1")
+    # 2026-08-06: reconcilia journal.stopCurrent com SL real na corretora
+    # antes do motor decidir (ver comentario no bloco TRAILING UNIFIED).
+    . (Join-Path $agentsDir "lib_trailing_stop_reconcile.ps1")
     # 2026-05-29: auto-reparo de protecao (SL+TP reais na corretora)
     . (Join-Path $agentsDir "lib_coinex_position_management.ps1")
     . (Join-Path $agentsDir "lib_order_validation.ps1")
@@ -241,6 +244,38 @@ try {
                     if ($tuPrice -le 0) { continue }
 
                     $tuIsFutures = ($tuPos.origin -and "$($tuPos.origin.asset_class)".ToUpper() -eq "FUTURES")
+
+                    # 2026-08-06 FIX: reconcilia $tuPos.stopCurrent (journal) com o
+                    # SL REAL na corretora antes de decidir -- achado real em
+                    # producao: ARBUSDT/NEARUSDT/OPUSDT tiveram origin corrigido
+                    # (backfill, ver lib_trailing_origin_backfill.ps1) DEPOIS de
+                    # varios ciclos com origin=UNKNOWN, onde o motor ja calculava
+                    # e gravava stopCurrent no journal MAS nunca empurrava pra
+                    # CoinEx (tuIsFutures era false, pulava o push). Resultado: o
+                    # journal "achava" que o stop ja tinha avancado, entao o
+                    # proximo ciclo (com origin ja correto) comparava contra esse
+                    # valor adiantado e decidia "stop_calculado_nao_melhora" --
+                    # nunca reenviava, corretora ficava presa no valor antigo pra
+                    # sempre. So reconcilia quando o real esta MAIS FOLGADO que o
+                    # journal (protege contra o caso real -- nunca afrouxa o que
+                    # ja esta certo na corretora, so corrige atraso).
+                    if ($tuIsFutures -and (Get-Command CoinEx-GetPendingPositions -ErrorAction SilentlyContinue)) {
+                        try {
+                            $tuRealPosCheck = @(CoinEx-GetPendingPositions -Market $tuMarket) | Select-Object -First 1
+                            if ($tuRealPosCheck -and [double]$tuRealPosCheck.stop_loss_price -gt 0 -and (Get-Command Test-JournalStopAheadOfExchange -ErrorAction SilentlyContinue)) {
+                                $tuRealSl = [double]$tuRealPosCheck.stop_loss_price
+                                $tuJournalSl = [double]$tuPos.stopCurrent
+                                $tuJournalAhead = Test-JournalStopAheadOfExchange -Side "$($tuPos.side)" -JournalStop $tuJournalSl -RealStop $tuRealSl
+                                if ($tuJournalAhead) {
+                                    Write-CrossPlatformLog "  UNIFIED ${tuMarket}: journal.stopCurrent ($tuJournalSl) esta a frente do SL real na corretora ($tuRealSl) -- reconciliando pro valor real antes de decidir (evita HOLD permanente por 'ja melhorou' quando na verdade nunca foi enviado)" -Level WARN -LogFile "trailing_stop_monitor.log"
+                                    $tuPos.stopCurrent = $tuRealSl
+                                }
+                            }
+                        } catch {
+                            Write-CrossPlatformLog "  UNIFIED ${tuMarket}: reconciliacao stopCurrent falhou (segue com valor do journal): $_" -Level WARN -LogFile "trailing_stop_monitor.log"
+                        }
+                    }
+
                     $tuCandles = @(Get-CoinExCandles -Market $tuMarket -Period "4hour" -Limit 30 -IsFutures $tuIsFutures)
 
                     # 2026-07-29 (parte 2): enriquecimento opcional -- multi-TF
