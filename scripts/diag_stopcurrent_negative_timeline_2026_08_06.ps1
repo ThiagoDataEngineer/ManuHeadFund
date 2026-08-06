@@ -25,12 +25,9 @@ foreach ($mkt in @("SOONUSDT", "PIPPINUSDT")) {
     try {
         $uri = "$($cfg.url)/rest/v1/trailing_unified_shadow?select=*&market=eq.$mkt&order=ts.asc&limit=200"
         $rows = @(Invoke-RestMethod -Uri $uri -Method GET -Headers $cfg.headers -TimeoutSec 30)
-        Write-Host "--- $mkt : $($rows.Count) registros de ciclo ---" -ForegroundColor Yellow
+        Write-Host "--- $mkt : $($rows.Count) registros de ciclo (RAW, sem conversao) ---" -ForegroundColor Yellow
         foreach ($r in $rows) {
-            $newStopVal = if ($null -ne $r.unified_new_stop) { [double]$r.unified_new_stop } else { 0 }
-            $flag = if ([double]$r.real_stop -lt 0 -or $newStopVal -lt 0) { " <<<< NEGATIVO" } else { "" }
-            Write-Host ("  ts={0} real_stop={1} action={2} new_stop={3} reason={4}{5}" -f `
-                $r.ts, $r.real_stop, $r.unified_action, $r.unified_new_stop, $r.reason, $flag)
+            $r | ConvertTo-Json -Depth 6 -Compress | Write-Host
         }
         Write-Host ""
     } catch {
