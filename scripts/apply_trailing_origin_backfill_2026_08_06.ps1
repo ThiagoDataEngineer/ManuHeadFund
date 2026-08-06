@@ -46,7 +46,17 @@ try {
 
         if ($needsBackfill) {
             $newOrigin = Resolve-BackfilledOrigin -JournalOrigin $r.origin
-            $toFix += [PSCustomObject]@{ pk_id = $r.pk_id; market = $mkt; new_origin = $newOrigin }
+            # 2026-08-06 FIX: Save-StateRecords faz upsert da linha INTEIRA (nao
+            # PATCH parcial) -- enviar so {pk_id, origin} sobrescrevia TODAS as
+            # outras colunas (market, entry, stop, etc) com null, violando o
+            # NOT NULL constraint de "market" (achado real: 1a tentativa falhou
+            # com PGRST 23502, nenhum dano feito -- Supabase rejeitou o insert
+            # inteiro antes de gravar qualquer coisa). Fix: parte do registro
+            # CRU completo ($r), so troca o campo origin, reenvia tudo.
+            $fullRecord = @{}
+            foreach ($prop in $r.PSObject.Properties) { $fullRecord[$prop.Name] = $prop.Value }
+            $fullRecord["origin"] = $newOrigin
+            $toFix += [PSCustomObject]@{ pk_id = $r.pk_id; market = $mkt; new_origin = $newOrigin; full_record = $fullRecord }
             Write-Host ("  [PRECISA FIX] {0} -> origin.asset_class={1} trade_style={2}" -f $mkt, $newOrigin.asset_class, $newOrigin.trade_style) -ForegroundColor Yellow
         }
     }
@@ -60,9 +70,16 @@ try {
     } else {
         foreach ($fix in $toFix) {
             try {
-                $record = @{ pk_id = $fix.pk_id; origin = $fix.new_origin }
-                Save-StateRecords -Table "trailing_state" -Records @($record) -PrimaryKey "pk_id"
-                Write-Host "  [OK] $($fix.market) origin corrigido" -ForegroundColor Green
+                # Guard extra (defesa em profundidade): NUNCA envia upsert se o
+                # registro completo nao tiver "market" preenchido -- e a coluna
+                # NOT NULL que causou a falha real anterior; melhor abortar
+                # este 1 fix do que arriscar de novo.
+                if (-not $fix.full_record["market"]) {
+                    Write-Host "  [ABORTADO] $($fix.market): full_record sem 'market' preenchido -- nao envia (protecao contra o bug ja visto)" -ForegroundColor Red
+                    continue
+                }
+                Save-StateRecords -Table "trailing_state" -Records @($fix.full_record) -PrimaryKey "pk_id"
+                Write-Host "  [OK] $($fix.market) origin corrigido (registro completo reenviado)" -ForegroundColor Green
             } catch {
                 Write-Host "  [ERRO] $($fix.market): $_" -ForegroundColor Red
             }
