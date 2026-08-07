@@ -1981,6 +1981,27 @@ function Invoke-GemExecute {
         $exchBal  = 0.0
         try { $exchBal = [double](CoinEx-GetTotalCapitalUSDT) } catch {}
 
+        # 2026-08-07 FIX CRITICO: $maxSize acima e um cap fixo em dolar
+        # historico (desde o commit inicial do projeto, quando nao havia
+        # % dinamico de capital ainda) -- sem este fix, ele bloqueava o
+        # trade INTEIRO (via Test-SizingCap, return mais abaixo) antes do
+        # "HARD CAP DE RISCO 3%" (mais novo, a Regra de Ouro real, so
+        # clampa) rodar mais adiante no arquivo. Caso real: XRPUSDT propos
+        # $142.09 com capital=$2560 (=5.5%, quase 2x a Regra de Ouro de
+        # 3%=$76.80) e foi descartado por inteiro pelo cap fixo de $100 --
+        # mais restritivo que 3% pra qualquer capital abaixo de ~$3333.
+        # Resolve-EffectiveSizingCap usa o MENOR entre os dois: nunca deixa
+        # a Regra de Ouro perder pra um cap fixo esquecido, mas tambem
+        # nunca relaxa o cap fixo pra cima (capitais grandes continuam
+        # protegidos pelo teto historico se 3% for maior que ele).
+        if (Get-Command Resolve-EffectiveSizingCap -ErrorAction SilentlyContinue) {
+            $effCap = Resolve-EffectiveSizingCap -FixedCapUsd $maxSize -Capital $capital -RiskPct 0.03
+            if ($effCap.cap_usd -lt $maxSize) {
+                Write-Host "  [GEM GUARD] $mkt cap efetivo: `$$maxSize (fixo) -> `$$($effCap.cap_usd) (3% capital, Regra de Ouro)" -ForegroundColor Cyan
+            }
+            $maxSize = [double]$effCap.cap_usd
+        }
+
         # 2026-07-08: overage pequeno (<=10%) clampa pro cap em vez de bloquear.
         # Proposta $102.75 > cap $100 matava o trade inteiro (8 blocks 07-07/08).
         # Overage >10% continua bloqueando via Test-SizingCap (fail-closed).
