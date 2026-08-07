@@ -134,6 +134,44 @@ function Resolve-EffectiveSizingCap {
 }
 
 
+function Resolve-GoldenRuleSizeClamp {
+    # 2026-08-07 FIX CRITICO: gem_executor.ps1 calcula $usd_size logo no
+    # inicio (dynamic_feedback/kelly/legacy_pct), mas gates de bloqueio
+    # (ex: Test-CoinExposureCap "cap_por_moeda", ~130 linhas depois no
+    # arquivo) rodavam contra esse valor CRU, antes do clamp de 3% (a
+    # Regra de Ouro, "HARD CAP DE RISCO 3%" mais abaixo no arquivo) ter
+    # qualquer chance de reduzir o tamanho. Achado real: SOLUSDT propos
+    # usd_size~$237 (=10.11% de capital=$2345.92, mais que o triplo de 3%)
+    # e foi bloqueado por inteiro pelo exposure cap repetidamente, ciclo
+    # apos ciclo, mesmo quando o Mentor aprovava o setup -- nunca chegava
+    # a ser clampado pra um tamanho que passaria no gate.
+    #
+    # Pure: recebe o usd_size proposto e o capital, devolve o valor
+    # clampado (nunca aumenta, so reduz se exceder RiskPct do capital).
+    # Sem nocao de cap fixo em dolar -- esse ponto do fluxo nao tem
+    # nenhum concorrente (diferente de Resolve-EffectiveSizingCap, usado
+    # mais tarde no mesmo arquivo onde ha um cap fixo historico tambem
+    # em jogo).
+    [CmdletBinding()]
+    param(
+        [double]$ProposedUsd,
+        [double]$Capital,
+        [double]$RiskPct = 0.03
+    )
+    if ($Capital -le 0 -or $ProposedUsd -le 0) {
+        # dado indisponivel/invalido -- fail-safe, nao mexe no valor
+        # (nao inventa teto de um capital que nao existe, nao bloqueia
+        # por engano um caller que passou 0 de proposito).
+        return [PSCustomObject]@{ usd_size = $ProposedUsd; clamped = $false }
+    }
+    $capUsd = [math]::Round($Capital * $RiskPct, 2)
+    if ($ProposedUsd -gt $capUsd) {
+        return [PSCustomObject]@{ usd_size = $capUsd; clamped = $true }
+    }
+    return [PSCustomObject]@{ usd_size = $ProposedUsd; clamped = $false }
+}
+
+
 # â”€â”€ Guard 2: Frequency cap â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 function Test-FrequencyCap {

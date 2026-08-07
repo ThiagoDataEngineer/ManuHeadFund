@@ -123,3 +123,88 @@ Describe "Resolve-EffectiveSizingCap + Test-SizingCap + Resolve-SizingClamp -- i
         $result.pass | Should Be $false
     }
 }
+
+Describe "Resolve-GoldenRuleSizeClamp" {
+    # 2026-08-07: achado real -- Test-CoinExposureCap (gate "cap_por_moeda",
+    # gem_executor.ps1) roda ~130 linhas ANTES do "HARD CAP DE RISCO 3%"
+    # no mesmo arquivo, contra o usd_size CRU (nao clampado ainda). Caso
+    # real: SOLUSDT propos usd_size~$237.19 (10.11% de capital=$2345.92,
+    # mais que o triplo da Regra de Ouro de 3%=$70.38) e foi bloqueado por
+    # inteiro repetidamente (mensagens Telegram identicas ciclo apos ciclo)
+    # mesmo quando o Mentor aprovava o setup tecnico. Resolve-GoldenRuleSizeClamp
+    # aplicado logo apos usd_size ser calculado (antes de QUALQUER gate de
+    # bloqueio) fecha esse gap -- clampa pra 3% em vez de deixar o valor
+    # cru estourar gates mais adiante no fluxo.
+
+    It "caso real SOLUSDT: usd_size=$237.19 capital=$2345.92 -- clampa para 3% (~$70.38)" {
+        $r = Resolve-GoldenRuleSizeClamp -ProposedUsd 237.19 -Capital 2345.92 -RiskPct 0.03
+        $r.clamped | Should Be $true
+        $r.usd_size | Should Be 70.38
+    }
+
+    It "usd_size ja dentro de 3% -- nao clampa, retorna o valor original inalterado" {
+        $r = Resolve-GoldenRuleSizeClamp -ProposedUsd 50.0 -Capital 2345.92 -RiskPct 0.03
+        $r.clamped | Should Be $false
+        $r.usd_size | Should Be 50.0
+    }
+
+    It "usd_size exatamente no limite de 3% -- nao clampa (nao e 'exceder', e igual)" {
+        $r = Resolve-GoldenRuleSizeClamp -ProposedUsd 70.38 -Capital 2346.0 -RiskPct 0.03
+        $r.clamped | Should Be $false
+    }
+
+    It "capital=0 (indisponivel) -- fail-safe, nao mexe no valor proposto" {
+        $r = Resolve-GoldenRuleSizeClamp -ProposedUsd 100.0 -Capital 0
+        $r.clamped | Should Be $false
+        $r.usd_size | Should Be 100.0
+    }
+
+    It "capital negativo (dado corrompido) -- mesmo fail-safe" {
+        $r = Resolve-GoldenRuleSizeClamp -ProposedUsd 100.0 -Capital -500.0
+        $r.clamped | Should Be $false
+        $r.usd_size | Should Be 100.0
+    }
+
+    It "ProposedUsd=0 -- fail-safe, nao inventa clamp sobre valor zero" {
+        $r = Resolve-GoldenRuleSizeClamp -ProposedUsd 0 -Capital 2000.0
+        $r.clamped | Should Be $false
+        $r.usd_size | Should Be 0
+    }
+
+    It "RiskPct customizado (nao hardcoded 3%) -- respeita o parametro" {
+        # capital=1000, risk=5% -> cap=50; proposto=80 -> clampa pra 50
+        $r = Resolve-GoldenRuleSizeClamp -ProposedUsd 80.0 -Capital 1000.0 -RiskPct 0.05
+        $r.clamped | Should Be $true
+        $r.usd_size | Should Be 50.0
+    }
+
+    It "nunca AUMENTA o valor -- clamp so reduz, mesmo com capital grande" {
+        $r = Resolve-GoldenRuleSizeClamp -ProposedUsd 10.0 -Capital 100000.0 -RiskPct 0.03
+        $r.clamped | Should Be $false
+        $r.usd_size | Should Be 10.0
+    }
+}
+
+Describe "Resolve-GoldenRuleSizeClamp -- integracao com Test-CoinExposureCap (caso real SOLUSDT)" {
+    # Reproduz o cenario exato do log real (run 31190290313, 2026-08-07
+    # 14:59:48Z): sem o clamp, Test-CoinExposureCap bloqueava
+    # (proj=10.11% >= MaxPerCoinPct=10.0%). Com o clamp aplicado antes,
+    # o usd_size cai bem abaixo do teto de exposicao, o trade passa.
+
+    BeforeEach {
+        $agentsDir = Split-Path $PSScriptRoot -Parent | Join-Path -ChildPath "agents"
+        . (Join-Path $agentsDir "lib_gem_safety.ps1")
+    }
+
+    It "sem clamp: usd_size cru de $237.19 estoura o cap de exposicao (10%) -- bloqueia (comportamento antigo, bug)" {
+        $cap = Test-CoinExposureCap -HeldUsd 0 -TradeUsd 237.19 -PortfolioUsd 2345.92 -MaxPerCoinPct 10.0
+        $cap.allowed | Should Be $false
+        $cap.reason | Should Be "cap_por_moeda"
+    }
+
+    It "com clamp: usd_size reduzido para 3% (~$70.38) passa tranquilo no cap de exposicao de 10% -- fix funciona" {
+        $clamp = Resolve-GoldenRuleSizeClamp -ProposedUsd 237.19 -Capital 2345.92 -RiskPct 0.03
+        $cap = Test-CoinExposureCap -HeldUsd 0 -TradeUsd $clamp.usd_size -PortfolioUsd 2345.92 -MaxPerCoinPct 10.0
+        $cap.allowed | Should Be $true
+    }
+}

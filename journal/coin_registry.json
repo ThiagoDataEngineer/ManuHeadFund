@@ -124,8 +124,8 @@
     "recovered_2021_ath": false,
     "listing_years": 5,
     "notes": "L1 sharded. Tx fee burn. ATH 2021 nao recuperado.",
-    "circulating_supply": 1302900175.0,
-    "current_price_usd": 1.66,
+    "circulating_supply": 1302954277.0,
+    "current_price_usd": 1.62,
     "ath_all_time_usd": 20.44
   },
   "HYPEUSDT": {
@@ -138,7 +138,7 @@
     "recovered_2021_ath": false,
     "listing_years": 1,
     "notes": "Hyperliquid perp DEX. Hard cap 1B. Token new (2024); cycle_resilience N/A (jovem, V1.5 nao penaliza). Insider 55% (alta concentracao initial).",
-    "current_price_usd": 55.83,
+    "current_price_usd": 55.68,
     "ath_all_time_usd": 76.87,
     "max_supply": 1000000000.0,
     "circulating_supply": 222445714.0741414

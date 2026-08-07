@@ -878,6 +878,28 @@ function Invoke-GemExecute {
             $sizingMethod = "legacy_pct"
         }
     }
+    # 2026-08-07 FIX CRITICO: clamp de 3% do capital (Regra de Ouro) precisa
+    # rodar AQUI, logo apos usd_size ser calculado por QUALQUER caminho
+    # (dynamic_feedback/kelly/legacy_pct acima) -- antes de qualquer gate
+    # posterior que possa BLOQUEAR o trade inteiro usando o valor cru.
+    # Achado real: SOLUSDT recebeu usd_size ~$237 (10.11% de capital=$2345.92,
+    # mais que o triplo da Regra de Ouro de 3%) e foi descartado por inteiro
+    # pelo Test-CoinExposureCap (gate "cap_por_moeda", ~130 linhas abaixo)
+    # sempre que o Mentor aprovava o setup -- o mesmo usd_size nao-clampado
+    # tambem e o que o "HARD CAP DE RISCO 3%" (mais abaixo no arquivo, apos
+    # o exposure cap) corrigiria, mas so DEPOIS do bloqueio ja ter descartado
+    # o trade. Aplicar o clamp aqui, antes de QUALQUER gate de bloqueio,
+    # fecha a mesma classe de bug ja corrigida hoje no guard de sizing fixo
+    # (Resolve-EffectiveSizingCap/lib_live_guards.ps1) -- aqui e o teto de 3%
+    # aplicado direto (sem cap fixo em dolar concorrente nesse ponto).
+    if (Get-Command Resolve-GoldenRuleSizeClamp -ErrorAction SilentlyContinue) {
+        $__earlyClamp = Resolve-GoldenRuleSizeClamp -ProposedUsd $usd_size -Capital $capital -RiskPct 0.03
+        if ($__earlyClamp.clamped) {
+            Write-Host "  [SIZING] $mkt usd_size=$usd_size excede 3% do capital ($($__earlyClamp.usd_size)) -- clampado antes dos gates de bloqueio" -ForegroundColor Cyan
+            $usd_size = [double]$__earlyClamp.usd_size
+        }
+    }
+
     $qty         = [math]::Round($usd_size / $price, 6)
     $spike_pct   = $vd.pct_change_today
 
