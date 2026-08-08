@@ -878,24 +878,31 @@ function Invoke-GemExecute {
             $sizingMethod = "legacy_pct"
         }
     }
-    # 2026-08-07 FIX CRITICO: clamp de 3% do capital (Regra de Ouro) precisa
-    # rodar AQUI, logo apos usd_size ser calculado por QUALQUER caminho
-    # (dynamic_feedback/kelly/legacy_pct acima) -- antes de qualquer gate
-    # posterior que possa BLOQUEAR o trade inteiro usando o valor cru.
+    # 2026-08-07 FIX CRITICO: clamp da Regra de Ouro (RISK_MAX_PCT_PER_TRADE,
+    # config.ps1 -- 7% desde commit 4060d4e/2026-08-04) precisa rodar AQUI,
+    # logo apos usd_size ser calculado por QUALQUER caminho (dynamic_feedback/
+    # kelly/legacy_pct acima) -- antes de qualquer gate posterior que possa
+    # BLOQUEAR o trade inteiro usando o valor cru.
     # Achado real: SOLUSDT recebeu usd_size ~$237 (10.11% de capital=$2345.92,
-    # mais que o triplo da Regra de Ouro de 3%) e foi descartado por inteiro
+    # acima mesmo dos 7% da Regra de Ouro) e foi descartado por inteiro
     # pelo Test-CoinExposureCap (gate "cap_por_moeda", ~130 linhas abaixo)
     # sempre que o Mentor aprovava o setup -- o mesmo usd_size nao-clampado
-    # tambem e o que o "HARD CAP DE RISCO 3%" (mais abaixo no arquivo, apos
+    # tambem e o que o "HARD CAP DE RISCO" (mais abaixo no arquivo, apos
     # o exposure cap) corrigiria, mas so DEPOIS do bloqueio ja ter descartado
     # o trade. Aplicar o clamp aqui, antes de QUALQUER gate de bloqueio,
     # fecha a mesma classe de bug ja corrigida hoje no guard de sizing fixo
-    # (Resolve-EffectiveSizingCap/lib_live_guards.ps1) -- aqui e o teto de 3%
-    # aplicado direto (sem cap fixo em dolar concorrente nesse ponto).
+    # (Resolve-EffectiveSizingCap/lib_live_guards.ps1).
+    # 2026-08-08 FIX: 1a versao deste clamp (RiskPct=0.03 hardcoded) reintroduziu
+    # por engano o mesmo bug que o commit 4060d4e ja tinha corrigido -- $riskPct
+    # do caminho primario (linha ~837) ja lia $global:RISK_MAX_PCT_PER_TRADE (7%),
+    # mas este clamp (adicionado 1 dia depois, sem eu saber da mudanca de 3%->7%)
+    # usava 3% hardcoded, apertando de volta pro valor antigo sempre que este
+    # gate clampava. Owner notou o valor errado no monitoramento ao vivo.
     if (Get-Command Resolve-GoldenRuleSizeClamp -ErrorAction SilentlyContinue) {
-        $__earlyClamp = Resolve-GoldenRuleSizeClamp -ProposedUsd $usd_size -Capital $capital -RiskPct 0.03
+        $__riskPctEarly = if ($global:RISK_MAX_PCT_PER_TRADE) { [double]$global:RISK_MAX_PCT_PER_TRADE } else { 0.07 }
+        $__earlyClamp = Resolve-GoldenRuleSizeClamp -ProposedUsd $usd_size -Capital $capital -RiskPct $__riskPctEarly
         if ($__earlyClamp.clamped) {
-            Write-Host "  [SIZING] $mkt usd_size=$usd_size excede 3% do capital ($($__earlyClamp.usd_size)) -- clampado antes dos gates de bloqueio" -ForegroundColor Cyan
+            Write-Host "  [SIZING] $mkt usd_size=$usd_size excede $($__riskPctEarly*100)% do capital ($($__earlyClamp.usd_size)) -- clampado antes dos gates de bloqueio" -ForegroundColor Cyan
             $usd_size = [double]$__earlyClamp.usd_size
         }
     }
@@ -2007,19 +2014,26 @@ function Invoke-GemExecute {
         # historico (desde o commit inicial do projeto, quando nao havia
         # % dinamico de capital ainda) -- sem este fix, ele bloqueava o
         # trade INTEIRO (via Test-SizingCap, return mais abaixo) antes do
-        # "HARD CAP DE RISCO 3%" (mais novo, a Regra de Ouro real, so
+        # "HARD CAP DE RISCO" (mais novo, a Regra de Ouro real, so
         # clampa) rodar mais adiante no arquivo. Caso real: XRPUSDT propos
-        # $142.09 com capital=$2560 (=5.5%, quase 2x a Regra de Ouro de
-        # 3%=$76.80) e foi descartado por inteiro pelo cap fixo de $100 --
-        # mais restritivo que 3% pra qualquer capital abaixo de ~$3333.
-        # Resolve-EffectiveSizingCap usa o MENOR entre os dois: nunca deixa
-        # a Regra de Ouro perder pra um cap fixo esquecido, mas tambem
-        # nunca relaxa o cap fixo pra cima (capitais grandes continuam
-        # protegidos pelo teto historico se 3% for maior que ele).
+        # $142.09 com capital=$2560 (=5.5%) e foi descartado por inteiro
+        # pelo cap fixo de $100 -- mais restritivo que a Regra de Ouro pra
+        # qualquer capital abaixo de ~$1428 (a 7%) ou ~$3333 (a 3%, valor
+        # antigo). Resolve-EffectiveSizingCap usa o MENOR entre os dois:
+        # nunca deixa a Regra de Ouro perder pra um cap fixo esquecido, mas
+        # tambem nunca relaxa o cap fixo pra cima (capitais grandes
+        # continuam protegidos pelo teto historico se a Regra de Ouro for
+        # maior que ele).
+        # 2026-08-08 FIX: RiskPct=0.03 hardcoded reintroduzia por engano o
+        # valor antigo (owner subiu RISK_MAX_PCT_PER_TRADE de 3% pra 7% no
+        # commit 4060d4e/2026-08-04, 3 dias antes deste fix ser escrito sem
+        # essa mudanca em vista) -- le a variavel global agora, mesmo padrao
+        # ja usado no caminho primario de sizing (linha ~837).
         if (Get-Command Resolve-EffectiveSizingCap -ErrorAction SilentlyContinue) {
-            $effCap = Resolve-EffectiveSizingCap -FixedCapUsd $maxSize -Capital $capital -RiskPct 0.03
+            $__riskPctGuard = if ($global:RISK_MAX_PCT_PER_TRADE) { [double]$global:RISK_MAX_PCT_PER_TRADE } else { 0.07 }
+            $effCap = Resolve-EffectiveSizingCap -FixedCapUsd $maxSize -Capital $capital -RiskPct $__riskPctGuard
             if ($effCap.cap_usd -lt $maxSize) {
-                Write-Host "  [GEM GUARD] $mkt cap efetivo: `$$maxSize (fixo) -> `$$($effCap.cap_usd) (3% capital, Regra de Ouro)" -ForegroundColor Cyan
+                Write-Host "  [GEM GUARD] $mkt cap efetivo: `$$maxSize (fixo) -> `$$($effCap.cap_usd) ($($__riskPctGuard*100)% capital, Regra de Ouro)" -ForegroundColor Cyan
             }
             $maxSize = [double]$effCap.cap_usd
         }
@@ -2234,21 +2248,30 @@ function Invoke-GemExecute {
         }
     }
 
-    # ── HARD CAP DE RISCO 3%/TRADE (2026-07-24, blueprint audit) ────────────
-    # Achado: o teto de 3% (Regra de Ouro #2) so e' aplicado no caminho
+    # ── HARD CAP DE RISCO/TRADE (2026-07-24, blueprint audit) ────────────
+    # Achado: o teto (Regra de Ouro #2) so e' aplicado no caminho
     # primario de sizing (dynamic_feedback) via normalizacao interna -- os
     # fallbacks (Kelly/legacy, Add Position cascata 5%, ladder, sizing clamp)
     # nao reafirmam esse teto de forma centralizada. Este gate roda por
     # ULTIMO, depois de QUALQUER caminho de sizing ja ter decidido $usd_size,
     # e clampa (nunca bloqueia o trade -- so reduz o tamanho) se o valor
-    # final exceder 3% do capital atual. Fail-safe: se $capital nao estiver
-    # disponivel aqui por algum motivo, nao clampa (evita falso-positivo por
-    # dado ausente bloquear trade legitimo -- o caminho primario ja aplicou
-    # o teto corretamente na maioria dos casos).
+    # final exceder o teto do capital atual. Fail-safe: se $capital nao
+    # estiver disponivel aqui por algum motivo, nao clampa (evita
+    # falso-positivo por dado ausente bloquear trade legitimo -- o caminho
+    # primario ja aplicou o teto corretamente na maioria dos casos).
+    # 2026-08-08 FIX: hardcode 0.03 nunca foi atualizado quando o owner
+    # subiu RISK_MAX_PCT_PER_TRADE de 3% pra 7% (commit 4060d4e/2026-08-04,
+    # 11 dias depois deste gate ter sido escrito) -- esse mesmo hardcode
+    # tambem foi copiado sem querer pros 2 fixes novos de 2026-08-07/08
+    # (Resolve-GoldenRuleSizeClamp, Resolve-EffectiveSizingCap), fazendo o
+    # sistema clampar trades de volta pro valor antigo (3%) mesmo apos o
+    # owner ja ter decidido 7% ha dias -- os 3 pontos agora leem a mesma
+    # fonte real (config.ps1).
     if ($capital -gt 0 -and $usd_size -gt 0) {
-        $__hardCapUsd = [math]::Round($capital * 0.03, 2)
+        $__hardCapRiskPct = if ($global:RISK_MAX_PCT_PER_TRADE) { [double]$global:RISK_MAX_PCT_PER_TRADE } else { 0.07 }
+        $__hardCapUsd = [math]::Round($capital * $__hardCapRiskPct, 2)
         if ($usd_size -gt $__hardCapUsd) {
-            Write-Host "  [RISK HARD CAP] $mkt usd_size=$usd_size excede 3% do capital ($__hardCapUsd) -- clampado" -ForegroundColor Yellow
+            Write-Host "  [RISK HARD CAP] $mkt usd_size=$usd_size excede $($__hardCapRiskPct*100)% do capital ($__hardCapUsd) -- clampado" -ForegroundColor Yellow
             $usd_size = $__hardCapUsd
             # $qty precisa refletir o clamp -- e' o que Invoke-OrderRouted usa
             # de fato pra FUTURES (SPOT usa $usd_size via QuoteAmountUsd direto).

@@ -61,3 +61,58 @@ Describe "Risco por trade (Regra de Ouro #2) -- valor real em vigor" {
         Remove-Variable -Name RISK_MAX_PCT_PER_TRADE -Scope Global -ErrorAction SilentlyContinue
     }
 }
+
+Describe "Risco por trade -- 3 clamps adicionados 2026-08-07/08 tambem sincronizados (regressao real corrigida 2026-08-08)" {
+    # Achado 2026-08-08 (owner, no monitoramento ao vivo: "se nao me engano
+    # ja subimos para 7%"): os 2 fixes de sizing escritos em 2026-08-07
+    # (Resolve-GoldenRuleSizeClamp em Execute-GemTrade, Resolve-EffectiveSizingCap
+    # no guard de tier) e o "HARD CAP DE RISCO" pre-existente de 2026-07-24
+    # (anterior ao commit 4060d4e que subiu a Regra de Ouro pra 7% em
+    # 2026-08-04) tinham RiskPct=0.03/0.03 HARDCODED -- reintroduzindo a
+    # MESMA classe de bug que 4060d4e ja tinha corrigido no caminho primario.
+    # Efeito real: SOLUSDT com usd_size=$237 era clampado pra $70.38 (3%) em
+    # vez do $164.21 (7%) que o owner ja tinha decidido -- sizing real ficava
+    # menor que o pretendido em TODO trade que passasse por qualquer um
+    # desses 3 pontos, silenciosamente, sem nenhum log indicando o motivo.
+
+    It "gem_executor.ps1 nao tem RiskPct=0.03 hardcoded em nenhuma chamada de Resolve-GoldenRuleSizeClamp ou Resolve-EffectiveSizingCap" {
+        $content = Get-Content (Join-Path $agentsDir "gem_executor.ps1") -Raw
+        ($content -match '-RiskPct\s+0\.03') | Should Be $false
+    }
+
+    It "gem_executor.ps1 nao tem o HARD CAP DE RISCO usando 0.03 hardcoded (capital \* 0.03)" {
+        $content = Get-Content (Join-Path $agentsDir "gem_executor.ps1") -Raw
+        ($content -match '\$capital\s*\*\s*0\.03') | Should Be $false
+    }
+
+    It "chamada de Resolve-GoldenRuleSizeClamp le \$global:RISK_MAX_PCT_PER_TRADE com fallback 0.07" {
+        $content = Get-Content (Join-Path $agentsDir "gem_executor.ps1") -Raw
+        ($content -match [regex]::Escape('$__riskPctEarly = if ($global:RISK_MAX_PCT_PER_TRADE) { [double]$global:RISK_MAX_PCT_PER_TRADE } else { 0.07 }')) | Should Be $true
+        ($content -match [regex]::Escape('Resolve-GoldenRuleSizeClamp -ProposedUsd $usd_size -Capital $capital -RiskPct $__riskPctEarly')) | Should Be $true
+    }
+
+    It "chamada de Resolve-EffectiveSizingCap le \$global:RISK_MAX_PCT_PER_TRADE com fallback 0.07" {
+        $content = Get-Content (Join-Path $agentsDir "gem_executor.ps1") -Raw
+        ($content -match [regex]::Escape('$__riskPctGuard = if ($global:RISK_MAX_PCT_PER_TRADE) { [double]$global:RISK_MAX_PCT_PER_TRADE } else { 0.07 }')) | Should Be $true
+        ($content -match [regex]::Escape('Resolve-EffectiveSizingCap -FixedCapUsd $maxSize -Capital $capital -RiskPct $__riskPctGuard')) | Should Be $true
+    }
+
+    It "HARD CAP DE RISCO le \$global:RISK_MAX_PCT_PER_TRADE com fallback 0.07" {
+        $content = Get-Content (Join-Path $agentsDir "gem_executor.ps1") -Raw
+        ($content -match [regex]::Escape('$__hardCapRiskPct = if ($global:RISK_MAX_PCT_PER_TRADE) { [double]$global:RISK_MAX_PCT_PER_TRADE } else { 0.07 }')) | Should Be $true
+        ($content -match [regex]::Escape('$__hardCapUsd = [math]::Round($capital * $__hardCapRiskPct, 2)')) | Should Be $true
+    }
+
+    It "cenario real SOLUSDT: com RISK_MAX_PCT_PER_TRADE=0.07 e capital=2345.92, o clamp correto e ~\$164.21 (nao \$70.38 do bug de 3%)" {
+        $agentsDirLocal = Join-Path (Split-Path -Parent $PSScriptRoot) "agents"
+        . (Join-Path $agentsDirLocal "lib_live_guards.ps1")
+
+        $global:RISK_MAX_PCT_PER_TRADE = 0.07
+        $riskPct = if ($global:RISK_MAX_PCT_PER_TRADE) { [double]$global:RISK_MAX_PCT_PER_TRADE } else { 0.07 }
+        $r = Resolve-GoldenRuleSizeClamp -ProposedUsd 237.0 -Capital 2345.92 -RiskPct $riskPct
+
+        $r.clamped | Should Be $true
+        $r.usd_size | Should Be 164.21
+        Remove-Variable -Name RISK_MAX_PCT_PER_TRADE -Scope Global -ErrorAction SilentlyContinue
+    }
+}
