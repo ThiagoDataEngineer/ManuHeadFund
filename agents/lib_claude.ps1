@@ -286,7 +286,15 @@ function Invoke-Cerebras {
 # Ref: https://docs.mistral.ai/api/
 # Criar key gratis: https://console.mistral.ai -> API Keys (sem cartao)
 # Tracking: cost = $0 (free tier)
+#
+# 2026-08-11: DESLIGADO por decisao do owner -- conta Mistral retornando 402
+# (Payment Required) em centenas de chamadas reais (auditoria 08-08 a 08-11,
+# billing pendente no console.mistral.ai). Centralizado aqui (nao nos 4 pontos
+# de chamada) pra ter 1 lugar so pra reverter: trocar $true por $false abaixo
+# assim que o billing for resolvido.
 # -----------------------------------------------------------------------------
+$script:MISTRAL_DISABLED = $true
+
 function Invoke-Mistral {
     param(
         [string]$SystemPrompt,
@@ -296,6 +304,8 @@ function Invoke-Mistral {
         [double]$Temperature = 0.4,
         [string]$Agent       = "unknown"
     )
+
+    if ($script:MISTRAL_DISABLED) { throw "Mistral desligado (billing pendente, ver comentario 2026-08-11)" }
 
     $apiKey = $env:MISTRAL_API_KEY
     if (-not $apiKey) { throw "MISTRAL_API_KEY nao configurada. Ver agents/config.local.ps1" }
@@ -473,6 +483,14 @@ function Invoke-MesaDroneCascade {
         }
     }
 
+    # 2026-08-11: Cerebras reativado como fallback 4 (ultimo recurso, apos Haiku).
+    # Auditoria de logs reais (08-08 a 08-11) achou os 3 provedores anteriores
+    # (Groq/Mistral/Anthropic) degradados SIMULTANEAMENTE em 92% dos MESA_DEGRADED --
+    # Groq 429 constante, Mistral 402 payment required, Anthropic teto mensal ate
+    # 2026-09-01. Cerebras (1M tok/dia free, so 5 RPM) foi removido em 05-27 por
+    # instabilidade de JSON curto -- reintroduzido como ULTIMA tentativa (nao
+    # substitui Groq/Mistral/Haiku, so evita retornar $null quando os 3 ja falharam).
+
     # 1. Groq dual-key (primary + secondary, 60 RPM combinado)
     if ($env:GROQ_API_KEY) {
         try {
@@ -487,6 +505,8 @@ function Invoke-MesaDroneCascade {
     # 2026-05-29: substitui Gemini (250 RPD esgotava em 2-3h de operacao).
     # NOTA: gemini-2.0-flash seria alternativa (1.500 RPD), mas Mistral e superior.
     # Provider state cache: pula se RATE_LIMITED ha menos de 5min.
+    # 2026-08-11: desligamento real fica centralizado em Invoke-Mistral
+    # ($script:MISTRAL_DISABLED) -- ver comentario la para o motivo/como reverter.
     $mistralBlocked = $false
     try {
         $journalDir = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else {
@@ -519,13 +539,23 @@ function Invoke-MesaDroneCascade {
         }
     }
 
-    # 3. Claude Haiku (fallback final, pago)
+    # 3. Claude Haiku (fallback final pago)
     if (-not $HaikuPrimary -and $env:ANTHROPIC_API_KEY) {
         try {
             return Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
                 -Model "claude-haiku-4-5-20251001" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
         } catch {
-            Write-Warning "  [$Agent] Haiku final falhou: $($_.Exception.Message)"
+            Write-Host "  [$Agent] Haiku final falhou, fallback Cerebras: $($_.Exception.Message.Substring(0,[Math]::Min(200,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
+        }
+    }
+
+    # 4. Cerebras (ultimo recurso -- 5 RPM, free, ver nota 2026-08-11 acima)
+    if ($env:CEREBRAS_API_KEY) {
+        try {
+            return Invoke-Cerebras -SystemPrompt $SystemPrompt -UserContent $UserContent `
+                -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+        } catch {
+            Write-Warning "  [$Agent] Cerebras (ultimo fallback) tambem falhou: $($_.Exception.Message)"
         }
     }
     return $null

@@ -276,7 +276,14 @@ function _Mesa_RunDrones {
         # Diagnostico mesa_drones.jsonl mostrou 50% dos CAOS recentes = ALL-3 drones null
         # consecutivos = 250ms ainda estourava Groq rate limit em retries internos.
         # 750ms = ~1.3 req/s, longe de qualquer threshold de RPM.
-        Start-Sleep -Milliseconds 750
+        #
+        # 2026-08-11: 750ms -> 1500ms. Auditoria de logs reais (08-08 a 08-11) achou
+        # 92% dos MESA_DEGRADED sendo os 3 provedores (Groq/Mistral/Anthropic) falhando
+        # SIMULTANEAMENTE -- Groq com milhares de 429 mesmo com dual-key, alem de Mistral
+        # (402 payment required) e Anthropic (teto mensal ate 2026-09-01) fora do ar ao
+        # mesmo tempo. Dobrar o stagger nao resolve Mistral/Anthropic mas reduz o burst
+        # que empurra Groq pro 429 com mais frequencia.
+        Start-Sleep -Milliseconds 1500
     }
 
     # B27 fix 2026-05-21: timeout 25s -> 40s. Cascade Groq->Gemini->Haiku com retry interno
