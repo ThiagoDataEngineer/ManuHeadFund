@@ -200,7 +200,21 @@ function Invoke-MesaDrone {
         # P1 instrumentação (2026-05-16 02:30): logar $raw pra diagnosticar B1/B2/B3.
         $rawPreview = if ($null -eq $raw) { "<NULL>" } else { $raw.Substring(0, [Math]::Min(120, $raw.Length)).Replace("`n"," ").Replace("`r"," ") }
         Write-Host ("  [MESA-RAW] $agent raw_len={0} preview='{1}'" -f ($(if ($null -eq $raw) { 0 } else { $raw.Length })), $rawPreview) -ForegroundColor DarkGray
-        if (-not $raw) { return $null }
+        if (-not $raw) {
+            # 2026-08-12: propaga se a cascade INTEIRA falhou por erro real de
+            # API (nao timeout) -- roda dentro do Start-Job (mesmo runspace de
+            # Invoke-MesaDroneCascade), diferente do script:-scope que nao
+            # atravessa Receive-Job. Consumido por _Mesa_RunDrones/rerun pra
+            # evitar tentar de novo algo que so vai repetir o mesmo erro.
+            $cascadeExhausted = if (Get-Variable -Name MESA_CASCADE_LAST_ALL_FAILED -Scope Script -ErrorAction SilentlyContinue) {
+                [bool]$script:MESA_CASCADE_LAST_ALL_FAILED
+            } else { $false }
+            return [PSCustomObject]@{
+                sinal = $null; forca = 0; justificativa = $null
+                error = "cascade_returned_null"
+                cascade_exhausted = $cascadeExhausted
+            }
+        }
 
         # Extrai primeiro JSON object via brace-matching (resolve Haiku fallback que
         # retorna ```json ... ``` SEGUIDO de prosa **ANALISE DETALHADA:** etc.
@@ -462,13 +476,30 @@ $($Context | ConvertTo-Json -Depth 8 -Compress)
     # job_state_Running_likely_timeout. Rerun sequencial (1 drone falho) ou paralelo
     # (2+ falhos) recupera o drone antes de calcular consensus.
     # Limite: 1 rerun por drone (nao loop infinito).
+    #
+    # 2026-08-12: rerun so faz sentido pra falha TRANSITORIA (timeout, job nao
+    # completou) -- se a cascade inteira (Groq+Mistral+Haiku+Cerebras) ja
+    # esgotou com erro real de API (429/400/402), o rerun so repete a mesma
+    # chamada fadada a falhar de novo em segundos, dobrando o gasto de quota
+    # sem chance real de recuperar. Achado real (auditoria 2026-08-12): 110 de
+    # 130 chamadas Mesa num unico ciclo, boa parte rerun de cascade ja exaurida.
     $failedDrones = @()
+    $skippedExhausted = @()
     foreach ($droneName in @("termal","radar","lidar")) {
         $d = $drones.$droneName
+        $cascadeExhausted = $d -and $d.PSObject.Properties["cascade_exhausted"] -and $d.cascade_exhausted
         $isFailed = ($null -eq $d) -or
                     ($d.PSObject.Properties["error"] -and $d.error) -or
                     (-not ($MESA_VALID_SIGNALS -contains $d.sinal))
-        if ($isFailed) { $failedDrones += $droneName }
+        if ($isFailed -and $cascadeExhausted) {
+            $skippedExhausted += $droneName
+        } elseif ($isFailed) {
+            $failedDrones += $droneName
+        }
+    }
+
+    if ($skippedExhausted.Count -gt 0) {
+        Write-Host ("  [MESA-RERUN] {0} drone(s) com cascade ja exaurida (erro real de API, nao timeout) -- rerun pulado: [{1}]" -f $skippedExhausted.Count, ($skippedExhausted -join ',')) -ForegroundColor DarkGray
     }
 
     if ($failedDrones.Count -gt 0) {

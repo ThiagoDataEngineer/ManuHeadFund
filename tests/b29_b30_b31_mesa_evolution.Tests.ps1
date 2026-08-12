@@ -37,6 +37,14 @@ function New-DroneError {
     [PSCustomObject]@{ sinal = $null; forca = 0; justificativa = $null; error = $Err }
 }
 
+function New-DroneErrorExhausted {
+    # 2026-08-12: simula cascade INTEIRA (Groq+Mistral+Haiku+Cerebras) esgotada
+    # por erro real de API (429/400/402) -- diferente de New-DroneError, que
+    # representa falha transitoria (timeout/job nao completou).
+    param([string]$Err = "cascade_returned_null")
+    [PSCustomObject]@{ sinal = $null; forca = 0; justificativa = $null; error = $Err; cascade_exhausted = $true }
+}
+
 # ============================================================================
 # B29 -- Regime salvo no JSONL
 # ============================================================================
@@ -263,6 +271,99 @@ Describe "B30 Rerun de drones degraded" {
         Invoke-Mesa -Market "BTCUSDT" -Context $ctx | Out-Null
 
         $script:rerunCalled | Should Be $false
+    }
+}
+
+# ============================================================================
+# 2026-08-12 -- rerun pula drone com cascade ja exaurida (erro real de API)
+# Achado real: auditoria de logs (08-12) mostrou 110 de 130 chamadas Mesa num
+# unico ciclo, boa parte rerun de cascade ja esgotada (Groq 429 + Mistral
+# desligado + Anthropic teto mensal + Cerebras 429 simultaneos) -- rerun so
+# repete a mesma chamada fadada a falhar de novo em segundos.
+# ============================================================================
+
+Describe "Rerun pula drone com cascade_exhausted=true (nao repete chamada fadada)" {
+
+    It "drone com cascade_exhausted=true: rerun NAO e chamado para ele" {
+        $script:rerunCalled = @()
+        function _Mesa_RunDrones { param($Market, $UserContent)
+            return [PSCustomObject]@{
+                termal = (New-DroneOk -Sinal "LONG")
+                radar  = (New-DroneErrorExhausted)
+                lidar  = (New-DroneOk -Sinal "LONG")
+            }
+        }
+        function _Mesa_RerunDrone { param($Drone, $Market, $UserContent)
+            $script:rerunCalled += $Drone
+            return (New-DroneOk)
+        }
+
+        $ctx = [PSCustomObject]@{ regime = "BULL_STRONG" }
+        Invoke-Mesa -Market "BTCUSDT" -Context $ctx | Out-Null
+
+        $script:rerunCalled -contains "radar" | Should Be $false
+    }
+
+    It "drone com falha TRANSITORIA (sem cascade_exhausted): rerun ainda e chamado normalmente" {
+        $script:rerunCalled = @()
+        function _Mesa_RunDrones { param($Market, $UserContent)
+            return [PSCustomObject]@{
+                termal = (New-DroneOk -Sinal "LONG")
+                radar  = (New-DroneError "job_state_Running_likely_timeout")
+                lidar  = (New-DroneOk -Sinal "LONG")
+            }
+        }
+        function _Mesa_RerunDrone { param($Drone, $Market, $UserContent)
+            $script:rerunCalled += $Drone
+            return (New-DroneOk)
+        }
+
+        $ctx = [PSCustomObject]@{ regime = "BULL_STRONG" }
+        Invoke-Mesa -Market "BTCUSDT" -Context $ctx | Out-Null
+
+        $script:rerunCalled -contains "radar" | Should Be $true
+    }
+
+    It "mix: 1 exhausted + 1 transitorio -- so o transitorio recebe rerun" {
+        $script:rerunCalled = @()
+        function _Mesa_RunDrones { param($Market, $UserContent)
+            return [PSCustomObject]@{
+                termal = (New-DroneErrorExhausted)
+                radar  = (New-DroneError "job_state_Running_likely_timeout")
+                lidar  = (New-DroneOk -Sinal "LONG")
+            }
+        }
+        function _Mesa_RerunDrone { param($Drone, $Market, $UserContent)
+            $script:rerunCalled += $Drone
+            return (New-DroneOk)
+        }
+
+        $ctx = [PSCustomObject]@{ regime = "BULL_STRONG" }
+        Invoke-Mesa -Market "BTCUSDT" -Context $ctx | Out-Null
+
+        $script:rerunCalled -contains "termal" | Should Be $false
+        $script:rerunCalled -contains "radar"  | Should Be $true
+    }
+
+    It "todos os 3 drones exhausted: rerun NAO e chamado pra nenhum" {
+        $script:rerunCalled = @()
+        function _Mesa_RunDrones { param($Market, $UserContent)
+            return [PSCustomObject]@{
+                termal = (New-DroneErrorExhausted)
+                radar  = (New-DroneErrorExhausted)
+                lidar  = (New-DroneErrorExhausted)
+            }
+        }
+        function _Mesa_RerunDrone { param($Drone, $Market, $UserContent)
+            $script:rerunCalled += $Drone
+            return (New-DroneOk)
+        }
+
+        $ctx = [PSCustomObject]@{ regime = "BULL_STRONG" }
+        $r = Invoke-Mesa -Market "BTCUSDT" -Context $ctx
+
+        $script:rerunCalled.Count | Should Be 0
+        $r.degraded | Should Be $true
     }
 }
 

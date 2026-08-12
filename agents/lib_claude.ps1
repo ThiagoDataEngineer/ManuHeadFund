@@ -473,11 +473,16 @@ function Invoke-MesaDroneCascade {
         [switch]$HaikuPrimary
     )
 
+    # 2026-08-12: sinaliza pra _Mesa_RunDrones se vale rerun (ver mesa_agent.ps1).
+    $script:MESA_CASCADE_LAST_ALL_FAILED = $false
+
     # B28d: LIDAR usa Haiku primary para liberar bucket Groq para Termal+Radar
     if ($HaikuPrimary -and $env:ANTHROPIC_API_KEY) {
         try {
-            return Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
+            $r = Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
                 -Model "claude-haiku-4-5-20251001" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+            $script:MESA_CASCADE_LAST_ALL_FAILED = $false
+            return $r
         } catch {
             Write-Host "  [$Agent] Haiku primary falhou, fallback Groq: $($_.Exception.Message.Substring(0,[Math]::Min(200,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
@@ -494,8 +499,10 @@ function Invoke-MesaDroneCascade {
     # 1. Groq dual-key (primary + secondary, 60 RPM combinado)
     if ($env:GROQ_API_KEY) {
         try {
-            return Invoke-Groq -SystemPrompt $SystemPrompt -UserContent $UserContent `
+            $r = Invoke-Groq -SystemPrompt $SystemPrompt -UserContent $UserContent `
                 -Model $GroqModel -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+            $script:MESA_CASCADE_LAST_ALL_FAILED = $false
+            return $r
         } catch {
             Write-Host "  [$Agent] Groq falhou, fallback Mistral: $($_.Exception.Message.Substring(0,[Math]::Min(200,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
@@ -532,8 +539,10 @@ function Invoke-MesaDroneCascade {
 
     if ($env:MISTRAL_API_KEY -and -not $mistralBlocked) {
         try {
-            return Invoke-Mistral -SystemPrompt $SystemPrompt -UserContent $UserContent `
+            $r = Invoke-Mistral -SystemPrompt $SystemPrompt -UserContent $UserContent `
                 -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+            $script:MESA_CASCADE_LAST_ALL_FAILED = $false
+            return $r
         } catch {
             Write-Host "  [$Agent] Mistral falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(200,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
@@ -542,8 +551,10 @@ function Invoke-MesaDroneCascade {
     # 3. Claude Haiku (fallback final pago)
     if (-not $HaikuPrimary -and $env:ANTHROPIC_API_KEY) {
         try {
-            return Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
+            $r = Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
                 -Model "claude-haiku-4-5-20251001" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+            $script:MESA_CASCADE_LAST_ALL_FAILED = $false
+            return $r
         } catch {
             Write-Host "  [$Agent] Haiku final falhou, fallback Cerebras: $($_.Exception.Message.Substring(0,[Math]::Min(200,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
@@ -552,12 +563,19 @@ function Invoke-MesaDroneCascade {
     # 4. Cerebras (ultimo recurso -- 5 RPM, free, ver nota 2026-08-11 acima)
     if ($env:CEREBRAS_API_KEY) {
         try {
-            return Invoke-Cerebras -SystemPrompt $SystemPrompt -UserContent $UserContent `
+            $r = Invoke-Cerebras -SystemPrompt $SystemPrompt -UserContent $UserContent `
                 -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
+            $script:MESA_CASCADE_LAST_ALL_FAILED = $false
+            return $r
         } catch {
             Write-Warning "  [$Agent] Cerebras (ultimo fallback) tambem falhou: $($_.Exception.Message)"
         }
     }
+
+    # Chegou aqui = toda etapa com credencial disponivel foi tentada e falhou
+    # com erro real de API (429/400/402) -- ou nenhuma credencial existia (config
+    # quebrada), mas nesse caso rerun tambem nao teria nada novo pra tentar.
+    $script:MESA_CASCADE_LAST_ALL_FAILED = $true
     return $null
 }
 
