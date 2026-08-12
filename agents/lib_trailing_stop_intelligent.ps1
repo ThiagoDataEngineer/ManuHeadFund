@@ -187,7 +187,23 @@ function Get-StructuralStopTarget {
         cai pro TargetPct fixo (nunca fecha o trade artificialmente cedo so
         pq havia uma resistencia proxima, quando o modo pedia mais folego).
         Default 0.5 = pivot precisa valer pelo menos metade do alvo original.
-        SL nao e afetado (proteger cedo continua sendo sempre desejavel).
+
+    .PARAMETER MinStopFractionOfMode
+        2026-08-12 FIX: achado real (auditoria de trade_outcomes -- 89% dos
+        fechamentos eram phantom_reconciliation, LONG com PnL medio -1.168%
+        nesses casos, vs a suposicao de que "proteger cedo e sempre
+        desejavel"). SL sempre aceitava o pivot de suporte/resistencia MAIS
+        PROXIMO do entry dentro do raio, sem piso minimo -- diferente do TP,
+        que ja tinha esse piso desde 2026-07-31. Um pivot muito proximo (ex:
+        1% do entry, comum em mercado lateral com muitos micro-pivots) gera
+        SL apertado o bastante pra ser varrido por ruido normal antes do
+        trade ter qualquer chance real de provar a tese certa ou errada --
+        nao e "protecao inteligente", e ausencia de piso.
+        Mesma logica do TP: pivot de SL so e aceito se a distancia dele for
+        >= (StopPct * MinStopFractionOfMode); caso contrario prefere um
+        pivot mais distante dentro do raio (se houver) ou cai pro StopPct
+        fixo. Default 0.0 preserva o comportamento anterior (sempre aceita
+        o mais proximo) -- so muda com valor explicito >0.
 
     .OUTPUTS
         PSCustomObject { stop_loss, take_profit, sl_source, tp_source }
@@ -201,9 +217,11 @@ function Get-StructuralStopTarget {
         [Parameter(Mandatory=$false)] [double] $StopPct = 0.08,
         [Parameter(Mandatory=$false)] [double] $TargetPct = 0.32,
         [Parameter(Mandatory=$false)] [double] $StructuralMaxPct = 25.0,
-        [Parameter(Mandatory=$false)] [double] $MinTargetFractionOfMode = 0.5
+        [Parameter(Mandatory=$false)] [double] $MinTargetFractionOfMode = 0.5,
+        [Parameter(Mandatory=$false)] [double] $MinStopFractionOfMode = 0.0
     )
     $minTpDistPct = ($TargetPct * 100.0) * $MinTargetFractionOfMode
+    $minSlDistPct = ($StopPct * 100.0) * $MinStopFractionOfMode
 
     $isLong = ("$Side".ToLower() -eq "long")
 
@@ -223,15 +241,25 @@ function Get-StructuralStopTarget {
 
     try {
         if ($isLong) {
-            # Suporte real (abaixo do preco) pro SL -- pivot mais proximo do entry.
+            # Suporte real (abaixo do preco) pro SL. 2026-08-12: mesmo piso
+            # minimo do TP -- entre os pivots dentro do raio, prefere o mais
+            # PROXIMO que ainda respeite >= (StopPct * MinStopFractionOfMode)
+            # de distancia; sem isso, o pivot mais proximo (que pode ser
+            # apertado demais, ex: 1% em mercado lateral) era aceito cego.
             $supports = @(Find-SupportLevels -Candles $Candles -LookbackPeriod 20)
-            $nearestSupport = $supports | Where-Object { $_ -lt $Entry } | Select-Object -First 1
-            if ($nearestSupport) {
-                $distPct = (($Entry - $nearestSupport) / $Entry) * 100
-                if ($distPct -gt 0 -and $distPct -le $StructuralMaxPct) {
-                    $result.stop_loss = $nearestSupport
-                    $result.sl_source = "structural"
-                }
+            $supportSlCandidates = @($supports | Where-Object { $_ -lt $Entry } | ForEach-Object {
+                [PSCustomObject]@{ price = $_; dist = (($Entry - $_) / $Entry) * 100 }
+            } | Where-Object { $_.dist -gt 0 -and $_.dist -le $StructuralMaxPct } | Sort-Object dist)
+            $chosenSl = $supportSlCandidates | Where-Object { $_.dist -ge $minSlDistPct } | Select-Object -First 1
+            if (-not $chosenSl -and $supportSlCandidates.Count -gt 0) {
+                # Nenhum pivot bate o piso -- prefere o mais DISTANTE disponivel
+                # (ainda estrutural) em vez do mais proximo, que protegeria
+                # cedo demais em relacao ao risco tolerado pelo modo do trade.
+                $chosenSl = $supportSlCandidates | Select-Object -Last 1
+            }
+            if ($chosenSl) {
+                $result.stop_loss = $chosenSl.price
+                $result.sl_source = "structural"
             }
 
             # Resistencia real (acima do preco) pro TP -- espelha o preco pra
@@ -265,15 +293,20 @@ function Get-StructuralStopTarget {
             $mirror = @($Candles | ForEach-Object {
                 [PSCustomObject]@{ open=$_.open; high=(2*$Entry - $_.low); low=(2*$Entry - $_.high); close=(2*$Entry - $_.close); volume=$_.volume }
             })
+            # 2026-08-12: mesmo piso minimo aplicado ao SL do SHORT (via
+            # resistencia real) -- ver comentario espelhado no bloco LONG acima.
             $mirroredResistances = @(Find-SupportLevels -Candles $mirror -LookbackPeriod 20)
-            $mirroredNearest = $mirroredResistances | Select-Object -First 1
-            if ($mirroredNearest) {
-                $nearestResistance = 2 * $Entry - $mirroredNearest
-                $distPct = (($nearestResistance - $Entry) / $Entry) * 100
-                if ($distPct -gt 0 -and $distPct -le $StructuralMaxPct) {
-                    $result.stop_loss = $nearestResistance
-                    $result.sl_source = "structural"
-                }
+            $resistanceSlCandidates = @($mirroredResistances | ForEach-Object {
+                $nearestResistance = 2 * $Entry - $_
+                [PSCustomObject]@{ price = $nearestResistance; dist = (($nearestResistance - $Entry) / $Entry) * 100 }
+            } | Where-Object { $_.dist -gt 0 -and $_.dist -le $StructuralMaxPct } | Sort-Object dist)
+            $chosenSl = $resistanceSlCandidates | Where-Object { $_.dist -ge $minSlDistPct } | Select-Object -First 1
+            if (-not $chosenSl -and $resistanceSlCandidates.Count -gt 0) {
+                $chosenSl = $resistanceSlCandidates | Select-Object -Last 1
+            }
+            if ($chosenSl) {
+                $result.stop_loss = $chosenSl.price
+                $result.sl_source = "structural"
             }
 
             # 2026-07-31: mesmo piso minimo aplicado ao TP do SHORT (via

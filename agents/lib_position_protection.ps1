@@ -332,7 +332,13 @@ function Repair-PositionProtection {
                     $__candles = @(CoinEx-GetCandles $Market "4hour" 60)
                 }
                 if ($__candles) {
-                    $__structural = Get-StructuralStopTarget -Side $side -Entry $entry -Candles $__candles -StopPct $StopPct -TargetPct $__effectiveTargetPct
+                    # 2026-08-12: ativa o piso minimo de SL (mesmo valor default
+                    # 0.5 ja usado pro TP desde 07-31) -- achado real (auditoria
+                    # trade_outcomes) mostrou SL estrutural sempre aceitando o
+                    # pivot mais proximo, sem piso, produzindo stops apertados
+                    # demais em mercado lateral (varridos por ruido antes do
+                    # trade ter chance real). Ver lib_trailing_stop_intelligent.ps1.
+                    $__structural = Get-StructuralStopTarget -Side $side -Entry $entry -Candles $__candles -StopPct $StopPct -TargetPct $__effectiveTargetPct -MinStopFractionOfMode 0.5
                 }
             } catch { $__structural = $null }
         }

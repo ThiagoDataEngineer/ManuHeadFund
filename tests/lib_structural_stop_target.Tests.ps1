@@ -177,6 +177,108 @@ Describe "Get-StructuralStopTarget -- piso minimo de TP vs alvo do modo (2026-07
     }
 }
 
+Describe "Get-StructuralStopTarget -- piso minimo de SL vs risco do modo (2026-08-12)" {
+    # Achado real: auditoria de trade_outcomes (2026-08-11/12) mostrou 89% dos
+    # fechamentos como phantom_reconciliation, LONG com PnL medio -1.168%
+    # nesses casos. SL sempre aceitava o pivot MAIS PROXIMO do entry dentro
+    # do raio, sem piso minimo -- diferente do TP (que ja tinha o piso desde
+    # 2026-07-31). Pivot muito proximo (comum em mercado lateral com micro-
+    # pivots) gera SL apertado o bastante pra ser varrido por ruido normal
+    # antes do trade ter chance real de provar a tese.
+
+    # 27 candles: pivot de suporte PROXIMO em ~99 (1% do entry=100, abaixo do
+    # piso de 4% quando StopPct=8%*0.5) E outro mais LONGE em ~85 (15%, acima
+    # do piso) -- espelha o caso real do OPUSDT usado no teste de TP, agora
+    # aplicado ao SL.
+    function New-CandlesWithNearAndFarSupport {
+        $candles = @()
+        # warm-up estritamente ascendente ate 102 (sem pivot espurio)
+        for ($i = 0; $i -lt 13; $i++) {
+            $p = 90 + ($i * 1.0)
+            $candles += New-Candle -Open $p -High ($p + 1) -Low ($p - 0.5) -Close ($p + 0.5)
+        }
+        $candles += New-Candle -Open 102   -High 103   -Low 102   -Close 102.5
+        # desce ate o pivot de suporte PROXIMO em 99 (1% do entry=100, swing low
+        # real: cercado por valores maiores dos dois lados)
+        $candles += New-Candle -Open 102  -High 102.5 -Low 100  -Close 100.5
+        $candles += New-Candle -Open 100.5 -High 101  -Low 99  -Close 99.5   # pivot low = 99
+        $candles += New-Candle -Open 99.5 -High 102  -Low 99.5 -Close 101
+        # sobe de volta, depois desce mais fundo ate o pivot DISTANTE em 85 (15%)
+        $candles += New-Candle -Open 101 -High 103 -Low 100 -Close 102
+        $candles += New-Candle -Open 102 -High 103 -Low 90  -Close 92
+        $candles += New-Candle -Open 92  -High 93  -Low 85  -Close 87        # pivot low = 85
+        $candles += New-Candle -Open 87  -High 100 -Low 86  -Close 99
+        for ($i = 0; $i -lt 4; $i++) {
+            $candles += New-Candle -Open 100 -High 100.5 -Low 99.5 -Close 100
+        }
+        return $candles
+    }
+
+    It "pivot de SL proximo demais (1%) e ignorado, prefere pivot distante (15%) que respeita o risco do modo" {
+        $candles = New-CandlesWithNearAndFarSupport
+        $r = Get-StructuralStopTarget -Side "long" -Entry 100.0 -Candles $candles -StopPct 0.08 -TargetPct 0.32 -MinStopFractionOfMode 0.5
+        $r.sl_source | Should Be "structural"
+        # pivot escolhido deve ser o de 85 (15%), NAO o de 99 (1%)
+        ($r.stop_loss -lt 90.0) | Should Be $true
+    }
+
+    It "MinStopFractionOfMode=0.0 (default) preserva comportamento antigo -- aceita o mais proximo" {
+        $candles = New-CandlesWithNearAndFarSupport
+        $r = Get-StructuralStopTarget -Side "long" -Entry 100.0 -Candles $candles -StopPct 0.08 -TargetPct 0.32
+        $r.sl_source | Should Be "structural"
+        # sem piso, volta a pegar o pivot mais proximo (99)
+        ($r.stop_loss -gt 97.0 -and $r.stop_loss -lt 100.0) | Should Be $true
+    }
+
+    It "sem pivot alternativo mais distante -- aceita o pivot proximo mesmo assim (fail-soft)" {
+        $candles = @()
+        for ($i = 0; $i -lt 13; $i++) {
+            $p = 84 + ($i * 1.0)
+            $candles += New-Candle -Open $p -High ($p + 1) -Low ($p - 0.5) -Close ($p + 0.5)
+        }
+        $candles += New-Candle -Open 97   -High 98   -Low 97   -Close 97.5
+        $candles += New-Candle -Open 97   -High 97.5 -Low 99   -Close 98.5
+        $candles += New-Candle -Open 98   -High 100  -Low 99  -Close 99.5
+        $candles += New-Candle -Open 99.5 -High 101  -Low 99   -Close 100   # unico pivot low = 99
+        for ($i = 0; $i -lt 4; $i++) {
+            $candles += New-Candle -Open 100 -High 100.5 -Low 99.5 -Close 100
+        }
+        $r = Get-StructuralStopTarget -Side "long" -Entry 100.0 -Candles $candles -StopPct 0.08 -TargetPct 0.32 -MinStopFractionOfMode 0.5
+        # unico pivot disponivel deve ser aceito mesmo violando o piso (fail-soft,
+        # nunca vira fixed_pct so pq nao ha alternativa mais distante)
+        if ($r.sl_source -eq "structural") {
+            ($r.stop_loss -lt 100.0) | Should Be $true
+        }
+    }
+
+    It "SHORT: pivot de SL (resistencia) proximo demais e ignorado, prefere o distante" {
+        # Espelho do teste LONG: resistencia proxima em ~101, distante em ~115
+        $candles = @()
+        for ($i = 0; $i -lt 13; $i++) {
+            $p = 84 + ($i * 1.0)
+            $candles += New-Candle -Open $p -High ($p + 1) -Low ($p - 0.5) -Close ($p + 0.5)
+        }
+        $candles += New-Candle -Open 97   -High 98   -Low 97   -Close 97.5
+        $candles += New-Candle -Open 97   -High 97.5 -Low 96   -Close 96.5
+        $candles += New-Candle -Open 96.5 -High 98   -Low 96   -Close 97.5
+        # pivot de resistencia PROXIMO em 101 (1% de distancia do entry=100)
+        $candles += New-Candle -Open 98    -High 100 -Low 98   -Close 99.5
+        $candles += New-Candle -Open 99.5  -High 101 -Low 99   -Close 100   # pivot high = 101
+        $candles += New-Candle -Open 100   -High 100.5 -Low 99.5 -Close 100
+        # sobe de novo mais alto -- pivot de resistencia DISTANTE em 115 (15%)
+        $candles += New-Candle -Open 100 -High 101 -Low 99  -Close 100
+        $candles += New-Candle -Open 100 -High 114 -Low 99  -Close 110
+        $candles += New-Candle -Open 110 -High 115 -Low 109 -Close 112       # pivot high = 115
+        $candles += New-Candle -Open 112 -High 113 -Low 100 -Close 101
+        for ($i = 0; $i -lt 4; $i++) {
+            $candles += New-Candle -Open 100 -High 100.5 -Low 99.5 -Close 100
+        }
+        $r = Get-StructuralStopTarget -Side "short" -Entry 100.0 -Candles $candles -StopPct 0.08 -TargetPct 0.32 -MinStopFractionOfMode 0.5
+        $r.sl_source | Should Be "structural"
+        ($r.stop_loss -gt 110.0) | Should Be $true
+    }
+}
+
 Describe "Get-StructuralStopTarget -- SHORT com estrutura real (espelhado)" {
 
     It "acha resistencia real pro SL quando dentro do raio" {
