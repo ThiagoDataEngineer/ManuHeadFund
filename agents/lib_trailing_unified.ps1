@@ -215,7 +215,8 @@ function Resolve-TrailingDecision {
         [string] $Regime = "",
         [Nullable[int]] $BarsHeld = $null,
         [double] $RemainingSizePct = 1.0,
-        [int] $ReversalSignals = 0
+        [int] $ReversalSignals = 0,
+        [double] $MinProfitRMultipleToTighten = 0.3
     )
 
     if (-not $Position.origin -or -not $Position.origin.asset_class -or -not $Position.origin.trade_style) {
@@ -227,6 +228,31 @@ function Resolve-TrailingDecision {
     $currentStop = [double]$Position.stopCurrent
     $assetClass = "$($Position.origin.asset_class)".ToUpper()
     $tradeStyle = "$($Position.origin.trade_style)".ToUpper()
+
+    # 2026-08-11: piso de lucro minimo (R-multiple) antes do trailing apertar
+    # via exhaustion/trendline/suporte. Achado real (owner + auditoria de
+    # trades fechados): LTCUSDT abriu com stop=42.96 (5% de folga, correto),
+    # mas o trailing ja tinha apertado pra stopCurrent=44.77 (so 1% de folga)
+    # com o preco praticamente parado (entry 45.22, atual 45.04, ainda no
+    # vermelho) -- os 3 fatores de aperto reagem a distancia ATUAL do preco
+    # (exhaustion/trendline/suporte), sem checar se ja existe lucro real
+    # acumulado pra proteger. Resultado: trades saindo via phantom_
+    # reconciliation bem antes do stop original ser sequer testado (TAOUSDT
+    # saiu a so 2.4% do caminho ate o stop original percorrido).
+    # Fix: os 3 fatores so entram em vigor quando a posicao ja avancou pelo
+    # menos $MinProfitRMultipleToTighten (default 0.3) do R original -- R
+    # medido como distancia entry->stop ORIGINAL (Position.stop), nao o
+    # stopCurrent ja movido. Antes disso, so o trailing base (ATR/leverage)
+    # decide o stop -- protege o trade de sair por ruido antes dele ter
+    # chance real de se desenvolver, sem tocar no stop original nem no piso
+    # de melhora minima (MIN_IMPROVEMENT_PCT) ja existente.
+    $originalStop = if ($Position.PSObject.Properties['stop'] -and [double]$Position.stop -gt 0) { [double]$Position.stop } else { $currentStop }
+    $originalRDistance = [Math]::Abs($entry - $originalStop)
+    $currentRMultiple = if ($originalRDistance -gt 0) {
+        if ($side -eq "LONG") { ($CurrentPrice - $entry) / $originalRDistance }
+        else { ($entry - $CurrentPrice) / $originalRDistance }
+    } else { 0.0 }
+    $profitFloorReached = $currentRMultiple -ge $MinProfitRMultipleToTighten
 
     $hold = {
         param($reason, $extra)
@@ -362,6 +388,20 @@ function Resolve-TrailingDecision {
     # Trailing % efetivo: exhaustion alto, proximidade da trendline real, e
     # proximidade de pivot de suporte/resistencia reduzem a distancia do
     # stop ao preco (produto dos 3 fatores).
+    #
+    # Piso de lucro minimo (ver comentario 2026-08-11 acima): antes da
+    # posicao acumular pelo menos $MinProfitRMultipleToTighten de R real, os
+    # 3 fatores de aperto ficam neutros (1.0) -- so o trailing base por
+    # ATR/leverage/estilo continua valendo, sem apertar preventivamente com
+    # base em exhaustion/trendline/suporte antes de haver lucro pra proteger.
+    if (-not $profitFloorReached) {
+        $tighteningFactor = 1.0
+        $trendlineFactor = 1.0
+        $trendlineReason = "profit_floor_nao_atingido_R=$([Math]::Round($currentRMultiple,3))"
+        $supportFactor = 1.0
+        $supportReason = "profit_floor_nao_atingido_R=$([Math]::Round($currentRMultiple,3))"
+    }
+
     $effectiveTrailingPct = $trailingPct * $tighteningFactor * $trendlineFactor * $supportFactor
 
     $calculatedStop = if ($side -eq "LONG") {
@@ -402,7 +442,8 @@ function Resolve-TrailingDecision {
     # de QUAL sinal real (exhaustion de volume, trendline por regressao, ou
     # pivot de suporte/resistencia) motivou o aperto, nao so um numero generico.
     $tightestFactor = [Math]::Min([Math]::Min($tighteningFactor, $trendlineFactor), $supportFactor)
-    $reason = if ($supportFactor -le $tightestFactor -and $supportFactor -lt 1.0) { "support_$supportReason" }
+    $reason = if (-not $profitFloorReached) { "trail_normal_profit_floor_nao_atingido_R=$([Math]::Round($currentRMultiple,3))" }
+              elseif ($supportFactor -le $tightestFactor -and $supportFactor -lt 1.0) { "support_$supportReason" }
               elseif ($trendlineFactor -le $tightestFactor -and $trendlineFactor -lt 1.0) { "trendline_$trendlineReason" }
               elseif ($exhaustionScore -ge 66) { "exhaustion_alto_aperta_forte" }
               elseif ($exhaustionScore -ge 33) { "exhaustion_moderado_aperta" }

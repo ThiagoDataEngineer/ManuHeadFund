@@ -278,6 +278,79 @@ Describe "Resolve-TrailingDecision -- exhaustion aperta o stop" {
     }
 }
 
+Describe "Resolve-TrailingDecision -- piso de lucro minimo (R-multiple) antes de apertar (2026-08-11)" {
+    # Achado real (auditoria de trades fechados 2026-08-11): LTCUSDT abriu com
+    # stop=42.96 (5% de folga do entry=45.22, correto), mas o trailing ja
+    # tinha apertado pra stopCurrent=44.77 (so 1% de folga) com o preco
+    # praticamente parado (atual=45.04, ainda no vermelho) -- os 3 fatores de
+    # aperto (exhaustion/trendline/suporte) reagiam a distancia ATUAL do
+    # preco, sem checar se ja existia lucro real acumulado pra proteger.
+
+    It "posicao com R baixo (ainda mal andou) NAO aperta via exhaustion, mesmo com exhaustion alto" {
+        # StepPct=0 -- preco fica parado perto do entry (100), so o ultimo
+        # candle traz exhaustion (wick+vol seco). CurrentPrice fica proximo
+        # do entry, garantindo R baixo (diferente de New-ExhaustedTopCandles
+        # com StepPct default, que ja sobe ~15% antes do topo exausto).
+        $flatCandles = @(New-HealthyUptrendCandles -Count 29 -StartPrice 100 -StepPct 0.0)
+        $lastClose = [double]$flatCandles[-1].close
+        $flatCandles += New-Candle -Open $lastClose -High ($lastClose * 1.05) -Low ($lastClose * 0.998) -Close ($lastClose * 1.001) -Volume 200
+        $priceNearEntry = [double]$flatCandles[-1].close
+
+        # entry=100, stop original=95 (5R=5), preco mal andou (perto do entry) -- R baixo
+        $pos = [PSCustomObject]@{
+            market="LOWRUSDT"; side="LONG"; entry=100.0; stop=95.0; stopCurrent=95.0
+            origin = @{ asset_class="SPOT"; trade_style="SWING" }
+        }
+        $r = Resolve-TrailingDecision -Position $pos -CurrentPrice $priceNearEntry -Candles $flatCandles
+
+        $r.exhaustion_score | Should BeGreaterThan 0
+        $r.reason | Should Match "profit_floor_nao_atingido"
+    }
+
+    It "posicao com R alto (ja lucrou o piso) aperta via exhaustion normalmente" {
+        $exhaustedCandles = New-ExhaustedTopCandles -Count 30 -StartPrice 100
+        $priceExhausted = [double]$exhaustedCandles[-1].close
+
+        # mesmo entry/stop, mas simula que o preco ja rodou bem alem do piso de 0.3R
+        # (usa o proprio preco exausto, bem acima do entry, como preco atual real)
+        $pos = [PSCustomObject]@{
+            market="HIGHRUSDT"; side="LONG"; entry=100.0; stop=95.0; stopCurrent=98.0
+            origin = @{ asset_class="SPOT"; trade_style="SWING" }
+        }
+        $r = Resolve-TrailingDecision -Position $pos -CurrentPrice $priceExhausted -Candles $exhaustedCandles
+
+        $r.reason | Should Not Match "profit_floor_nao_atingido"
+    }
+
+    It "sem Position.stop (chamador antigo, sem passar o campo) usa stopCurrent como fallback -- comportamento preservado" {
+        $healthyCandles = New-HealthyUptrendCandles -Count 30 -StartPrice 100 -StepPct 0.5
+        $priceHealthy = [double]$healthyCandles[-1].close
+
+        $pos = [PSCustomObject]@{
+            market="LEGACYUSDT"; side="LONG"; entry=100.0; stopCurrent=98.0
+            origin = @{ asset_class="SPOT"; trade_style="SWING" }
+        }
+        $threw = $false
+        try {
+            Resolve-TrailingDecision -Position $pos -CurrentPrice $priceHealthy -Candles $healthyCandles | Out-Null
+        } catch { $threw = $true }
+        $threw | Should Be $false
+    }
+
+    It "MinProfitRMultipleToTighten e configuravel -- piso mais baixo libera aperto mais cedo" {
+        $exhaustedCandles = New-ExhaustedTopCandles -Count 30 -StartPrice 100
+        $priceExhausted = [double]$exhaustedCandles[-1].close
+
+        $pos = [PSCustomObject]@{
+            market="CUSTOMUSDT"; side="LONG"; entry=100.0; stop=95.0; stopCurrent=95.0
+            origin = @{ asset_class="SPOT"; trade_style="SWING" }
+        }
+        # piso 0.0 = sempre libera o aperto (comportamento pre-fix)
+        $r = Resolve-TrailingDecision -Position $pos -CurrentPrice $priceExhausted -Candles $exhaustedCandles -MinProfitRMultipleToTighten 0.0
+        $r.reason | Should Not Match "profit_floor_nao_atingido"
+    }
+}
+
 Describe "Resolve-TrailingDecision -- output shape (contrato estavel p/ downstream)" {
 
     It "retorna todos os campos esperados por Sync-TrailingToExchange" {
