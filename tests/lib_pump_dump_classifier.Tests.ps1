@@ -407,6 +407,84 @@ Describe "lib_pump_dump_classifier" {
     }
 
     # =========================================================================
+    # Test Suite 6c: Test-PumpDumpGate -- natural_uptrend so bloqueia SHORT
+    # perto do proprio pico (2026-08-14 FIX)
+    # =========================================================================
+
+    Context "Test-PumpDumpGate -- natural_uptrend nao bloqueia SHORT quando ja retraiu do pico" {
+
+        function New-Candle {
+            param($Open, $High, $Low, $Close, $Volume)
+            [PSCustomObject]@{ open=$Open; high=$High; low=$Low; close=$Close; volume=$Volume }
+        }
+
+        It "caso real BTCUSDT (2026-08-14): dist_from_peak=-3.81%, sem sinal de pump -> ALLOW SHORT" {
+            # Dados reais BTCUSDT (7d ate 2026-08-14): peak7d=65450, price=62955
+            # (dist=-3.81%). Volume estavel (sem spike), mcap alto (nao penny),
+            # sem retracement abrupto -- classifica natural_uptrend por baixo
+            # score, NAO por confirmacao de alta real. Producao real bloqueou
+            # SHORT aqui 6x em ~2.5h mesmo com Breadth=bearish confirmado.
+            function Get-CoinExCandles {
+                param($Market, $Period, $Limit)
+                @(
+                    New-Candle -Open 64000 -High 64500 -Low 63800 -Close 64200 -Volume 200
+                    New-Candle -Open 64200 -High 65450 -Low 64100 -Close 65200 -Volume 210
+                    New-Candle -Open 65200 -High 65400 -Low 64300 -Close 64500 -Volume 195
+                    New-Candle -Open 64500 -High 64700 -Low 63600 -Close 63900 -Volume 205
+                    New-Candle -Open 63900 -High 64200 -Low 63200 -Close 63400 -Volume 190
+                    New-Candle -Open 63400 -High 63700 -Low 62900 -Close 63100 -Volume 200
+                    New-Candle -Open 63100 -High 63300 -Low 62700 -Close 62955 -Volume 198
+                )
+            }
+
+            $gate = Test-PumpDumpGate -Market "BTCUSDT"
+            $gate.allow_short | Should Be $true
+        }
+
+        It "moeda genuinamente perto do pico (dist>=-3%): SHORT continua bloqueado" {
+            # Range apertado + mcap alto + volume estavel: zera todas as outras
+            # features (mcap/penny/vol_spike/retracement/candle_strength), so
+            # duration_score (sempre >0 quando perto do proprio pico) sobra --
+            # classifica natural_uptrend com dist_from_peak ~-0.2% (genuinamente
+            # no topo, nao em queda).
+            function Get-CoinExCandles {
+                param($Market, $Period, $Limit)
+                @(
+                    New-Candle -Open 100.0 -High 100.5 -Low 99.8  -Close 100.2 -Volume 200
+                    New-Candle -Open 100.2 -High 100.6 -Low 100.0 -Close 100.4 -Volume 202
+                    New-Candle -Open 100.4 -High 100.8 -Low 100.2 -Close 100.6 -Volume 198
+                    New-Candle -Open 100.6 -High 101.0 -Low 100.4 -Close 100.8 -Volume 201
+                    New-Candle -Open 100.8 -High 101.2 -Low 100.6 -Close 101.0 -Volume 199
+                    New-Candle -Open 101.0 -High 101.4 -Low 100.8 -Close 101.2 -Volume 200
+                    New-Candle -Open 101.2 -High 101.6 -Low 101.0 -Close 101.4 -Volume 200
+                )
+            }
+
+            $gate = Test-PumpDumpGate -Market "NEARPEAKUSDT" -Metadata @{mcap=500000000; listing_date_days=200}
+            $gate.pump_class | Should Be "natural_uptrend"
+            $gate.allow_short | Should Be $false
+        }
+
+        It "LONG continua permitido em natural_uptrend independente da distancia do pico (nao mudou)" {
+            function Get-CoinExCandles {
+                param($Market, $Period, $Limit)
+                @(
+                    New-Candle -Open 64000 -High 64500 -Low 63800 -Close 64200 -Volume 200
+                    New-Candle -Open 64200 -High 65450 -Low 64100 -Close 65200 -Volume 210
+                    New-Candle -Open 65200 -High 65400 -Low 64300 -Close 64500 -Volume 195
+                    New-Candle -Open 64500 -High 64700 -Low 63600 -Close 63900 -Volume 205
+                    New-Candle -Open 63900 -High 64200 -Low 63200 -Close 63400 -Volume 190
+                    New-Candle -Open 63400 -High 63700 -Low 62900 -Close 63100 -Volume 200
+                    New-Candle -Open 63100 -High 63300 -Low 62700 -Close 62955 -Volume 198
+                )
+            }
+
+            $gate = Test-PumpDumpGate -Market "BTCUSDT2"
+            $gate.allow_long | Should Be $true
+        }
+    }
+
+    # =========================================================================
     # Test Suite 7: Function definitions
     # =========================================================================
 

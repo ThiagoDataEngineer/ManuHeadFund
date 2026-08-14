@@ -312,10 +312,32 @@ function Test-PumpDumpGate {
         }
 
         "natural_uptrend" {
-            # Natural growth: allow LONG, block SHORT
+            # 2026-08-14 FIX (achado real, auditoria de volume de entradas):
+            # "natural_uptrend" e a classe DEFAULT de baixo sinal (score>0 mas
+            # <30 -- nenhuma feature de pump artificial disparou), NAO uma
+            # confirmacao de que o preco esta de fato subindo agora. Auditoria
+            # de ~3h de producao real achou 59 blocks de SHORT via esse branch,
+            # todos com Breadth=bearish (mercado ja em baixa confirmado por
+            # outro gate). Amostra real (2026-08-14): TIAUSDT dist_from_peak=
+            # -8.64%, BTCUSDT -3.81%, SOLUSDT -3.29%, XRPUSDT -4.70%, ARBUSDT
+            # -8.60%, ONEUSDT -50.54% -- nenhum estava perto do proprio pico de
+            # 7d, todos ja em queda genuina, so sem assinatura de pump/dump
+            # artificial (mcap alto, sem volume spike). Bloquear SHORT nesses
+            # casos so porque "nao parece pump de gema" nao tem fundamento --
+            # mesma logica ja usada no branch pump_and_dump (DistFromPeakThreshold)
+            # aplicada aqui: SHORT so continua bloqueado se o preco ainda
+            # estiver PERTO do proprio pico (>= -3%, ou seja, ainda no topo/
+            # subindo de fato) -- caso contrario, ja caiu o suficiente pra
+            # natural_uptrend ser so ausencia de sinal, nao confirmacao de alta.
+            $distFromPeakNatural = $classifier.metadata.dist_from_peak_pct
             $allowLong = $true
-            $allowShort = $false
-            $reason = "natural_uptrend_long_only"
+            if ($distFromPeakNatural -ge -3.0) {
+                $allowShort = $false
+                $reason = "natural_uptrend_near_peak_dist${distFromPeakNatural}pct_long_only"
+            } else {
+                $allowShort = $true
+                $reason = "natural_uptrend_retracted_dist${distFromPeakNatural}pct_allows_short"
+            }
         }
 
         "new_listing" {
