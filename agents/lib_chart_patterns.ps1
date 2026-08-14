@@ -268,6 +268,21 @@ function Detect-VolumeAccumulation {
     ACUMULACAO, nao de reversao).
 
     .NOTES
+    LIMITACAO CONHECIDA (2026-08-15, validacao contra 10 casos reais adicionais
+    -- 4 pumps: SAL/NEOX/H/ALICE, 4 dumps: KROAK/NCT/X/ONE, alem dos 2 originais
+    ACE/TUT): taxa de deteccao ANTES do pico do movimento foi 4/10 (40%). Nao e
+    bug -- e a natureza do mercado: so 2 dos 8 casos novos (ALICE 22x, XUSDT 87x)
+    tiveram volume genuinamente anomalo perto do movimento; os outros 6 (SAL,
+    NEOX, H, KROAK, NCT, ONE) tiveram pump/dump com volume normal (1.5x-4.7x),
+    as vezes subindo JUNTO com o preco (nao antes). Volume anomalo isolado
+    precede so uma fracao dos movimentos -- moedas de baixa liquidez onde
+    acumulacao lenta antecede o movimento (padrao ACE/TUT), nao o mercado
+    inteiro. CONCLUSAO: usar como 1 sinal a mais no score combinado (ja
+    integrado em lib_auto_market_analysis.ps1), NUNCA como gate isolado de
+    "vai pumpar/dumpar" -- 60% dos movimentos reais testados nao dao nenhum
+    aviso previo por volume.
+
+    .NOTES
     2026-08-15: usa MEDIANA (nao media) do Lookback como baseline -- achado
     real (validacao contra dump real do TUT, -24%/24h): media e sensivel a
     outlier -- um unico pico de volume normal (109849 vs base ~15-30k) nas
