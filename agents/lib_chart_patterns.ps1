@@ -341,6 +341,117 @@ function Detect-VolumeAccumulation {
     }
 }
 
+function Detect-StructuralRejection {
+    <#
+    .SYNOPSIS
+    Detecta preco perto de um nivel estrutural (suporte/resistencia real,
+    via pivots) que falhou em romper nos ultimos N candles -- sinal de
+    rejeicao, independente de padrao de vela ou pico de volume.
+
+    .NOTES
+    Achado real (2026-08-14, owner trouxe grafico BTC 1D): pico 66920 em
+    21/07, grind de baixa ate 62872 em 13/08, com rejeicao clara na regiao
+    64470-65361 (EMA20/50) nos ultimos ~9 candles antes do close. Nenhum
+    candlestick pattern disparou (movimento gradual demais, sem gap/estrela)
+    e Detect-VolumeAccumulation tambem nao (volume 0.81x, DECRESCENTE, nao
+    e caso de spike) -- confirmado que essa classe de setup (rejeicao lenta
+    de resistencia em tendencia de baixa, sem volume anomalo) e uma lacuna
+    real dos detectores existentes, que so cobrem reversao abrupta (vela)
+    ou acumulacao/climax (volume). Zero custo de API nova -- recebe os
+    niveis de suporte/resistencia JA calculados por Get-AutoTimeframeAnalysis
+    (Find-SupportLevels + espelho), so adiciona a checagem de proximidade +
+    falha em romper que ate 2026-08-14 era descartada (support_levels/
+    resistance_levels iam pro output mas nunca entravam no score).
+
+    .PARAMETER Levels
+    Array de niveis estruturais candidatos (resistances p/ SHORT, supports
+    p/ LONG) -- mesmo array ja retornado por Find-SupportLevels/espelho.
+    .PARAMETER ProximityPct
+    Nivel so conta se estiver a ate ProximityPct% do preco atual (default
+    5.0 -- perto o bastante pra ser relevante, mas nao exige toque exato).
+    .PARAMETER FailureLookback
+    Quantos candles anteriores (incl. o atual) precisam ter falhado em
+    fechar alem do nivel pra confirmar rejeicao (default 5).
+
+    .OUTPUTS
+    PSCustomObject { detected, pattern_name="structural_rejection", strength,
+    level, dist_pct }.
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)] [double[]] $Closes,
+        [double[]] $Levels = @(),
+        [Parameter(Mandatory)] [ValidateSet("LONG","SHORT")] [string] $Side,
+        [double] $ProximityPct = 5.0,
+        [int]    $FailureLookback = 5
+    )
+    $n = $Closes.Length
+    if ($n -lt $FailureLookback) {
+        return [PSCustomObject]@{ detected=$false; pattern_name=$null; strength=0; reason="insufficient_history" }
+    }
+    if (@($Levels).Count -eq 0) {
+        return [PSCustomObject]@{ detected=$false; pattern_name=$null; strength=0; reason="no_levels" }
+    }
+
+    $price = $Closes[$n - 1]
+    $recent = @($Closes[($n - $FailureLookback)..($n - 1)])
+
+    # SHORT: resistencia ACIMA do preco, nenhum close recente pode ter
+    # fechado acima dela. LONG: suporte ABAIXO, nenhum close recente pode
+    # ter fechado abaixo dele.
+    $candidates = if ($Side -eq "SHORT") {
+        @($Levels | Where-Object { $_ -gt $price })
+    } else {
+        @($Levels | Where-Object { $_ -lt $price })
+    }
+    if ($candidates.Count -eq 0) {
+        return [PSCustomObject]@{ detected=$false; pattern_name=$null; strength=0; reason="no_level_on_correct_side" }
+    }
+
+    # Nivel mais proximo do preco (mais relevante pra rejeicao imediata)
+    $nearest = if ($Side -eq "SHORT") {
+        $candidates | Sort-Object | Select-Object -First 1
+    } else {
+        $candidates | Sort-Object -Descending | Select-Object -First 1
+    }
+    $distPct = [Math]::Abs(($nearest - $price) / $price) * 100.0
+    if ($distPct -gt $ProximityPct) {
+        return [PSCustomObject]@{ detected=$false; pattern_name=$null; strength=0; reason="no_level_within_proximity"; dist_pct=[math]::Round($distPct,2) }
+    }
+
+    $failed = if ($Side -eq "SHORT") {
+        -not ($recent | Where-Object { $_ -gt $nearest })
+    } else {
+        -not ($recent | Where-Object { $_ -lt $nearest })
+    }
+    if (-not $failed) {
+        return [PSCustomObject]@{ detected=$false; pattern_name=$null; strength=0; reason="level_broken_recently"; dist_pct=[math]::Round($distPct,2) }
+    }
+
+    # Nivel precisa ter sido de fato REJEITADO, nao so estar por perto no
+    # ultimo candle. Achado real (2026-08-14, validacao contra o mesmo caso
+    # BTC): um pivot de suporte a 0.34% do close passava direto pela
+    # checagem de "nao rompeu" mesmo sem NUNCA ter havido bounce -- os
+    # closes da janela convergiam MONOTONICAMENTE pro nivel (2.50% -> 1.11%
+    # -> 0.56% -> 0.35% -> 0.34%), ou seja, o preco estava so CHEGANDO la
+    # pela 1a vez, nao repelindo dele. Rejeicao real exige que algum ponto
+    # anterior da janela tenha ficado MAIS PERTO do nivel do que o candle
+    # atual (aproximou e recuou) -- convergencia pura (sempre mais perto a
+    # cada candle) e desqualificada.
+    $distToLevel = @($recent | ForEach-Object { [Math]::Abs(($nearest - $_) / $_) * 100.0 })
+    $currentDist = $distToLevel[-1]
+    $closerEarlier = $distToLevel[0..($distToLevel.Count - 2)] | Where-Object { $_ -lt $currentDist }
+    if (-not $closerEarlier) {
+        return [PSCustomObject]@{ detected=$false; pattern_name=$null; strength=0; reason="monotonic_approach_not_rejection"; dist_pct=[math]::Round($distPct,2) }
+    }
+
+    $strength = [Math]::Min(100, [int](40 + ((($ProximityPct - $distPct) / $ProximityPct) * 40)))
+    return [PSCustomObject]@{
+        detected=$true; pattern_name="structural_rejection"; strength=$strength
+        level=[math]::Round($nearest,6); dist_pct=[math]::Round($distPct,2)
+    }
+}
+
 
 # ============================================================================
 # 2. CANDLESTICK REVERSAL

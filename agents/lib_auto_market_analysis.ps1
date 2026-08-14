@@ -180,6 +180,19 @@ function Get-AutoTimeframeAnalysis {
         if ($accL.detected) { $signals += "volume_accumulation_bullish"; $bullPattern = $true }
         if ($accS.detected) { $signals += "volume_accumulation_bearish"; $bearPattern = $true }
     }
+    # 2026-08-14: Structural Rejection -- $supports/$resistances (linha 136+)
+    # ja eram calculados mas iam direto pro output sem nunca influenciar
+    # signals/score. Achado real (owner trouxe grafico BTC 1D: grind de
+    # 66920->62872 com rejeicao clara em ~65249/EMA20-50 nos ultimos 9
+    # candles) -- nem candlestick pattern nem volume accumulation pegam esse
+    # tipo de setup (movimento gradual, volume decrescente). Zero custo
+    # extra: reusa os mesmos $supports/$resistances ja computados acima.
+    if (Get-Command Detect-StructuralRejection -ErrorAction SilentlyContinue) {
+        $rejL = Detect-StructuralRejection -Closes $closes -Levels $supports -Side "LONG"
+        $rejS = Detect-StructuralRejection -Closes $closes -Levels $resistances -Side "SHORT"
+        if ($rejL.detected) { $signals += "structural_rejection_bullish"; $bullPattern = $true }
+        if ($rejS.detected) { $signals += "structural_rejection_bearish"; $bearPattern = $true }
+    }
 
     # --- Bias + score (combinacao ponderada) ---
     # EMA rapida vs lenta para tendencia base

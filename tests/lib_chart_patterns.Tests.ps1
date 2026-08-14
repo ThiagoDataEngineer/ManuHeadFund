@@ -225,6 +225,94 @@ Describe "Detect-VolumeAccumulation - validacao contra dado real (ACE +168%/24h,
 
 
 # ============================================================================
+# 1b. Detect-StructuralRejection — preco perto de nivel que falhou em romper
+# ============================================================================
+
+Describe "Detect-StructuralRejection - validacao contra dado real (BTCUSDT, grind 21/07-13/08/2026)" {
+
+    It "SHORT: caso real BTC -- rejeicao clara em 65249 (EMA20/50), 9 closes sem romper, dist 2.8%" {
+        if (-not (Get-Command Detect-StructuralRejection -ErrorAction SilentlyContinue)) { Set-TestInconclusive; return }
+        # Closes diarios reais 05/08-13/08/2026: pico 66920 em 21/07, grind de
+        # baixa sem nenhum close voltando a fechar acima do pivot de resistencia
+        # 65249.25 (achado real via Find-SupportLevels espelhado, ver
+        # lib_auto_market_analysis.ps1). Candlestick e Volume Accumulation NAO
+        # pegam esse caso (movimento gradual, volume decrescente) -- motivou
+        # este detector.
+        $closes = @(64650,64312,64892,64953,64878,63968,63614,63478,63474)
+        $levels = @(65249.25)
+
+        $r = Detect-StructuralRejection -Closes $closes -Levels $levels -Side SHORT
+        $r.detected | Should Be $true
+        $r.dist_pct | Should BeLessThan 5
+    }
+
+    It "SHORT: nao detecta se o nivel foi rompido recentemente" {
+        if (-not (Get-Command Detect-StructuralRejection -ErrorAction SilentlyContinue)) { Set-TestInconclusive; return }
+        # Break precisa estar DENTRO do FailureLookback (default 5, ultimos
+        # 5 closes = indices 4..8 de um array de 9) pra ser considerado
+        # "recente".
+        $closes = @(64650,64312,64892,64953,65400,63968,63614,63478,63474)
+        $levels = @(65249.25)
+
+        $r = Detect-StructuralRejection -Closes $closes -Levels $levels -Side SHORT
+        $r.detected | Should Be $false
+        $r.reason | Should Be "level_broken_recently"
+    }
+
+    It "SHORT: nao detecta se o nivel mais proximo esta fora do raio de proximidade" {
+        if (-not (Get-Command Detect-StructuralRejection -ErrorAction SilentlyContinue)) { Set-TestInconclusive; return }
+        $closes = @(64650,64312,64892,64953,64878,63968,63614,63478,63474)
+        $levels = @(75000.0)
+
+        $r = Detect-StructuralRejection -Closes $closes -Levels $levels -Side SHORT
+        $r.detected | Should Be $false
+        $r.reason | Should Be "no_level_within_proximity"
+    }
+
+    It "LONG: espelho -- rejeicao de suporte proximo sem quebra recente" {
+        if (-not (Get-Command Detect-StructuralRejection -ErrorAction SilentlyContinue)) { Set-TestInconclusive; return }
+        $closes = @(60100,60300,60050,60200,60150,60400,60600,60500,60550)
+        $levels = @(59200.0)
+
+        $r = Detect-StructuralRejection -Closes $closes -Levels $levels -Side LONG
+        $r.detected | Should Be $true
+    }
+
+    It "retorna insufficient_history com poucos closes" {
+        if (-not (Get-Command Detect-StructuralRejection -ErrorAction SilentlyContinue)) { Set-TestInconclusive; return }
+        $r = Detect-StructuralRejection -Closes @(100,101) -Levels @(105) -Side SHORT
+        $r.detected | Should Be $false
+        $r.reason | Should Be "insufficient_history"
+    }
+
+    It "retorna no_levels quando array de niveis vazio" {
+        if (-not (Get-Command Detect-StructuralRejection -ErrorAction SilentlyContinue)) { Set-TestInconclusive; return }
+        $closes = @(100,101,102,103,104)
+        $r = Detect-StructuralRejection -Closes $closes -Levels @() -Side SHORT
+        $r.detected | Should Be $false
+        $r.reason | Should Be "no_levels"
+    }
+
+    It "LONG: nao detecta convergencia monotona pro nivel (aproximando pela 1a vez, nao rejeitando)" {
+        if (-not (Get-Command Detect-StructuralRejection -ErrorAction SilentlyContinue)) { Set-TestInconclusive; return }
+        # Caso real (2026-08-14): mesmos closes do caso BTC acima, mas testado
+        # contra um SUPORTE que fica so 0.34% abaixo do ultimo close (63256).
+        # Os closes da janela convergem SEMPRE mais perto do nivel a cada
+        # candle (nunca bounce) -- e o preco so chegando la pela 1a vez, nao
+        # uma rejeicao. Achado ao integrar o detector: sem essa checagem,
+        # qualquer pivot por coincidencia perto do ultimo preco disparava
+        # falso positivo.
+        $closes = @(64650,64312,64892,64953,64878,63968,63614,63478,63474)
+        $levels = @(63256.0)
+
+        $r = Detect-StructuralRejection -Closes $closes -Levels $levels -Side LONG
+        $r.detected | Should Be $false
+        $r.reason | Should Be "monotonic_approach_not_rejection"
+    }
+}
+
+
+# ============================================================================
 # 2. Candlestick Reversal — Hammer / Bullish Engulfing / Doji
 # ============================================================================
 
