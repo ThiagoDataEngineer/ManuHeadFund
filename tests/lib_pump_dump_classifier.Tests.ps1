@@ -345,6 +345,68 @@ Describe "lib_pump_dump_classifier" {
     }
 
     # =========================================================================
+    # Test Suite 6b: avgVol7d exclui o candle de hoje (2026-08-15 FIX)
+    # Auto-contaminacao: media incluia o proprio dia do pump que estava sendo
+    # comparado contra ela mesma, subestimando volRatio sistematicamente.
+    # =========================================================================
+
+    Context "Get-PumpDumpClass -- avgVol7d exclui candle de hoje" {
+
+        function New-Candle {
+            param($Open, $High, $Low, $Close, $Volume)
+            [PSCustomObject]@{ open=$Open; high=$High; low=$Low; close=$Close; volume=$Volume }
+        }
+
+        It "caso de fronteira: pump real de 3.1x (deveria dar 20pts) nao cai pra 10pts por auto-contaminacao" {
+            # 6 dias normais com volume ~1000, dia 7 (hoje) com volume 3100
+            # (exatamente 3.1x a media REAL dos 6 dias anteriores).
+            # Com o bug antigo, a media incluia o proprio 3100 -> ratio bugado
+            # ficava em ~2.38x (so 10pts). Com o fix, deve ficar em 3.1x (20pts).
+            function Get-CoinExCandles {
+                param($Market, $Period, $Limit)
+                @(
+                    New-Candle -Open 100 -High 102 -Low 99  -Close 100 -Volume 1000
+                    New-Candle -Open 100 -High 103 -Low 99  -Close 101 -Volume 1050
+                    New-Candle -Open 101 -High 102 -Low 98  -Close 99  -Volume 950
+                    New-Candle -Open 99  -High 104 -Low 98  -Close 102 -Volume 1100
+                    New-Candle -Open 102 -High 103 -Low 97  -Close 98  -Volume 900
+                    New-Candle -Open 98  -High 101 -Low 97  -Close 100 -Volume 1000
+                    New-Candle -Open 100 -High 106 -Low 100 -Close 104 -Volume 3100
+                )
+            }
+
+            $r = Get-PumpDumpClass -Market "TESTUSDT" -UseCache $false
+            $r.details["vol_spike_score"] | Should Be 20
+            $r.metadata.vol_ratio_today_vs_7d_avg | Should BeGreaterThan 3.0
+        }
+
+        It "caso real ACE (+168%/24h, 2026-08-14): vol_ratio real medido com candles reais" {
+            # Dados reais dos ultimos 8 dias diarios do ACEUSDT (Kaggle/CoinEx,
+            # ver auditoria 2026-08-14). Volume do dia do pump: 267308.
+            # Media dos 6 dias anteriores ao ultimo (exclui hoje E o dia 0
+            # do array de 7): deve dar ratio ~5.25x (correto), nao ~3.27x
+            # (bugado, que incluia o proprio dia do pump na media).
+            function Get-CoinExCandles {
+                param($Market, $Period, $Limit)
+                @(
+                    New-Candle -Open 0.108 -High 0.112 -Low 0.104 -Close 0.108447 -Volume 52345
+                    New-Candle -Open 0.108 -High 0.125 -Low 0.106 -Close 0.121629 -Volume 97024
+                    New-Candle -Open 0.121 -High 0.150 -Low 0.120 -Close 0.144072 -Volume 62210
+                    New-Candle -Open 0.144 -High 0.146 -Low 0.120 -Close 0.122833 -Volume 39766
+                    New-Candle -Open 0.122 -High 0.124 -Low 0.118 -Close 0.121874 -Volume 26494
+                    New-Candle -Open 0.121 -High 0.123 -Low 0.100 -Close 0.104445 -Volume 27655
+                    New-Candle -Open 0.104 -High 0.323 -Low 0.100 -Close 0.298080 -Volume 267308
+                )
+            }
+
+            $r = Get-PumpDumpClass -Market "ACEUSDT" -UseCache $false
+            # ratio correto (sem auto-contaminacao) fica ~5.25x -- bem acima do
+            # ratio bugado (~3.27x) que o codigo antigo produzia
+            $r.metadata.vol_ratio_today_vs_7d_avg | Should BeGreaterThan 4.5
+        }
+    }
+
+    # =========================================================================
     # Test Suite 7: Function definitions
     # =========================================================================
 

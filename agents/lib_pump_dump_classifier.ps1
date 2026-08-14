@@ -54,7 +54,21 @@ function Get-PumpDumpClass {
         # === Extract candle data ===
         $today = $candles[-1]
         $peak7d = ($candles | ForEach-Object { [double]$_.high } | Measure-Object -Maximum).Maximum
-        $avgVol7d = ($candles | ForEach-Object { [double]$_.volume } | Measure-Object -Average).Average
+        # 2026-08-14 FIX: $avgVol7d incluia o proprio candle de hoje -- auto-
+        # contaminacao, nao so vies de outlier (achado real: auditoria do
+        # motor de Volume Accumulation revelou o mesmo padrao Measure-Object
+        # -Average em varios pontos do sistema). O dia do pump SEMPRE puxa a
+        # propria media pra cima contra a qual ele mesmo e comparado, sub-
+        # estimando volRatio de forma sistematica (nao aleatoria) -- caso de
+        # fronteira medido: pump real de 3.1x aparecia como 2.38x, perdendo
+        # os 20 pontos de "vol_spike_score" pro nivel de 10 (10 pontos a
+        # menos no score final, podendo mudar reaccumulation<->pump_and_dump
+        # perto do threshold de 60). Fix: media usa so os candles ANTERIORES
+        # a hoje (exclui o ultimo). Fail-safe: se so 1 candle disponivel
+        # (candles.Count<2 ja bloqueado acima, mas defensivo aqui tambem),
+        # cai no proprio $today.volume (evita divisao por zero/vazio).
+        $priorCandles = if ($candles.Count -gt 1) { $candles[0..($candles.Count - 2)] } else { $candles }
+        $avgVol7d = ($priorCandles | ForEach-Object { [double]$_.volume } | Measure-Object -Average).Average
         $price = [double]$today.close
 
         # === Feature extraction ===
