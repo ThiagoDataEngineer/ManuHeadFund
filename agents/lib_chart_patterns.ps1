@@ -229,6 +229,88 @@ function Detect-VolumeClimax {
 
 
 # ============================================================================
+# 1b. VOLUME ACCUMULATION (2026-08-15)
+# ============================================================================
+
+function Detect-VolumeAccumulation {
+    <#
+    .SYNOPSIS
+    Detecta pico de volume ANOMALO isolado (acumulacao silenciosa) na ultima
+    barra -- DIFERENTE de Detect-VolumeClimax, que so dispara em quebra de
+    swing high/low (exaustao de reversao). Este detector nao exige swing --
+    o alvo e pegar volume anormal no MEIO de um range, antes do preco reagir.
+
+    .NOTES
+    Achado real (2026-08-14, auditoria ACE +168%/24h): candlestick patterns
+    sozinhos disparam ruido demais (1 sinal a cada ~6h num range lateral,
+    30+ sinais em 190h sem filtro util). O sinal que de fato precedeu o pump
+    por horas foi volume 9x-58x a media, em candles verdes, SEM nenhuma
+    quebra de estrutura -- Detect-VolumeClimax nao pega isso porque exige
+    newLow/newHigh. Threshold default 8x calibrado contra o caso real (ACE
+    teve hits em 9x, 14.3x, 31x, 58x -- 3 dos 4 foram candles verdes
+    precedendo alta real, 1 foi candle vermelho isolado sem sequencia,
+    filtrado pela exigencia de candle na direcao certa).
+
+    Zero custo de API nova -- reusa os mesmos candles ja buscados por
+    Detect-VolumeClimax/Detect-CandlestickReversal no mesmo chamador.
+
+    .PARAMETER AccumMultiplier
+    Vol da ultima barra deve ser >= AccumMultiplier x media do Lookback
+    anterior (exclusive). Default 8.0 (calibrado contra ACE real).
+    .PARAMETER Lookback
+    Janela pra media de volume (default 20, mesmo padrao de Detect-VolumeClimax).
+
+    .OUTPUTS
+    PSCustomObject { detected, pattern_name="volume_accumulation", strength,
+    bar_idx, vol_ratio }. LONG exige candle verde (close>open); SHORT exige
+    candle vermelho (close<open) -- direcao do candle na barra do pico, nao
+    da tendencia previa (este detector nao olha tendencia, e sinal de
+    ACUMULACAO, nao de reversao).
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)] [double[]] $Opens,
+        [Parameter(Mandatory)] [double[]] $Highs,
+        [Parameter(Mandatory)] [double[]] $Lows,
+        [Parameter(Mandatory)] [double[]] $Closes,
+        [Parameter(Mandatory)] [double[]] $Volumes,
+        [Parameter(Mandatory)] [ValidateSet("LONG","SHORT")] [string] $Side,
+        [double] $AccumMultiplier = 8.0,
+        [int]    $Lookback = 20
+    )
+    $n = $Volumes.Length
+    if ($n -lt $Lookback + 1) {
+        return [PSCustomObject]@{ detected=$false; pattern_name=$null; strength=0; bar_idx=$null; reason="insufficient_history" }
+    }
+
+    $lastIdx = $n - 1
+    $prior = $Volumes[($n - 1 - $Lookback)..($lastIdx - 1)]
+    $avgVol = ($prior | Measure-Object -Average).Average
+    if ($avgVol -le 0) {
+        return [PSCustomObject]@{ detected=$false; pattern_name=$null; strength=0; bar_idx=$null; reason="zero_avg_vol" }
+    }
+
+    $ratio = $Volumes[$lastIdx] / $avgVol
+    if ($ratio -lt $AccumMultiplier) {
+        return [PSCustomObject]@{ detected=$false; pattern_name=$null; strength=0; bar_idx=$null; reason="vol_below_accum_threshold"; vol_ratio=[math]::Round($ratio,2) }
+    }
+
+    $isGreen = $Closes[$lastIdx] -gt $Opens[$lastIdx]
+    $isRed   = $Closes[$lastIdx] -lt $Opens[$lastIdx]
+    $directionOk = if ($Side -eq "LONG") { $isGreen } else { $isRed }
+    if (-not $directionOk) {
+        return [PSCustomObject]@{ detected=$false; pattern_name=$null; strength=0; bar_idx=$null; reason="vol_spike_wrong_candle_direction"; vol_ratio=[math]::Round($ratio,2) }
+    }
+
+    $strength = [Math]::Min(100, [int](30 + ($ratio * 3)))
+    return [PSCustomObject]@{
+        detected=$true; pattern_name="volume_accumulation"; strength=$strength; bar_idx=$lastIdx
+        vol_ratio=[math]::Round($ratio,2)
+    }
+}
+
+
+# ============================================================================
 # 2. CANDLESTICK REVERSAL
 # ============================================================================
 

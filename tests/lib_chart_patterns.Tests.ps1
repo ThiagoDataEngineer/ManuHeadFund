@@ -110,6 +110,99 @@ Describe "Detect-VolumeClimax - SHORT side (buying climax top)" {
 
 
 # ============================================================================
+# 1b. Volume Accumulation (2026-08-15) -- pico de volume ISOLADO, sem exigir
+# quebra de swing high/low (diferente de Volume Climax). Achado real: ACE
+# (+168%/24h) teve picos de 9x-58x a media EM CANDLES VERDES horas antes do
+# pump explodir, sem tocar minima/maxima recente -- Volume Climax nao pega
+# isso por design (so dispara em exaustao de reversao no extremo do range).
+# ============================================================================
+
+Describe "Detect-VolumeAccumulation - LONG (acumulacao antes de alta)" {
+
+    It "Detecta pico de volume 8x+ em candle verde, SEM quebra de swing (caso real ACE)" {
+        if (-not (Get-Command Detect-VolumeAccumulation -ErrorAction SilentlyContinue)) { Set-TestInconclusive; return }
+        $opens = @(); $highs = @(); $lows = @(); $closes = @(); $vols = @()
+        for ($i = 0; $i -lt 20; $i++) {
+            $opens  += 100.0; $closes += 100.3; $highs += 100.5; $lows += 99.8
+            $vols   += 1000.0
+        }
+        # Barra de acumulacao: vol 10x a media, candle verde, DENTRO do range
+        # (nao quebra minima/maxima dos ultimos 20 -- Volume Climax NAO dispararia aqui)
+        $opens  += 100.1; $closes += 100.4; $highs += 100.45; $lows += 100.0
+        $vols   += 10000.0
+
+        $r = Detect-VolumeAccumulation -Opens $opens -Highs $highs -Lows $lows -Closes $closes -Volumes $vols -Side LONG
+        $r.detected | Should Be $true
+        $r.pattern_name | Should Be "volume_accumulation"
+        $r.vol_ratio | Should Be 10
+    }
+
+    It "Nao detecta se volume esta abaixo do threshold (7x, default exige 8x)" {
+        if (-not (Get-Command Detect-VolumeAccumulation -ErrorAction SilentlyContinue)) { Set-TestInconclusive; return }
+        $opens = @(); $highs = @(); $lows = @(); $closes = @(); $vols = @()
+        for ($i = 0; $i -lt 20; $i++) {
+            $opens += 100.0; $closes += 100.3; $highs += 100.5; $lows += 99.8; $vols += 1000.0
+        }
+        $opens += 100.1; $closes += 100.4; $highs += 100.45; $lows += 100.0; $vols += 7000.0
+
+        $r = Detect-VolumeAccumulation -Opens $opens -Highs $highs -Lows $lows -Closes $closes -Volumes $vols -Side LONG
+        $r.detected | Should Be $false
+    }
+
+    It "Nao detecta se volume alto mas candle e VERMELHO (direcao errada pra LONG)" {
+        if (-not (Get-Command Detect-VolumeAccumulation -ErrorAction SilentlyContinue)) { Set-TestInconclusive; return }
+        $opens = @(); $highs = @(); $lows = @(); $closes = @(); $vols = @()
+        for ($i = 0; $i -lt 20; $i++) {
+            $opens += 100.0; $closes += 100.3; $highs += 100.5; $lows += 99.8; $vols += 1000.0
+        }
+        # candle vermelho (close < open) com vol 10x -- nao deve contar como acumulacao LONG
+        $opens += 100.4; $closes += 100.1; $highs += 100.45; $lows += 100.0; $vols += 10000.0
+
+        $r = Detect-VolumeAccumulation -Opens $opens -Highs $highs -Lows $lows -Closes $closes -Volumes $vols -Side LONG
+        $r.detected | Should Be $false
+        $r.reason | Should Be "vol_spike_wrong_candle_direction"
+    }
+}
+
+
+Describe "Detect-VolumeAccumulation - SHORT (acumulacao antes de queda)" {
+
+    It "Detecta pico de volume 8x+ em candle vermelho, SEM quebra de swing" {
+        if (-not (Get-Command Detect-VolumeAccumulation -ErrorAction SilentlyContinue)) { Set-TestInconclusive; return }
+        $opens = @(); $highs = @(); $lows = @(); $closes = @(); $vols = @()
+        for ($i = 0; $i -lt 20; $i++) {
+            $opens += 100.0; $closes += 99.7; $highs += 100.2; $lows += 99.5; $vols += 1000.0
+        }
+        # candle vermelho, vol 12x, dentro do range (sem quebrar minima)
+        $opens += 99.9; $closes += 99.6; $highs += 100.0; $lows += 99.55; $vols += 12000.0
+
+        $r = Detect-VolumeAccumulation -Opens $opens -Highs $highs -Lows $lows -Closes $closes -Volumes $vols -Side SHORT
+        $r.detected | Should Be $true
+        $r.pattern_name | Should Be "volume_accumulation"
+    }
+}
+
+
+Describe "Detect-VolumeAccumulation - validacao contra dado real (ACE +168%/24h, 2026-08-14)" {
+
+    It "Threshold 8x pega os picos reais de 9x/14.3x observados horas antes do pump acelerar" {
+        if (-not (Get-Command Detect-VolumeAccumulation -ErrorAction SilentlyContinue)) { Set-TestInconclusive; return }
+        # Reproduz o padrao real: 20 candles com vol baixo/estavel, depois um
+        # candle verde com vol 9x (o menor hit observado no caso real).
+        $opens = @(); $highs = @(); $lows = @(); $closes = @(); $vols = @()
+        for ($i = 0; $i -lt 20; $i++) {
+            $opens += 0.140; $closes += 0.1405; $highs += 0.141; $lows += 0.1398; $vols += 2711.0
+        }
+        $opens += 0.14232; $closes += 0.14858; $highs += 0.149; $lows += 0.142; $vols += (2711.0 * 9.0)
+
+        $r = Detect-VolumeAccumulation -Opens $opens -Highs $highs -Lows $lows -Closes $closes -Volumes $vols -Side LONG
+        $r.detected | Should Be $true
+        $r.vol_ratio | Should BeGreaterThan 8
+    }
+}
+
+
+# ============================================================================
 # 2. Candlestick Reversal — Hammer / Bullish Engulfing / Doji
 # ============================================================================
 

@@ -169,6 +169,17 @@ function Get-AutoTimeframeAnalysis {
         if ($climL.detected) { $signals += "selling_climax"; $bullPattern = $true }
         if ($climS.detected) { $signals += "buying_climax"; $bearPattern = $true }
     }
+    # 2026-08-15: Volume Accumulation -- pico de volume isolado SEM quebra de
+    # swing (diferente de Volume Climax, que so pega exaustao de reversao).
+    # Achado real: ACE (+168%/24h) teve volume 9x-58x a media horas antes do
+    # pump, sem tocar minima/maxima recente -- Volume Climax nao captura esse
+    # caso por design. Reusa os mesmos candles ja buscados, zero custo extra.
+    if (Get-Command Detect-VolumeAccumulation -ErrorAction SilentlyContinue) {
+        $accL = Detect-VolumeAccumulation -Opens $opens -Highs $highs -Lows $lows -Closes $closes -Volumes $vols -Side "LONG"
+        $accS = Detect-VolumeAccumulation -Opens $opens -Highs $highs -Lows $lows -Closes $closes -Volumes $vols -Side "SHORT"
+        if ($accL.detected) { $signals += "volume_accumulation_bullish"; $bullPattern = $true }
+        if ($accS.detected) { $signals += "volume_accumulation_bearish"; $bearPattern = $true }
+    }
 
     # --- Bias + score (combinacao ponderada) ---
     # EMA rapida vs lenta para tendencia base
