@@ -199,6 +199,208 @@ Describe "Detect-CandlestickReversal - SHORT (bearish reversal)" {
 
 
 # ============================================================================
+# 2b. Detect-CandlestickReversal -- expansao 2026-08-14 (Doji, Harami,
+# Piercing/Dark Cloud, Morning/Evening Star, 3 Soldados/Corvos)
+#
+# Card de referencia do owner (padroes classicos de candlestick, Live Traders):
+# Doji, Harami de Alta/Queda, Piercing de Fundo, Nuvem Negra (Dark Cloud
+# Cover), Estrela da Manha/Tarde, 3 Soldados Brancos, 3 Corvos Negros.
+# Prioridade: mais reconhecidos/confiaveis na literatura classica primeiro.
+# ============================================================================
+
+Describe "Detect-CandlestickReversal - Doji (indecisao/possivel reversao)" {
+
+    It "Detecta Doji apos downtrend -- sinaliza LONG (indecisao no fundo)" {
+        if (-not (Get-Command Detect-CandlestickReversal -ErrorAction SilentlyContinue)) { Set-TestInconclusive; return }
+        $opens = @(); $highs = @(); $lows = @(); $closes = @()
+        for ($i = 0; $i -lt 10; $i++) {
+            $opens  += 100.0 - $i; $closes += 99.0 - $i
+            $highs  += 101.0 - $i; $lows  += 98.0 - $i
+        }
+        # Doji: open~close (corpo quase zero), sombras nos dois lados
+        $opens  += 89.0; $closes += 89.05; $highs += 91.0; $lows += 87.0
+        $r = Detect-CandlestickReversal -Opens $opens -Highs $highs -Lows $lows -Closes $closes -Side LONG
+        $r.detected | Should Be $true
+        $r.pattern_name | Should Be "doji"
+    }
+
+    It "Detecta Doji apos uptrend -- sinaliza SHORT (indecisao no topo)" {
+        if (-not (Get-Command Detect-CandlestickReversal -ErrorAction SilentlyContinue)) { Set-TestInconclusive; return }
+        $opens = @(); $highs = @(); $lows = @(); $closes = @()
+        for ($i = 0; $i -lt 10; $i++) {
+            $opens += 100.0 + $i; $closes += 101.0 + $i
+            $highs += 102.0 + $i; $lows  += 99.0 + $i
+        }
+        $opens  += 111.0; $closes += 111.05; $highs += 113.0; $lows += 109.0
+        $r = Detect-CandlestickReversal -Opens $opens -Highs $highs -Lows $lows -Closes $closes -Side SHORT
+        $r.detected | Should Be $true
+        $r.pattern_name | Should Be "doji"
+    }
+
+    It "Nao detecta Doji quando corpo e grande (nao e indecisao)" {
+        if (-not (Get-Command Detect-CandlestickReversal -ErrorAction SilentlyContinue)) { Set-TestInconclusive; return }
+        $opens = @(); $highs = @(); $lows = @(); $closes = @()
+        for ($i = 0; $i -lt 10; $i++) {
+            $opens  += 100.0 - $i; $closes += 99.0 - $i
+            $highs  += 101.0 - $i; $lows  += 98.0 - $i
+        }
+        # corpo grande (nao doji) e sem shape de hammer/engulfing tambem
+        $opens  += 89.0; $closes += 85.0; $highs += 89.2; $lows += 84.8
+        $r = Detect-CandlestickReversal -Opens $opens -Highs $highs -Lows $lows -Closes $closes -Side LONG
+        $r.pattern_name | Should Not Be "doji"
+    }
+}
+
+
+Describe "Detect-CandlestickReversal - Harami (contracao antes de reversao)" {
+
+    It "Detecta Harami de Alta: bar grande bearish seguida de bar pequena contida dentro (downtrend)" {
+        if (-not (Get-Command Detect-CandlestickReversal -ErrorAction SilentlyContinue)) { Set-TestInconclusive; return }
+        $opens = @(); $highs = @(); $lows = @(); $closes = @()
+        for ($i = 0; $i -lt 9; $i++) {
+            $opens  += 100.0 - $i; $closes += 99.0 - $i
+            $highs  += 101.0 - $i; $lows  += 98.0 - $i
+        }
+        # Bar -1: bearish grande (open 92, close 87)
+        $opens  += 92.0; $closes += 87.0; $highs += 92.5; $lows += 86.5
+        # Bar 0: corpo pequeno, TOTALMENTE contido dentro do corpo anterior (87-92)
+        $opens  += 89.0; $closes += 90.0; $highs += 90.3; $lows += 88.7
+        $r = Detect-CandlestickReversal -Opens $opens -Highs $highs -Lows $lows -Closes $closes -Side LONG
+        $r.detected | Should Be $true
+        $r.pattern_name | Should Be "bullish_harami"
+    }
+
+    It "Detecta Harami de Queda: bar grande bullish seguida de bar pequena contida dentro (uptrend)" {
+        if (-not (Get-Command Detect-CandlestickReversal -ErrorAction SilentlyContinue)) { Set-TestInconclusive; return }
+        $opens = @(); $highs = @(); $lows = @(); $closes = @()
+        for ($i = 0; $i -lt 9; $i++) {
+            $opens += 100.0 + $i; $closes += 101.0 + $i
+            $highs += 102.0 + $i; $lows  += 99.0 + $i
+        }
+        # Bar -1: bullish grande (open 108, close 113)
+        $opens  += 108.0; $closes += 113.0; $highs += 113.5; $lows += 107.5
+        # Bar 0: corpo pequeno, contido dentro (108-113)
+        $opens  += 111.5; $closes += 110.0; $highs += 111.8; $lows += 109.7
+        $r = Detect-CandlestickReversal -Opens $opens -Highs $highs -Lows $lows -Closes $closes -Side SHORT
+        $r.detected | Should Be $true
+        $r.pattern_name | Should Be "bearish_harami"
+    }
+}
+
+
+Describe "Detect-CandlestickReversal - Piercing Line / Dark Cloud Cover" {
+
+    It "Detecta Piercing Line: bear grande seguido de bull que fecha acima do meio do corpo anterior (downtrend)" {
+        if (-not (Get-Command Detect-CandlestickReversal -ErrorAction SilentlyContinue)) { Set-TestInconclusive; return }
+        $opens = @(); $highs = @(); $lows = @(); $closes = @()
+        for ($i = 0; $i -lt 9; $i++) {
+            $opens  += 100.0 - $i; $closes += 99.0 - $i
+            $highs  += 101.0 - $i; $lows  += 98.0 - $i
+        }
+        # Bar -1: bearish (open 92, close 87) -- corpo 87-92, meio=89.5
+        $opens  += 92.0; $closes += 87.0; $highs += 92.5; $lows += 86.5
+        # Bar 0: abre abaixo do low anterior, fecha ACIMA do meio (89.5) mas ABAIXO do open anterior (92)
+        $opens  += 86.0; $closes += 90.5; $highs += 90.8; $lows += 85.8
+        $r = Detect-CandlestickReversal -Opens $opens -Highs $highs -Lows $lows -Closes $closes -Side LONG
+        $r.detected | Should Be $true
+        $r.pattern_name | Should Be "piercing_line"
+    }
+
+    It "Detecta Dark Cloud Cover: bull grande seguido de bear que fecha abaixo do meio do corpo anterior (uptrend)" {
+        if (-not (Get-Command Detect-CandlestickReversal -ErrorAction SilentlyContinue)) { Set-TestInconclusive; return }
+        $opens = @(); $highs = @(); $lows = @(); $closes = @()
+        for ($i = 0; $i -lt 9; $i++) {
+            $opens += 100.0 + $i; $closes += 101.0 + $i
+            $highs += 102.0 + $i; $lows  += 99.0 + $i
+        }
+        # Bar -1: bullish (open 108, close 113) -- corpo 108-113, meio=110.5
+        $opens  += 108.0; $closes += 113.0; $highs += 113.5; $lows += 107.5
+        # Bar 0: abre acima do high anterior, fecha ABAIXO do meio (110.5) mas ACIMA do open anterior (108)
+        $opens  += 114.0; $closes += 109.5; $highs += 114.3; $lows += 109.2
+        $r = Detect-CandlestickReversal -Opens $opens -Highs $highs -Lows $lows -Closes $closes -Side SHORT
+        $r.detected | Should Be $true
+        $r.pattern_name | Should Be "dark_cloud_cover"
+    }
+}
+
+
+Describe "Detect-CandlestickReversal - Morning Star / Evening Star (3 velas, alta confiabilidade)" {
+
+    It "Detecta Morning Star: bear grande + corpo pequeno (gap down) + bull grande fechando na metade superior (downtrend)" {
+        if (-not (Get-Command Detect-CandlestickReversal -ErrorAction SilentlyContinue)) { Set-TestInconclusive; return }
+        $opens = @(); $highs = @(); $lows = @(); $closes = @()
+        for ($i = 0; $i -lt 8; $i++) {
+            $opens  += 100.0 - $i; $closes += 99.0 - $i
+            $highs  += 101.0 - $i; $lows  += 98.0 - $i
+        }
+        # Bar -2: bearish grande (open 93, close 88)
+        $opens  += 93.0; $closes += 88.0; $highs += 93.3; $lows += 87.7
+        # Bar -1: corpo pequeno (estrela), abre com gap down
+        $opens  += 86.5; $closes += 86.3; $highs += 86.8; $lows += 86.0
+        # Bar 0: bullish grande, fecha bem acima do meio da bar -2 (meio=90.5)
+        $opens  += 87.0; $closes += 92.0; $highs += 92.3; $lows += 86.8
+        $r = Detect-CandlestickReversal -Opens $opens -Highs $highs -Lows $lows -Closes $closes -Side LONG
+        $r.detected | Should Be $true
+        $r.pattern_name | Should Be "morning_star"
+    }
+
+    It "Detecta Evening Star: bull grande + corpo pequeno (gap up) + bear grande fechando na metade inferior (uptrend)" {
+        if (-not (Get-Command Detect-CandlestickReversal -ErrorAction SilentlyContinue)) { Set-TestInconclusive; return }
+        $opens = @(); $highs = @(); $lows = @(); $closes = @()
+        for ($i = 0; $i -lt 8; $i++) {
+            $opens += 100.0 + $i; $closes += 101.0 + $i
+            $highs += 102.0 + $i; $lows  += 99.0 + $i
+        }
+        # Bar -2: bullish grande (open 107, close 112)
+        $opens  += 107.0; $closes += 112.0; $highs += 112.3; $lows += 106.7
+        # Bar -1: corpo pequeno (estrela), abre com gap up
+        $opens  += 113.5; $closes += 113.7; $highs += 114.0; $lows += 113.2
+        # Bar 0: bearish grande, fecha bem abaixo do meio da bar -2 (meio=109.5)
+        $opens  += 113.0; $closes += 108.0; $highs += 113.3; $lows += 107.7
+        $r = Detect-CandlestickReversal -Opens $opens -Highs $highs -Lows $lows -Closes $closes -Side SHORT
+        $r.detected | Should Be $true
+        $r.pattern_name | Should Be "evening_star"
+    }
+}
+
+
+Describe "Detect-CandlestickReversal - 3 Soldados Brancos / 3 Corvos Negros (continuacao confirmada)" {
+
+    It "Detecta 3 Soldados Brancos: 3 velas bullish consecutivas, cada uma fechando mais alto (downtrend previo)" {
+        if (-not (Get-Command Detect-CandlestickReversal -ErrorAction SilentlyContinue)) { Set-TestInconclusive; return }
+        $opens = @(); $highs = @(); $lows = @(); $closes = @()
+        for ($i = 0; $i -lt 7; $i++) {
+            $opens  += 100.0 - $i; $closes += 99.0 - $i
+            $highs  += 101.0 - $i; $lows  += 98.0 - $i
+        }
+        # 3 soldados: cada abre dentro do corpo anterior e fecha em nova alta, corpos solidos
+        $opens += 87.0; $closes += 90.0; $highs += 90.3; $lows += 86.8
+        $opens += 89.0; $closes += 92.5; $highs += 92.8; $lows += 88.8
+        $opens += 91.5; $closes += 95.0; $highs += 95.3; $lows += 91.3
+        $r = Detect-CandlestickReversal -Opens $opens -Highs $highs -Lows $lows -Closes $closes -Side LONG
+        $r.detected | Should Be $true
+        $r.pattern_name | Should Be "three_white_soldiers"
+    }
+
+    It "Detecta 3 Corvos Negros: 3 velas bearish consecutivas, cada uma fechando mais baixo (uptrend previo)" {
+        if (-not (Get-Command Detect-CandlestickReversal -ErrorAction SilentlyContinue)) { Set-TestInconclusive; return }
+        $opens = @(); $highs = @(); $lows = @(); $closes = @()
+        for ($i = 0; $i -lt 7; $i++) {
+            $opens += 100.0 + $i; $closes += 101.0 + $i
+            $highs += 102.0 + $i; $lows  += 99.0 + $i
+        }
+        # 3 corvos: cada abre dentro do corpo anterior e fecha em nova baixa, corpos solidos
+        $opens += 113.0; $closes += 110.0; $highs += 113.3; $lows += 109.7
+        $opens += 111.0; $closes += 107.5; $highs += 111.3; $lows += 107.2
+        $opens += 108.5; $closes += 105.0; $highs += 108.8; $lows += 104.7
+        $r = Detect-CandlestickReversal -Opens $opens -Highs $highs -Lows $lows -Closes $closes -Side SHORT
+        $r.detected | Should Be $true
+        $r.pattern_name | Should Be "three_black_crows"
+    }
+}
+
+
+# ============================================================================
 # 3. RSI Divergence
 # ============================================================================
 

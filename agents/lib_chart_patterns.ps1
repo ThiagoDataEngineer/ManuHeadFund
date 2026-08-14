@@ -261,9 +261,24 @@ function _CP-IsBullishTrend {
 function Detect-CandlestickReversal {
     <#
     .SYNOPSIS
-    Detecta padrao candlestick reversal na ultima barra com contexto de tendencia.
-    LONG: hammer (em downtrend) OR bullish engulfing
-    SHORT: shooting star (em uptrend) OR bearish engulfing
+    Detecta padrao candlestick reversal na ultima barra (ou nas ultimas 2-3
+    barras, pros padroes multi-vela) com contexto de tendencia.
+
+    LONG (ordem de prioridade -- mais confiavel primeiro):
+      morning_star (3 velas) > bullish_harami / piercing_line (2 velas) >
+      three_white_soldiers (3 velas, continuacao) > hammer / bullish_engulfing
+      (ja existentes) > doji (1 vela, menor confianca sozinho)
+
+    SHORT (espelhado):
+      evening_star > bearish_harami / dark_cloud_cover >
+      three_black_crows > shooting_star / bearish_engulfing > doji
+
+    .NOTES
+    2026-08-14: expansao do card de referencia classico (Doji, Harami,
+    Piercing Line, Dark Cloud Cover, Morning/Evening Star, 3 Soldados
+    Brancos/3 Corvos Negros) -- ate entao so hammer/engulfing/shooting star
+    estavam implementados, apesar do cabecalho do arquivo de teste ja citar
+    "doji/morning-evening star" desde a criacao original.
     #>
     [CmdletBinding()]
     param(
@@ -289,6 +304,44 @@ function Detect-CandlestickReversal {
 
     if ($Side -eq "LONG") {
         $isDownTrend = _CP-IsBearishTrend -Closes $Closes
+
+        # MORNING STAR (3 velas, alta confiabilidade): bar i-2 bearish grande +
+        # bar i-1 corpo pequeno (estrela, gap down) + bar i bullish grande
+        # fechando acima do meio do corpo da bar i-2.
+        if ($i -ge 2 -and $isDownTrend) {
+            $body2 = $Opens[$i-2] - $Closes[$i-2]   # bar -2 esperada bearish
+            $body1 = [Math]::Abs($Closes[$i-1] - $Opens[$i-1])
+            $body0 = $Closes[$i] - $Opens[$i]        # bar 0 esperada bullish
+            $bar2Bear = $Closes[$i-2] -lt $Opens[$i-2]
+            $bar0Bull = $Closes[$i] -gt $Opens[$i]
+            $starSmall = $body2 -gt 0 -and $body1 -le ($body2 * 0.4)
+            $midBar2 = ($Opens[$i-2] + $Closes[$i-2]) / 2.0
+            $closesAboveMid = $Closes[$i] -gt $midBar2
+            if ($bar2Bear -and $bar0Bull -and $starSmall -and $closesAboveMid) {
+                $strength = [Math]::Min(100, [int](60 + (($body0 / [Math]::Max($body2, 0.001)) * 10)))
+                return [PSCustomObject]@{
+                    detected=$true; pattern_name="morning_star"; strength=$strength; bar_idx=$i
+                }
+            }
+        }
+
+        # 3 SOLDADOS BRANCOS (3 velas, continuacao confirmada): 3 bullish
+        # consecutivas, cada abrindo dentro do corpo anterior e fechando
+        # numa nova alta, sem sombras superiores grandes (corpos solidos).
+        if ($i -ge 2 -and $isDownTrend) {
+            $bull2 = $Closes[$i-2] -gt $Opens[$i-2]
+            $bull1 = $Closes[$i-1] -gt $Opens[$i-1]
+            $bull0 = $Closes[$i] -gt $Opens[$i]
+            $risingCloses = ($Closes[$i-1] -gt $Closes[$i-2]) -and ($Closes[$i] -gt $Closes[$i-1])
+            $opensInsidePrior = ($Opens[$i-1] -gt $Opens[$i-2] -and $Opens[$i-1] -lt $Closes[$i-2]) -and
+                                ($Opens[$i] -gt $Opens[$i-1] -and $Opens[$i] -lt $Closes[$i-1])
+            if ($bull2 -and $bull1 -and $bull0 -and $risingCloses -and $opensInsidePrior) {
+                return [PSCustomObject]@{
+                    detected=$true; pattern_name="three_white_soldiers"; strength=75; bar_idx=$i
+                }
+            }
+        }
+
         # HAMMER: lower shadow >=2x body + body pequeno + upper shadow pequeno + downtrend prior
         $hammerShape = ($lower -ge 2 * $body) -and ($upper -le $body) -and ($body -gt 0)
         if ($isDownTrend -and $hammerShape) {
@@ -315,9 +368,85 @@ function Detect-CandlestickReversal {
             }
         }
 
+        # HARAMI DE ALTA: bar i-1 bearish grande + bar i corpo pequeno,
+        # TOTALMENTE contido dentro do corpo da bar i-1 (contracao -- mercado
+        # perdendo forca vendedora).
+        if ($i -ge 1 -and $isDownTrend) {
+            $prevBear = $Closes[$i-1] -lt $Opens[$i-1]
+            $bodyPrev = $Opens[$i-1] - $Closes[$i-1]
+            $containedInside = ($Opens[$i] -gt $Closes[$i-1]) -and ($Opens[$i] -lt $Opens[$i-1]) -and
+                                ($Closes[$i] -gt $Closes[$i-1]) -and ($Closes[$i] -lt $Opens[$i-1])
+            if ($prevBear -and $containedInside -and $body -le ($bodyPrev * 0.5)) {
+                $strength = [Math]::Min(100, [int](45 + ((1 - ($body / [Math]::Max($bodyPrev, 0.001))) * 30)))
+                return [PSCustomObject]@{
+                    detected=$true; pattern_name="bullish_harami"; strength=$strength; bar_idx=$i
+                }
+            }
+        }
+
+        # PIERCING LINE: bar i-1 bearish grande + bar i abre abaixo do low
+        # anterior mas fecha ACIMA do meio do corpo anterior (recuperacao forte,
+        # sem chegar a engolfar o corpo inteiro).
+        if ($i -ge 1 -and $isDownTrend) {
+            $prevBear = $Closes[$i-1] -lt $Opens[$i-1]
+            $currBull = $Closes[$i] -gt $Opens[$i]
+            $midPrev = ($Opens[$i-1] + $Closes[$i-1]) / 2.0
+            $opensBelowLow = $Opens[$i] -lt $Closes[$i-1]
+            $closesAboveMidBelowOpen = ($Closes[$i] -gt $midPrev) -and ($Closes[$i] -lt $Opens[$i-1])
+            if ($prevBear -and $currBull -and $opensBelowLow -and $closesAboveMidBelowOpen) {
+                return [PSCustomObject]@{
+                    detected=$true; pattern_name="piercing_line"; strength=65; bar_idx=$i
+                }
+            }
+        }
+
+        # DOJI: corpo quase zero (indecisao) -- menor confianca sozinho,
+        # por isso checado por ultimo dentre os padroes de reversao LONG.
+        $isDoji = $range -gt 0 -and $body -le ($range * 0.1)
+        if ($isDownTrend -and $isDoji) {
+            return [PSCustomObject]@{
+                detected=$true; pattern_name="doji"; strength=35; bar_idx=$i
+            }
+        }
+
         return [PSCustomObject]@{ detected=$false; pattern_name=$null; strength=0; reason="no_pattern_in_downtrend" }
     } else {
         $isUpTrend = _CP-IsBullishTrend -Closes $Closes
+
+        # EVENING STAR (3 velas, alta confiabilidade): espelho do morning star.
+        if ($i -ge 2 -and $isUpTrend) {
+            $body2 = $Closes[$i-2] - $Opens[$i-2]   # bar -2 esperada bullish
+            $body1 = [Math]::Abs($Closes[$i-1] - $Opens[$i-1])
+            $body0 = $Opens[$i] - $Closes[$i]        # bar 0 esperada bearish
+            $bar2Bull = $Closes[$i-2] -gt $Opens[$i-2]
+            $bar0Bear = $Closes[$i] -lt $Opens[$i]
+            $starSmall = $body2 -gt 0 -and $body1 -le ($body2 * 0.4)
+            $midBar2 = ($Opens[$i-2] + $Closes[$i-2]) / 2.0
+            $closesBelowMid = $Closes[$i] -lt $midBar2
+            if ($bar2Bull -and $bar0Bear -and $starSmall -and $closesBelowMid) {
+                $strength = [Math]::Min(100, [int](60 + (($body0 / [Math]::Max($body2, 0.001)) * 10)))
+                return [PSCustomObject]@{
+                    detected=$true; pattern_name="evening_star"; strength=$strength; bar_idx=$i
+                }
+            }
+        }
+
+        # 3 CORVOS NEGROS (3 velas, continuacao confirmada): espelho dos
+        # 3 soldados brancos.
+        if ($i -ge 2 -and $isUpTrend) {
+            $bear2 = $Closes[$i-2] -lt $Opens[$i-2]
+            $bear1 = $Closes[$i-1] -lt $Opens[$i-1]
+            $bear0 = $Closes[$i] -lt $Opens[$i]
+            $fallingCloses = ($Closes[$i-1] -lt $Closes[$i-2]) -and ($Closes[$i] -lt $Closes[$i-1])
+            $opensInsidePrior = ($Opens[$i-1] -lt $Opens[$i-2] -and $Opens[$i-1] -gt $Closes[$i-2]) -and
+                                ($Opens[$i] -lt $Opens[$i-1] -and $Opens[$i] -gt $Closes[$i-1])
+            if ($bear2 -and $bear1 -and $bear0 -and $fallingCloses -and $opensInsidePrior) {
+                return [PSCustomObject]@{
+                    detected=$true; pattern_name="three_black_crows"; strength=75; bar_idx=$i
+                }
+            }
+        }
+
         # SHOOTING STAR: upper shadow >=2x body + body pequeno + lower pequeno + uptrend prior
         $starShape = ($upper -ge 2 * $body) -and ($lower -le $body) -and ($body -gt 0)
         if ($isUpTrend -and $starShape) {
@@ -341,6 +470,42 @@ function Detect-CandlestickReversal {
                     detected=$true; pattern_name="bearish_engulfing"; strength=$strength; bar_idx=$i
                     body_ratio = [math]::Round($bodyCurr / [Math]::Max($bodyPrev, 0.001), 2)
                 }
+            }
+        }
+
+        # HARAMI DE QUEDA: espelho do harami de alta.
+        if ($i -ge 1 -and $isUpTrend) {
+            $prevBull = $Closes[$i-1] -gt $Opens[$i-1]
+            $bodyPrev = $Closes[$i-1] - $Opens[$i-1]
+            $containedInside = ($Opens[$i] -lt $Closes[$i-1]) -and ($Opens[$i] -gt $Opens[$i-1]) -and
+                                ($Closes[$i] -lt $Closes[$i-1]) -and ($Closes[$i] -gt $Opens[$i-1])
+            if ($prevBull -and $containedInside -and $body -le ($bodyPrev * 0.5)) {
+                $strength = [Math]::Min(100, [int](45 + ((1 - ($body / [Math]::Max($bodyPrev, 0.001))) * 30)))
+                return [PSCustomObject]@{
+                    detected=$true; pattern_name="bearish_harami"; strength=$strength; bar_idx=$i
+                }
+            }
+        }
+
+        # DARK CLOUD COVER: espelho do piercing line.
+        if ($i -ge 1 -and $isUpTrend) {
+            $prevBull = $Closes[$i-1] -gt $Opens[$i-1]
+            $currBear = $Closes[$i] -lt $Opens[$i]
+            $midPrev = ($Opens[$i-1] + $Closes[$i-1]) / 2.0
+            $opensAboveHigh = $Opens[$i] -gt $Closes[$i-1]
+            $closesBelowMidAboveOpen = ($Closes[$i] -lt $midPrev) -and ($Closes[$i] -gt $Opens[$i-1])
+            if ($prevBull -and $currBear -and $opensAboveHigh -and $closesBelowMidAboveOpen) {
+                return [PSCustomObject]@{
+                    detected=$true; pattern_name="dark_cloud_cover"; strength=65; bar_idx=$i
+                }
+            }
+        }
+
+        # DOJI: menor confianca sozinho, checado por ultimo.
+        $isDoji = $range -gt 0 -and $body -le ($range * 0.1)
+        if ($isUpTrend -and $isDoji) {
+            return [PSCustomObject]@{
+                detected=$true; pattern_name="doji"; strength=35; bar_idx=$i
             }
         }
 
