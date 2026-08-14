@@ -199,6 +199,28 @@ Describe "Detect-VolumeAccumulation - validacao contra dado real (ACE +168%/24h,
         $r.detected | Should Be $true
         $r.vol_ratio | Should BeGreaterThan 8
     }
+
+    It "Mediana (nao media) evita falso-negativo por outlier na base -- caso real TUT (-24%/24h)" {
+        if (-not (Get-Command Detect-VolumeAccumulation -ErrorAction SilentlyContinue)) { Set-TestInconclusive; return }
+        # Achado real (2026-08-15): TUT tinha 1 pico de volume normal (109849)
+        # nas 20h anteriores ao dump -- isso inflava a MEDIA base o suficiente
+        # pra diluir o ratio real do dump pra 6.88x (abaixo do threshold 8x,
+        # NAO disparava). Com mediana, o outlier e ignorado -- reproduz os
+        # 20 volumes reais das 20h anteriores + a barra real do dump (198896).
+        $opens = @(); $highs = @(); $lows = @(); $closes = @()
+        for ($i = 0; $i -lt 20; $i++) { $opens += 0.06; $closes += 0.0598; $highs += 0.0605; $lows += 0.0595 }
+        $opens  += 0.05699; $closes += 0.05260; $highs += 0.05750; $lows += 0.05200
+
+        # 20 volumes reais das 20h anteriores ao dump (contem 1 outlier: 109849)
+        $vols = @(19757.0,17106.0,28055.0,20580.0,22708.0,22507.0,9233.0,109849.0,17828.0,26710.0,
+                  12442.0,73137.0,37382.0,48526.0,32364.0,19906.0,17544.0,11580.0,16498.0,14656.0)
+        # barra real do inicio do dump (13/08 13:00 UTC): vol=198896, close<open
+        $vols += 198896.0
+
+        $r = Detect-VolumeAccumulation -Opens $opens -Highs $highs -Lows $lows -Closes $closes -Volumes $vols -Side SHORT
+        $r.detected | Should Be $true
+        $r.vol_ratio | Should BeGreaterThan 9
+    }
 }
 
 

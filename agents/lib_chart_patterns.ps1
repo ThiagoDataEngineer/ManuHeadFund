@@ -266,6 +266,17 @@ function Detect-VolumeAccumulation {
     candle vermelho (close<open) -- direcao do candle na barra do pico, nao
     da tendencia previa (este detector nao olha tendencia, e sinal de
     ACUMULACAO, nao de reversao).
+
+    .NOTES
+    2026-08-15: usa MEDIANA (nao media) do Lookback como baseline -- achado
+    real (validacao contra dump real do TUT, -24%/24h): media e sensivel a
+    outlier -- um unico pico de volume normal (109849 vs base ~15-30k) nas
+    20h anteriores ao dump inflava a media base o suficiente pra diluir o
+    ratio do candle real do dump pra 6.88x, ABAIXO do threshold 8x (nao
+    disparava). Mediana e robusta a esse outlier: mesmo caso sobe pra 9.83x
+    (dispara corretamente). Sem essa troca, o detector so funcionava bem em
+    moedas com volume de base ja estavel (caso ACE original) e falhava em
+    moedas ja voláteis/barulhentas de base (caso TUT).
     #>
     [CmdletBinding()]
     param(
@@ -284,8 +295,14 @@ function Detect-VolumeAccumulation {
     }
 
     $lastIdx = $n - 1
-    $prior = $Volumes[($n - 1 - $Lookback)..($lastIdx - 1)]
-    $avgVol = ($prior | Measure-Object -Average).Average
+    $prior = @($Volumes[($n - 1 - $Lookback)..($lastIdx - 1)])
+    $sorted = @($prior | Sort-Object)
+    $mid = [int]($sorted.Count / 2)
+    $avgVol = if ($sorted.Count % 2 -eq 0) {
+        ($sorted[$mid - 1] + $sorted[$mid]) / 2.0
+    } else {
+        $sorted[$mid]
+    }
     if ($avgVol -le 0) {
         return [PSCustomObject]@{ detected=$false; pattern_name=$null; strength=0; bar_idx=$null; reason="zero_avg_vol" }
     }
