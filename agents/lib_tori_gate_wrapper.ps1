@@ -240,19 +240,45 @@ function Get-ToriHistoricalCandles {
         })
     }
 
+    # 2026-08-14 FIX: periodo em segundos, usado pra descartar o candle EM
+    # FORMACAO (achado real: candle "atual" de 1h com 1-50min de vida
+    # comparado contra media de candles fechados de 60min inteiros --
+    # ACEUSDT: volume=53.71 no candle em formacao vs ~6000-22000 nos 5
+    # anteriores fechados, ratio caindo pra 0.01. TUTUSDT: mesmo padrao,
+    # 977.62 vs ~30000-111000. Isso derrubava sistematicamente o
+    # VOLUME_CLIMAX (so 4/92 hits reais auditados) e mantinha a maioria
+    # dos candidatos travada em score=65 (so fractal_pattern, sem
+    # confluencia) contra o threshold=80 do TORI Gate.
+    $periodSeconds = @{
+        "1min"=60; "5min"=300; "15min"=900; "30min"=1800
+        "1hour"=3600; "2hour"=7200; "4hour"=14400; "1day"=86400; "1week"=604800
+    }
+    $periodSec = if ($periodSeconds.ContainsKey($period)) { $periodSeconds[$period] } else { 3600 }
+
+    function _DropIncompleteLastCandle($parsed) {
+        if (@($parsed).Count -lt 2) { return $parsed }
+        $lastTs = [double]$parsed[-1].timestamp / 1000.0
+        $nowEpoch = [double]([DateTimeOffset]::UtcNow.ToUnixTimeSeconds())
+        $ageSec = $nowEpoch - $lastTs
+        if ($ageSec -lt $periodSec) {
+            return @($parsed[0..($parsed.Count - 2)])
+        }
+        return $parsed
+    }
+
     try {
         # Try futures first (most liquid)
         $url = "$base/v2/futures/kline?market=$Market&period=$period&limit=$Limit"
         $candles = Invoke-RestMethod -Uri $url -Method GET -TimeoutSec $TimeoutSeconds -ErrorAction Stop
         if ($candles.code -eq 0 -and $candles.data -and @($candles.data).Count -gt 0) {
-            return (_ParseKlineData $candles.data)
+            return (_DropIncompleteLastCandle (_ParseKlineData $candles.data))
         }
 
         # Fallback to spot
         $url = "$base/v2/spot/kline?market=$Market&period=$period&limit=$Limit"
         $candles = Invoke-RestMethod -Uri $url -Method GET -TimeoutSec $TimeoutSeconds -ErrorAction Stop
         if ($candles.code -eq 0 -and $candles.data -and @($candles.data).Count -gt 0) {
-            return (_ParseKlineData $candles.data)
+            return (_DropIncompleteLastCandle (_ParseKlineData $candles.data))
         }
 
         return $null
