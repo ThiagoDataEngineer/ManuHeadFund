@@ -53,3 +53,36 @@ Describe "Test-EntryQualityGate -- caso real run #677" {
         $r.blocked | Should Be $true
     }
 }
+
+Describe "Test-EntryQualityGate -- 2026-08-14 FIX: fallback deterministico nao veta trade com confluencia forte" {
+    # Caso real (producao, ~3h, 14 ocorrencias): LINKUSDT SHORT com TORI
+    # conviction=80-100 (confluencia real >=3 fatores) bloqueado repetidas
+    # vezes so porque scripts/tech_agent.ps1 (fallback, SEM piso de
+    # confluencia) dizia LONG enquanto Claude estava indisponivel na sessao.
+
+    It "SHORT trade conv=80 (TORI forte) + fallback diz LONG -> ALLOW (fallback sem peso pra vetar confluencia forte)" {
+        $r = Test-EntryQualityGate -TradeDirection "SHORT" -TechConsensus "LONG" -LlmFallback $true -Conviction 80 -MesaScore 0 -ChartStatus "ok"
+        $r.allow | Should Be $true
+    }
+
+    It "SHORT trade conv=100 (TORI maximo) + fallback diz LONG -> ALLOW" {
+        $r = Test-EntryQualityGate -TradeDirection "SHORT" -TechConsensus "LONG" -LlmFallback $true -Conviction 100 -MesaScore 0 -ChartStatus "ok"
+        $r.allow | Should Be $true
+    }
+
+    It "SHORT trade conv=50 (fraco) + fallback diz LONG -> BLOCK (nenhum lado tem sinal forte, mantem cautela)" {
+        $r = Test-EntryQualityGate -TradeDirection "SHORT" -TechConsensus "LONG" -LlmFallback $true -Conviction 50 -MesaScore 0 -ChartStatus "ok"
+        $r.blocked | Should Be $true
+    }
+
+    It "SHORT trade conv=80 + LLM REAL (nao fallback) diz LONG -> BLOCK (opiniao real do LLM continua com poder de veto)" {
+        $r = Test-EntryQualityGate -TradeDirection "SHORT" -TechConsensus "LONG" -LlmFallback $false -Conviction 80 -MesaScore 0 -ChartStatus "ok"
+        $r.blocked | Should Be $true
+        ($r.reasons -join ',') | Should Match "direction_contradiction"
+    }
+
+    It "LONG trade conv=80 (TORI forte) + fallback diz SHORT -> ALLOW (espelho)" {
+        $r = Test-EntryQualityGate -TradeDirection "LONG" -TechConsensus "SHORT" -LlmFallback $true -Conviction 80 -MesaScore 0 -ChartStatus "ok"
+        $r.allow | Should Be $true
+    }
+}
