@@ -29,14 +29,56 @@ function Test-Capitulation {
     return [pscustomobject]@{ is_capitulation=$false; reason="sem climax (rsi=$Rsi vol=$VolRatio)" }
 }
 
+function Test-Euphoria {
+    <#
+      Detecta o TOPO (espelho de Test-Capitulation): RSI extremo overbought +
+      volume CLIMATICO + preco ESTICADO acima da EMA200 (nao so acima dela --
+      qualquer BULL saudavel fica acima da 200; euforia exige distancia real,
+      caso contrario qualquer alta normal disparava falso positivo).
+
+      Achado real (2026-08-14, owner pediu investigar SHORT no topo do
+      ACEUSDT antes do crash de -31%): Test-PumpDumpGate ja liberava SHORT
+      nesse momento (reaccumulation), mas Resolve-MarketScenario bloqueava
+      sempre via BULL puro -- essa funcao fecha essa lacuna sem tocar na
+      logica de BEAR/BULL/NEUTRO existente.
+    #>
+    param(
+        [double]$Rsi,
+        [double]$VolRatio,        # volume 3d / volume 20d
+        [double]$Price,
+        [double]$Ema200,
+        [double]$RsiMin = 70,      # RSI >= 70 = overbought extremo
+        [double]$VolMin = 1.8,     # volume >= 1.8x = climax
+        [double]$StretchMinPct = 15.0  # preco >= 15% acima da EMA200 = esticado
+    )
+    if ($Price -le 0 -or $Ema200 -le 0) { return [pscustomobject]@{ is_euphoria=$false; reason="dados_invalidos" } }
+    $overbought = ($Rsi -ge $RsiMin)
+    $climax     = ($VolRatio -ge $VolMin)
+    $stretchPct = (($Price - $Ema200) / $Ema200) * 100
+    $stretched  = ($stretchPct -ge $StretchMinPct)
+    if ($overbought -and $climax -and $stretched) {
+        return [pscustomobject]@{ is_euphoria=$true; reason="RSI $Rsi + vol ${VolRatio}x + ${stretchPct}% acima EMA200" }
+    }
+    return [pscustomobject]@{ is_euphoria=$false; reason="sem climax de topo (rsi=$Rsi vol=$VolRatio stretch=${stretchPct}%)" }
+}
+
 function Resolve-MarketScenario {
     <#
       Classifica o cenario e diz a estrategia com edge. Ordem de prioridade:
         1) CAPITULACAO (fundo)  -> allow_long  (acumula)
-        2) BEAR (sem capit.)    -> allow_short (SHORT/caixa)
-        3) BULL                 -> allow_long
-        4) NEUTRO (chop)        -> espera (nada)
+        2) EUFORIA (topo)       -> allow_short (vende o topo esticado)
+        3) BEAR (sem capit.)    -> allow_short (SHORT/caixa)
+        4) BULL                 -> allow_long
+        5) NEUTRO (chop)        -> espera (nada)
       Fail-safe: dados invalidos -> UNKNOWN, allow_long=true (nao trava por dado ruim).
+
+      2026-08-14: EUFORIA adicionada (espelho de CAPITULACAO) -- achado real
+      (ACEUSDT, pico 08-14 22h, RSI~95/vol 5.25x/momentum 150%, crash -31%
+      na hora seguinte) mostrou que BULL bloqueava SHORT incondicionalmente
+      mesmo com exaustao extrema medida, enquanto Test-PumpDumpGate ja
+      liberava SHORT no mesmo momento (reaccumulation). Checada ANTES de
+      BEAR/BULL pelo mesmo motivo que CAPITULACAO -- extremos tem prioridade
+      sobre a leitura generica de tendencia.
     #>
     param(
         [double]$Price, [double]$Ema20, [double]$Ema50, [double]$Ema200,
@@ -49,6 +91,11 @@ function Resolve-MarketScenario {
     $cap = Test-Capitulation -Rsi $Rsi -VolRatio $VolRatio -Price $Price -Ema200 $Ema200
     if ($cap.is_capitulation) {
         return [pscustomobject]@{ scenario="CAPITULACAO"; strategy="acumula_long_fundo"; allow_long=$true; allow_short=$false; reason=$cap.reason; momentum_30d=$Momentum30dPct }
+    }
+
+    $euph = Test-Euphoria -Rsi $Rsi -VolRatio $VolRatio -Price $Price -Ema200 $Ema200
+    if ($euph.is_euphoria) {
+        return [pscustomobject]@{ scenario="EUFORIA"; strategy="vende_topo_esticado"; allow_long=$false; allow_short=$true; reason=$euph.reason; momentum_30d=$Momentum30dPct }
     }
 
     $bear = ($Price -lt $Ema20) -and ($Price -lt $Ema50) -and ($Momentum30dPct -lt 0)

@@ -23,6 +23,35 @@ Describe "Test-Capitulation - detecta o fundo (Fase 3)" {
     }
 }
 
+Describe "Test-Euphoria - detecta o topo (espelho de Test-Capitulation)" {
+    # Achado real 2026-08-14 (owner pediu pra investigar se um SHORT no topo
+    # do ACEUSDT teria sido pego): no candle exato do topo (08-14 22:00,
+    # RSI~95, momentum30d=150%, vol_ratio=5.25x), Test-PumpDumpGate JA
+    # liberava SHORT (reaccumulation), mas Resolve-MarketScenario bloqueava
+    # incondicionalmente -- classificava BULL (preco>EMA20 + momentum
+    # positivo) sem nenhuma nocao de exaustao. Existia Test-Capitulation
+    # (fundo: RSI<=30 + volume climatico + preco<EMA200) mas nao o espelho
+    # (topo: RSI>=70 + volume climatico + preco>EMA200 esticado) -- lacuna
+    # estrutural, nao bug. Preco>EMA200 sozinho e normal em qualquer BULL
+    # saudavel; a assimetria real e exigir DISTANCIA da EMA200 (esticado
+    # demais), nao so estar acima dela.
+    It "RSI extremo + volume climatico + esticado (>15%) acima da 200 -> EUFORIA" {
+        (Test-Euphoria -Rsi 95 -VolRatio 5.25 -Price 0.350948 -Ema200 0.15).is_euphoria | Should Be $true
+    }
+    It "RSI alto mas SEM volume climatico -> NAO e euforia (so alta normal)" {
+        (Test-Euphoria -Rsi 75 -VolRatio 1.0 -Price 0.35 -Ema200 0.15).is_euphoria | Should Be $false
+    }
+    It "Volume alto mas RSI nao extremo -> NAO" {
+        (Test-Euphoria -Rsi 58 -VolRatio 2.5 -Price 0.35 -Ema200 0.15).is_euphoria | Should Be $false
+    }
+    It "Perto da 200 (nao esticado, BULL saudavel normal) -> NAO" {
+        (Test-Euphoria -Rsi 75 -VolRatio 2.0 -Price 66000 -Ema200 64000).is_euphoria | Should Be $false
+    }
+    It "Abaixo da 200 (nao e topo esticado) -> NAO" {
+        (Test-Euphoria -Rsi 80 -VolRatio 2.0 -Price 60000 -Ema200 64000).is_euphoria | Should Be $false
+    }
+}
+
 Describe "Resolve-MarketScenario - cenario -> estrategia com edge" {
     It "Capitulacao -> ACUMULA LONG (compra o fundo)" {
         $r = Resolve-MarketScenario -Price 52000 -Ema20 64000 -Ema50 68000 -Ema200 77000 -Rsi 24 -Momentum30dPct -28 -VolRatio 2.2
@@ -64,5 +93,24 @@ Describe "Resolve-MarketScenario - cenario -> estrategia com edge" {
         $r = Resolve-MarketScenario -Price 65074 -Ema20 64330 -Ema50 65130 -Ema200 72593 -Rsi 45 -Momentum30dPct 3.74 -VolRatio 1.0
         $r.scenario | Should Not Be "BULL"
         $r.allow_long | Should Be $false
+    }
+
+    It "EUFORIA (topo esticado) -> libera SHORT -- caso real ACEUSDT no pico antes do crash de -31% (2026-08-14 22h-23h)" {
+        # Dado real do candle diario do pico (08-14, close=0.350948): RSI~95,
+        # momentum30d=150%, vol_ratio=5.25x, preco ~134% acima da EMA200
+        # estimada (0.15). Antes do fix, isso classificava BULL puro
+        # (allow_short=false) -- o crash de -31% que aconteceu na hora
+        # seguinte (23:00, close=0.251168) nunca teria sido pego por SHORT.
+        $r = Resolve-MarketScenario -Price 0.350948 -Ema20 0.20 -Ema50 0.15 -Ema200 0.15 -Rsi 95 -Momentum30dPct 150 -VolRatio 5.25
+        $r.scenario | Should Be "EUFORIA"
+        $r.allow_short | Should Be $true
+        $r.allow_long | Should Be $false
+    }
+
+    It "BULL saudavel normal (RSI moderado, sem volume climatico) continua liberando LONG, nao regride pra EUFORIA" {
+        $r = Resolve-MarketScenario -Price 72000 -Ema20 68000 -Ema50 66000 -Ema200 64000 -Rsi 58 -Momentum30dPct 12 -VolRatio 1.1
+        $r.scenario | Should Be "BULL"
+        $r.allow_long | Should Be $true
+        $r.allow_short | Should Be $false
     }
 }
