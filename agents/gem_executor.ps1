@@ -2,6 +2,22 @@
 # Padrao: FUTURES (isolated margin). Fallback: SPOT quando par nao tem futuros.
 # Dot-source: . (Join-Path $PSScriptRoot "gem_executor.ps1")
 
+# 2026-06-28 CAUSA RAIZ (Add-TrailingPosition caia no default "public",
+# schema compartilhado com outro app -- congelamento 26/06): FORCAR
+# STATE_STORE_SCHEMA=manuheadfund ANTES de qualquer persistencia deste
+# arquivo. 2026-08-15 FIX: o force original ficava so na linha ~2555
+# (dentro do registro de trade ABERTO, Add-TrailingPosition) -- mas
+# Write-SignalSkip (candidatos REJEITADOS, a materia-prima real de
+# trade_rejections/mce_counterfactual_agg/Evolution Engine) e chamada 6x
+# ANTES desse ponto no arquivo (linhas ~469-2230), sempre sem o schema
+# forcado ainda. Resultado real medido: trade_rejections ficou vazia por
+# ~1 mes em producao, mce_counterfactual_agg parou de atualizar em 07-17,
+# e a regra C de Get-EvolutionProposals (calibragem automatica do
+# tori_confluence_threshold, ja escrita e testada desde 07-17) nunca teve
+# evidencia real pra agir -- ficava sempre com n=0. Fix: forcar uma unica
+# vez aqui no topo do arquivo, antes de QUALQUER chamada de persistencia.
+$env:STATE_STORE_SCHEMA = "manuheadfund"
+
 # 2026-07-02 FIX: Auto-loader para NÃO perder libs novamente
 . (Join-Path $PSScriptRoot "lib_loader_auto.ps1")
 
@@ -2547,12 +2563,13 @@ function Invoke-GemExecute {
     # BUG-B: Add-TrailingPosition nunca era chamada — só Update-TrailingStop (ATR job),
     #        que é diferente: um registra a posição, o outro ajusta o stop depois.
     # Fix: registrar SEMPRE após EXEC, independente de SPOT vs FUTURES.
-    # 2026-06-28 CAUSA RAIZ: Add-TrailingPosition caia no default "public" (schema compartilhado
-    # com outro app). Congelamento desde 26/06 01:02 quando aquele app apagou a tabela.
-    # FIX: FORCAR STATE_STORE_SCHEMA=manuheadfund ANTES de qualquer persistencia.
+    # 2026-06-28 CAUSA RAIZ original: Add-TrailingPosition caia no default "public"
+    # (schema compartilhado com outro app). STATE_STORE_SCHEMA agora e forcado no
+    # TOPO do arquivo (2026-08-15 fix, cobre Write-SignalSkip tambem) -- linha
+    # abaixo mantida como reforco redundante no mesmo processo, sem custo real.
     if (Get-Command Add-TrailingPosition -ErrorAction SilentlyContinue) {
         try {
-            $env:STATE_STORE_SCHEMA = "manuheadfund"  # FORCE schema correto (CRITICO!)
+            $env:STATE_STORE_SCHEMA = "manuheadfund"  # reforco (fonte real: topo do arquivo)
             $__orderId = if ($order -and $order.order_id) { [string]$order.order_id } else { "" }
             # 2026-07-18: origem explicita p/ lib_trailing_unified.ps1 (motor
             # unico de trailing). $hasFutures ja esta no escopo (usado 3 linhas
