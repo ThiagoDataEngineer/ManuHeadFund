@@ -108,13 +108,21 @@ function Resolve-EffectiveSizingCap {
     # 3%=$76.80) e foi INTEIRAMENTE DESCARTADO pelo cap fixo de $100, que
     # e mais restritivo que 3% pra qualquer capital abaixo de ~$3333.
     #
-    # Fix: o teto EFETIVO usado pelo guard de bloqueio (Test-SizingCap) e
-    # pela tolerancia de clamp (Resolve-SizingClamp) passa a ser o MENOR
-    # entre o cap fixo em dolar e 3% do capital atual -- nunca deixa a
-    # Regra de Ouro perder pra um cap fixo esquecido, mas tambem nunca
-    # relaxa o cap fixo pra cima (se 3% do capital for MAIOR que o cap
-    # fixo, o cap fixo continua valendo -- protege capitais grandes de
-    # trades desproporcionais de qualquer forma).
+    # 2026-08-14 FIX (achado real: LINKUSDT SHORT com TORI 100/100 + quality
+    # gate PASS, tudo aprovado, mas bloqueado no fim por "proposto $171.14 >
+    # cap $100" -- capital real $2444.81, 7% real=$171.14, MAIOR que o cap
+    # fixo de $100 nunca atualizado desde antes da Regra de Ouro subir pra
+    # 7%): o "menor dos dois" ainda deixava o cap fixo esquecido vencer
+    # sempre que 7% do capital superasse $100 -- ou seja, SEMPRE que o
+    # capital for < ~$1428, TODO trade dimensionado corretamente pela Regra
+    # de Ouro era cortado pra ~4.1% em vez de 7%. LIVE_MAX_SIZE_USD nunca
+    # foi configurado em nenhum lugar do repo (sempre cai no default 100.0)
+    # -- nao e um teto deliberado, e um valor esquecido do design anterior
+    # ao % dinamico. Fix: teto efetivo agora e SO a Regra de Ouro (RiskPct
+    # do capital) -- decisao explicita do owner (2026-08-14): 7% do capital
+    # atual E a trava, sem teto fixo em dolar por cima. $FixedCapUsd mantido
+    # como parametro (nao remove a assinatura, callers antigos nao quebram)
+    # mas so e usado no fail-safe de capital indisponivel.
     [CmdletBinding()]
     param(
         [double]$FixedCapUsd,
@@ -122,15 +130,12 @@ function Resolve-EffectiveSizingCap {
         [double]$RiskPct = 0.03
     )
     if ($Capital -le 0) {
-        # capital indisponivel -- fail-safe, usa so o cap fixo (nao
-        # inventa um teto de 3% de um valor que nao existe).
+        # capital indisponivel -- fail-safe, usa o cap fixo historico (nao
+        # inventa um teto de % de um capital que nao existe).
         return [PSCustomObject]@{ cap_usd = $FixedCapUsd; source = "fixed_only_no_capital" }
     }
     $riskCapUsd = [math]::Round($Capital * $RiskPct, 2)
-    if ($riskCapUsd -lt $FixedCapUsd) {
-        return [PSCustomObject]@{ cap_usd = $riskCapUsd; source = "risk_pct" }
-    }
-    return [PSCustomObject]@{ cap_usd = $FixedCapUsd; source = "fixed" }
+    return [PSCustomObject]@{ cap_usd = $riskCapUsd; source = "risk_pct" }
 }
 
 

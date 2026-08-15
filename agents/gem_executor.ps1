@@ -2015,24 +2015,24 @@ function Invoke-GemExecute {
         # % dinamico de capital ainda) -- sem este fix, ele bloqueava o
         # trade INTEIRO (via Test-SizingCap, return mais abaixo) antes do
         # "HARD CAP DE RISCO" (mais novo, a Regra de Ouro real, so
-        # clampa) rodar mais adiante no arquivo. Caso real: XRPUSDT propos
-        # $142.09 com capital=$2560 (=5.5%) e foi descartado por inteiro
-        # pelo cap fixo de $100 -- mais restritivo que a Regra de Ouro pra
-        # qualquer capital abaixo de ~$1428 (a 7%) ou ~$3333 (a 3%, valor
-        # antigo). Resolve-EffectiveSizingCap usa o MENOR entre os dois:
-        # nunca deixa a Regra de Ouro perder pra um cap fixo esquecido, mas
-        # tambem nunca relaxa o cap fixo pra cima (capitais grandes
-        # continuam protegidos pelo teto historico se a Regra de Ouro for
-        # maior que ele).
+        # clampa) rodar mais adiante no arquivo.
         # 2026-08-08 FIX: RiskPct=0.03 hardcoded reintroduzia por engano o
         # valor antigo (owner subiu RISK_MAX_PCT_PER_TRADE de 3% pra 7% no
         # commit 4060d4e/2026-08-04, 3 dias antes deste fix ser escrito sem
         # essa mudanca em vista) -- le a variavel global agora, mesmo padrao
         # ja usado no caminho primario de sizing (linha ~837).
+        # 2026-08-14 FIX: Resolve-EffectiveSizingCap deixou de usar "o menor
+        # entre cap fixo e risk_pct" -- caso real LINKUSDT (TORI 100/100 +
+        # quality gate PASS, tudo aprovado) bloqueado no fim por "$171.14 >
+        # cap $100" com capital=$2444.81 (7% real=$171.14, MAIOR que o cap
+        # fixo nunca configurado/esquecido desde antes da Regra de Ouro subir
+        # pra 7%). Decisao explicita do owner: risk_pct do capital atual E a
+        # trava, sem teto fixo em dolar por cima (nem pra capital pequeno nem
+        # grande) -- ver Resolve-EffectiveSizingCap pro detalhe completo.
         if (Get-Command Resolve-EffectiveSizingCap -ErrorAction SilentlyContinue) {
             $__riskPctGuard = if ($global:RISK_MAX_PCT_PER_TRADE) { [double]$global:RISK_MAX_PCT_PER_TRADE } else { 0.07 }
             $effCap = Resolve-EffectiveSizingCap -FixedCapUsd $maxSize -Capital $capital -RiskPct $__riskPctGuard
-            if ($effCap.cap_usd -lt $maxSize) {
+            if ($effCap.cap_usd -ne $maxSize) {
                 Write-Host "  [GEM GUARD] $mkt cap efetivo: `$$maxSize (fixo) -> `$$($effCap.cap_usd) ($($__riskPctGuard*100)% capital, Regra de Ouro)" -ForegroundColor Cyan
             }
             $maxSize = [double]$effCap.cap_usd

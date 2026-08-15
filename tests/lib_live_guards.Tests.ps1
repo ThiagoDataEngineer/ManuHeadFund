@@ -5,14 +5,20 @@
 # desde o commit inicial do projeto quando o capital era pequeno e nao
 # havia % dinamico ainda) rodava ANTES do "HARD CAP DE RISCO 3%"
 # (gem_executor.ps1, a Regra de Ouro real, adicionada 2026-07-24) e
-# BLOQUEAVA o trade inteiro sem o clamp de 3% ter chance de agir. Caso
-# real: XRPUSDT propos $142.09 com capital=$2560 (=5.5% do capital, quase
-# 2x a Regra de Ouro de 3%=$76.80) e foi descartado por inteiro pelo cap
-# fixo de $100 -- que e mais restritivo que 3% pra qualquer capital abaixo
-# de ~$3333. Resolve-EffectiveSizingCap calcula o teto real como o MENOR
-# entre os dois, garantindo que a Regra de Ouro nunca perde pra um cap
-# fixo esquecido, e que o cap fixo continua protegendo capitais grandes
-# (onde 3% seria maior que o teto historico).
+# BLOQUEAVA o trade inteiro sem o clamp de 3% ter chance de agir.
+#
+# 2026-08-14 FIX: achado real posterior -- mesmo com o fix acima (usa o
+# MENOR entre cap fixo e risk_pct), o cap fixo de $100 (LIVE_MAX_SIZE_USD,
+# nunca configurado em lugar nenhum do repo, sempre cai no default 100.0)
+# continuava vencendo sempre que risk_pct do capital > $100 -- ou seja,
+# SEMPRE que capital < ~$1428 (a 7%, a Regra de Ouro atual desde
+# 2026-08-04). Caso real: LINKUSDT SHORT com TORI 100/100 + quality gate
+# PASS, tudo aprovado, bloqueado no fim por "$171.14 > cap $100" com
+# capital=$2444.81 (7% real=$171.14). Decisao explicita do owner
+# (2026-08-14): removido o cap fixo em dolar do calculo -- risk_pct do
+# capital atual E a trava, sem teto adicional por cima (nem pra capital
+# pequeno nem pra capital grande). Testes que validavam "capital grande
+# usa cap fixo" foram atualizados pra refletir a nova politica.
 #
 # Pester 3.4 (motor real de producao/CI) / ASCII-only.
 
@@ -21,28 +27,28 @@ $agentsDir = Join-Path (Split-Path $PSScriptRoot -Parent) "agents"
 
 Describe "Resolve-EffectiveSizingCap" {
 
-    It "capital pequeno (caso real XRPUSDT): 3% do capital < cap fixo -- usa 3% (Regra de Ouro vence)" {
-        # capital=2560, 3%=76.80, cap fixo=100 -- 76.80 < 100, usa risk_pct
+    It "capital pequeno (caso real XRPUSDT): usa risk_pct do capital, cap fixo nao entra na conta" {
+        # capital=2560, 3%=76.80
         $r = Resolve-EffectiveSizingCap -FixedCapUsd 100.0 -Capital 2560.0 -RiskPct 0.03
         $r.cap_usd | Should Be 76.80
         $r.source | Should Be "risk_pct"
     }
 
-    It "capital grande: 3% do capital > cap fixo -- usa cap fixo (protege trade desproporcional)" {
-        # capital=10000, 3%=300, cap fixo=100 -- 300 > 100, usa fixed
+    It "caso real LINKUSDT (2026-08-14): capital=2444.81, RiskPct=7% -- risk_pct ($171.14) vence, nao mais o cap fixo $100" {
+        $r = Resolve-EffectiveSizingCap -FixedCapUsd 100.0 -Capital 2444.81 -RiskPct 0.07
+        $r.cap_usd | Should Be 171.14
+        $r.source | Should Be "risk_pct"
+    }
+
+    It "capital grande: risk_pct SEM teto adicional -- cap fixo nao vence mais (mudanca de politica 2026-08-14)" {
+        # capital=10000, 3%=300 -- antes o cap fixo (100) venceria; agora
+        # risk_pct do capital E a trava, sem teto fixo em dolar por cima.
         $r = Resolve-EffectiveSizingCap -FixedCapUsd 100.0 -Capital 10000.0 -RiskPct 0.03
-        $r.cap_usd | Should Be 100.0
-        $r.source | Should Be "fixed"
+        $r.cap_usd | Should Be 300.0
+        $r.source | Should Be "risk_pct"
     }
 
-    It "capital no ponto de equilibrio exato (3% = cap fixo): usa cap fixo (empate nao vira risk_pct)" {
-        # capital=3333.33, 3%=99.9999 ~ 100.00 apos round -- exatamente igual ao fixo
-        $r = Resolve-EffectiveSizingCap -FixedCapUsd 100.0 -Capital (100.0 / 0.03) -RiskPct 0.03
-        $r.cap_usd | Should Be 100.0
-        $r.source | Should Be "fixed"
-    }
-
-    It "capital=0 (indisponivel): fail-safe, usa so o cap fixo, nao inventa teto de risk_pct" {
+    It "capital=0 (indisponivel): fail-safe, usa o cap fixo historico, nao inventa teto de risk_pct" {
         $r = Resolve-EffectiveSizingCap -FixedCapUsd 100.0 -Capital 0
         $r.cap_usd | Should Be 100.0
         $r.source | Should Be "fixed_only_no_capital"
@@ -54,15 +60,15 @@ Describe "Resolve-EffectiveSizingCap" {
         $r.source | Should Be "fixed_only_no_capital"
     }
 
-    It "RiskPct customizado (nao hardcoded 3%): respeita o parametro" {
-        # capital=1000, risk=5% -> 50; cap fixo=100 -- 50 < 100, usa risk_pct
+    It "RiskPct customizado (nao hardcoded): respeita o parametro" {
+        # capital=1000, risk=5% -> 50
         $r = Resolve-EffectiveSizingCap -FixedCapUsd 100.0 -Capital 1000.0 -RiskPct 0.05
         $r.cap_usd | Should Be 50.0
         $r.source | Should Be "risk_pct"
     }
 
-    It "capital muito pequeno: risk_pct pode ficar bem abaixo do cap fixo, ainda assim vence" {
-        # capital=100, 3%=3.0 -- protege capital pequeno de trade desproporcional
+    It "capital muito pequeno: risk_pct pode ficar bem abaixo do cap fixo historico, usa risk_pct mesmo assim" {
+        # capital=100, 3%=3.0
         $r = Resolve-EffectiveSizingCap -FixedCapUsd 100.0 -Capital 100.0 -RiskPct 0.03
         $r.cap_usd | Should Be 3.0
         $r.source | Should Be "risk_pct"
@@ -114,13 +120,14 @@ Describe "Resolve-EffectiveSizingCap + Test-SizingCap + Resolve-SizingClamp -- i
         $clamp.size_usd | Should Be $eff.cap_usd
     }
 
-    It "capital grande (FUTURES com muito capital): cap fixo protege, comportamento antigo preservado" {
-        # capital=50000, 3%=1500 -- cap fixo de 100 continua sendo o teto
-        # real (protege contra trade desproporcional mesmo com capital alto)
+    It "capital grande (FUTURES com muito capital): risk_pct escala com o capital, sem teto fixo por cima (2026-08-14)" {
+        # capital=50000, 3%=1500 -- antes o cap fixo de 100 venceria; agora
+        # a Regra de Ouro escala com o capital, decisao explicita do owner.
         $eff = Resolve-EffectiveSizingCap -FixedCapUsd 100.0 -Capital 50000.0 -RiskPct 0.03
-        $eff.source | Should Be "fixed"
+        $eff.source | Should Be "risk_pct"
+        $eff.cap_usd | Should Be 1500.0
         $result = Test-SizingCap -ProposedSizeUsd 150.0 -MaxSizeUsd $eff.cap_usd
-        $result.pass | Should Be $false
+        $result.pass | Should Be $true
     }
 }
 
