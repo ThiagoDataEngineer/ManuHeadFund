@@ -1084,7 +1084,18 @@ function Invoke-GemExecute {
             $cap = Test-CoinExposureCap -HeldUsd $heldUsd -TradeUsd $usd_size -PortfolioUsd $capital
             if (-not $cap.allowed) {
                 Write-Host "  [EXPOSURE CAP BLOCK] ${mkt}: $($cap.reason) (held=`$$([math]::Round($heldUsd,2)) proj=$($cap.projected_pct)%)" -ForegroundColor Red
-                try { Send-TelegramAlert -Message "GEM bloqueado ${mkt}: $($cap.reason) - ja segura `$$([math]::Round($heldUsd,2)) (anti trade-gigante)" | Out-Null } catch {}
+                # 2026-08-15: achado real (owner, 22+ posicoes SHORT abertas) --
+                # scanner varre a cada 5min, entao a MESMA moeda ja posicionada
+                # ("anti trade-gigante", bloqueio correto) gerava dezenas de
+                # Telegrams/hora sem nenhuma acao necessaria. Max 1 alerta por
+                # moeda por janela do dia (manha/tarde/noite BRT), sem alerta
+                # na madrugada -- ver Test-DailyMarketAlertThrottle.
+                $__shouldAlertExposure = if (Get-Command Test-DailyMarketAlertThrottle -ErrorAction SilentlyContinue) {
+                    Test-DailyMarketAlertThrottle -Market $mkt -Reason "exposure_cap"
+                } else { $true }
+                if ($__shouldAlertExposure) {
+                    try { Send-TelegramAlert -Message "GEM bloqueado ${mkt}: $($cap.reason) - ja segura `$$([math]::Round($heldUsd,2)) (anti trade-gigante)" | Out-Null } catch {}
+                }
                 if (Get-Command Add-GemRejection -ErrorAction SilentlyContinue) {
                     try { Add-GemRejection -Path (Join-Path $global:JOURNAL_DIR "gem_recent_decisions.json") -Market $mkt -Reason "exposure_cap:$($cap.reason)" } catch {}
                 }

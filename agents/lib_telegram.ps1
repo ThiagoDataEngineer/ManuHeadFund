@@ -28,6 +28,106 @@ function Test-TelegramMessageDuplicate {
 }
 
 # ============================================================================
+# Test-DailyMarketAlertThrottle - max 1 alerta por MOEDA por janela do dia
+# ============================================================================
+# 2026-08-15 achado real (owner, com 22+ posicoes SHORT abertas): exposure
+# cap (Test-CoinExposureCap, "anti trade-gigante") bloqueia candidatos que
+# ja tem posicao aberta na mesma moeda -- protecao correta, mas o scanner
+# varre o mercado a cada 5min, entao a MESMA moeda pode gerar dezenas de
+# Telegrams por hora sem nenhuma acao necessaria do owner. Pedido explicito:
+# max 1 alerta por moeda por janela (manha/tarde/noite, BRT=UTC-3), sem
+# alerta nenhum na madrugada (00h-06h). Estado persistido em JSON simples
+# (market|window|date -> count), reseta sozinho ao virar o dia/janela.
+$script:__dailyAlertThrottleCache = $null
+
+function Get-BrtDayWindow {
+    <#
+      Retorna a janela do dia (manha/tarde/noite/madrugada) e a data (BRT)
+      pra um timestamp UTC dado. Pura, sem I/O -- testavel isoladamente.
+
+      2026-08-15: PowerShell 5.1 converte literais "...Z" (ex: [datetime]
+      '2026-08-15T09:00:00Z') pro timezone LOCAL da maquina automaticamente
+      (Kind=Local, ja ajustado) -- diferente de [datetime]::UtcNow
+      (Kind=Utc, cru). Sem normalizar, AddHours(-3) aplicava a conversao
+      DUAS vezes num caso e nenhuma no outro, dependendo de como o valor
+      chegava. .ToUniversalTime() normaliza os dois casos corretamente (e
+      no-op seguro se ja for Utc).
+    #>
+    [CmdletBinding()]
+    param([datetime]$UtcNow = ([datetime]::UtcNow))
+    $brt = $UtcNow.ToUniversalTime().AddHours(-3)
+    $window = if ($brt.Hour -ge 6 -and $brt.Hour -lt 12) { "manha" }
+              elseif ($brt.Hour -ge 12 -and $brt.Hour -lt 18) { "tarde" }
+              elseif ($brt.Hour -ge 18) { "noite" }
+              else { "madrugada" }
+    return [pscustomobject]@{ window = $window; date = $brt.ToString("yyyy-MM-dd") }
+}
+
+function Test-DailyMarketAlertThrottle {
+    <#
+      Fail-open por design: erro de leitura/escrita do arquivo de estado
+      NUNCA deve bloquear um alerta real -- silenciosamente permite passar
+      (throttle e conveniencia, nao gate de seguranca).
+
+      .PARAMETER Market
+      Symbol (ex: BTCUSDT)
+      .PARAMETER Reason
+      Rotulo curto da razao do alerta (ex: "exposure_cap") -- throttle e
+      por Market+Reason, nao global por Market (nao mistura razoes distintas).
+      .PARAMETER StatePath
+      Caminho do JSON de estado (default: journal/daily_alert_throttle.json)
+      .OUTPUTS
+      $true = pode enviar (dentro do limite ou madrugada silenciosa=false),
+      $false = suprimir (ja bateu o limite da janela, ou e madrugada)
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)] [string] $Market,
+        [Parameter(Mandatory)] [string] $Reason,
+        [string] $StatePath = "",
+        [datetime] $UtcNow = ([datetime]::UtcNow)
+    )
+    if (-not $StatePath) {
+        $base = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path (Join-Path $PSScriptRoot "..") "journal" }
+        $StatePath = Join-Path $base "daily_alert_throttle.json"
+    }
+
+    $dw = Get-BrtDayWindow -UtcNow $UtcNow
+    if ($dw.window -eq "madrugada") { return $false }  # silencio total 00h-06h BRT
+
+    $key = "$Market|$Reason|$($dw.date)|$($dw.window)"
+
+    try {
+        $state = if ($script:__dailyAlertThrottleCache) { $script:__dailyAlertThrottleCache } else { @{} }
+        if (-not $script:__dailyAlertThrottleCache -and (Test-Path $StatePath)) {
+            $raw = Get-Content $StatePath -Raw -Encoding UTF8 -ErrorAction Stop
+            if ($raw) {
+                $parsed = $raw | ConvertFrom-Json -ErrorAction Stop
+                $state = @{}
+                foreach ($p in $parsed.PSObject.Properties) { $state[$p.Name] = [int]$p.Value }
+            }
+        }
+
+        $count = if ($state.ContainsKey($key)) { [int]$state[$key] } else { 0 }
+        if ($count -ge 1) { $script:__dailyAlertThrottleCache = $state; return $false }
+
+        $state[$key] = $count + 1
+        # Poda entradas de dias anteriores (arquivo nao cresce sem limite)
+        $todayPrefix = "|$($dw.date)|"
+        $pruned = @{}
+        foreach ($k in $state.Keys) { if ($k -like "*$todayPrefix*") { $pruned[$k] = $state[$k] } }
+        $script:__dailyAlertThrottleCache = $pruned
+
+        $dir = Split-Path -Parent $StatePath
+        if ($dir -and -not (Test-Path $dir)) { New-Item -ItemType Directory -Path $dir -Force | Out-Null }
+        ($pruned | ConvertTo-Json -Compress) | Set-Content -Path $StatePath -Encoding UTF8
+        return $true
+    } catch {
+        return $true  # fail-open: throttle e conveniencia, nunca bloqueia alerta real por erro de I/O
+    }
+}
+
+# ============================================================================
 # Telegram-SendMessage - Envia mensagem para Telegram (com DEDUP)
 # ============================================================================
 
