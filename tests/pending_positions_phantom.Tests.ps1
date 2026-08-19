@@ -53,6 +53,29 @@ Describe "CoinEx-GetPendingPositions - filtra fantasmas" {
         }
     }
 
+    Context "2026-08-19 DIAG: erro de API vs lista vazia legitima fica logado (achado real 2026-08-17 mass phantom close)" {
+        # Achado real: 13 posicoes reais fecharam em massa via phantom_reconciliation
+        # porque um erro de API (code!=0, fora da lista retryable) foi indistinguivel
+        # de "sem posicoes" -- o codigo exato nunca foi logado. Este teste NAO muda
+        # comportamento (retorno continua @()), so garante que o Write-Warning
+        # dispara com o code/message reais pra proxima ocorrencia ser diagnosticavel.
+
+        It "erro de API real (code=4213 rate-limit) gera Write-Warning com o code exato" {
+            Mock CoinEx-Get { @{ code = 4213; message = "Too Many Requests" } }
+            $warnings = @()
+            CoinEx-GetPendingPositions -WarningVariable warnings -WarningAction SilentlyContinue | Out-Null
+            ($warnings -join " ") | Should Match "code=4213"
+            ($warnings -join " ") | Should Match "Too Many Requests"
+        }
+
+        It "data vazia legitima (code=0) NAO gera warning de erro" {
+            Mock CoinEx-Get { @{ code = 0; data = @() } }
+            $warnings = @()
+            CoinEx-GetPendingPositions -WarningVariable warnings -WarningAction SilentlyContinue | Out-Null
+            $warnings.Count | Should Be 0
+        }
+    }
+
     Context "Nenhuma posicao com market vazio sobrevive (garantia p/ consumidores)" {
 
         It "todas as retornadas tem market nao-vazio" {

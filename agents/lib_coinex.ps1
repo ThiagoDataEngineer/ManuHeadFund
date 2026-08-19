@@ -551,7 +551,19 @@ function CoinEx-GetPendingPositions {
     # limit=100 cobre qualquer volume realista de posicoes simultaneas deste
     # sistema (cap de exposicao ja impede escala muito maior).
     $r = CoinEx-Get "/v2/futures/pending-position?market_type=FUTURES&limit=100"
-    if ($r.code -ne 0) { return @() }
+    if ($r.code -ne 0) {
+        # 2026-08-19 DIAG (nao muda comportamento, so instrumenta): achado real
+        # em producao (2026-08-17 16:31 UTC) -- esta funcao retorna @() tanto
+        # quando genuinamente nao ha posicoes QUANTO quando a API falha (codigo
+        # de erro fora da lista retryable de Invoke-CoinExWithRetry: 4213/3008).
+        # Detect-PhantomPositions nao distingue os dois casos e fechou 13
+        # posicoes reais em massa via phantom_reconciliation com preco
+        # aproximado (nao o real de TP/SL), pois o codigo de erro exato nunca
+        # foi logado. Warning aqui captura o codigo/mensagem real na proxima
+        # ocorrencia, sem alterar o retorno @() (mesmo comportamento de hoje).
+        Write-Warning "CoinEx-GetPendingPositions: API retornou erro (nao lista vazia legitima) -- code=$($r.code) message=$($r.message)"
+        return @()
+    }
 
     # 2026-06-18 fix: FILTRA fantasmas (entradas sem market). A API devolvia 1
     # elemento vazio quando nao ha posicoes -> consumidores estouravam
