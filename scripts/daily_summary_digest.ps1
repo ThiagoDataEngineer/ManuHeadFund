@@ -145,6 +145,18 @@ try {
     }
 } catch { $lines.Add("Custo LLM: ERR $_") }
 
+# 10. API key expiry (2026-08-19: CoinEx key expirou em 2026-08-17 sem
+# nenhum alerta -- 90 dias sem IP vinculado, causou phantom_reconciliation
+# em massa. Silencio total ate faltar <=10 dias, evita spam diario.)
+try {
+    $apiKeyExpiryPath = Join-Path (Join-Path $projectRoot "agents") "lib_api_key_expiry.ps1"
+    if (Test-Path $apiKeyExpiryPath) {
+        . $apiKeyExpiryPath
+        $expiryLines = @(Get-ApiKeyExpiryDigestLines)
+        foreach ($el in $expiryLines) { $lines.Add("AVISO: $el") }
+    }
+} catch { $lines.Add("API key expiry check: ERR $_") }
+
 $msg = $lines -join "`n"
 Write-Host $msg
 Send-TelegramAlert -Message $msg | Out-Null

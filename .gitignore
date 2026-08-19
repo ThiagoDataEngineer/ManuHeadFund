@@ -116,6 +116,13 @@ journal/*.json.bak*
 # fqs=0/AVOID no cloud, fazendo o Mentor LLM vetar por "FQS indisponivel"
 # mesmo em ativos de boa qualidade real (XRP, ARB, RENDER etc).
 !journal/coin_registry.json
+# 2026-08-19: api_key_expiry.json e curadoria manual real (data de criacao
+# de cada API key rastreada, ver lib_api_key_expiry.ps1) -- nao dado
+# operacional. Achado real: CoinEx key expirou 2026-08-17 (90 dias sem IP
+# vinculado) sem NENHUM alerta, causou fechamento em massa de posicoes
+# reais via phantom_reconciliation. Sem este arquivo commitado, o digest
+# diario nunca teria a data de criacao pra calcular dias restantes.
+!journal/api_key_expiry.json
 # 2026-07-26: per_asset_whitelist_*.json (mais recente por LastWriteTime,
 # ver Get-QuantWhitelistPath em lib_quant_whitelist.ps1) e curadoria real de
 # tiers (TIER_A_LIVE/B/C) de um backtest quant -- ja documentado como gap

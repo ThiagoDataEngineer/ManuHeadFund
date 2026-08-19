@@ -1,0 +1,9 @@
+[
+  {
+    "name": "CoinEx (COINEX_ACCESS_ID/COINEX_SECRET_KEY)",
+    "created_at": "2026-08-19",
+    "validity_days": 90,
+    "renew_url": "https://www.coinex.com/en/apikey",
+    "note": "Sem IP vinculado -- 90 dias, renovar antes do vencimento. Atualizar este registro toda vez que a key for recriada. Owner decidiu 2026-08-19 nao vincular IP fixo (exigiria proxy/VPS dedicado)."
+  }
+]
