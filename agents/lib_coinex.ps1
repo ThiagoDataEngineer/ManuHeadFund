@@ -537,8 +537,25 @@ function CoinEx-GetPendingPositions {
         return @()
     }
 
-    # Caso contrario, busca todas as posicoes abertas
-    #
+    $r = _CoinEx-GetPendingPositionsWithStatus
+    return @($r.positions)
+}
+
+# 2026-08-19: extraida de CoinEx-GetPendingPositions -- retorna tambem
+# se a chamada teve SUCESSO real, nao so a lista de posicoes. Achado real
+# em producao (2026-08-17 16:31 UTC): CoinEx-GetPendingPositions retorna
+# @() tanto quando genuinamente nao ha posicoes QUANTO quando a API falha
+# -- indistinguivel pro caller. Detect-PhantomPositions usava isso pra
+# decidir "todas as posicoes sumiram da exchange" e fechou 13 posicoes
+# REAIS em massa (confirmado: ainda abertas na CoinEx dias depois) com
+# preco aproximado, nao o real de TP/SL. CoinEx-GetPendingPositions (acima)
+# mantem o MESMO contrato de sempre (so array, 43 consumidores existentes
+# nao mudam) -- esta funcao nova e usada so onde a distincao "erro vs vazio
+# legitimo" e critica o suficiente pra justificar abortar em vez de agir.
+function _CoinEx-GetPendingPositionsWithStatus {
+    [CmdletBinding()]
+    param()
+
     # 2026-08-04 FIX CRITICO: sem &limit=, a CoinEx aplica paginacao default
     # (page=1, poucos itens) e trunca silenciosamente -- confirmado real: com
     # 11 posicoes FUTURES abertas, esta chamada so devolvia 10, sempre
@@ -550,19 +567,15 @@ function CoinEx-GetPendingPositions {
     # aparecia na varredura bulk (so via CoinEx-GetPosition -market direto).
     # limit=100 cobre qualquer volume realista de posicoes simultaneas deste
     # sistema (cap de exposicao ja impede escala muito maior).
-    $r = CoinEx-Get "/v2/futures/pending-position?market_type=FUTURES&limit=100"
+    try {
+        $r = CoinEx-Get "/v2/futures/pending-position?market_type=FUTURES&limit=100"
+    } catch {
+        Write-Warning "_CoinEx-GetPendingPositionsWithStatus: excecao na chamada -- $_"
+        return [PSCustomObject]@{ success = $false; positions = @(); error_code = -1; error_message = "$_" }
+    }
     if ($r.code -ne 0) {
-        # 2026-08-19 DIAG (nao muda comportamento, so instrumenta): achado real
-        # em producao (2026-08-17 16:31 UTC) -- esta funcao retorna @() tanto
-        # quando genuinamente nao ha posicoes QUANTO quando a API falha (codigo
-        # de erro fora da lista retryable de Invoke-CoinExWithRetry: 4213/3008).
-        # Detect-PhantomPositions nao distingue os dois casos e fechou 13
-        # posicoes reais em massa via phantom_reconciliation com preco
-        # aproximado (nao o real de TP/SL), pois o codigo de erro exato nunca
-        # foi logado. Warning aqui captura o codigo/mensagem real na proxima
-        # ocorrencia, sem alterar o retorno @() (mesmo comportamento de hoje).
-        Write-Warning "CoinEx-GetPendingPositions: API retornou erro (nao lista vazia legitima) -- code=$($r.code) message=$($r.message)"
-        return @()
+        Write-Warning "_CoinEx-GetPendingPositionsWithStatus: API retornou erro (nao lista vazia legitima) -- code=$($r.code) message=$($r.message)"
+        return [PSCustomObject]@{ success = $false; positions = @(); error_code = $r.code; error_message = "$($r.message)" }
     }
 
     # 2026-06-18 fix: FILTRA fantasmas (entradas sem market). A API devolvia 1
@@ -570,9 +583,7 @@ function CoinEx-GetPendingPositions {
     # "Cannot bind argument to parameter 'Market'" (quebrava o trailing na nuvem).
     $raw = if ($r.data) { @($r.data) } else { @() }
     $valid = @($raw | Where-Object { $_ -and "$($_.market)".Trim() -ne "" })
-    if ($valid.Count -eq 0) { return @() }
-    if ($valid.Count -eq 1) { return ,$valid }
-    return $valid
+    return [PSCustomObject]@{ success = $true; positions = $valid; error_code = 0; error_message = "" }
 }
 
 # Posicoes abertas consolidadas (SPOT holdings + FUTURES positions).

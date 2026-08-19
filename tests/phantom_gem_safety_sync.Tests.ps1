@@ -28,6 +28,9 @@ $global:GEM_SAFETY_STATE  = "$tmpDir\gem_safety_state.json"
 Set-Item function:CoinEx-GetTicker          -Value { param($m) [PSCustomObject]@{ last = 1.0 } }
 Set-Item function:Send-TelegramAlert        -Value { param($Message) $true }
 Set-Item function:CoinEx-GetPendingPositions -Value { $global:MOCK_EXCH }
+# 2026-08-19: Detect-PhantomPositions passou a usar _CoinEx-GetPendingPositionsWithStatus
+# (fail-closed reverso -- ver lib_trailing_orphan_detection.ps1). Mock no mesmo nivel.
+Set-Item function:_CoinEx-GetPendingPositionsWithStatus -Value { [PSCustomObject]@{ success = $true; positions = $global:MOCK_EXCH; error_code = 0; error_message = "" } }
 # 2026-07-23 FIX: Detect-PhantomPositions tambem consulta saldo SPOT real
 # (CoinEx-Get "/v2/assets/spot/balance") -- sem mock, credenciais ausentes
 # em teste disparam o fail-closed correto ("abortando deteccao"), mas isso

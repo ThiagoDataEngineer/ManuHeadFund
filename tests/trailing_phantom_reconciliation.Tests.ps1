@@ -31,6 +31,11 @@ $global:TRAILING_USE_STATE_STORE = $false
 Set-Item function:CoinEx-GetTicker -Value { param($market) return [PSCustomObject]@{ last = 100.0 } }
 Set-Item function:Send-TelegramAlert -Value { param($Message) return $true }
 Set-Item function:CoinEx-GetPendingPositions -Value { return $global:MOCK_EXCH_POSITIONS }
+# 2026-08-19: Detect-PhantomPositions passou a usar _CoinEx-GetPendingPositionsWithStatus
+# (fail-closed reverso: distingue "API falhou" de "lista vazia legitima" -- achado real
+# 2026-08-17, 13 posicoes REAIS fechadas em massa por engano). Mock no mesmo nivel,
+# preserva o comportamento legado dos testes (sempre success=true).
+Set-Item function:_CoinEx-GetPendingPositionsWithStatus -Value { return [PSCustomObject]@{ success = $true; positions = $global:MOCK_EXCH_POSITIONS; error_code = 0; error_message = "" } }
 # 2026-07-29: sem registro real no historico da exchange por default (fallback
 # pro ticker, comportamento legado preservado nos testes existentes).
 Set-Item function:CoinEx-GetFinishedPositions -Value { param($Market, $Limit) return [PSCustomObject]@{ success = $true; positions = @() } }
@@ -92,6 +97,48 @@ Describe "Detect-PhantomPositions" {
         Set-MockExchange @()
         $phantoms = @(Detect-PhantomPositions)
         $phantoms.Count | Should Be 3
+    }
+}
+
+Describe "Detect-PhantomPositions -- fail-closed reverso quando API FUTURES falha (2026-08-19)" {
+    # Achado real em producao (2026-08-17 16:31 UTC): CoinEx-GetPendingPositions
+    # retorna @() tanto pra "sem posicoes" quanto pra "API falhou" -- indistinguivel.
+    # 13 posicoes FUTURES REAIS (confirmadas ainda abertas na CoinEx dias depois,
+    # via tela real do owner) fecharam em massa achando que tinham sumido. Fix:
+    # Detect-PhantomPositions usa _CoinEx-GetPendingPositionsWithStatus e ABORTA
+    # (retorna @(), nao fecha nada) quando a chamada FALHOU de verdade -- so trata
+    # como "sumiu" quando a API respondeu com sucesso genuino.
+
+    # 2026-08-19 FIX: Set-Item function:_CoinEx-GetPendingPositionsWithStatus
+    # reescreve no SCRIPT scope (persiste entre It/Describe seguintes no mesmo
+    # arquivo) -- sem restaurar, o mock success=false vazava pro Describe
+    # seguinte (Reconcile-PhantomPositions), quebrando "retorna closed=0
+    # quando nao ha phantoms". AfterEach restaura o mock padrao do arquivo
+    # (mesmo comportamento usado pelos demais Describe deste arquivo).
+    BeforeEach { Reset-TrailingFile; Set-MockExchange @() }
+    AfterEach {
+        Set-Item function:_CoinEx-GetPendingPositionsWithStatus -Value { [PSCustomObject]@{ success = $true; positions = $global:MOCK_EXCH_POSITIONS; error_code = 0; error_message = "" } }
+    }
+
+    It "API FUTURES falha (success=false) -- NAO marca nenhuma posicao local como phantom, mesmo com posicoes ativas" {
+        Add-TrailingPosition -Market "ADAUSDT" -Side "SHORT" -Entry 0.18 -Stop 0.19 -Target 0.15
+        Add-TrailingPosition -Market "XRPUSDT" -Side "SHORT" -Entry 1.00 -Stop 1.05 -Target 0.90
+        Set-Item function:_CoinEx-GetPendingPositionsWithStatus -Value {
+            [PSCustomObject]@{ success = $false; positions = @(); error_code = 999; error_message = "erro simulado" }
+        }
+        $phantoms = @(Detect-PhantomPositions)
+        $phantoms.Count | Should Be 0
+        (Get-TrailingPositions | Where-Object { $_.active }).Count | Should Be 2
+    }
+
+    It "API FUTURES responde com sucesso genuino (success=true, vazio real) -- continua fechando phantoms normalmente" {
+        Add-TrailingPosition -Market "ADAUSDT" -Side "SHORT" -Entry 0.18 -Stop 0.19 -Target 0.15
+        Set-Item function:_CoinEx-GetPendingPositionsWithStatus -Value {
+            [PSCustomObject]@{ success = $true; positions = @(); error_code = 0; error_message = "" }
+        }
+        $phantoms = @(Detect-PhantomPositions)
+        $phantoms.Count | Should Be 1
+        $phantoms[0].market | Should Be "ADAUSDT"
     }
 }
 

@@ -423,8 +423,21 @@ function Detect-PhantomPositions {
     [CmdletBinding()]
     param()
     try {
-        # FUTURES: pending positions
-        $exchangePositions = @(CoinEx-GetPendingPositions | ForEach-Object { $_ })
+        # 2026-08-19 FIX CRITICO (fail-closed reverso, mesmo principio ja usado
+        # 6 linhas abaixo pro saldo SPOT): achado real em producao -- 13
+        # posicoes FUTURES REAIS (confirmadas ainda abertas na CoinEx dias
+        # depois) fecharam em massa via phantom_reconciliation em 2026-08-17
+        # 16:31 UTC porque CoinEx-GetPendingPositions retornou @() (mesmo
+        # retorno de "sem posicoes" e de "API falhou", indistinguivel antes
+        # deste fix). Usa a variante com status: se a chamada FALHOU de
+        # verdade, aborta a deteccao inteira em vez de tratar "nao vi
+        # nenhuma posicao" como "todas as posicoes sumiram".
+        $exchangeCall = _CoinEx-GetPendingPositionsWithStatus
+        if (-not $exchangeCall.success) {
+            Write-Warning "Detect-PhantomPositions: FUTURES pending-position indisponivel (code=$($exchangeCall.error_code) msg=$($exchangeCall.error_message)), abortando deteccao: nao da pra afirmar que posicoes sumiram"
+            return @()
+        }
+        $exchangePositions = @($exchangeCall.positions | ForEach-Object { $_ })
         $exchangeMarkets = @($exchangePositions | ForEach-Object { "$($_.market)" })
 
         # 2026-06-11 fix: posicoes SPOT (GEMs BASED/AIN/FIRO/COAI) nunca aparecem
