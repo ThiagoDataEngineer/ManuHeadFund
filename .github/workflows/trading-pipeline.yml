@@ -115,6 +115,30 @@ jobs:
             Write-Host "⚠ manuheadfund.trade_rejections ainda ausente -- rodar docs/SETUP_SUPABASE_FIX_TRADE_REJECTIONS_SCHEMA_2026_07_16.sql no Supabase Dashboard" -ForegroundColor Yellow
           }
 
+      # 2026-08-19 DIAG TEMPORARIO (remover apos confirmar): owner reportou
+      # trade_rejections vazia via ANON key (0 linhas, possivel RLS
+      # bloqueando SELECT tambem, nao so INSERT) mesmo apos fix de escopo do
+      # STATE_STORE_SCHEMA (commit 98522bd) e apesar deste MESMO step acima
+      # inserir um registro "INIT" a cada ciclo (~5min) ha semanas usando a
+      # SERVICE key. Se a contagem real (via SERVICE key, ignora RLS) for
+      # alta, confirma que e problema de leitura/policy, nao de escrita.
+      - name: DIAG trade_rejections real count (temporario)
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          $url = "${{ secrets.SUPABASE_URL }}"
+          $key = "${{ secrets.SUPABASE_SERVICE_KEY }}"
+          if (-not $url -or -not $key) { Write-Host "sem credenciais"; exit 0 }
+          $headers = @{ "Authorization" = "Bearer $key"; "apikey" = $key; "Accept-Profile" = "manuheadfund"; "Prefer" = "count=exact" }
+          try {
+            $resp = Invoke-WebRequest -Uri "$url/rest/v1/trade_rejections?select=market&limit=1" -Headers $headers -Method Get -ErrorAction Stop
+            Write-Host "DIAG trade_rejections total (SERVICE key): $($resp.Headers['Content-Range'])" -ForegroundColor Magenta
+            $resp2 = Invoke-WebRequest -Uri "$url/rest/v1/trade_rejections?select=market,gate,ts&order=ts.desc&limit=5" -Headers $headers -Method Get -ErrorAction Stop
+            Write-Host "DIAG ultimas 5 linhas: $($resp2.Content)" -ForegroundColor Magenta
+          } catch {
+            Write-Host "DIAG ERRO: $_" -ForegroundColor Red
+          }
+
       - name: Initialize Supabase Data
         shell: pwsh
         run: |
