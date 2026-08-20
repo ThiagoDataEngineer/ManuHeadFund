@@ -1206,7 +1206,67 @@ jobs:
             Write-Host "WARN: $_" -ForegroundColor Yellow
           }
 
-  # ----------------------------------------------------------------------------
+  # ============================================================================
+  # JOB 17b: TRADING SCAN + EXECUTOR (cada 5min) - 2026-08-20
+  # Ativa scan_master + gem_executor automaticamente, respeitando autonomy_flags
+  # ============================================================================
+  trading-scan-executor:
+    name: Trading Scan + Executor
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:TELEGRAM_BOT_TOKEN = '${{ secrets.TELEGRAM_BOT_TOKEN }}'" + "`n"
+          $content += "`$env:TELEGRAM_CHAT_ID = '${{ secrets.TELEGRAM_CHAT_ID }}'" + "`n"
+          $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content += "`$env:FRED_API_KEY = '${{ secrets.FRED_API_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run Scan + Execute
+        shell: pwsh
+        continue-on-error: true
+        run: |
+          try {
+            Write-Host "=== TRADING SCAN + EXECUTOR ===" -ForegroundColor Cyan
+
+            $flagsPath = "config/autonomy_flags.json"
+            $flags = @{ human_approval_required = $true }
+            if (Test-Path $flagsPath) {
+              try {
+                $flagContent = Get-Content $flagsPath -Raw | ConvertFrom-Json
+                $flags = @{
+                  human_approval_required = $flagContent.human_approval_required
+                  auto_execute_futures = $flagContent.auto_execute_futures
+                  auto_execute_short = $flagContent.auto_execute_short
+                  auto_execute_long = $flagContent.auto_execute_long
+                }
+              } catch { }
+            }
+
+            if ($flags.human_approval_required -eq $false) {
+              Write-Host "AUTONOMY MODE ACTIVE" -ForegroundColor Green
+              & ./scripts/scan_master.ps1 -TopN 10 -MinScore 65
+            } else {
+              Write-Host "Manual approval mode" -ForegroundColor Yellow
+            }
+
+            Write-Host "Scan cycle complete" -ForegroundColor Green
+          } catch {
+            Write-Host "WARN: $_" -ForegroundColor Yellow
+          }
+          exit 0
+
+  # ============================================================================
   # JOB 18: LAYER 1 â€” Adaptive Trailing (cada 5min)
   # ----------------------------------------------------------------------------
   layer1-trailing-adaptive:
