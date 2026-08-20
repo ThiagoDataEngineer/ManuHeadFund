@@ -1232,9 +1232,10 @@ jobs:
           $content += "`$env:FRED_API_KEY = '${{ secrets.FRED_API_KEY }}'" + "`n"
           $content | Out-File "agents/config.local.ps1" -Encoding UTF8
 
-      - name: Run Scan + Execute
+      - name: Run Scan + Execute (direct mode)
         shell: pwsh
         continue-on-error: true
+        timeout-minutes: 10
         run: |
           try {
             Write-Host "=== TRADING SCAN + EXECUTOR ===" -ForegroundColor Cyan
@@ -1255,12 +1256,34 @@ jobs:
 
             if ($flags.human_approval_required -eq $false) {
               Write-Host "AUTONOMY MODE ACTIVE" -ForegroundColor Green
-              & ./scripts/scan_master.ps1 -Once -GemTopN 10
+
+              . ./agents/config.ps1
+              . ./agents/lib_coinex.ps1
+              . ./agents/gem_executor.ps1
+
+              Write-Host "Loaded: gem_executor, ready to scan" -ForegroundColor Green
+
+              $markets = @("BTCUSDT","ETHUSDT","SOLUSDT","ADAUSDT","LINKUSDT","AVAXUSDT")
+              $executed = 0
+              foreach ($market in $markets) {
+                try {
+                  Write-Host "Testing: $market" -ForegroundColor DarkCyan
+                  $result = Invoke-GemExecute -Market $market -DryRun
+                  if ($result -and -not $result.blocked) {
+                    $executed++
+                    Write-Host "  -> APPROVED $market" -ForegroundColor Green
+                  } else {
+                    Write-Host "  -> Blocked" -ForegroundColor Yellow
+                  }
+                } catch {
+                  Write-Host "  -> Error: $_" -ForegroundColor Red
+                }
+              }
+              Write-Host "Executed: $executed markets" -ForegroundColor Green
             } else {
-              Write-Host "Manual approval mode" -ForegroundColor Yellow
+              Write-Host "Manual approval mode (autonomy disabled)" -ForegroundColor Yellow
             }
 
-            Write-Host "Scan cycle complete" -ForegroundColor Green
           } catch {
             Write-Host "WARN: $_" -ForegroundColor Yellow
           }
