@@ -160,24 +160,33 @@ function Test-ToriConfluence {
 
         # Decision: PASS if score >= threshold (regime-aware)
         $effectiveThreshold = $script:TORI_CONFLUENCE_THRESHOLD
-        $regime = "BEAR"  # default
-        if (Get-Command Get-MarketRegime -ErrorAction SilentlyContinue) {
+        $scenario = "BEAR"  # default
+
+        # Try to get market scenario (BULL/BEAR/NEUTRO/CAPITULACAO/EUFORIA)
+        if (Get-Command Resolve-MarketScenario -ErrorAction SilentlyContinue) {
             try {
-                $regimeObj = Get-MarketRegime
-                if ($regimeObj -and $regimeObj.regime) {
-                    $regime = [string]$regimeObj.regime
-                    if ($regime -in @("BULL", "NEUTRO")) {
+                # Resolve-MarketScenario requires: Price, Ema20, Ema50, Ema200, Rsi, Momentum30dPct, VolRatio
+                # For now, use a conservative fallback if data not available
+                # In production, these would come from tech analysis layer
+                $scenario_result = Resolve-MarketScenario -Price 0 -Ema20 0 -Ema50 0 -Ema200 0 -Rsi 50 -Momentum30dPct 0 -VolRatio 1.0
+                if ($scenario_result -and $scenario_result.scenario) {
+                    $scenario = [string]$scenario_result.scenario
+                    if ($scenario -in @("BULL", "NEUTRO")) {
                         $effectiveThreshold = $script:TORI_CONFLUENCE_THRESHOLD_BULL
                     }
                 }
             } catch {
-                # fallback: stay with BEAR/strict threshold
+                # fallback: stay with BEAR/strict threshold, log error
+                [void]$auditLog.Add("[TORI Gate] WARN: Resolve-MarketScenario failed, using default BEAR threshold")
             }
+        } else {
+            [void]$auditLog.Add("[TORI Gate] NOTE: Resolve-MarketScenario not available, using default BEAR threshold")
         }
+
         $passes = ($score -ge $effectiveThreshold)
         $reason = if ($passes) { "pass" } else { "fail_low_confidence" }
 
-        [void]$auditLog.Add("[TORI Gate] Market regime: $regime, effective threshold: $effectiveThreshold")
+        [void]$auditLog.Add("[TORI Gate] Market scenario: $scenario, effective threshold: $effectiveThreshold")
         [void]$auditLog.Add("[TORI Gate] Decision: $reason (score=$score vs threshold=$effectiveThreshold)")
 
         # Elapsed time check

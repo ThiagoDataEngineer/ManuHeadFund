@@ -208,7 +208,10 @@
       "Bash(awk '/MARKET_TO_CG = \\\\{/,/^\\\\}/' \"c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\backtest\\\\coingecko_enrichment.py\")",
       "Bash(python -m pytest tests/test_coingecko_enrichment.py -q)",
       "Bash(python -m yaml c:\\\\Users\\\\thiag\\\\Coinex_AI_USER_API\\\\.github\\\\workflows\\\\coin-registry-enrichment.yml)",
-      "Bash(python -c \"import yaml; yaml.safe_load\\(open\\('c:\\\\\\\\Users\\\\\\\\thiag\\\\\\\\Coinex_AI_USER_API\\\\\\\\.github\\\\\\\\workflows\\\\\\\\coin-registry-enrichment.yml'\\)\\)\")"
+      "Bash(python -c \"import yaml; yaml.safe_load\\(open\\('c:\\\\\\\\Users\\\\\\\\thiag\\\\\\\\Coinex_AI_USER_API\\\\\\\\.github\\\\\\\\workflows\\\\\\\\coin-registry-enrichment.yml'\\)\\)\")",
+      "Bash(cat)",
+      "Bash(chmod +x /tmp/check_state.sh)",
+      "Bash(bash /tmp/check_state.sh)"
     ],
     "additionalDirectories": [
       "C:\\Users\\thiag\\Diagram_Forge\\scripts",
