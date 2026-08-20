@@ -1255,7 +1255,7 @@ jobs:
 
             if ($flags.human_approval_required -eq $false) {
               Write-Host "AUTONOMY MODE ACTIVE" -ForegroundColor Green
-              & ./scripts/scan_master.ps1 -TopN 10 -MinScore 65
+              & ./scripts/scan_master.ps1 -Once -GemTopN 10
             } else {
               Write-Host "Manual approval mode" -ForegroundColor Yellow
             }
