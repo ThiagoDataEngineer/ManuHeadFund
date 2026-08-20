@@ -15,6 +15,12 @@
 # ============================================================================
 
 $script:TORI_CONFLUENCE_THRESHOLD = 80    # Minimum confluence score for ALLOW
+$script:TORI_CONFLUENCE_THRESHOLD_BULL = 65   # Regime-aware: abaixado em BULL (menos confluencia disponivel em rango)
+# 2026-08-20 FIX: score=65 era consistente em mercado BULL/NEUTRO (47 candidatos,
+# 100% bloqueados por 80 threshold). Achado: FRACTAL+baseline(50)=65, outros sinais
+# (RSI_EXTREME, CHoCH, VOLUME_CLIMAX, VOLUME_PROFILE) nao disparam em rango. Fix:
+# regime-aware threshold -- 65 em BULL/NEUTRO, 80 em BEAR/trending.
+#
 # 2026-07-09 EVOLUTION WIRE: threshold agora e tunavel (registry 70-90).
 # Bound 2 de 2: clamp local mesmo se overlay vier fora do range.
 if (Get-Command Get-EvolutionParams -ErrorAction SilentlyContinue) {
@@ -152,11 +158,27 @@ function Test-ToriConfluence {
         $signalsJoined = if ($signals.Count -gt 0) { $signals -join ", " } else { "none" }
         [void]$auditLog.Add("[TORI Gate] Confluence score computed: $score (signals: $signalsJoined)")
 
-        # Decision: PASS if score >= threshold
-        $passes = ($score -ge $script:TORI_CONFLUENCE_THRESHOLD)
+        # Decision: PASS if score >= threshold (regime-aware)
+        $effectiveThreshold = $script:TORI_CONFLUENCE_THRESHOLD
+        $regime = "BEAR"  # default
+        if (Get-Command Get-MarketRegime -ErrorAction SilentlyContinue) {
+            try {
+                $regimeObj = Get-MarketRegime
+                if ($regimeObj -and $regimeObj.regime) {
+                    $regime = [string]$regimeObj.regime
+                    if ($regime -in @("BULL", "NEUTRO")) {
+                        $effectiveThreshold = $script:TORI_CONFLUENCE_THRESHOLD_BULL
+                    }
+                }
+            } catch {
+                # fallback: stay with BEAR/strict threshold
+            }
+        }
+        $passes = ($score -ge $effectiveThreshold)
         $reason = if ($passes) { "pass" } else { "fail_low_confidence" }
 
-        [void]$auditLog.Add("[TORI Gate] Decision: $reason (score=$score vs threshold=$script:TORI_CONFLUENCE_THRESHOLD)")
+        [void]$auditLog.Add("[TORI Gate] Market regime: $regime, effective threshold: $effectiveThreshold")
+        [void]$auditLog.Add("[TORI Gate] Decision: $reason (score=$score vs threshold=$effectiveThreshold)")
 
         # Elapsed time check
         $stopwatch.Stop()
