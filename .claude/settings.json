@@ -211,7 +211,8 @@
       "Bash(python -c \"import yaml; yaml.safe_load\\(open\\('c:\\\\\\\\Users\\\\\\\\thiag\\\\\\\\Coinex_AI_USER_API\\\\\\\\.github\\\\\\\\workflows\\\\\\\\coin-registry-enrichment.yml'\\)\\)\")",
       "Bash(cat)",
       "Bash(chmod +x /tmp/check_state.sh)",
-      "Bash(bash /tmp/check_state.sh)"
+      "Bash(bash /tmp/check_state.sh)",
+      "Bash(bash -c 'until gh run view 32404607539 --json status --jq \".status\" | grep -q \"completed\"; do echo \"Waiting for run to complete... $\\(gh run view 32404607539 --json status --jq \".status\"\\)\"; sleep 10; done; echo \"Run completed!\"')"
     ],
     "additionalDirectories": [
       "C:\\Users\\thiag\\Diagram_Forge\\scripts",

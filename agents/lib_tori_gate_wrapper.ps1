@@ -14,17 +14,17 @@
 # CONFIGURATION
 # ============================================================================
 
-$script:TORI_CONFLUENCE_THRESHOLD = 70    # Minimum confluence score for ALLOW
-# 2026-08-20 CRITICAL: score=65 era consistente em mercado BULL/NEUTRO (47 candidatos,
-# 100% bloqueados por 80 threshold). Achado: FRACTAL+baseline(50)=65, outros sinais
-# (RSI_EXTREME, CHoCH, VOLUME_CLIMAX, VOLUME_PROFILE) nao disparam em rango.
-# Tentativa 1: regime-aware (65 em BULL, 80 em BEAR) falhou -- Get-MarketScenario
-# nao disponivel em Test-ToriConfluence (dados nao passados).
-# Solucao final: threshold=70 global (meio termo). Justify:
-# - Em BEAR: RSI_EXTREME(20) + CHoCH(15) + FRACTAL(15) = 50+50 = 100, passa 70 ✓
-# - Em BULL/rango: FRACTAL(15) = 50+15 = 65, PASS pra aceitar candidatos fracos ✓
-# - VOLUME_CLIMAX(20) ou VOLUME_PROFILE(10) quando disparam, score ja >= 75 ✓
-# Falso-positivos reduzidos vs aceitar 65 puro; verdadeiros-positivos restaurados.
+$script:TORI_CONFLUENCE_THRESHOLD = 65    # Minimum confluence score for ALLOW
+# 2026-08-20 CRITICAL: score=65 era consistente em mercado BULL/NEUTRO (40-47
+# candidatos, 100% bloqueados por 80 threshold). Achado: FRACTAL+baseline(50)=65.
+# Em rango, outros sinais (RSI_EXTREME, CHoCH, VOLUME_CLIMAX, VOLUME_PROFILE)
+# nao disparam. Tentativa 1 (regime-aware) falhou -- dados nao disponivel.
+# Solucao: threshold=65 (aceita FRACTAL puro + baseline).
+# Trade-off: mais falso-positivos em BULL vs restaurar pipeline de trades.
+# Em BEAR: quando RSI_EXTREME+CHoCH disparam, score>=80 de qualquer forma.
+# VOLUME_CLIMAX(20)+FRACTAL(15)=35+50=85, passa 65 ✓
+# Hypothesis: FRACTAL sozinho em score de 65 ainda e valido sinal
+# (nao e ruido puro, e confluencia minima aceitavel em rango).
 #
 # 2026-07-09 EVOLUTION WIRE: threshold agora e tunavel (registry 70-90).
 # Bound 2 de 2: clamp local mesmo se overlay vier fora do range.
