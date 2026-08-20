@@ -29,7 +29,7 @@
     { "market": "SEIUSDT",  "note": "layer1 rapido" },
     { "market": "WIFUSDT",  "note": "meme liquido; vol alta" },
     { "market": "PEPEUSDT", "note": "meme liquido; vol alta" },
-    { "market": "TONUSDT",  "note": "layer1 liquido" },
+    { "market": "GRAMUSDT", "note": "layer1 liquido (rebrand TON->GRAM 2026-06-15, mesmo ativo -- par TONUSDT descontinuado na CoinEx)" },
     { "market": "DYDXUSDT", "note": "perp DEX; DYDX +23% historico em posicao" }
   ]
 }

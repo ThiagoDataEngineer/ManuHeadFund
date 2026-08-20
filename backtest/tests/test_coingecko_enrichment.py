@@ -14,6 +14,7 @@ from coingecko_enrichment import (
     derive_registry_fields,
     merge_into_registry,
     find_markets_needing_full_enrichment,
+    build_supabase_row,
 )
 
 
@@ -28,6 +29,46 @@ class TestMapping:
         assert map_market_to_coingecko_id("UNKNOWNUSDT") is None
     def test_lowercase_normalized(self):
         assert map_market_to_coingecko_id("btcusdt") == "bitcoin"
+
+    def test_expansion_2026_08_19_top_liquid_markets_mapped(self):
+        # Achado real: Invoke-FqsLazyEnrich (gem_executor.ps1) ja chama este
+        # mapping automaticamente a cada candidato novo, mas so cobria 53
+        # tickers -- travando LINK/ADA/AVAX/BNB/UNI/etc em FQS=AVOID por
+        # ausencia de mapeamento (nao qualidade real). Expandido pra cobrir
+        # a maioria dos top ~100 mercados FUTURES liquidos da CoinEx.
+        expected = {
+            "LINKUSDT": "chainlink", "ADAUSDT": "cardano", "AVAXUSDT": "avalanche-2",
+            "BNBUSDT": "binancecoin", "UNIUSDT": "uniswap", "CROUSDT": "crypto-com-chain",
+            "XAUTUSDT": "tether-gold", "AAVEUSDT": "aave",
+        }
+        for market, cg_id in expected.items():
+            assert map_market_to_coingecko_id(market) == cg_id, f"{market} deveria mapear para {cg_id}"
+
+    def test_gram_usdt_maps_to_same_id_as_legacy_ton(self):
+        # Rebrand TON->GRAM 2026-06-15 na CoinEx (mesmo ativo, par TONUSDT
+        # descontinuado) -- GRAMUSDT precisa resolver pro MESMO CoinGecko ID
+        # que TONUSDT ja usava, nao um ID novo/errado.
+        assert map_market_to_coingecko_id("GRAMUSDT") == map_market_to_coingecko_id("TONUSDT")
+        assert map_market_to_coingecko_id("GRAMUSDT") == "the-open-network"
+
+    def test_no_duplicate_keys_in_market_to_cg(self):
+        # TDD real: duplicata de chave em dict literal Python nao lanca erro
+        # (a segunda silenciosamente sobrescreve a primeira) -- valida via
+        # AST que o arquivo fonte nao tem chaves repetidas no bloco
+        # MARKET_TO_CG, garantia que nao regride ao expandir no futuro.
+        import ast
+        src_path = os.path.join(os.path.dirname(__file__), "..", "coingecko_enrichment.py")
+        with open(src_path, encoding="utf-8") as f:
+            tree = ast.parse(f.read())
+        for node in ast.walk(tree):
+            if isinstance(node, ast.Assign) and any(
+                isinstance(t, ast.Name) and t.id == "MARKET_TO_CG" for t in node.targets
+            ):
+                keys = [k.value for k in node.value.keys]
+                dupes = [k for k in set(keys) if keys.count(k) > 1]
+                assert dupes == [], f"chaves duplicadas em MARKET_TO_CG: {dupes}"
+                return
+        assert False, "MARKET_TO_CG nao encontrado no arquivo fonte"
 
 
 class TestDeriveFields:
@@ -168,3 +209,35 @@ class TestMerge:
         assert merged["X"]["age_years"] == 4
         assert merged["X"]["burn_active"] is True
         assert merged["X"]["utility_score"] == 0.5
+
+
+class TestBuildSupabaseRow:
+    # 2026-08-19: coin_registry.json (curadoria manual, git) fica cada vez
+    # mais dificil de escalar pra ~100 moedas -- pivotou pra Supabase como
+    # destino do job periodico (persistencia central, sem git commit-back).
+    # build_supabase_row so deve levar campos DERIVADOS (CoinGecko), nunca
+    # burn_active/utility_score/concentration_top10 (esses continuam so no
+    # registry estatico curado manualmente -- CoinGecko nao tem esse dado).
+    def test_only_derived_fields_included(self):
+        derived = {
+            "age_years": 16, "supply_capped": True, "recovered_2021_ath": True,
+            "current_price_usd": 77000.0, "ath_all_time_usd": 69000.0,
+            "max_supply": 21000000.0, "circulating_supply": 19500000.0,
+        }
+        row = build_supabase_row("BTCUSDT", "bitcoin", derived)
+        assert row["market"] == "BTCUSDT"
+        assert row["coingecko_id"] == "bitcoin"
+        assert row["source"] == "coingecko_enrichment_auto"
+        assert row["age_years"] == 16
+        assert row["supply_capped"] is True
+        assert "burn_active" not in row
+        assert "utility_score" not in row
+        assert "concentration_top10" not in row
+
+    def test_partial_derived_fields_ok(self):
+        # Nem toda resposta CoinGecko tem todos os campos (ex: sem price/ath) --
+        # row deve conter so o que veio, sem KeyError.
+        derived = {"age_years": 5}
+        row = build_supabase_row("NEWUSDT", "new-coin", derived)
+        assert row["age_years"] == 5
+        assert "current_price_usd" not in row

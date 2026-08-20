@@ -133,7 +133,7 @@ function Get-AssetBeta {
         "NEARUSDT" = 1.9   # Altcoin pequenininho
         "UNIUSDT" = 1.6    # DEX token
         "BNBUSDT" = 1.2    # Binance, estável
-        "TONUSDT" = 1.7    # Telegram, novo
+        "GRAMUSDT" = 1.7   # Telegram/TON rebrand 2026-06-15 (era TONUSDT, par descontinuado na CoinEx)
     }
 
     if ($cache -and $cache.ContainsKey($Market)) {

@@ -1,0 +1,72 @@
+# GitHub Actions - Coin Registry Dynamic Enrichment via CoinGecko
+# Rodando a cada 6 horas, alimenta manuheadfund.coin_registry_dynamic
+# com dados frescos (age_years, supply_capped, price, ATH, etc).
+
+name: Coin Registry Enrichment
+
+on:
+  schedule:
+    # 02:00, 08:00, 14:00, 20:00 UTC
+    - cron: '0 2,8,14,20 * * *'
+
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'Dry run (mostra diff sem salvar)'
+        type: boolean
+        default: false
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  enrich-coin-registry:
+    name: Enrich Coin Registry via CoinGecko
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        python-version: ['3.12']
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: ${{ matrix.python-version }}
+
+      - name: Setup Supabase Credentials
+        shell: bash
+        run: |
+          mkdir -p agents journal logs
+          cat > agents/config.local.ps1 <<EOF
+          \$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'
+          \$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'
+          EOF
+
+      - name: Run CoinGecko Enrichment
+        shell: bash
+        run: |
+          cd backtest
+          export SUPABASE_URL='${{ secrets.SUPABASE_URL }}'
+          export SUPABASE_SERVICE_KEY='${{ secrets.SUPABASE_SERVICE_KEY }}'
+
+          # --sleep 3.0 = 20 coins/min, bem abaixo do CoinGecko free tier 30 req/min
+          # --supabase = upsert em manuheadfund.coin_registry_dynamic
+          python coingecko_enrichment.py \
+            --all-from-registry \
+            --supabase \
+            --sleep 3.0
+
+          echo "✓ Enrichment complete"
+
+      - name: Notify on Failure
+        if: failure()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: 'CoinGecko enrichment job failed'
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+          fields: repo,message,commit,author

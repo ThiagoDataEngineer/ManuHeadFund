@@ -48,10 +48,46 @@ function Get-FundamentalScore {
     } catch {
         return [PSCustomObject]@{ market=$Market; fqs=0; category="AVOID"; reason="registry_parse_error" }
     }
-    if (-not $reg.PSObject.Properties[$Market]) {
+
+    # 2026-08-19: coin_registry.json (curadoria manual, git) so cobria ~68
+    # moedas -- travava LONG FUTURES em coins liquidas reais (LINK/ADA/AVAX/etc)
+    # so por AUSENCIA de cadastro, nao qualidade real. coin_registry_dynamic
+    # (Supabase) e alimentado por job periodico (coingecko_enrichment.py
+    # --supabase, ver docs/SETUP_SUPABASE_COIN_REGISTRY_DYNAMIC_2026_08_19.sql)
+    # com dado FRESCO de mercado (age/supply/price/ath). So cobre os campos
+    # derivaveis via CoinGecko -- burn_active/utility_score/concentration_top10
+    # (julgamento curado manual) vem do registry estatico quando existir,
+    # e ficam no default conservador (false/0) quando o market so existe no
+    # dinamico. Dynamic e um OVERLAY sobre o estatico, nunca substitui: se o
+    # market ja esta no JSON curado, os campos do JSON vencem (curadoria > auto).
+    $dynEntry = $null
+    if (Get-Command Get-StateRecords -ErrorAction SilentlyContinue) {
+        try {
+            $dynRows = @(Get-StateRecords -Table "coin_registry_dynamic" -Filter @{ market = $Market })
+            if ($dynRows.Count -gt 0) { $dynEntry = $dynRows[0] }
+        } catch {
+            # Fail-safe: Supabase indisponivel nao deve bloquear o gate --
+            # segue so com o registry estatico (comportamento pre-existente).
+        }
+    }
+
+    $hasStatic = $null -ne $reg.PSObject.Properties[$Market]
+    if (-not $hasStatic -and -not $dynEntry) {
         return [PSCustomObject]@{ market=$Market; fqs=0; category="AVOID"; reason="market_not_in_registry" }
     }
-    $e = $reg.$Market
+
+    $e = if ($hasStatic) { $reg.$Market } else { [PSCustomObject]@{} }
+    if ($dynEntry) {
+        # Overlay: campos dinamicos preenchem SO o que o estatico nao definiu.
+        foreach ($prop in @("age_years","supply_capped","recovered_2021_ath","current_price_usd","ath_all_time_usd")) {
+            $dynVal = $dynEntry.$prop
+            $staticHas = $e.PSObject.Properties[$prop] -and $null -ne $e.$prop
+            if (-not $staticHas -and $null -ne $dynVal) {
+                if ($e.PSObject.Properties[$prop]) { $e.$prop = $dynVal }
+                else { $e | Add-Member -MemberType NoteProperty -Name $prop -Value $dynVal -Force }
+            }
+        }
+    }
     $fqs = 0
     $reasons = @()
 

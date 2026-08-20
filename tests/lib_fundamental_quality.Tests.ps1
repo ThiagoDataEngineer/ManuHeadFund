@@ -236,4 +236,87 @@ Describe "FQS V1.6 - cycle resilience refinado" {
 }
 
 
+Describe "FQS 2026-08-19 -- overlay Supabase coin_registry_dynamic" {
+    # coin_registry.json (curadoria manual, git) so cobre ~68 moedas -- travava
+    # LONG FUTURES em coins liquidas reais (LINK/ADA/AVAX/etc) so por AUSENCIA
+    # de cadastro. coin_registry_dynamic (Supabase, alimentado por
+    # coingecko_enrichment.py --supabase) cobre o resto com dado fresco.
+    $tmpDyn = Join-Path $env:TEMP ("fqs_dyn_$([guid]::NewGuid())")
+    New-Item -ItemType Directory -Path $tmpDyn -Force | Out-Null
+
+    AfterEach {
+        Remove-Item function:Get-StateRecords -ErrorAction SilentlyContinue
+    }
+
+    It "Market AUSENTE do estatico mas presente no dynamic usa dado do Supabase" {
+        Set-Item function:Get-StateRecords -Value {
+            param($Table, $Filter)
+            return @([PSCustomObject]@{
+                market = "LINKUSDT"; age_years = 12; supply_capped = $false
+                recovered_2021_ath = $true; current_price_usd = 25.0; ath_all_time_usd = 53.0
+            })
+        }
+        $reg = Join-Path $tmpDyn "empty.json"
+        "{}" | Out-File $reg -Encoding utf8
+        $r = Get-FundamentalScore -Market "LINKUSDT" -RegistryPath $reg
+        $r.reason | Should Not Be "market_not_in_registry"
+        ($r.reasons -contains "age_3y+") | Should Be $true
+        ($r.reasons -contains "recovered_ath") | Should Be $true
+    }
+
+    It "Market presente no estatico: campos curados (burn_active/utility_score) vencem, dynamic so preenche o resto" {
+        Set-Item function:Get-StateRecords -Value {
+            param($Table, $Filter)
+            return @([PSCustomObject]@{
+                market = "MIXUSDT"; age_years = 999; supply_capped = $false
+            })
+        }
+        $reg = Join-Path $tmpDyn "mixed.json"
+        @{
+            MIXUSDT = @{
+                age_years = 5; supply_capped = $true; burn_active = $true
+                utility_score = 0.9; concentration_top10 = 0.2
+                recovered_2021_ath = $true; listing_years = 4
+            }
+        } | ConvertTo-Json -Depth 5 | Out-File $reg -Encoding utf8
+        $r = Get-FundamentalScore -Market "MIXUSDT" -RegistryPath $reg
+        # age_years=5 do estatico deve vencer, NAO 999 do dynamic
+        $r.details.age_years | Should Be 5
+        $r.details.supply_capped | Should Be $true
+    }
+
+    It "Market ausente dos dois continua AVOID (comportamento pre-existente preservado)" {
+        Set-Item function:Get-StateRecords -Value {
+            param($Table, $Filter)
+            return @()
+        }
+        $reg = Join-Path $tmpDyn "empty2.json"
+        "{}" | Out-File $reg -Encoding utf8
+        $r = Get-FundamentalScore -Market "NOWHEREUSDT" -RegistryPath $reg
+        $r.fqs | Should Be 0
+        $r.category | Should Be "AVOID"
+        $r.reason | Should Be "market_not_in_registry"
+    }
+
+    It "Falha no Supabase (excecao) nao quebra o gate -- segue so com estatico" {
+        Set-Item function:Get-StateRecords -Value {
+            param($Table, $Filter)
+            throw "Supabase indisponivel"
+        }
+        $reg = Join-Path $tmpDyn "staticonly.json"
+        @{
+            SAFEUSDT = @{
+                age_years = 4; supply_capped = $true; burn_active = $true
+                utility_score = 0.9; concentration_top10 = 0.2
+                recovered_2021_ath = $true; listing_years = 3
+            }
+        } | ConvertTo-Json -Depth 5 | Out-File $reg -Encoding utf8
+        $r = Get-FundamentalScore -Market "SAFEUSDT" -RegistryPath $reg
+        $r.category | Should Be "BLUE_CHIP"
+    }
+
+    Remove-Item $tmpDyn -Recurse -Force -ErrorAction SilentlyContinue
+}
+
+
 Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue

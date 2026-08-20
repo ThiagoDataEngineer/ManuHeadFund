@@ -19,7 +19,7 @@ Usage:
 Preserva campos curated manualmente (burn_active, utility_score, concentration_insider_pct, notes).
 """
 from __future__ import annotations
-import argparse, json, sys, time
+import argparse, json, os, sys, time
 from datetime import datetime
 from pathlib import Path
 from typing import Optional
@@ -28,6 +28,8 @@ import urllib.request, urllib.parse, urllib.error
 ROOT = Path(__file__).resolve().parent.parent
 REGISTRY_PATH = ROOT / "journal" / "coin_registry.json"
 COINGECKO_BASE = "https://api.coingecko.com/api/v3"
+SUPABASE_SCHEMA = "manuheadfund"
+SUPABASE_TABLE = "coin_registry_dynamic"
 
 
 # Hardcoded mapping market -> CoinGecko ID (mais confiavel que /coins/list search)
@@ -88,6 +90,72 @@ MARKET_TO_CG = {
     "WLDUSDT":     "worldcoin-wld",
     "PYTHUSDT":    "pyth-network",
     "SUSDT":       "sonic-3",  # Sonic L1 (formerly Fantom). Verificar se mapping correto.
+    # 2026-08-19: expansao real (owner pediu "lista de 100 moedas" -- achado que
+    # Invoke-FqsLazyEnrich/gem_executor.ps1 JA CHAMA este mapping automaticamente
+    # a cada candidato novo, mas so cobria 53 tickers, travando LINK/ADA/AVAX/BNB/
+    # UNI/etc em FQS=AVOID por ausencia de mapeamento, nao por qualidade real).
+    # IDs resolvidos via /coins/list (match por symbol) + desambiguacao manual
+    # onde havia mais de 1 projeto com o mesmo symbol -- validado amostralmente
+    # contra /coins/{id} real (chainlink/cardano/avalanche-2/binancecoin/uniswap/
+    # hyperliquid/crypto-com-chain/pump-fun/lido-dao/curve-dao-token/bonk/
+    # litecoin/pepe confirmados batendo nome+symbol esperado).
+    "ADAUSDT": "cardano",
+    "AEROUSDT": "aerodrome-finance",
+    "AEVOUSDT": "aevo-exchange",
+    "ANKRUSDT": "ankr",
+    "AVAXUSDT": "avalanche-2",
+    "AVNTUSDT": "avantis",
+    "BABYDOGEUSDT": "baby-doge-coin",
+    "BIOUSDT": "bio-protocol",
+    "BNBUSDT": "binancecoin",
+    "BONKUSDT": "bonk",
+    "BRETTUSDT": "brett",
+    "BTTUSDT": "bittorrent",
+    "CAKEUSDT": "pancakeswap-token",
+    "CHIPUSDT": "chip-2",
+    "CROUSDT": "crypto-com-chain",
+    "CRVUSDT": "curve-dao-token",
+    "DOTUSDT": "polkadot",
+    "EIGENUSDT": "eigenlayer",
+    "ENAUSDT": "ethena",
+    "ENSUSDT": "ethereum-name-service",
+    "ETCUSDT": "ethereum-classic",
+    "ETHFIUSDT": "ether-fi",
+    "FARTCOINUSDT": "fartcoin",
+    "FLOKIUSDT": "floki",
+    "GALAUSDT": "gala",
+    "GRAMUSDT": "the-open-network",  # rebrand TON->GRAM 2026-06-15, mesmo ativo (CoinGecko ID ainda "the-open-network")
+    "HBARUSDT": "hedera-hashgraph",
+    "ICPUSDT": "internet-computer",
+    "KAIAUSDT": "kaia",
+    "KAITOUSDT": "kaito",
+    "LDOUSDT": "lido-dao",
+    "LINEAUSDT": "linea",
+    "LINKUSDT": "chainlink",
+    "LTCUSDT": "litecoin",
+    "MASKUSDT": "mask-network",
+    "MNTUSDT": "mantle",
+    "OKBUSDT": "okb",
+    "ONEUSDT": "harmony",
+    "ORDIUSDT": "ordinals",
+    "PARTIUSDT": "particle-network",
+    "PEPEUSDT": "pepe",
+    "PIPPINUSDT": "pippin",
+    "POLUSDT": "polygon-ecosystem-token",
+    "PUMPUSDT": "pump-fun",
+    "RATSUSDT": "rats",
+    "RAYUSDT": "raydium",
+    "RVNUSDT": "ravencoin",
+    "SHIBUSDT": "shiba-inu",
+    "SOONUSDT": "soon-2",
+    "SPXUSDT": "spx6900",
+    "STRKUSDT": "starknet",
+    "SUPERUSDT": "superfarm",
+    "UNIUSDT": "uniswap",
+    "VIRTUALUSDT": "virtual-protocol",
+    "XAUTUSDT": "tether-gold",
+    "XLMUSDT": "stellar",
+    "ZROUSDT": "layerzero",
 }
 
 
@@ -205,6 +273,47 @@ def fetch_coingecko(coin_id: str, timeout: int = 15) -> Optional[dict]:
         return None
 
 
+def build_supabase_row(market: str, coingecko_id: str, derived: dict) -> dict:
+    """Monta 1 linha pra upsert em manuheadfund.coin_registry_dynamic.
+    So campos derivaveis via CoinGecko (age_years, supply_capped, etc) --
+    burn_active/utility_score/concentration_top10 continuam SO no registry
+    estatico curado (docs/SETUP_SUPABASE_COIN_REGISTRY_DYNAMIC_2026_08_19.sql
+    explica o motivo: CoinGecko nao tem esse dado, e julgamento manual)."""
+    row = {"market": market, "coingecko_id": coingecko_id, "source": "coingecko_enrichment_auto"}
+    for k in ("age_years", "supply_capped", "recovered_2021_ath", "current_price_usd",
+              "ath_all_time_usd", "max_supply", "circulating_supply"):
+        if k in derived:
+            row[k] = derived[k]
+    return row
+
+
+def push_to_supabase(rows: list, url: str, service_key: str, timeout: int = 15) -> bool:
+    """Upsert em lote via PostgREST (Content-Profile + Prefer merge-duplicates,
+    mesmo padrao de agents/lib_state_store.ps1). Retorna True se sucesso."""
+    if not rows:
+        return True
+    endpoint = f"{url.rstrip('/')}/rest/v1/{SUPABASE_TABLE}"
+    body = json.dumps(rows).encode("utf-8")
+    headers = {
+        "apikey": service_key,
+        "Authorization": f"Bearer {service_key}",
+        "Content-Type": "application/json",
+        "Content-Profile": SUPABASE_SCHEMA,
+        "Prefer": "resolution=merge-duplicates,return=minimal",
+    }
+    req = urllib.request.Request(endpoint, data=body, headers=headers, method="POST")
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
+            resp.read()
+        return True
+    except urllib.error.HTTPError as e:
+        print(f"[supabase] HTTP {e.code} no upsert: {e.read().decode('utf-8', errors='replace')}")
+        return False
+    except Exception as e:
+        print(f"[supabase] erro no upsert: {e}")
+        return False
+
+
 def main(argv=None):
     p = argparse.ArgumentParser()
     p.add_argument("--markets", help="comma-separated (default: todos do MARKET_TO_CG)")
@@ -214,6 +323,8 @@ def main(argv=None):
     p.add_argument("--dry-run", action="store_true", help="nao salva")
     p.add_argument("--registry", default=str(REGISTRY_PATH))
     p.add_argument("--sleep", type=float, default=2.5, help="segundos entre calls (rate limit)")
+    p.add_argument("--supabase", action="store_true",
+                   help="tambem faz upsert em manuheadfund.coin_registry_dynamic (requer SUPABASE_URL/SUPABASE_SERVICE_KEY no ambiente)")
     args = p.parse_args(argv)
 
     reg_path = Path(args.registry)
@@ -240,6 +351,7 @@ def main(argv=None):
     n_updated = 0
     n_failed = 0
     n_skipped = 0
+    supabase_rows = []
     for mkt in markets:
         cg_id = map_market_to_coingecko_id(mkt)
         if not cg_id:
@@ -253,11 +365,22 @@ def main(argv=None):
             continue
         derived = derive_registry_fields(resp)
         registry = merge_into_registry(registry, mkt, derived)
+        supabase_rows.append(build_supabase_row(mkt, cg_id, derived))
         print(f"  [ok] {mkt} ({cg_id}) -> {derived}")
         n_updated += 1
         time.sleep(args.sleep)
 
     print(f"\n[coingecko] {n_updated} updated, {n_failed} failed, {n_skipped} skipped")
+
+    if args.supabase and not args.dry_run:
+        supa_url = os.environ.get("SUPABASE_URL")
+        supa_key = os.environ.get("SUPABASE_SERVICE_KEY")
+        if not supa_url or not supa_key:
+            print("[supabase] SUPABASE_URL/SUPABASE_SERVICE_KEY ausentes no ambiente -- skip upsert")
+        else:
+            ok = push_to_supabase(supabase_rows, supa_url, supa_key)
+            print(f"[supabase] upsert de {len(supabase_rows)} linhas -> {'ok' if ok else 'FALHOU'}")
+
     if args.dry_run:
         print("[coingecko] DRY_RUN -- registry NOT saved")
         return 0

@@ -144,7 +144,7 @@ $DEFAULT_SCAN_MARKETS = @(
     "BTCUSDT", "ETHUSDT", "SOLUSDT", "BNBUSDT", "XRPUSDT",
     "DOGEUSDT", "AVAXUSDT", "ADAUSDT", "DOTUSDT", "LINKUSDT",
     "UNIUSDT", "ATOMUSDT", "LTCUSDT", "BCHUSDT", "SUIUSDT",
-    "APTUSDT", "ARBUSDT", "OPUSDT", "MATICUSDT", "TONUSDT"
+    "APTUSDT", "ARBUSDT", "OPUSDT", "MATICUSDT", "GRAMUSDT"
 )
 
 # Get-ScoreClamp -- limite superior do scanner.score, com override OPT-IN.

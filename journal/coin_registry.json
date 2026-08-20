@@ -103,18 +103,6 @@
     "current_price_usd": 1.38,
     "ath_all_time_usd": 7.5
   },
-  "TONUSDT": {
-    "age_years": 7,
-    "supply_capped": false,
-    "burn_active": true,
-    "utility_score": 0.8,
-    "concentration_top10": 0.35,
-    "recovered_2021_ath": false,
-    "listing_years": 4,
-    "notes": "Telegram Open Network. Massive user base, validator burn.",
-    "current_price_usd": 1.89,
-    "ath_all_time_usd": 8.25
-  },
   "NEARUSDT": {
     "age_years": 6,
     "supply_capped": false,
@@ -138,7 +126,7 @@
     "recovered_2021_ath": false,
     "listing_years": 1,
     "notes": "Hyperliquid perp DEX. Hard cap 1B. Token new (2024); cycle_resilience N/A (jovem, V1.5 nao penaliza). Insider 55% (alta concentracao initial).",
-    "current_price_usd": 54.28,
+    "current_price_usd": 57.04,
     "ath_all_time_usd": 76.87,
     "max_supply": 1000000000.0,
     "circulating_supply": 222445714.0741414
@@ -212,9 +200,9 @@
     "concentration_top10": 0.35,
     "recovered_2021_ath": false,
     "listing_years": 5,
-    "notes": "Aave DeFi lending #1. Hard cap 16M. Safety module burn. QUALITY forte.",
-    "current_price_usd": 82.73,
-    "ath_all_time_usd": 661.69
+    "notes": "ATUALIZACAO do registro ja existente (AAVEUSDT ja cadastrado com current_price_usd=82.73 e ath_all_time_usd=661.69 -- dados abaixo sao pesquisa atual de ago/2026, comparar antes de sobrescrever). Aave, lancado como token AAVE out/2020 (migracao 100:1 do antigo LEND). Max supply hard cap 16 milhoes AAVE. Burn ativo via Safety Module e mecanismos de fee capture do protocolo (real, documentado). Utility real muito forte: Aave e o maior protocolo de lending/borrowing DeFi, AAVE token tem papel real em governanca + safety module (staking que cobre shortfall de risco) -- utility_score alto (0.9) mantido do registro existente. ATH pesquisa atual confirma $664.01 (18/mai/2021, fontes convergem entre $659-670), MUITO PROXIMO do valor ja cadastrado ($661.69) -- boa confirmacao cruzada. PRECO ATUALIZADO (pesquisa ago/2026): atual ~$88-89.4 (fontes convergem bem), ligeiramente ACIMA do valor ja cadastrado ($82.73), sugerindo leve alta desde o ultimo update do registro. recovered_2021_ath=false mantido (preco atual ainda ~7x abaixo do ATH).",
+    "current_price_usd": 92.36,
+    "ath_all_time_usd": 664.01
   },
   "FILUSDT": {
     "age_years": 5,
@@ -248,10 +236,10 @@
     "burn_active": false,
     "utility_score": 0.7,
     "concentration_top10": 0.15,
-    "recovered_2021_ath": false,
+    "recovered_2021_ath": true,
     "listing_years": 8,
-    "notes": "Monero privacy. Tail emission 0.6 XMR/block (slow inflation). Distributed. QUALITY.",
-    "current_price_usd": 365.76,
+    "notes": "AVISO: XMRUSDT JA ESTA CADASTRADO no registro atual com current_price_usd=365.76 e ath_all_time_usd=797.73 -- dados abaixo sao ATUALIZACAO de agosto/2026 para conferencia, NAO inserir cegamente, comparar com o valor ja existente antes de sobrescrever. Monero, tail emission continua de 0.6 XMR/bloco (reduzindo, atualmente ~0.3 XMR/min pos-2022) -- moeda estruturalmente inflacionaria de forma lenta e perpetua, por isso supply_capped=false (nao ha hard cap real, emissao continua indefinidamente por design, ainda que a taxa seja baixa). Utility real forte como privacy coin (ring signatures + stealth addresses + RingCT, privacidade obrigatoria a nivel de protocolo, nao opcional) -- referencia tecnica do setor de privacidade, utility_score 0.7 mantido do registro existente. Concentracao top10 historicamente baixa (0.15) por design de mineracao ASIC-resistant (RandomX) que favorece distribuicao ampla -- mantido do registro existente, condizente com literatura. PRECO ATUALIZADO (pesquisa ago/2026): atual ~$416.40 (17/ago/2026, fonte especifica), ATH $797.73 (14/jan/2026, NAO em 2021 -- pico foi no ciclo mais recente 2026). recovered_2021_ath=true pois XMR claramente ultrapassou muito o nivel de 2021 (chegando a quase $800 em jan/2026) antes de recuar para os atuais ~$416 -- interpretacao similar ao override manual usado no BTCUSDT (recuperou e ULTRAPASSOU o ciclo 2021, mesmo que tenha caido do pico mais recente).",
+    "current_price_usd": 415.64,
     "ath_all_time_usd": 797.73
   },
   "DYDXUSDT": {
@@ -431,18 +419,16 @@
     "ath_all_time_usd": 13.31
   },
   "RONUSDT": {
-    "age_years": 3,
+    "age_years": 4.6,
     "supply_capped": true,
     "burn_active": false,
     "utility_score": 0.5,
     "concentration_top10": 0.5,
     "recovered_2021_ath": false,
     "listing_years": 2,
-    "notes": "Ronin Network (Axie). EVM sidechain gaming. Manual baseline.",
-    "max_supply": 1000000000.0,
-    "circulating_supply": 772401679.4337813,
-    "current_price_usd": 0.078273,
-    "ath_all_time_usd": 4.45
+    "notes": "ATUALIZACAO do registro ja existente (RONUSDT ja cadastrado com dados diferentes -- valores abaixo sao da pesquisa atual de ago/2026, comparar e decidir qual usar). Ronin, sidechain EVM da Sky Mavis para jogos (Axie Infinity), token de governanca lancado 27/jan/2022 (rede Ronin em si e de fev/2021). Max supply hard cap 1 bilhao RON, distribuido ao longo de ~9 anos (108 meses). Utility real: paga gas fee na Ronin Chain, staking para validators, papel operacional na infraestrutura de jogos Web3 -- utility_score moderado. ATH $4.563 (13/mar/2024, NAO em 2021 pois o token so foi lancado em 2022). Preco atual ~$0.048-0.049 (ago/2026), fortissima queda do ATH (~99%). Token existia como REDE desde 2021 mas o TOKEN RON so lancou em 2022 -- idade calculada a partir do lancamento do token (jan/2022), portanto recovered_2021_ath e tecnicamente nao-aplicavel ao ciclo 2021 propriamente dito (token nao existia), mas por ter passado de 2 anos de idade nao se enquadra na regra de omissao -- marcado false por prudencia dado ATH ($4.56) muito acima do preco atual.",
+    "current_price_usd": 0.049899,
+    "ath_all_time_usd": 4.563
   },
   "BUSDT": {
     "age_years": 1,
@@ -675,5 +661,173 @@
     "ath_all_time_usd": 0.2847,
     "added_date": "2026-05-29",
     "source": "manual_registry_gap_fill"
+  },
+  "CROUSDT": {
+    "age_years": 7.7,
+    "supply_capped": false,
+    "burn_active": true,
+    "utility_score": 0.5,
+    "concentration_top10": 0.5,
+    "recovered_2021_ath": false,
+    "listing_years": 7,
+    "notes": "Cronos (Crypto.com Chain), lancado dez/2018. Supply NAO e mais hard-capped de forma confiavel: comecou 100B, burn de 70B em nov/2021 reduziu para ~30B, mas em mar/2026 comunidade votou RECRIAR os 70B queimados como 'Strategic Reserve' com vesting 5 anos -- ou seja, o burn foi parcialmente revertido, marcado supply_capped=false por essa instabilidade de politica monetaria. ATH $0.9889 (nov/2021, fonte CoinGecko/TradingView), portanto NAO recuperado (preco atual ~2 centavos, ordem de magnitude abaixo). Utility real como token de exchange (staking, taxas, cashback Crypto.com App/Card) mas nao e essencial tecnicamente (concentracao alta, historico de trust issues no burn). Concentracao top10 estimada media/alta dado historico de grandes alocacoes ao time/tesouraria -- SEM fonte on-chain especifica verificada, INCERTEZA.",
+    "current_price_usd": 0.047588,
+    "ath_all_time_usd": 0.9889
+  },
+  "LINKUSDT": {
+    "age_years": 9,
+    "supply_capped": true,
+    "burn_active": false,
+    "utility_score": 0.9,
+    "concentration_top10": 0.4,
+    "recovered_2021_ath": false,
+    "listing_years": 8,
+    "notes": "Chainlink lancado 2017 (ICO), hard cap 1 bilhao LINK, sem mint adicional possivel. Utility real forte: token e usado como colateral/pagamento para node operators de oracle (dado on-chain para DeFi/RWA), papel central na infraestrutura, nao apenas governanca. ATH nao encontrado nesta pesquisa com precisao total-time (fontes deram $9.72 como 7-day high em ago/2026, NAO all-time -- ATH historico real do LINK foi ~$52.88 em maio/2021, usando esse valor por conhecimento previo, precisa confirmacao). Preco atual ~$9.5-9.75 (ago/2026, fontes convergem). recovered_2021_ath=false pois $9.5 << $52.88.",
+    "current_price_usd": 10.1011,
+    "ath_all_time_usd": 52.88
+  },
+  "ADAUSDT": {
+    "age_years": 9,
+    "supply_capped": true,
+    "burn_active": false,
+    "utility_score": 0.6,
+    "concentration_top10": 0.3,
+    "recovered_2021_ath": false,
+    "listing_years": 8,
+    "notes": "Cardano mainnet lancado set/2017, max supply hard cap 45 bilhoes ADA. Utility real (gas fee, staking em pools, smart contracts Plutus) mas adocao de dApps historicamente abaixo de outros L1s -- utility_score moderado. ATH $3.10 (2 set 2021). Preco atual ~$0.17-0.18 (ago/2026), portanto MUITO longe do ATH 2021, recovered_2021_ath=false claro. Concentracao top10 nao verificada com fonte especifica nesta pesquisa -- estimativa baseada em distribuicao historicamente ampla do ICO da Cardano Foundation/IOHK/Emurgo, INCERTEZA.",
+    "current_price_usd": 0.180729,
+    "ath_all_time_usd": 3.1
+  },
+  "XAUTUSDT": {
+    "age_years": 6.5,
+    "supply_capped": false,
+    "burn_active": false,
+    "utility_score": 0.9,
+    "concentration_top10": null,
+    "recovered_2021_ath": true,
+    "listing_years": 5,
+    "notes": "Tether Gold, lancado 23/jan/2020. NAO e uma rede/protocolo, e um token ERC-20/TRC-20 lastreado 1:1 em ouro fisico alocado em cofres suicos (1 XAUT = 1 onca troy), resgatavel fisicamente sujeito a minimos. supply_capped=false pois supply cresce/diminui conforme ouro depositado/resgatado (nao ha cap artificial, e lastro fisico). burn_active=false (nao ha mecanismo de queima, e mint/redeem contra estoque fisico). utility_score alto (0.9) por analogia a reserva de valor real (ouro fisico auditavel), mas NAO e 'utility' de rede (nao paga gas, nao tem staking) -- e mais proximo de um stablecoin-lastro. concentration_top10 NAO aplicavel da mesma forma que tokens de rede (marcado null/incerto -- concentracao de XAUT tende a refletir grandes holders institucionais/tesourarias, sem dado publico confiavel encontrado nesta pesquisa). Preco do OURO fisico (XAU) em ago/2026: ATH historico $5602.22 (28/jan/2026), preco atual ~$4480-4518 (fontes convergem nessa faixa medium-agosto/2026). recovered_2021_ath=true pois ouro subiu estruturalmente e nunca teve 'ciclo bear cripto' 2021-2022 -- preco 2021 do ouro (~$1800-1900) foi superado ha muito tempo. ATENCAO: o ATH informado pelo usuario (~$4480 'recente') NAO bate com o ATH real de $5602 (jan/2026) encontrado na pesquisa -- usar o dado da pesquisa, mas sinalizar para confirmacao humana pois pode haver defasagem entre XAUT (token) e XAU (spot) ou dado do usuario ser mais recente que meu conhecimento de busca.",
+    "current_price_usd": 4500,
+    "ath_all_time_usd": 5602.22
+  },
+  "AVAXUSDT": {
+    "age_years": 6,
+    "supply_capped": true,
+    "burn_active": true,
+    "utility_score": 0.8,
+    "concentration_top10": 0.35,
+    "recovered_2021_ath": false,
+    "listing_years": 5,
+    "notes": "Avalanche, lancado 21/set/2020. Max supply hard cap 720M AVAX. Burn ativo: taxas de transacao sao queimadas (mecanismo tipo EIP-1559). Utility real forte: gas fee nativo da C-Chain, staking para validators/subnets, papel central em L1 com ecossistema DeFi/gaming ativo (RWA locked ~$1.3B mencionado em pesquisa) -- utility_score alto. ATH $135.52-147.50 (22/nov/2021, fontes divergem no valor exato, uso a media/maior fonte). Preco atual ~$6.3-6.9 (ago/2026), portanto MUITO abaixo do ATH -- recovered_2021_ath=false claro.",
+    "current_price_usd": 6.5572,
+    "ath_all_time_usd": 147.5
+  },
+  "BNBUSDT": {
+    "age_years": 9,
+    "supply_capped": false,
+    "burn_active": true,
+    "utility_score": 0.9,
+    "concentration_top10": 0.5,
+    "recovered_2021_ath": true,
+    "listing_years": 8,
+    "notes": "BNB (Binance Coin), lancado jul/2017 (ICO, 11 dias antes da exchange Binance abrir). Supply comecou 200M, burn trimestral programatico ate atingir 100M (50% do supply original) -- processo continuo e verificavel on-chain, mas NAO ha hard cap formal imutavel (marcado supply_capped=false por tecnicamente ser possivel emissao/ajuste de politica, embora o burn seja um compromisso forte). Utility real muito alta: gas fee nativo da BNB Chain (BSC), desconto de taxas na exchange Binance, garantia em varios produtos -- um dos tokens de exchange com utility mais comprovada do mercado. ATH historico ~$690.93 (10/mai/2021) segundo uma fonte, mas outra fonte da pesquisa cita ATH de $1370 em out/2025 -- ou seja, BNB JA SUPEROU o ATH de 2021 (preco atual ~$602-615 em ago/2026, que fica entre os dois valores, sugerindo pico posterior a 2021 real). recovered_2021_ath=true com confianca (mecanismo de burn + adocao da exchange sustentaram alta estrutural).",
+    "current_price_usd": 614.91,
+    "ath_all_time_usd": 1370
+  },
+  "BTCUSDC": {
+    "age_years": 16,
+    "supply_capped": true,
+    "burn_active": false,
+    "utility_score": 1.0,
+    "concentration_top10": 0.1,
+    "recovered_2021_ath": true,
+    "listing_years": 8,
+    "notes": "MESMO ATIVO que BTCUSDT ja cadastrado no registro -- apenas denominacao de quote diferente (USDC stablecoin ao inves de USDT), o ativo base (Bitcoin) e identico. Todos os valores fundamentais replicados exatamente do BTCUSDT: hard cap 21M, halving 4y, store of value canonico. current_price_usd e ath_all_time_usd tambem replicados do BTCUSDT (mesmo ativo, precos devem ser equivalentes entre pares USDT/USDC salvo pequeno spread de mercado irrelevante para fins de fundamentals).",
+    "current_price_usd": 73925,
+    "ath_all_time_usd": 126080
+  },
+  "XLMUSDT": {
+    "age_years": 12,
+    "supply_capped": true,
+    "burn_active": false,
+    "utility_score": 0.5,
+    "concentration_top10": 0.5,
+    "recovered_2021_ath": false,
+    "listing_years": 8,
+    "notes": "Stellar Lumens, lancado jul/2014 (um dos projetos mais antigos da lista). Max supply hard cap ~50 bilhoes XLM (reduzido de emissao original via burn unico de ~55 bilhoes em 2019 -- evento passado, nao e burn continuo/ativo hoje, por isso burn_active=false). Utility real moderada: rede de pagamentos cross-border/remessas com parcerias institucionais reais (ex: nota recente sobre SEC no-action letter para fundo Franklin Templeton baseado em Stellar), mas adocao de dApps/DeFi limitada comparado a L1s programaveis -- utility_score moderado. ATH $0.9381 (4/jan/2018, note: pico foi no ciclo 2017/2018, nao 2021). Preco atual ~$0.16 (ago/2026). CONCENTRACAO MUITO ALTA E VERIFICADA: pesquisa encontrou dado especifico -- top 10 wallets controlam entre ~50% e ~80% do supply circulante dependendo da fonte (uma fonte da Flipside Crypto citou quase 80%), e top 100 controla >87%. Usando 0.5 como estimativa conservadora dado a grande incerteza entre fontes (50%-80%), mas o numero real pode ser MAIOR -- sinalizar para revisao humana dado quao alto e concentrado esse ativo especificamente.",
+    "current_price_usd": 0.16535,
+    "ath_all_time_usd": 0.9381
+  },
+  "PEPEUSDT": {
+    "age_years": 3.3,
+    "supply_capped": true,
+    "burn_active": false,
+    "utility_score": 0.05,
+    "concentration_top10": 0.35,
+    "recovered_2021_ath": false,
+    "listing_years": 3,
+    "notes": "Pepe, memecoin lancado 14/abr/2023 na Ethereum, SEM presale, sem alocacao a time, sem utility real declarada -- e puramente especulativo/cultural (referencia ao meme Pepe the Frog). utility_score extremamente baixo (0.05, nao zero apenas porque tem liquidez real e listagens em exchanges major, o que da alguma 'utility' de negociabilidade, mas ZERO utility tecnica/funcional). Max supply hard cap fixo 420.69 trilhoes PEPE (numero deliberadamente 'meme'). ATH $0.00002803 (dez/2024). Preco atual ~$0.0000026-0.0000027 (ago/2026), ordem de magnitude abaixo do ATH. Token nao existia em 2021 (lancado 2023), portanto recovered_2021_ath=false e apenas por nao-aplicabilidade, nao julgamento de ciclo. Concentracao top10 nao verificada com fonte especifica nesta pesquisa para PEPE -- estimativa moderada tipica de memecoins pos-fair-launch (comunidade + alguns early whales), INCERTEZA.",
+    "current_price_usd": 2.7064e-06,
+    "ath_all_time_usd": 2.803e-05
+  },
+  "UNIUSDT": {
+    "age_years": 6,
+    "supply_capped": true,
+    "burn_active": false,
+    "utility_score": 0.6,
+    "concentration_top10": 0.45,
+    "recovered_2021_ath": false,
+    "listing_years": 5,
+    "notes": "Uniswap, token UNI lancado 15/set/2020 via airdrop retroativo. Max supply hard cap 1 bilhao UNI. Token de governanca do maior DEX (AMM) da Ethereum por volume historico, mas fee-switch (mecanismo que faria UNI capturar parte das taxas de trading) so foi ativado/discutido em fases limitadas ao longo do tempo -- utility real como 'token de governanca de infraestrutura core do DeFi' e significativa mas nao e essencial tecnicamente (nao e gas, nao e colateral obrigatorio) -- utility_score moderado. ATH $44.90-44.92 (mai/2021). Preco atual ~$3.47-3.61 (ago/2026), bem abaixo do ATH -- recovered_2021_ath=false claro.",
+    "current_price_usd": 3.5131,
+    "ath_all_time_usd": 44.92
+  },
+  "ICPUSDT": {
+    "age_years": 5.3,
+    "supply_capped": false,
+    "burn_active": true,
+    "utility_score": 0.6,
+    "concentration_top10": 0.4,
+    "recovered_2021_ath": false,
+    "listing_years": 5,
+    "notes": "Internet Computer, lancado publicamente 10/mai/2021 pela DFINITY Foundation. SEM max supply fixo -- protocolo emite novos tokens para recompensar node providers (compute/storage) e participacao em governanca (NNS), com pressao inflacionaria E deflacionaria (burn de cycles ao consumir compute) coexistindo -- marcado burn_active=true pelo mecanismo real de queima de ciclos computacionais, mas supply_capped=false pela politica monetaria nao ter teto fixo. Utility real: token paga por compute/storage na rede (analogo a 'gas' mas para canisters/smart contracts), staking em neurons para governanca -- utility_score moderado-alto mas adocao de dApps reais permanece um ponto de debate no mercado. ATH extremo $750 (10/mai/2021, no PROPRIO dia do lancamento -- padrao classico de ICO/airdrop com pico de euforia inicial seguido de colapso). Preco atual ~$2.17-2.24 (ago/2026) -- QUEDA DE ~99.7% do ATH, um dos piores desempenhos da lista. recovered_2021_ath=false extremamente claro.",
+    "current_price_usd": 2.2403,
+    "ath_all_time_usd": 750
+  },
+  "RVNUSDT": {
+    "age_years": 8.6,
+    "supply_capped": true,
+    "burn_active": false,
+    "utility_score": 0.3,
+    "concentration_top10": 0.2,
+    "recovered_2021_ath": false,
+    "listing_years": 7,
+    "notes": "Ravencoin, fork do Bitcoin (v0.15.99) lancado 3/jan/2018, foco em tokenizacao de ativos (asset issuance nativa on-chain, mineravel PoW ASIC-resistant historicamente). Max supply hard cap 21 bilhoes RVN. Utility real limitada -- proposta de tokenizacao de ativos existe desde o lancamento mas adocao pratica ficou bem abaixo da promessa original, rede hoje e majoritariamente mineracao/especulacao -- utility_score baixo-moderado. ATH $0.285737 (20/fev/2021). Preco atual ~$0.0027-0.0035 (ago/2026), proximo de MINIMOS HISTORICOS (fontes mencionam ATL recente em 19/ago/2026 a $0.002483) -- um dos piores desempenhos da lista, queda de ~99% do ATH. recovered_2021_ath=false extremamente claro. Mineracao PoW distribuida sugere concentracao de holders relativamente menor que tokens com ICO/VC.",
+    "current_price_usd": 0.002785,
+    "ath_all_time_usd": 0.285737
+  },
+  "CRVUSDT": {
+    "age_years": 6,
+    "supply_capped": true,
+    "burn_active": false,
+    "utility_score": 0.6,
+    "concentration_top10": 0.4,
+    "recovered_2021_ath": false,
+    "listing_years": 5,
+    "notes": "Curve DAO Token, lancado 13/ago/2020 (protocolo Curve Finance, maior AMM especializado em stablecoins/ativos correlacionados). Max supply hard cap ~3.03 bilhoes CRV, com emissao via liquidity mining programada para concluir ate ago/2026 (curva de emissao proxima do fim neste momento). Utility real: veCRV (voto-escrow) direciona emissoes de liquidez entre pools ('Curve Wars'), fee-sharing real para holders que fazem lock -- mecanismo de governanca com captura de valor genuina, mais sofisticado que governanca pura -- utility_score moderado-alto. Sem burn ativo confirmado (emissao e via mineracao de liquidez, nao queima). ATH $60.50 (14/ago/2020, no dia seguinte ao lancamento -- pico de euforia inicial classico). Preco atual ~$0.21-0.26 (ago/2026), fontes convergem numa faixa razoavel. recovered_2021_ath=false (preco muito abaixo do pico de lancamento).",
+    "current_price_usd": 0.255091,
+    "ath_all_time_usd": 60.5
+  },
+  "GRAMUSDT": {
+    "age_years": 7,
+    "supply_capped": false,
+    "burn_active": true,
+    "utility_score": 0.8,
+    "concentration_top10": 0.35,
+    "recovered_2021_ath": false,
+    "listing_years": 4,
+    "notes": "Telegram Open Network. Massive user base, validator burn. [2026-08-19: par renomeado de TONUSDT para GRAMUSDT na CoinEx apos rebranding oficial Toncoin->GRAM (15/jun/2026), mesmo ativo, sem swap de saldo -- entrada renomeada, nao duplicada.]",
+    "current_price_usd": 1.3488,
+    "ath_all_time_usd": 8.25
   }
 }
