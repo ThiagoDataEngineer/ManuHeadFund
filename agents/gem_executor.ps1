@@ -553,8 +553,9 @@ function Invoke-GemExecute {
     # funcao criada hoje pro breadth gate) -- exige momentum de 1h E 4h
     # confirmando queda ATIVA agora, nao so historico de dias.
     $toriConfluenceExtreme = ($Gem.mode -match "TORI_SHORT") -and ($null -ne $Gem.score) -and ([int]$Gem.score -ge 90)
+    $toriConfluenceStrong = ($Gem.mode -match "TORI_SHORT") -and ($null -ne $Gem.score) -and ([int]$Gem.score -ge 85)
     $hasActiveMomentum = $false
-    if ($toriConfluenceExtreme -and (Get-Command Test-RecentMomentumConfirmed -ErrorAction SilentlyContinue)) {
+    if ($toriConfluenceStrong -and (Get-Command Test-RecentMomentumConfirmed -ErrorAction SilentlyContinue)) {
         try { $hasActiveMomentum = Test-RecentMomentumConfirmed -Market $mkt -Direction "lt" } catch { $hasActiveMomentum = $false }
     }
     if (-not $pumpGate.allow_short -and $toriConfluenceExtreme -and $hasActiveMomentum) {
@@ -571,6 +572,36 @@ function Invoke-GemExecute {
             source              = $pumpGate.source
         }
         Write-Host "  [PUMP GATE OVERRIDE] ${mkt}: Tori confluence=$($Gem.score) >=90 + momentum 1h/4h confirmando queda ativa -> libera SHORT apesar de pump_class=$($pumpGate.pump_class)" -ForegroundColor DarkYellow
+    }
+
+    # 2026-08-20: BREADTH GATE OVERRIDE (SHORT FORTE EM BULL)
+    # Achado: breadth gate bloqueia SHORT 100% em regime BULL/NEUTRO mesmo
+    # quando candidato tem sinal TORI muito forte (>=85) + momentum ativo
+    # confirmado. Padrao ja existe pro pump gate (acima, tori>=90), estendendo
+    # pra breadth gate com limiar ligeiramente menor (>=85, vs 90) porque
+    # breadth e mais conservadora que pump. Mesmo raciocinio: sinais TORI forte
+    # em SHORT justificam override de mercado macro. Regra: breadth nega SHORT
+    # se scenario=BULL (allow_short=false) e breadth nao esta bearish.
+    if (-not $breadthGate.allow_short -and $toriConfluenceStrong -and $hasActiveMomentum) {
+        $origReason = $breadthGate.reason
+        $breadthGate = [PSCustomObject]@{
+            allow_long = $breadthGate.allow_long
+            allow_short = $true
+            breadth_trend = $breadthGate.breadth_trend
+            breadth_pct = $breadthGate.breadth_pct
+            breadth_confidence = $breadthGate.breadth_confidence
+            breadth_vol_ratio = $breadthGate.breadth_vol_ratio
+            breadth_green = $breadthGate.breadth_green
+            breadth_total = $breadthGate.breadth_total
+            btc_scenario = $breadthGate.btc_scenario
+            btc_allow_long = $breadthGate.btc_allow_long
+            btc_allow_short = $breadthGate.btc_allow_short
+            strong_individual_move = $breadthGate.strong_individual_move
+            change_24h = $breadthGate.change_24h
+            source = "breadth_gate_override"
+            reason = "tori_confluence_override_$($Gem.score)_momentum_ativo (era: $origReason)"
+        }
+        Write-Host "  [BREADTH GATE OVERRIDE] ${mkt}: Tori confluence=$($Gem.score) >=85 + momentum 1h/4h confirmando queda ativa -> libera SHORT apesar de breadth=neutral" -ForegroundColor DarkYellow
     }
 
     # Gate #2: Entry timing (RSI 15M)
