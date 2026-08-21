@@ -1259,38 +1259,39 @@ jobs:
 
               . ./agents/config.ps1
               . ./agents/lib_coinex.ps1
-              . ./agents/gem_executor.ps1
               . ./agents/gem_agent.ps1
+              . ./agents/gem_executor.ps1
 
-              Write-Host "Loaded: gem_executor + gem_agent, ready to execute" -ForegroundColor Green
+              Write-Host "Loaded: gem_agent + gem_executor, ready to scan and execute" -ForegroundColor Green
 
-              $markets = @("BTCUSDT","ETHUSDT","SOLUSDT","ADAUSDT","LINKUSDT","AVAXUSDT")
-              $executed = 0
-              foreach ($market in $markets) {
-                try {
-                  Write-Host "`nTesting: $market" -ForegroundColor DarkCyan
+              # Invoke GemScan pra gerar candidatos
+              Write-Host "`nInvoking GemScan..." -ForegroundColor Cyan
+              try {
+                $gems = @(Invoke-GemScan -TopN 10)
+                Write-Host "Generated $($gems.Count) gems" -ForegroundColor Green
 
-                  # Invocar gem_agent pra gerar gem
-                  $gem = Invoke-GemAgent -Market $market 2>&1
-                  if ($gem -and -not $gem.skip) {
-                    Write-Host "  GEM generated: score=$($gem.score) dir=$($gem.direction)" -ForegroundColor Green
+                $executed = 0
+                foreach ($gem in $gems) {
+                  $market = $gem.market
+                  try {
+                    Write-Host "`n  Processing: $market (score=$($gem.score) dir=$($gem.direction))" -ForegroundColor DarkCyan
 
                     # Executar gem via gem_executor
                     $result = Invoke-GemExecute -Gem $gem -DryRun
                     if ($result -and -not $result.blocked) {
                       $executed++
-                      Write-Host "  -> APPROVED" -ForegroundColor Green
+                      Write-Host "    -> APPROVED" -ForegroundColor Green
                     } else {
-                      Write-Host "  -> Blocked: $($result.blocked_by -join ',')" -ForegroundColor Yellow
+                      Write-Host "    -> Blocked: $($result.blocked_by -join ',')" -ForegroundColor Yellow
                     }
-                  } else {
-                    Write-Host "  -> Skipped (no valid gem)" -ForegroundColor DarkYellow
+                  } catch {
+                    Write-Host "    -> Error: $_" -ForegroundColor Red
                   }
-                } catch {
-                  Write-Host "  -> Error: $_" -ForegroundColor Red
                 }
+                Write-Host "`nExecuted: $executed/$($gems.Count) gems" -ForegroundColor Green
+              } catch {
+                Write-Host "GemScan error: $_" -ForegroundColor Red
               }
-              Write-Host "`nExecuted: $executed markets" -ForegroundColor Green
             } else {
               Write-Host "Manual approval mode (autonomy disabled)" -ForegroundColor Yellow
             }
