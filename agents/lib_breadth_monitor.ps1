@@ -294,24 +294,36 @@ function Test-RecentMomentumConfirmed {
     )
 
     if (-not (Get-Command Get-CoinExCandles -ErrorAction SilentlyContinue)) {
+        Write-Host "[MOMENTUM DIAG] ${Market}: Get-CoinExCandles indisponivel -- fail-closed" -ForegroundColor DarkGray
         return $false   # fail-closed: sem dado de confirmacao, nao libera
     }
 
     try {
         # 5 candles de 1h cobre a janela de 4h + 1 de folga
         $candles = @(Get-CoinExCandles -Market $Market -Period "1hour" -Limit 5 -IsFutures $false)
-        if ($candles.Count -lt 5) { return $false }
+        if ($candles.Count -lt 5) {
+            Write-Host "[MOMENTUM DIAG] ${Market}: apenas $($candles.Count) candles (precisa 5) -- fail-closed" -ForegroundColor DarkGray
+            return $false
+        }
 
         $last = $candles[-1].close
         $mom1h = (($last - $candles[-2].close) / $candles[-2].close) * 100
         $mom4h = (($last - $candles[0].close) / $candles[0].close) * 100
 
-        if ($Direction -eq "gt") {
-            return ($mom1h -gt 0 -and $mom4h -gt 0)
+        $result = if ($Direction -eq "gt") {
+            ($mom1h -gt 0 -and $mom4h -gt 0)
         } else {
-            return ($mom1h -lt 0 -and $mom4h -lt 0)
+            ($mom1h -lt 0 -and $mom4h -lt 0)
         }
+        # 2026-08-21 DIAG TEMPORARIO: expoe mom1h/mom4h reais pra investigar
+        # candidatos TORI score=100 (ARBUSDT/OPUSDT/INJUSDT) bloqueados por
+        # breadth_short_blocked -- confirmar se a divergencia 1h-vs-4h
+        # documentada no caso ARBUSDT antigo (linha ~545 gem_executor.ps1)
+        # ainda e o padrao real, ou se o gate esta rigoroso demais.
+        Write-Host "[MOMENTUM DIAG] ${Market} dir=${Direction}: mom1h=$([math]::Round($mom1h,3))% mom4h=$([math]::Round($mom4h,3))% -> confirmed=$result" -ForegroundColor DarkGray
+        return $result
     } catch {
+        Write-Host "[MOMENTUM DIAG] ${Market}: excecao $_ -- fail-closed" -ForegroundColor DarkGray
         return $false   # fail-closed
     }
 }
