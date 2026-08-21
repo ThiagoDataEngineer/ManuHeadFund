@@ -1260,26 +1260,37 @@ jobs:
               . ./agents/config.ps1
               . ./agents/lib_coinex.ps1
               . ./agents/gem_executor.ps1
+              . ./agents/gem_agent.ps1
 
-              Write-Host "Loaded: gem_executor, ready to scan" -ForegroundColor Green
+              Write-Host "Loaded: gem_executor + gem_agent, ready to execute" -ForegroundColor Green
 
               $markets = @("BTCUSDT","ETHUSDT","SOLUSDT","ADAUSDT","LINKUSDT","AVAXUSDT")
               $executed = 0
               foreach ($market in $markets) {
                 try {
-                  Write-Host "Testing: $market" -ForegroundColor DarkCyan
-                  $result = Invoke-GemExecute -Market $market -DryRun
-                  if ($result -and -not $result.blocked) {
-                    $executed++
-                    Write-Host "  -> APPROVED $market" -ForegroundColor Green
+                  Write-Host "`nTesting: $market" -ForegroundColor DarkCyan
+
+                  # Invocar gem_agent pra gerar gem
+                  $gem = Invoke-GemAgent -Market $market 2>&1
+                  if ($gem -and -not $gem.skip) {
+                    Write-Host "  GEM generated: score=$($gem.score) dir=$($gem.direction)" -ForegroundColor Green
+
+                    # Executar gem via gem_executor
+                    $result = Invoke-GemExecute -Gem $gem -DryRun
+                    if ($result -and -not $result.blocked) {
+                      $executed++
+                      Write-Host "  -> APPROVED" -ForegroundColor Green
+                    } else {
+                      Write-Host "  -> Blocked: $($result.blocked_by -join ',')" -ForegroundColor Yellow
+                    }
                   } else {
-                    Write-Host "  -> Blocked" -ForegroundColor Yellow
+                    Write-Host "  -> Skipped (no valid gem)" -ForegroundColor DarkYellow
                   }
                 } catch {
                   Write-Host "  -> Error: $_" -ForegroundColor Red
                 }
               }
-              Write-Host "Executed: $executed markets" -ForegroundColor Green
+              Write-Host "`nExecuted: $executed markets" -ForegroundColor Green
             } else {
               Write-Host "Manual approval mode (autonomy disabled)" -ForegroundColor Yellow
             }
