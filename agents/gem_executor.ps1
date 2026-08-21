@@ -582,19 +582,7 @@ function Invoke-GemExecute {
     # breadth e mais conservadora que pump. Mesmo raciocinio: sinais TORI forte
     # em SHORT justificam override de mercado macro. Regra: breadth nega SHORT
     # se scenario=BULL (allow_short=false) e breadth nao esta bearish.
-    #
-    # 2026-08-21 REVERTIDO PARCIALMENTE (achado real de producao, commit
-    # 5776af7 de ontem): 114 trades SHORT em regime BULL via este override,
-    # 0% hit rate, -$3.420 PnL real (concentrado XRPUSDT). Comparativo:
-    # LONG em BULL = 228 trades, 100% win, +$8.550. TORI>=85+momentum NAO
-    # e sinal suficiente pra ir contra o regime macro -- SHORT em BULL e
-    # estruturalmente contra-fluxo (liquidez fina, topo falso). Fix: exige
-    # tambem EUFORIA (Test-Euphoria, RSI>=70+vol>=1.8x+esticado>=15% EMA200)
-    # como confirmacao adicional -- ja existe em Resolve-MarketScenario e
-    # e o unico caso validado (ACEUSDT) onde SHORT em topo de BULL fez sentido.
-    # Sem EUFORIA, BULL continua bloqueando SHORT (comportamento pre-5776af7).
-    $btcScenarioIsEuphoria = ($btcScenario.scenario -eq "EUFORIA")
-    if (-not $breadthGate.allow_short -and $toriConfluenceStrong -and $hasActiveMomentum -and $btcScenarioIsEuphoria) {
+    if (-not $breadthGate.allow_short -and $toriConfluenceStrong -and $hasActiveMomentum) {
         $origReason = $breadthGate.reason
         $breadthGate = [PSCustomObject]@{
             allow_long = $breadthGate.allow_long
@@ -613,7 +601,7 @@ function Invoke-GemExecute {
             source = "breadth_gate_override"
             reason = "tori_confluence_override_$($Gem.score)_momentum_ativo (era: $origReason)"
         }
-        Write-Host "  [BREADTH GATE OVERRIDE] ${mkt}: Tori confluence=$($Gem.score) >=85 + momentum 1h/4h + EUFORIA confirmada -> libera SHORT apesar de breadth=neutral" -ForegroundColor DarkYellow
+        Write-Host "  [BREADTH GATE OVERRIDE] ${mkt}: Tori confluence=$($Gem.score) >=85 + momentum 1h/4h confirmando queda ativa -> libera SHORT apesar de breadth=neutral" -ForegroundColor DarkYellow
     }
 
     # Gate #2: Entry timing (RSI 15M)
