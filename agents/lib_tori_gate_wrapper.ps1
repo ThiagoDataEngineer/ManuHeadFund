@@ -26,14 +26,19 @@ $script:TORI_CONFLUENCE_THRESHOLD = 65    # Minimum confluence score for ALLOW
 # Hypothesis: FRACTAL sozinho em score de 65 ainda e valido sinal
 # (nao e ruido puro, e confluencia minima aceitavel em rango).
 #
-# 2026-07-09 EVOLUTION WIRE: threshold agora e tunavel (registry 70-90).
+# 2026-07-09 EVOLUTION WIRE: threshold agora e tunavel (registry 65-90).
 # Bound 2 de 2: clamp local mesmo se overlay vier fora do range.
+# 2026-08-21 FIX: piso do clamp local (era 70) desalinhado com o registry
+# (lib_evolution_engine.ps1, corrigido no mesmo commit pra min=65) -- o
+# Evolution Engine SEMPRE roda e sobrescreve o default 65 daqui com o
+# proprio default do registry (antes 80, min 70), entao o valor 65 setado
+# acima NUNCA sobrevivia em producao real. Clamp agora casa com o registry.
 if (Get-Command Get-EvolutionParams -ErrorAction SilentlyContinue) {
     try {
         $__evo = Get-EvolutionParams
         if ($__evo.tori_confluence_threshold) {
             $__t = [int]$__evo.tori_confluence_threshold
-            if ($__t -ge 70 -and $__t -le 90) { $script:TORI_CONFLUENCE_THRESHOLD = $__t }
+            if ($__t -ge 65 -and $__t -le 90) { $script:TORI_CONFLUENCE_THRESHOLD = $__t }
         }
     } catch {}
 }

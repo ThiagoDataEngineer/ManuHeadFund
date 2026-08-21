@@ -28,7 +28,14 @@ function Get-TunableRegistry {
         [PSCustomObject]@{ name="pumpfade_min_pump_pct"; class="detection"; default=15;  min=8;   max=25;   step=1 }
         [PSCustomObject]@{ name="pumpfade_dump_pct";     class="detection"; default=-10; min=-20; max=-5;   step=1 }
         # 2026-07-09: pecas antes FORA do loop (auditoria 5 pecas) — agora tunaveis
-        [PSCustomObject]@{ name="tori_confluence_threshold"; class="detection"; default=80;  min=70;  max=90;  step=2 }
+        # 2026-08-21 FIX: min=70 travava o Evolution Engine (e Get-EvolutionParams,
+        # que sempre roda e sobrescreve o default local de lib_tori_gate_wrapper.ps1)
+        # num piso mais alto que o valor correto medido em producao real (2026-08-20:
+        # 40-47 candidatos/ciclo 100% bloqueados em threshold=80, FRACTAL+baseline=65
+        # e sinal minimo aceitavel em BULL/NEUTRO). O overlay sempre vencia o default
+        # local (65) porque Get-EvolutionParams comeca do registry (min=70 antes),
+        # nunca deixando o threshold real cair abaixo de 70 mesmo com evidencia forte.
+        [PSCustomObject]@{ name="tori_confluence_threshold"; class="detection"; default=65;  min=65;  max=90;  step=2 }
         [PSCustomObject]@{ name="faro_signals_needed";       class="detection"; default=5;   min=4;   max=6;   step=1 }
         # RISK: nunca auto — qualquer proposta vira requires_owner
         [PSCustomObject]@{ name="gem_sizing_pct";        class="risk";      default=0.5; min=0.1; max=1.0;  step=0.1 }
