@@ -366,9 +366,19 @@ function Invoke-GemCycle-Once {
                                 Write-GemLog "TORI_SHORT" "$m confluence=$($tc.confluence_score) signals=$(@($tc.signals_fired) -join '+')"
                             }
                         }
-                        if ($toriShortGems.Count -gt 3) {
-                            $toriShortGems = @($toriShortGems | Sort-Object { [int]$_.score } -Descending | Select-Object -First 3)
-                        }
+                        # 2026-08-22 FIX: cap de 3 (Sort-Object -Descending, estavel em
+                        # empate) sempre escolhia os primeiros da lista fixa do JSON
+                        # (BTC/ETH/SOL/XRP/DOGE/ADA...), nunca os "melhores" de fato --
+                        # confirmado real (2026-08-22 03:11 UTC): 13/15 pares do
+                        # tier_a_live com confluence>=80 no mesmo ciclo (mercado em
+                        # overbought generalizado, breadth=89.6%), so 4 (BTC/SOL/XRP/ADA)
+                        # chegavam a virar candidato -- ETH/LINK/UNI (confluence>=85,
+                        # alguns=100) descartados so por posicao na lista, nao por
+                        # qualidade. Gates de seguranca (breadth momentum, exposure cap,
+                        # sizing, quality) continuam intactos e re-rodam completos no
+                        # executor pra cada um -- so o corte arbitrario de topo sai.
+                        # Ainda ordenado por score (melhores primeiro no log/execucao).
+                        $toriShortGems = @($toriShortGems | Sort-Object { [int]$_.score } -Descending)
                         if ($toriShortGems.Count -gt 0) {
                             Write-GemLog "INFO" "Tori SHORT sweep: $($toriShortGems.Count) candidato(s) >=80 no tier_a_live"
                         }
@@ -417,9 +427,12 @@ function Invoke-GemCycle-Once {
                                 Write-GemLog "TORI_LONG" "$m confluence=$($tc.confluence_score) signals=$(@($tc.signals_fired) -join '+')"
                             }
                         }
-                        if ($toriLongGems.Count -gt 3) {
-                            $toriLongGems = @($toriLongGems | Sort-Object { [int]$_.score } -Descending | Select-Object -First 3)
-                        }
+                        # 2026-08-22 FIX: mesmo cap arbitrario removido do lado SHORT
+                        # (ver comentario acima) -- long_universe.json hoje so tem 4
+                        # moedas entao raramente atingia o corte, mas ao expandir o
+                        # universo (proximo passo real pra mais volume) o mesmo bug
+                        # apareceria aqui. Gates de seguranca continuam intactos.
+                        $toriLongGems = @($toriLongGems | Sort-Object { [int]$_.score } -Descending)
                         if ($toriLongGems.Count -gt 0) {
                             Write-GemLog "INFO" "Tori LONG sweep: $($toriLongGems.Count) candidato(s) >=80 no A_LIVE (cenario=$($scenSweep.scenario))"
                         }
