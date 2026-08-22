@@ -75,7 +75,19 @@ function Test-DailyMarketAlertThrottle {
       Rotulo curto da razao do alerta (ex: "exposure_cap") -- throttle e
       por Market+Reason, nao global por Market (nao mistura razoes distintas).
       .PARAMETER StatePath
-      Caminho do JSON de estado (default: journal/daily_alert_throttle.json)
+      Caminho do JSON de estado (default: journal/daily_alert_throttle.json,
+      local). 2026-08-22: journal/*.json e gitignored e nunca sobrevive entre
+      execucoes do GitHub Actions (cada job = checkout limpo/processo novo) --
+      achado real (owner reportou "recebendo mensagem telegram pra caramba"):
+      exposure_cap disparava 1 alerta por moeda a CADA ciclo de 5min (RENDER/
+      BTC/INJ ja posicionados), porque o throttle "1 por janela" nunca
+      persistia -- resetava a zero em todo processo novo. Mesma classe de bug
+      ja corrigida hoje em evolution_params.json e per_asset_whitelist_*.json.
+      Fix: quando -StatePath NAO e passado explicitamente (uso normal em
+      producao) e Get-StateRecords/Save-StateRecords estao carregadas
+      (Supabase real), persiste la (tabela daily_alert_throttle, PK=key,
+      sobrevive entre processos). -StatePath explicito (uso dos testes
+      unitarios, isolamento local) preserva 100% o comportamento original.
       .OUTPUTS
       $true = pode enviar (dentro do limite ou madrugada silenciosa=false),
       $false = suprimir (ja bateu o limite da janela, ou e madrugada)
@@ -87,15 +99,33 @@ function Test-DailyMarketAlertThrottle {
         [string] $StatePath = "",
         [datetime] $UtcNow = ([datetime]::UtcNow)
     )
-    if (-not $StatePath) {
-        $base = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path (Join-Path $PSScriptRoot "..") "journal" }
-        $StatePath = Join-Path $base "daily_alert_throttle.json"
-    }
-
     $dw = Get-BrtDayWindow -UtcNow $UtcNow
     if ($dw.window -eq "madrugada") { return $false }  # silencio total 00h-06h BRT
 
     $key = "$Market|$Reason|$($dw.date)|$($dw.window)"
+
+    # Backend Supabase: so quando o caller NAO fixou um StatePath (producao
+    # real, nao teste isolado) e as funcoes de state_store estao disponiveis.
+    $useSupabase = (-not $StatePath) -and
+                   (Get-Command Get-StateRecords -ErrorAction SilentlyContinue) -and
+                   (Get-Command Save-StateRecords -ErrorAction SilentlyContinue)
+    if ($useSupabase) {
+        try {
+            $rows = @(Get-StateRecords -Table "daily_alert_throttle" -Filter @{ key = $key })
+            if ($rows.Count -gt 0 -and [int]$rows[0].count -ge 1) { return $false }
+            Save-StateRecords -Table "daily_alert_throttle" -Records @(
+                [PSCustomObject]@{ key = $key; count = 1; updated_at = $UtcNow.ToString("o") }
+            ) -PrimaryKey "key"
+            return $true
+        } catch {
+            return $true  # fail-open: throttle e conveniencia, nunca bloqueia alerta real por erro Supabase
+        }
+    }
+
+    if (-not $StatePath) {
+        $base = if ($global:JOURNAL_DIR) { $global:JOURNAL_DIR } else { Join-Path (Join-Path $PSScriptRoot "..") "journal" }
+        $StatePath = Join-Path $base "daily_alert_throttle.json"
+    }
 
     try {
         $state = if ($script:__dailyAlertThrottleCache) { $script:__dailyAlertThrottleCache } else { @{} }

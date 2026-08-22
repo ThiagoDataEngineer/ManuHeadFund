@@ -2100,6 +2100,23 @@ jobs:
         run: |
           & ./scripts/apply_decision_reflections_2026_07_28.ps1
 
+  apply-daily-alert-throttle-schema:
+    name: Apply daily_alert_throttle Schema (one-shot, URGENTE)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Apply migration
+        shell: pwsh
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          & ./scripts/apply_daily_alert_throttle_2026_08_22.ps1
+
   cleanup-trade-outcomes-duplicates-dryrun:
     name: Cleanup trade_outcomes Duplicates DRY-RUN (one-shot)
     runs-on: ubuntu-latest
