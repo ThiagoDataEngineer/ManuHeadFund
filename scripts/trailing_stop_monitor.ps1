@@ -71,6 +71,13 @@ try {
     . (Join-Path $agentsDir "lib_multiframe_analysis.ps1")
     . (Join-Path $agentsDir "lib_tori_proximity.ps1")
     . (Join-Path $agentsDir "lib_trailing_unified.ps1")
+    # 2026-08-22: detectores de reversao (rejeicao estrutural + candlestick)
+    # pra alimentar -ReversalSignals do Resolve-TrailingDecision -- o ladder
+    # de reversao (tighten=2 sinais, exit=3) existia desde 2026-07-29 mas o
+    # caller nunca passava sinal nenhum (default 0 = ladder morto). As duas
+    # funcoes existem/testadas desde 2026-08-14 (caso ACEUSDT) mas so eram
+    # usadas na ENTRADA, nunca pra proteger posicao aberta.
+    . (Join-Path $agentsDir "lib_chart_patterns.ps1")
     # 2026-08-06: reconcilia journal.stopCurrent com SL real na corretora
     # antes do motor decidir (ver comentario no bloco TRAILING UNIFIED).
     . (Join-Path $agentsDir "lib_trailing_stop_reconcile.ps1")
@@ -314,7 +321,74 @@ try {
                         try { $tuBarsHeld = [Math]::Max(0, [int][Math]::Floor(((Get-Date) - [datetime]$tuPos.openedAt).TotalDays)) } catch { $tuBarsHeld = $null }
                     }
 
-                    $tuDecision = Resolve-TrailingDecision -Position $tuPos -CurrentPrice $tuPrice -Candles $tuCandles -HtfTrend $tuHtfTrend -Regime $tuRegime -BarsHeld $tuBarsHeld
+                    # 2026-08-22: conta sinais de reversao REAIS contra a posicao e
+                    # alimenta o ladder do Resolve-TrailingDecision (tighten com 2,
+                    # exit com 3 -- lib_trailing_policy.ps1). Antes: -ReversalSignals
+                    # nunca era passado (default 0), ladder morto desde a criacao.
+                    # Sinal 1 = rejeicao estrutural no nivel CONTRA a posicao: pra
+                    # LONG, resistencia ACIMA testada e rejeitada (caso do video do
+                    # owner: BTC batendo 80-82k pela 4a vez); pra SHORT, suporte
+                    # abaixo rejeitando. O motor unificado interno so olha o nivel A
+                    # FAVOR (suporte pra LONG) como fator de aperto -- o lado CONTRA
+                    # nunca era avaliado em posicao aberta.
+                    # Sinal 2 = candlestick reversal na direcao contraria (evening
+                    # star/shooting star/etc pra LONG; espelho pra SHORT).
+                    # Exhaustion NAO conta aqui: ja age como fator continuo interno
+                    # do motor -- contar de novo dobraria o efeito.
+                    # Fail-soft total: qualquer erro -> 0 sinais (comportamento iden-
+                    # tico ao anterior).
+                    $tuReversalSignals = 0
+                    $tuRevDetails = @()
+                    try {
+                        $tuSide = "$($tuPos.side)".ToUpper()
+                        $tuOpens  = @($tuCandles | ForEach-Object { [double]$_.open })
+                        $tuHighs  = @($tuCandles | ForEach-Object { [double]$_.high })
+                        $tuLows   = @($tuCandles | ForEach-Object { [double]$_.low })
+                        $tuCloses = @($tuCandles | ForEach-Object { [double]$_.close })
+                        # lado CONTRA a posicao: LONG teme reversao SHORT e vice-versa
+                        $tuAgainst = if ($tuSide -eq "LONG") { "SHORT" } else { "LONG" }
+
+                        if ((Get-Command Detect-StructuralRejection -ErrorAction SilentlyContinue) -and (Get-Command Find-SupportLevels -ErrorAction SilentlyContinue)) {
+                            $tuLevels = @()
+                            if ($tuAgainst -eq "SHORT") {
+                                # resistencias ACIMA: espelha candles pra reusar Find-SupportLevels
+                                # (mesmo padrao ja usado dentro de lib_trailing_unified.ps1)
+                                $tuMirror = @($tuCandles | ForEach-Object { [PSCustomObject]@{ open=$_.open; high=(2*$tuPrice - $_.low); low=(2*$tuPrice - $_.high); close=(2*$tuPrice - $_.close); volume=$_.volume } })
+                                $tuMirrored = @(Find-SupportLevels -Candles $tuMirror -LookbackPeriod 20)
+                                $tuLevels = @($tuMirrored | ForEach-Object { 2*$tuPrice - [double]$_ })
+                            } else {
+                                $tuLevels = @(Find-SupportLevels -Candles $tuCandles -LookbackPeriod 20)
+                            }
+                            if ($tuLevels.Count -gt 0) {
+                                $tuRej = Detect-StructuralRejection -Closes $tuCloses -Levels $tuLevels -Side $tuAgainst
+                                if ($tuRej.detected) {
+                                    $tuReversalSignals++
+                                    $tuRevDetails += "structural_rejection(nivel=$([math]::Round([double]$tuRej.level,6)) forca=$($tuRej.strength))"
+                                }
+                            }
+                        }
+                        if (Get-Command Detect-CandlestickReversal -ErrorAction SilentlyContinue) {
+                            $tuCdl = Detect-CandlestickReversal -Opens $tuOpens -Highs $tuHighs -Lows $tuLows -Closes $tuCloses -Side $tuAgainst
+                            if ($tuCdl.detected) {
+                                $tuReversalSignals++
+                                $tuRevDetails += "candlestick($($tuCdl.pattern_name) forca=$($tuCdl.strength))"
+                            }
+                        }
+                        if ($tuReversalSignals -gt 0) {
+                            Write-CrossPlatformLog "  UNIFIED ${tuMarket}: $tuReversalSignals sinal(is) de reversao contra $tuSide -- $($tuRevDetails -join ' + ')" -Level WARN -LogFile "trailing_stop_monitor.log"
+                        }
+                    } catch {
+                        $tuReversalSignals = 0
+                        Write-CrossPlatformLog "  UNIFIED ${tuMarket}: deteccao de reversao falhou (segue sem sinais): $_" -Level WARN -LogFile "trailing_stop_monitor.log"
+                    }
+
+                    # Ladder de reversao (Get-ExitDecision) so ativa com BarsHeld nao-nulo
+                    # (lib_trailing_unified.ps1 linha ~475). Posicao sem openedAt perderia
+                    # os sinais detectados -- fallback: BarsHeld=0 ativa o ladder sem
+                    # acionar o time-stop (que so age com barras acumuladas).
+                    if ($null -eq $tuBarsHeld -and $tuReversalSignals -gt 0) { $tuBarsHeld = 0 }
+
+                    $tuDecision = Resolve-TrailingDecision -Position $tuPos -CurrentPrice $tuPrice -Candles $tuCandles -HtfTrend $tuHtfTrend -Regime $tuRegime -BarsHeld $tuBarsHeld -ReversalSignals $tuReversalSignals
                     $tuPushed = $false
                     $tuPushErr = $null
 
