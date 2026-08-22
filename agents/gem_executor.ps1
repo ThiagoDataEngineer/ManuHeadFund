@@ -2057,9 +2057,21 @@ function Invoke-GemExecute {
     # ── GUARD: tier whitelist + 4 live guards (2026-05-18) ────────────────────
     # GemAgent agora respeita Mode 2 LIVE guards. Bloqueia GEMs fora Tier A/B em LIVE.
     # 2026-06-03: DISCOVERY mode exempto de tier whitelist (são pares novos por definição)
+    #
+    # 2026-08-21 FIX: default PAPER travava 100% dos candidatos LONG nao-DISCOVERY
+    # (RENDERUSDT/INJUSDT score=65, mesmo perfil que ja entrou via BTC) porque
+    # journal/per_asset_whitelist_*.json REAL (gerado por build_per_asset_
+    # whitelist.py, com Sharpe/DSR/PBO/walk-forward) e gitignored e nunca chega
+    # no runner cloud (checkout limpo) -- so sobra journal/per_asset_whitelist_
+    # 20260701_101921_RESTORED.json (unico commitado, TIER_B_PAPER vazio, so
+    # BTC/ETH/SOL em TIER_A_LIVE/TIER_A_PAPER). Gap ja documentado 2026-07-23
+    # (nunca corrigido). Rodar o backtest completo pra popular a whitelist real
+    # e trabalho separado (caro, pipeline quant); owner decidiu priorizar volume
+    # de trades reais agora: tier vira ANY (sem filtro), outros guards (sizing
+    # cap, frequency cap, custodial cap) continuam ativos sem mudanca.
     if (Get-Command Test-LiveTradeGuards -ErrorAction SilentlyContinue) {
         $tierMode = if ($gem.mode -eq "DISCOVERY") { "ANY" } else {
-            if ($global:LIVE_TIER_FILTER) { $global:LIVE_TIER_FILTER } else { "PAPER" }
+            if ($global:LIVE_TIER_FILTER) { $global:LIVE_TIER_FILTER } else { "ANY" }
         }
         $maxSize  = if ($global:LIVE_MAX_SIZE_USD) { [double]$global:LIVE_MAX_SIZE_USD } else { 100.0 }
         $maxFreq  = if ($global:LIVE_MAX_TRADES_PER_WEEK) { [int]$global:LIVE_MAX_TRADES_PER_WEEK } else { 5 }
