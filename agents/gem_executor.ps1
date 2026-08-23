@@ -2549,12 +2549,37 @@ function Invoke-GemExecute {
     }
 
     # ── Multi TP/SL nativo CoinEx (apenas FUTURES; spot usa stop ja colocado) ───
+    # 2026-08-23 FIX CRITICO: $ladder.sl_levels vem do template de exit-ladder
+    # (ex: "tori" -> trigger=-50, ou seja -50% do entry) -- um valor GENERICO
+    # de estrutura de saida, nunca calibrado pelo stop_pct real do trade (2%
+    # default, ou percentual estrutural via Get-StructuralStopTarget). Achado
+    # real (auditoria RENDERUSDT/BTCUSDT/INJUSDT, 2026-08-22/23): Set-Position-
+    # Protection colocava o SL correto (ex: RENDERUSDT SL=1.5508, 2% do entry
+    # 1.5824) segundos ANTES desta chamada -- CoinEx-PlaceMultiExitLadder entao
+    # colocava uma SEGUNDA ordem de SL nativo usando sl_levels do template
+    # (-50%), sobrepondo a protecao correta. O trailing monitor via o SL de
+    # -50% como "real na corretora" e recalculava a partir dali, produzindo
+    # stops finais inconsistentes (RENDERUSDT variou 1.1%-8.1% de distancia
+    # entre 3 entradas, todas mesmo score/mode) e permitindo perdas muito
+    # maiores que o risco pretendido (7% capital / Regra de Ouro) antes do
+    # trailing conseguir reconciliar. Fix: remove sl_levels do ladder antes de
+    # passar pra CoinEx-PlaceMultiExitLadder -- SL fica 100% sob controle de
+    # Set-PositionProtection + trailing_stop_monitor (unica fonte de verdade),
+    # ladder nativo so cuida dos TPs parciais (que sao percentuais de LUCRO,
+    # nao de risco, e nao tem esse problema).
     if ($ladder -and $hasFutures -and (Get-Command CoinEx-PlaceMultiExitLadder -ErrorAction SilentlyContinue)) {
         try {
+            $__ladderTpOnly = [PSCustomObject]@{
+                ladder_template_id = $ladder.ladder_template_id
+                tp_levels          = $ladder.tp_levels
+                sl_levels          = @()
+                breakeven_after_tp = $ladder.breakeven_after_tp
+                notes              = $ladder.notes
+            }
             $multi = CoinEx-PlaceMultiExitLadder -Market $mkt -PositionSide "long" `
                 -TotalAmount ([decimal]$filled_qty) -Entry ([decimal]$avg_price) `
-                -Ladder $ladder -AtrValue ([decimal]0) -PricePrecision $pricePrec -AmountPrecision $basePrec
-            Write-Host "  [LADDER PLACED] tps=$(@($multi.tp_orders).Count) sls=$(@($multi.sl_orders).Count)" -ForegroundColor Cyan
+                -Ladder $__ladderTpOnly -AtrValue ([decimal]0) -PricePrecision $pricePrec -AmountPrecision $basePrec
+            Write-Host "  [LADDER PLACED] tps=$(@($multi.tp_orders).Count) sls=$(@($multi.sl_orders).Count) (SL sob controle de Set-PositionProtection/trailing, nao do template)" -ForegroundColor Cyan
         } catch {
             Write-Host "  [LADDER WARN] CoinEx-PlaceMultiExitLadder falhou: $_" -ForegroundColor Yellow
         }
