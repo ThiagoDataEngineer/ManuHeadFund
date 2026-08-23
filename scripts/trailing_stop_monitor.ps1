@@ -283,6 +283,26 @@ try {
                                     try { Save-TrailingPositions -Positions @($tuPositions) | Out-Null } catch {
                                         Write-CrossPlatformLog "  UNIFIED ${tuMarket}: falha ao persistir reconciliacao no journal: $_" -Level WARN -LogFile "trailing_stop_monitor.log"
                                     }
+                                } elseif ((Get-Command Get-JournalStopSanityGap -ErrorAction SilentlyContinue)) {
+                                    # 2026-08-23: journal "estaria a frente" na direcao certa mas o
+                                    # piso de sanidade recusou (gap grande demais -- ver lib_trailing_
+                                    # stop_reconcile.ps1). Isso e SUSPEITO o bastante pra alertar em
+                                    # vez de silenciosamente ignorar: pode ser outro bug do mesmo tipo
+                                    # do achado real 2026-08-23 (CoinEx-PlaceMultiExitLadder escrevendo
+                                    # SL errado direto na corretora, ja corrigido, mas vigia contra
+                                    # recorrencia/variantes). So alerta se a direcao "journal a frente"
+                                    # bateria (senao e so o caso normal "real ja mais protegido").
+                                    $tuSideUpper = "$($tuPos.side)".ToUpper()
+                                    $tuWouldBeAhead = if ($tuSideUpper -eq "LONG") { $tuJournalSl -gt $tuRealSl } else { $tuJournalSl -lt $tuRealSl }
+                                    if ($tuWouldBeAhead) {
+                                        $tuGap = Get-JournalStopSanityGap -JournalStop $tuJournalSl -RealStop $tuRealSl
+                                        Write-CrossPlatformLog "  UNIFIED ${tuMarket}: SL real na corretora ($tuRealSl) diverge do journal ($tuJournalSl) em $([math]::Round($tuGap*100,1))% -- ACIMA do piso de sanidade, reconciliacao RECUSADA (suspeita de SL incorreto escrito na corretora por outra rotina)" -Level WARN -LogFile "trailing_stop_monitor.log"
+                                        if (Get-Command Send-TelegramAlert -ErrorAction SilentlyContinue) {
+                                            try {
+                                                Send-TelegramAlert -Message "⚠️ *SL SUSPEITO* -- $tuMarket`nJournal: $tuJournalSl | Corretora: $tuRealSl (gap $([math]::Round($tuGap*100,1))%)`nReconciliacao recusada (gap grande demais) -- VERIFICAR MANUALMENTE." | Out-Null
+                                            } catch {}
+                                        }
+                                    }
                                 }
                             }
                         } catch {

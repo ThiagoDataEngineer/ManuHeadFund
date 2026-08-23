@@ -46,6 +46,7 @@ if (Test-Path $__entryDirPath) { . $__entryDirPath }  # 2026-07-22: cerebro bidi
 # 2026-06-09: Direction learning (counterfactual: learn from rejections)
 . (Join-Path $PSScriptRoot "lib_direction_learning.ps1")
 . (Join-Path $PSScriptRoot "lib_position_protection.ps1")  # 2026-07-02 FIX: SL+TP placement CRÍTICO
+. (Join-Path $PSScriptRoot "lib_trailing_stop_reconcile.ps1")  # 2026-08-23: piso de sanidade pos-ladder (Get-JournalStopSanityGap)
 # 2026-06-17: Triagem agent (aplica aprendizado a conviction scores)
 . (Join-Path $PSScriptRoot "triagem_agent.ps1")
 # 2026-07-08: Trailing stop learning logger (enrich logs para auto-aprendizado)
@@ -2580,6 +2581,29 @@ function Invoke-GemExecute {
                 -TotalAmount ([decimal]$filled_qty) -Entry ([decimal]$avg_price) `
                 -Ladder $__ladderTpOnly -AtrValue ([decimal]0) -PricePrecision $pricePrec -AmountPrecision $basePrec
             Write-Host "  [LADDER PLACED] tps=$(@($multi.tp_orders).Count) sls=$(@($multi.sl_orders).Count) (SL sob controle de Set-PositionProtection/trailing, nao do template)" -ForegroundColor Cyan
+
+            # 2026-08-23 DEFESA EM PROFUNDIDADE: sl_levels=@() acima ja remove a
+            # CAUSA do bug (ver comentario grande logo acima), mas confirma aqui
+            # que o SL na corretora, DEPOIS do ladder, ainda bate com o que
+            # Set-PositionProtection colocou -- protege contra qualquer rotina
+            # FUTURA (nao so este ladder) que escreva um SL errado por cima.
+            # Mesmo piso de sanidade usado no trailing_stop_monitor.ps1
+            # (Get-JournalStopSanityGap, lib_trailing_stop_reconcile.ps1).
+            if ($protect -and [double]$protect.sl_price -gt 0 -and (Get-Command Get-JournalStopSanityGap -ErrorAction SilentlyContinue) -and (Get-Command CoinEx-GetPendingPositions -ErrorAction SilentlyContinue)) {
+                try {
+                    $__postLadderPos = @(CoinEx-GetPendingPositions -Market $mkt) | Select-Object -First 1
+                    if ($__postLadderPos -and [double]$__postLadderPos.stop_loss_price -gt 0) {
+                        $__postLadderSl = [double]$__postLadderPos.stop_loss_price
+                        $__slGap = Get-JournalStopSanityGap -JournalStop ([double]$protect.sl_price) -RealStop $__postLadderSl
+                        if ($__slGap -gt 0.20) {
+                            Write-Host "  [SL SUSPEITO POS-LADDER] $mkt`: SL esperado=$($protect.sl_price) mas corretora agora mostra=$__postLadderSl (gap=$([math]::Round($__slGap*100,1))%) -- ladder pode ter sobreposto a protecao" -ForegroundColor Red
+                            if (Get-Command Send-TelegramAlert -ErrorAction SilentlyContinue) {
+                                try { Send-TelegramAlert -Message "🚨 *SL SUSPEITO POS-LADDER* -- $mkt`nEsperado: $($protect.sl_price) | Corretora: $__postLadderSl (gap $([math]::Round($__slGap*100,1))%)`nLadder pode ter sobreposto a protecao -- VERIFICAR MANUALMENTE." | Out-Null } catch {}
+                            }
+                        }
+                    }
+                } catch {}
+            }
         } catch {
             Write-Host "  [LADDER WARN] CoinEx-PlaceMultiExitLadder falhou: $_" -ForegroundColor Yellow
         }
