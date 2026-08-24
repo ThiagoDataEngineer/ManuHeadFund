@@ -44,7 +44,7 @@ try {
     Write-Host "ERRO em Get-SpotHoldingsForStop: $_" -ForegroundColor Red
 }
 
-Write-Host "`n--- [3] Ordens SPOT pendentes ja na corretora (pra comparar com o esperado) ---" -ForegroundColor Yellow
+Write-Host "`n--- [3a] Ordens SPOT NORMAIS pendentes (pending-order) ---" -ForegroundColor Yellow
 try {
     $pending = CoinEx-Get "/v2/spot/pending-order?market_type=SPOT"
     Write-Host "code=$($pending.code) | total pendentes: $(@($pending.data).Count)"
@@ -55,4 +55,23 @@ try {
     Write-Host "ERRO ao buscar ordens pendentes: $_" -ForegroundColor Red
 }
 
-Write-Host "`n=== FIM DIAG ===" -ForegroundColor Cyan
+Write-Host "`n--- [3b] Ordens de STOP SPOT pendentes (pending-stop-order -- o que Sync-SpotStopsToExchange realmente consulta) ---" -ForegroundColor Yellow
+try {
+    $markets = @("FFUSDT","STXUSDT","SUPERUSDT","VIRTUALUSDT","DOGUSDT","AEROUSDT","SCUSDT","SUIUSDT","XAUTUSDT")
+    foreach ($mkt in $markets) {
+        try {
+            $so = CoinEx-Get "/v2/spot/pending-stop-order?market=$mkt&market_type=SPOT&page=1&limit=100"
+            $n = @($so.data).Count
+            Write-Host "  ${mkt}: code=$($so.code) stop-orders=$n"
+            foreach ($s in @($so.data)) {
+                Write-Host "    side=$($s.side) trigger=$($s.trigger_price) price=$($s.price) amount=$($s.amount)"
+            }
+        } catch {
+            Write-Host "  ${mkt}: ERRO $_" -ForegroundColor Red
+        }
+    }
+} catch {
+    Write-Host "ERRO ao buscar stop-orders: $_" -ForegroundColor Red
+}
+
+Write-Host "`n=== FIM DIAG (so leitura -- Sync-SpotStopsToExchange NAO executado) ===" -ForegroundColor Cyan
