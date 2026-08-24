@@ -594,6 +594,28 @@ Describe "Resolve-TrailingDecision -- enriquecimento opcional multi-TF + perfil 
         ($r.size_pct -gt 0) | Should Be $true
     }
 
+    It "2026-08-24 FIX CRITICO: stopCurrent JA MOVIDO acima do entry (trailing protegeu lucro) -- r_now continua correto e ainda dispara PARTIAL" {
+        # Achado real (INJUSDT, 2026-08-24): entry=4.8686, trailing ja empurrou
+        # o stop pra 5.1797 (acima do entry -- breakeven+/ratchet correto), preco
+        # real em +24.33% de lucro. Bug antigo: $risk=entry-currentStop virava
+        # NEGATIVO (4.8686-5.1797=-0.31), r_now saia -3.8 (sem sentido), NUNCA
+        # disparava partial por mais lucro que o trade tivesse. Fix: usa
+        # $originalRDistance (baseado no stop ORIGINAL -- Position.stop -- que
+        # aqui e passado explicitamente como 95, distinto do stopCurrent=110
+        # ja movido bem alem do entry 100).
+        $candles = New-HealthyUptrendCandles -Count 30
+        $pos = [PSCustomObject]@{
+            market="TRAILEDPASTENTRYUSDT"; side="LONG"; entry=100.0
+            stop=95.0; stopCurrent=110.0   # stop ORIGINAL=95 (5R=5), stopCurrent JA acima do entry
+            origin = @{ asset_class="FUTURES"; trade_style="SWING" }
+            leverage = 1; peak = 130.0
+        }
+        # r_now (correto, base no stop original) = (124.33-100)/(100-95) = 4.866 -> bem acima de 1R e 2R
+        $r = Resolve-TrailingDecision -Position $pos -CurrentPrice 124.33 -Candles $candles -BarsHeld 3
+        $r.action | Should Be "PARTIAL"
+        ($r.size_pct -gt 0) | Should Be $true
+    }
+
     It "excecao dentro do enriquecimento (Get-ExitDecision indisponivel) -- fail-soft, mantem baseDecision (ATR+exhaustion+trendline+support)" {
         if (Get-Command Get-ExitDecision -ErrorAction SilentlyContinue) {
             Remove-Item function:Get-ExitDecision -ErrorAction SilentlyContinue

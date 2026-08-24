@@ -474,9 +474,26 @@ function Resolve-TrailingDecision {
     # exhaustion+trendline+support), nunca quebra o ciclo do trailing.
     if ($null -ne $BarsHeld -and (Get-Command Get-ExitDecision -ErrorAction SilentlyContinue) -and (Get-Command Resolve-ExitPolicyGated -ErrorAction SilentlyContinue)) {
         try {
-            $risk = if ($side -eq "LONG") { $entry - $currentStop } else { $currentStop - $entry }
+            # 2026-08-24 FIX CRITICO: $risk calculado com $currentStop (o stop JA
+            # MOVIDO pelo trailing) em vez do stop ORIGINAL. Assim que o trailing
+            # protege lucro suficiente pra empurrar o stop ALEM do entry (ratchet/
+            # breakeven+, comportamento correto e esperado), $risk fica NEGATIVO
+            # pra LONG (entry - currentStop < 0) -- e o r_now resultante vira um
+            # numero negativo sem sentido (ex: achado real INJUSDT: entry=4.8686,
+            # currentStop=5.1797 apos trailing, preco real +24.33% de lucro, mas
+            # r_now calculado dava -3.8). Como TODO partial exige $rNow -ge
+            # $pp.at_r (sempre positivo, minimo 1.0), a saida parcial fica
+            # estruturalmente IMPOSSIVEL de disparar assim que o trade vai bem
+            # o bastante pro trailing ja ter subido o stop -- exatamente o
+            # cenario onde faria mais sentido realizar lucro. Fix: reusa
+            # $originalRDistance/$currentRMultiple (ja calculados acima, linha
+            # ~249-255, com o stop ORIGINAL da posicao, sempre positivo via Abs())
+            # -- mesma fonte de verdade que ja protege contra sair cedo demais
+            # (profitFloorReached), agora tambem alimentando corretamente quando
+            # DEVE realizar parcial/sair.
+            $risk = $originalRDistance
             if ($risk -gt 0) {
-                $rNow = if ($side -eq "LONG") { ($CurrentPrice - $entry) / $risk } else { ($entry - $CurrentPrice) / $risk }
+                $rNow = $currentRMultiple
                 $peak = if ($Position.PSObject.Properties['peak'] -and [double]$Position.peak -gt 0) { [double]$Position.peak } else { $CurrentPrice }
 
                 $trendUp = $false
