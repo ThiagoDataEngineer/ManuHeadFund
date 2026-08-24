@@ -2189,6 +2189,31 @@ jobs:
         run: |
           & ./scripts/diag_evolution_engine_status_2026_08_04.ps1
 
+  diag-spot-holdings-readonly:
+    name: Diag SPOT Holdings Sem Stop Read-Only (one-shot, URGENTE)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_ANON_KEY = '${{ secrets.SUPABASE_ANON_KEY }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run diagnostic
+        shell: pwsh
+        run: |
+          & ./scripts/diag_spot_holdings_readonly_2026_08_24.ps1
+
   apply-evolution-tori-threshold-fix:
     name: Apply Evolution tori_confluence_threshold Fix (one-shot, URGENTE)
     runs-on: ubuntu-latest
