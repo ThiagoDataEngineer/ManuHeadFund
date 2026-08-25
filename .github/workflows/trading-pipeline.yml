@@ -2239,6 +2239,28 @@ jobs:
         run: |
           & ./scripts/diag_daily_cost_readonly_2026_08_25.ps1
 
+  diag-groq-models-readonly:
+    name: Diag Groq Models List Read-Only (one-shot, URGENTE)
+    runs-on: ubuntu-latest
+    if: github.event_name == 'workflow_dispatch'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup
+        shell: pwsh
+        run: |
+          New-Item -ItemType Directory -Path "agents","journal","logs" -Force | Out-Null
+          $content = "`$env:GROQ_API_KEY = '${{ secrets.GROQ_API_KEY }}'" + "`n"
+          $content += "`$env:GROQ_API_KEY_2 = '${{ secrets.GROQ_API_KEY_2 }}'" + "`n"
+          $content | Out-File "agents/config.local.ps1" -Encoding UTF8
+
+      - name: Run diagnostic
+        shell: pwsh
+        run: |
+          & ./scripts/diag_groq_models_readonly_2026_08_25.ps1
+
   apply-evolution-tori-threshold-fix:
     name: Apply Evolution tori_confluence_threshold Fix (one-shot, URGENTE)
     runs-on: ubuntu-latest
