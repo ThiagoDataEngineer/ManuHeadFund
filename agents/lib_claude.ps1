@@ -103,18 +103,29 @@ function Invoke-Claude {
 # Resolve-GroqActiveModel — PURA: escolhe o melhor modelo dentre os disponiveis.
 #
 # 2026-08-25 achado real: llama-3.3-70b-versatile (hardcoded desde sempre)
-# comecou a dar 404 sistematico em TODOS os agentes (triagem/mesa_termal/
-# mesa_radar/mentor) -- diagnostico de custo LLM mostrou $0 gasto em 7 dias
-# consecutivos, ou seja, NENHUMA chamada bem-sucedida, nao economia real.
-# Padrao ja documentado 2x antes no codigo (qwen-qwq-32b e llama-3.1-70b-
-# versatile, ambos comentados como "era deprecated") -- Groq aposenta
-# modelos "preview"/"versatile" com frequencia, sem aviso no client.
+# comecou a dar 404 sistematico em TODOS os agentes -- diagnostico de custo
+# LLM mostrou $0 gasto em 7 dias consecutivos (nenhuma chamada bem-sucedida),
+# e owner confirmou via Anthropic Console gasto real de $263 em ~25 dias
+# (limite mensal $270, quase estourado) -- toda chamada estava caindo direto
+# no Claude pago por falta do fallback gratuito Groq.
 #
-# Fix: em vez de outra troca hardcoded (quebra nao a proxima), consulta
-# GET /openai/v1/models (endpoint publico, so precisa de key valida) e
-# escolhe dinamicamente. Prioridade: o modelo PEDIDO (se ainda ativo) >
-# outro "versatile"/70b da mesma familia (llama) > qualquer llama ativo >
-# primeiro da lista (ultimo recurso).
+# 3 tentativas ate a lista real de /v1/models ser inspecionada (2026-08-25):
+#   Fix #1: filtro generico 'llama' no nome -> escolheu prompt-guard (nao chat)
+#   Fix #2: blocklist (exclui guard/whisper/moderation/embed/tts/vision) ->
+#           ainda escolheu canopylabs/orpheus-* (TTS, "orpheus" nao bate
+#           blocklist) e allam-2-7b (chat arabe de nicho, ctx=4096)
+#   Fix #3 (este): lista real inspecionada via diag_groq_models_readonly_
+#           2026_08_25.ps1 confirmou que a FAMILIA LLAMA CHAT FOI TOTALMENTE
+#           DESCONTINUADA pela Groq -- so sobrou meta-llama/llama-prompt-
+#           guard-* (guard-rail, nao chat). Catalogo atual (13 modelos):
+#           groq/compound(-mini), openai/gpt-oss-{120b,20b,safeguard-20b},
+#           qwen/qwen3.6-27b, allam-2-7b (chat arabe), canopylabs/orpheus-*
+#           (TTS), whisper-large-v3* (STT), meta-llama/llama-prompt-guard-*
+#           (guard-rail). Abordagem muda de blocklist (nunca cobre modelo
+#           novo/inesperado) pra ALLOWLIST: familias de chat-completion
+#           GENERALISTA conhecidas, em ordem de preferencia (contexto maior
+#           e propensao a qualidade primeiro). "-safeguard-" e excluido
+#           explicitamente do match de "gpt-oss" (e guard-rail, nao chat).
 # -----------------------------------------------------------------------------
 function Resolve-GroqActiveModel {
     <#
@@ -141,37 +152,30 @@ function Resolve-GroqActiveModel {
     if (@($AvailableModels).Count -eq 0) { return $RequestedModel }
     if ($AvailableModels -contains $RequestedModel) { return $RequestedModel }
 
-    # 2026-08-25 FIX #2 (achado real em producao no MESMO dia do fix #1):
-    # a lista /v1/models inclui modelos UTILITARIOS que tem "llama" no nome
-    # mas NAO sao chat completion (prompt-guard = deteccao de prompt
-    # injection, whisper = STT, embed = embeddings) -- o filtro generico
-    # 'llama' escolheu 'meta-llama/llama-prompt-guard-2-86m' e todo agente
-    # (triagem/mesa_termal/mesa_radar/mentor) passou a tomar 400 Bad Request
-    # em vez do 404 anterior (chamada de chat num modelo que nao aceita esse
-    # formato). Exclui esses padroes antes de qualquer escolha por nome.
-    $chatCandidates = @($AvailableModels | Where-Object {
-        $_ -notmatch '(?i)guard|whisper|moderation|embed|tts|vision'
-    })
-    if ($chatCandidates.Count -eq 0) {
-        # nada parece ser chat model -- fail-safe, mantem o pedido original
-        # (caller decide: throw/fallback pra proximo provider da cascata)
-        return $RequestedModel
+    # Allowlist de familias chat-completion generalistas conhecidas, em ordem
+    # de preferencia. Cada padrao e testado nesta ordem; o primeiro match
+    # (entre os modelos disponiveis) vence. "-safeguard-"/"guard"/"whisper"/
+    # "orpheus" NUNCA batem aqui de proposito (nao sao chat generalista).
+    $familyPatterns = @(
+        '(?i)^meta-llama/llama-4.*'          # familia Llama, se a Groq reintroduzir (prioridade
+        '(?i)^llama-.*-(versatile|instant)$' # historica -- era o modelo original deste projeto)
+        '(?i)^openai/gpt-oss-120b$'
+        '(?i)^openai/gpt-oss-20b$'
+        '(?i)^groq/compound$'
+        '(?i)^groq/compound-mini$'
+        '(?i)^qwen/.*'
+        '(?i)^mixtral-.*'
+        '(?i)^gemma.*'
+    )
+    foreach ($pat in $familyPatterns) {
+        $match = @($AvailableModels | Where-Object { $_ -match $pat } | Sort-Object -Descending)
+        if ($match.Count -gt 0) { return $match[0] }
     }
 
-    # Prioridade 2: outro llama "versatile" (mesma familia/tier de qualidade)
-    $versatile = @($chatCandidates | Where-Object { $_ -match '(?i)llama.*versatile' } | Sort-Object -Descending)
-    if ($versatile.Count -gt 0) { return $versatile[0] }
-
-    # Prioridade 3: llama "instant" (familia rapida, tambem chat real)
-    $instant = @($chatCandidates | Where-Object { $_ -match '(?i)llama.*instant' } | Sort-Object -Descending)
-    if ($instant.Count -gt 0) { return $instant[0] }
-
-    # Prioridade 4: qualquer llama chat-capavel restante (70b > 8b, prefere maior)
-    $anyLlama = @($chatCandidates | Where-Object { $_ -match '(?i)llama' } | Sort-Object -Descending)
-    if ($anyLlama.Count -gt 0) { return $anyLlama[0] }
-
-    # Ultimo recurso: primeiro chat-candidate da lista (algo ativo e melhor que nada)
-    return $chatCandidates[0]
+    # Nenhuma familia conhecida disponivel -- fail-safe, mantem o pedido
+    # original (caller decide: throw/fallback pra proximo provider da
+    # cascata). Nao arrisca escolher as cegas um modelo de nicho/utilitario.
+    return $RequestedModel
 }
 
 # -----------------------------------------------------------------------------
