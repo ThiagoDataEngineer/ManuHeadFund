@@ -100,6 +100,86 @@ function Invoke-Claude {
 }
 
 # -----------------------------------------------------------------------------
+# Resolve-GroqActiveModel — PURA: escolhe o melhor modelo dentre os disponiveis.
+#
+# 2026-08-25 achado real: llama-3.3-70b-versatile (hardcoded desde sempre)
+# comecou a dar 404 sistematico em TODOS os agentes (triagem/mesa_termal/
+# mesa_radar/mentor) -- diagnostico de custo LLM mostrou $0 gasto em 7 dias
+# consecutivos, ou seja, NENHUMA chamada bem-sucedida, nao economia real.
+# Padrao ja documentado 2x antes no codigo (qwen-qwq-32b e llama-3.1-70b-
+# versatile, ambos comentados como "era deprecated") -- Groq aposenta
+# modelos "preview"/"versatile" com frequencia, sem aviso no client.
+#
+# Fix: em vez de outra troca hardcoded (quebra nao a proxima), consulta
+# GET /openai/v1/models (endpoint publico, so precisa de key valida) e
+# escolhe dinamicamente. Prioridade: o modelo PEDIDO (se ainda ativo) >
+# outro "versatile"/70b da mesma familia (llama) > qualquer llama ativo >
+# primeiro da lista (ultimo recurso).
+# -----------------------------------------------------------------------------
+function Resolve-GroqActiveModel {
+    <#
+    .SYNOPSIS
+    PURA: dado o modelo desejado e a lista de IDs disponiveis (de /v1/models),
+    devolve o melhor modelo a usar.
+
+    .PARAMETER RequestedModel
+    Modelo que o caller pediu (ex: "llama-3.3-70b-versatile").
+
+    .PARAMETER AvailableModels
+    Array de strings (IDs de modelo) retornados por /v1/models.
+
+    .OUTPUTS
+    [string] ID do modelo a usar. Se AvailableModels vazio, devolve
+    RequestedModel sem tocar (fail-safe -- caller decide o que fazer).
+    #>
+    [CmdletBinding()]
+    [OutputType([string])]
+    param(
+        [Parameter(Mandatory)] [string]   $RequestedModel,
+        [string[]] $AvailableModels = @()
+    )
+    if (@($AvailableModels).Count -eq 0) { return $RequestedModel }
+    if ($AvailableModels -contains $RequestedModel) { return $RequestedModel }
+
+    # Prioridade 2: outro llama "versatile" (mesma familia/tier de qualidade)
+    $versatile = @($AvailableModels | Where-Object { $_ -match '(?i)llama.*versatile' } | Sort-Object -Descending)
+    if ($versatile.Count -gt 0) { return $versatile[0] }
+
+    # Prioridade 3: qualquer llama ativo (70b > 8b, prefere maior)
+    $anyLlama = @($AvailableModels | Where-Object { $_ -match '(?i)llama' } | Sort-Object -Descending)
+    if ($anyLlama.Count -gt 0) { return $anyLlama[0] }
+
+    # Ultimo recurso: primeiro da lista (algo ativo e melhor que nada)
+    return $AvailableModels[0]
+}
+
+# -----------------------------------------------------------------------------
+# Get-GroqAvailableModels — I/O: consulta /v1/models, cacheia por processo
+# (evita 1 chamada extra a CADA request -- so busca 1x por execucao do runner).
+# Fail-soft: qualquer erro devolve array vazio (Resolve-GroqActiveModel cai
+# no fail-safe de manter o RequestedModel).
+# -----------------------------------------------------------------------------
+function Get-GroqAvailableModels {
+    [CmdletBinding()]
+    param([string]$ApiKey)
+
+    if ($script:GROQ_MODELS_CACHE -and $script:GROQ_MODELS_CACHE_TS -and
+        ((Get-Date) - $script:GROQ_MODELS_CACHE_TS).TotalMinutes -lt 30) {
+        return $script:GROQ_MODELS_CACHE
+    }
+    try {
+        $wr = Invoke-RestMethod -Uri "https://api.groq.com/openai/v1/models" `
+            -Headers @{ "Authorization" = "Bearer $ApiKey" } -TimeoutSec 10 -ErrorAction Stop
+        $ids = @($wr.data | ForEach-Object { [string]$_.id })
+        $script:GROQ_MODELS_CACHE = $ids
+        $script:GROQ_MODELS_CACHE_TS = Get-Date
+        return $ids
+    } catch {
+        return @()
+    }
+}
+
+# -----------------------------------------------------------------------------
 # Invoke-Groq — wrapper Groq (OpenAI-compatible API)
 # Free tier: 14.400 req/dia. Llama 3.3 70B versatile.
 # Tracking: registrado com cost = $0 (free tier)
@@ -125,8 +205,22 @@ function Invoke-Groq {
 
     [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 -bor [Net.SecurityProtocolType]::Tls13
 
+    # 2026-08-25: resolve dinamicamente se $Model ainda esta ativo (ver
+    # Resolve-GroqActiveModel/Get-GroqAvailableModels acima) -- evita 404
+    # sistematico quando Groq aposenta o modelo hardcoded (ja aconteceu 2x
+    # antes, documentado no historico deste arquivo). Fail-soft: qualquer
+    # erro na consulta mantem $Model original (comportamento pre-existente).
+    $__resolvedModel = $Model
+    try {
+        $__available = Get-GroqAvailableModels -ApiKey $keys[0]
+        $__resolvedModel = Resolve-GroqActiveModel -RequestedModel $Model -AvailableModels $__available
+        if ($__resolvedModel -ne $Model) {
+            Write-Host "  [$Agent] Groq: modelo '$Model' indisponivel, usando '$__resolvedModel'" -ForegroundColor DarkYellow
+        }
+    } catch {}
+
     $body = @{
-        model       = $Model
+        model       = $__resolvedModel
         max_tokens  = $MaxTokens
         temperature = $Temperature
         messages    = @(
@@ -159,7 +253,7 @@ function Invoke-Groq {
                 if (Get-Command -Name "Track-ClaudeUsage" -ErrorAction SilentlyContinue) {
                     $inTok  = [int]$response.usage.prompt_tokens
                     $outTok = [int]$response.usage.completion_tokens
-                    Track-ClaudeUsage -Model "groq:$Model" -InputTokens $inTok -OutputTokens $outTok -Agent $Agent -LatencyMs $latencyMs | Out-Null
+                    Track-ClaudeUsage -Model "groq:$__resolvedModel" -InputTokens $inTok -OutputTokens $outTok -Agent $Agent -LatencyMs $latencyMs | Out-Null
                 }
             } catch {}
 
