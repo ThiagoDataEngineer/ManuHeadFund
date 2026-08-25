@@ -57,6 +57,34 @@ Describe "Resolve-GroqActiveModel -- funcao pura (contrato)" {
             -AvailableModels @("Llama-4.0-Versatile")
         $r | Should Be "Llama-4.0-Versatile"
     }
+
+    It "2026-08-25 FIX #2 (bug real em producao): NUNCA escolhe prompt-guard mesmo sendo o unico 'llama' na lista" {
+        # Caso real: /v1/models so tinha meta-llama/llama-prompt-guard-2-86m
+        # como 'llama' -- filtro antigo escolhia esse (guard-rail, nao chat)
+        # e todo agente tomava 400 Bad Request. Sem chat-candidate real,
+        # deve cair no fail-safe (manter RequestedModel), NAO no guard model.
+        $r = Resolve-GroqActiveModel -RequestedModel "llama-3.3-70b-versatile" `
+            -AvailableModels @("meta-llama/llama-prompt-guard-2-86m", "distil-whisper-large-v3-en")
+        $r | Should Be "llama-3.3-70b-versatile"
+    }
+
+    It "prompt-guard presente JUNTO com um chat model real -- escolhe o chat model, ignora o guard" {
+        $r = Resolve-GroqActiveModel -RequestedModel "llama-3.3-70b-versatile" `
+            -AvailableModels @("meta-llama/llama-prompt-guard-2-86m", "llama-3.1-8b-instant")
+        $r | Should Be "llama-3.1-8b-instant"
+    }
+
+    It "prefere 'instant' sobre 'llama' generico sem qualificador conhecido" {
+        $r = Resolve-GroqActiveModel -RequestedModel "llama-3.3-70b-versatile" `
+            -AvailableModels @("llama-guard-3-8b", "llama-3.1-8b-instant")
+        $r | Should Be "llama-3.1-8b-instant"
+    }
+
+    It "exclui tambem whisper/moderation/embed/tts/vision mesmo com nome parecido" {
+        $r = Resolve-GroqActiveModel -RequestedModel "llama-3.3-70b-versatile" `
+            -AvailableModels @("whisper-large-v3", "llama-moderation-x", "text-embedding-llama", "llama-3.1-8b-instant")
+        $r | Should Be "llama-3.1-8b-instant"
+    }
 }
 
 Describe "Get-GroqAvailableModels -- I/O real (smoke test, fail-soft)" {

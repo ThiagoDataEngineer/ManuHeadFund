@@ -141,16 +141,37 @@ function Resolve-GroqActiveModel {
     if (@($AvailableModels).Count -eq 0) { return $RequestedModel }
     if ($AvailableModels -contains $RequestedModel) { return $RequestedModel }
 
+    # 2026-08-25 FIX #2 (achado real em producao no MESMO dia do fix #1):
+    # a lista /v1/models inclui modelos UTILITARIOS que tem "llama" no nome
+    # mas NAO sao chat completion (prompt-guard = deteccao de prompt
+    # injection, whisper = STT, embed = embeddings) -- o filtro generico
+    # 'llama' escolheu 'meta-llama/llama-prompt-guard-2-86m' e todo agente
+    # (triagem/mesa_termal/mesa_radar/mentor) passou a tomar 400 Bad Request
+    # em vez do 404 anterior (chamada de chat num modelo que nao aceita esse
+    # formato). Exclui esses padroes antes de qualquer escolha por nome.
+    $chatCandidates = @($AvailableModels | Where-Object {
+        $_ -notmatch '(?i)guard|whisper|moderation|embed|tts|vision'
+    })
+    if ($chatCandidates.Count -eq 0) {
+        # nada parece ser chat model -- fail-safe, mantem o pedido original
+        # (caller decide: throw/fallback pra proximo provider da cascata)
+        return $RequestedModel
+    }
+
     # Prioridade 2: outro llama "versatile" (mesma familia/tier de qualidade)
-    $versatile = @($AvailableModels | Where-Object { $_ -match '(?i)llama.*versatile' } | Sort-Object -Descending)
+    $versatile = @($chatCandidates | Where-Object { $_ -match '(?i)llama.*versatile' } | Sort-Object -Descending)
     if ($versatile.Count -gt 0) { return $versatile[0] }
 
-    # Prioridade 3: qualquer llama ativo (70b > 8b, prefere maior)
-    $anyLlama = @($AvailableModels | Where-Object { $_ -match '(?i)llama' } | Sort-Object -Descending)
+    # Prioridade 3: llama "instant" (familia rapida, tambem chat real)
+    $instant = @($chatCandidates | Where-Object { $_ -match '(?i)llama.*instant' } | Sort-Object -Descending)
+    if ($instant.Count -gt 0) { return $instant[0] }
+
+    # Prioridade 4: qualquer llama chat-capavel restante (70b > 8b, prefere maior)
+    $anyLlama = @($chatCandidates | Where-Object { $_ -match '(?i)llama' } | Sort-Object -Descending)
     if ($anyLlama.Count -gt 0) { return $anyLlama[0] }
 
-    # Ultimo recurso: primeiro da lista (algo ativo e melhor que nada)
-    return $AvailableModels[0]
+    # Ultimo recurso: primeiro chat-candidate da lista (algo ativo e melhor que nada)
+    return $chatCandidates[0]
 }
 
 # -----------------------------------------------------------------------------
