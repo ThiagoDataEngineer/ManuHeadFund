@@ -39,7 +39,7 @@ try {
     Write-Host "ERRO em Get-CostSummary: $_" -ForegroundColor Red
 }
 
-Write-Host "`n--- [2] Taxas de trading FUTURES (ultimos 50 fechamentos reais) ---" -ForegroundColor Yellow
+Write-Host "`n--- [2] Taxas de trading FUTURES (via finished-order, que carrega a taxa real por execucao) ---" -ForegroundColor Yellow
 try {
     $futPos = CoinEx-Get "/v2/futures/pending-position?market_type=FUTURES"
     $futMarkets = @()
@@ -51,24 +51,35 @@ try {
     $windowStart = (Get-Date).AddDays(-1)
     $totalFeeFut24h = 0.0
     $countFut24h = 0
+    $__schemaShown = $false
     foreach ($mkt in $futMarkets) {
         try {
-            $r = CoinEx-Get "/v2/futures/finished-position?market=$mkt&market_type=FUTURES&page=1&limit=50"
-            if ($r.code -eq 0) {
-                foreach ($p in @($r.data)) {
-                    $fee = if ($p.PSObject.Properties['fee']) { [double]$p.fee } else { 0.0 }
-                    $totalFeeFut += $fee
-                    $countFut++
-                    $updatedAt = try { [datetimeoffset]::FromUnixTimeMilliseconds([long]$p.updated_at).UtcDateTime } catch { $null }
-                    if ($updatedAt -and $updatedAt -ge $windowStart) {
-                        $totalFeeFut24h += $fee
-                        $countFut24h++
-                    }
+            $r = CoinEx-Get "/v2/futures/finished-order?market=$mkt&market_type=FUTURES&page=1&limit=50"
+            if ($r.code -ne 0) {
+                Write-Host "  ${mkt}: finished-order code=$($r.code) message=$($r.message)" -ForegroundColor DarkYellow
+                continue
+            }
+            if (-not $__schemaShown -and @($r.data).Count -gt 0) {
+                Write-Host "  [schema real de 1 registro finished-order]:"
+                ($r.data[0] | ConvertTo-Json -Compress) | Write-Host
+                $__schemaShown = $true
+            }
+            foreach ($p in @($r.data)) {
+                $fee = if ($p.PSObject.Properties['deal_fee']) { [double]$p.deal_fee }
+                       elseif ($p.PSObject.Properties['fee']) { [double]$p.fee }
+                       else { 0.0 }
+                $totalFeeFut += $fee
+                $countFut++
+                $tsField = if ($p.PSObject.Properties['updated_at']) { $p.updated_at } elseif ($p.PSObject.Properties['create_time']) { $p.create_time } else { 0 }
+                $updatedAt = try { [datetimeoffset]::FromUnixTimeMilliseconds([long]$tsField).UtcDateTime } catch { $null }
+                if ($updatedAt -and $updatedAt -ge $windowStart) {
+                    $totalFeeFut24h += $fee
+                    $countFut24h++
                 }
             }
         } catch {}
     }
-    Write-Host "Taxas FUTURES (todos os mercados com posicao aberta agora, historico finished-position): `$$([math]::Round($totalFeeFut,4)) em $countFut fechamentos"
+    Write-Host "Taxas FUTURES (todos os mercados com posicao aberta agora, historico finished-order): `$$([math]::Round($totalFeeFut,4)) em $countFut ordens"
     Write-Host "Taxas FUTURES ultimas 24h: `$$([math]::Round($totalFeeFut24h,4)) em $countFut24h fechamentos"
 } catch {
     Write-Host "ERRO ao calcular taxas futures: $_" -ForegroundColor Red
