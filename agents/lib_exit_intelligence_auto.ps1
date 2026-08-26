@@ -79,8 +79,18 @@ function Resolve-ExitAutoDecision {
         [double]  $MinGainPctL2 = 8.0,  # piso de ganho p/ L2 (RSI) disparar -- ver nota 2026-07-17
         [double]  $MinGainPctL3 = 15.0, # piso de ganho p/ L3 (reversal) disparar
         [bool]    $IsRunner = $false,   # 2026-07-27: trade classificado runner (tendencia forte confirmada)
-        [double]  $MinGainPctL4Runner = 1.0  # piso de ganho p/ L4 quando IsRunner (default = comportamento antigo se $false)
+        [double]  $MinGainPctL4Runner = 1.0,  # piso de ganho p/ L4 quando IsRunner (default = comportamento antigo se $false)
+        # 2026-08-25 FIX (owner: "TP nao surfa a onda"): distToSL<=2.5 fixo foi
+        # calibrado p/ stops largos (MOMENTUM 30%/DISCOVERY 50%). Com stops
+        # apertados (TRIGGER/TORI_* ~1-3%, ver config.ps1 GEM_STOP_TRIGGER_*),
+        # 2.5% de distancia de PRECO e maior que o proprio stop -- L4 realizava
+        # 100% quase de imediato, antes de qualquer trailing surfar o movimento.
+        # StopPct (opcional, <=0 = ausente) ativa piso PROPORCIONAL ao stop real
+        # do trade. Ausente = 100% comportamento antigo (fixo 2.5%).
+        [double]  $StopPct = 0,
+        [double]  $L4DistToSlFractionOfStop = 0.5
     )
+    $l4Threshold = if ($StopPct -gt 0) { $StopPct * $L4DistToSlFractionOfStop } else { 2.5 }
 
     $mk = { param($a,$p,$q,$r) [pscustomobject]@{
         action=$a; layer=$p; pct=$q; sellQty=0.0; reason=$r
@@ -143,10 +153,10 @@ function Resolve-ExitAutoDecision {
         }
     }
     if ($IsRunner) {
-        if (($distToSL -le 2.5) -and ($gain -ge $MinGainPctL4Runner)) {
+        if (($distToSL -le $l4Threshold) -and ($gain -ge $MinGainPctL4Runner)) {
             return (& $decide 'SELL' 4 100 0.997 'perto_SL_com_ganho_runner')
         }
-    } elseif (($distToSL -le 2.5) -and ($gain -gt 0)) {
+    } elseif (($distToSL -le $l4Threshold) -and ($gain -gt 0)) {
         return (& $decide 'SELL' 4 100 0.997 'perto_SL_com_ganho')
     }
     if ($isReversal -and ($gain -ge $MinGainPctL3)) {
@@ -181,7 +191,12 @@ function Invoke-ExitIntelligenceAuto {
     if (-not (Get-Command CoinEx-PlaceSpotOrder -ErrorAction SilentlyContinue)) { return $executed }
 
     # 1) Registro do momento da compra: entry/stop por mercado.
-    $entryMap = @{}; $stopMap = @{}
+    # 2026-08-25 FIX: stopPctMap guarda o stop_pct ORIGINAL de entrada
+    # ((Entry-Stop)/Entry, campo .stop -- nunca .stopCurrent, que muda com
+    # trailing) pra alimentar o piso proporcional do L4 (-StopPct). Sem isso
+    # o L4 nao tem como saber se o trade nasceu com stop de 1-3% (TRIGGER/
+    # TORI_*) ou 30-50% (MOMENTUM/DISCOVERY) -- ver config.ps1 GEM_STOP_TRIGGER_*.
+    $entryMap = @{}; $stopMap = @{}; $stopPctMap = @{}
     if (Get-Command Get-TrailingPositions -ErrorAction SilentlyContinue) {
         try {
             foreach ($p in @(Get-TrailingPositions)) {
@@ -193,6 +208,11 @@ function Invoke-ExitIntelligenceAuto {
                       elseif ($p.PSObject.Properties['stop'] -and [double]$p.stop -gt 0) { [double]$p.stop }
                       else { 0 }
                 if ($sc -gt 0) { $stopMap[$mk] = $sc }
+                $__entryOrig = if ($p.PSObject.Properties['entry']) { [double]$p.entry } else { 0 }
+                $__stopOrig  = if ($p.PSObject.Properties['stop'] -and [double]$p.stop -gt 0) { [double]$p.stop } else { 0 }
+                if ($__entryOrig -gt 0 -and $__stopOrig -gt 0) {
+                    $stopPctMap[$mk] = [Math]::Abs($__entryOrig - $__stopOrig) / $__entryOrig * 100.0
+                }
             }
         } catch {}
     }
@@ -257,7 +277,8 @@ function Invoke-ExitIntelligenceAuto {
                 } catch { $__isRunnerThis = $false }
             }
 
-            $d = Resolve-ExitAutoDecision -Closes $closes -Current $current -Entry $entry -Sl $sl -RealQty $realQty -MinNotionalUsd $MinNotionalUsd -DayOpen $dayOpen -IsRunner $__isRunnerThis
+            $__stopPctThis = if ($stopPctMap.ContainsKey($market)) { [double]$stopPctMap[$market] } else { 0 }
+            $d = Resolve-ExitAutoDecision -Closes $closes -Current $current -Entry $entry -Sl $sl -RealQty $realQty -MinNotionalUsd $MinNotionalUsd -DayOpen $dayOpen -IsRunner $__isRunnerThis -StopPct $__stopPctThis
 
             Write-Host ("[{0}] {1} | preco={2} ganho={3}% RSI={4} distSL={5}% rev={6} runner={7} -> {8} {9}" -f `
                 $ccy, $d.action, $current, $d.gain, $d.rsi, $d.distToSL, $d.reversal, $__isRunnerThis, $d.action, $d.reason) -ForegroundColor Gray

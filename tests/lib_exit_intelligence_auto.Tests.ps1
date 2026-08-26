@@ -84,6 +84,46 @@ Describe "Resolve-ExitAutoDecision (Exit Intelligence Auto - nucleo puro)" {
         }
     }
 
+    # 2026-08-25 FIX (owner: "TP nao surfa a onda ate reversao"): distToSL<=2.5
+    # era um valor ABSOLUTO fixo, calibrado pra stops largos (MOMENTUM 30%/
+    # DISCOVERY 50%). Com o fix de stop_pct de TRIGGER/TORI_* (2%->3%/1%,
+    # config.ps1 GEM_STOP_TRIGGER_1H/15M), 2.5% de distancia continuaria
+    # disparando quase de imediato (2.5% > 100% do proprio stop de 1%-3%),
+    # anulando o fix -- o mesmo numero fixo que apertava o SL tambem realizava
+    # o TP cedo demais. Fix: -StopPct (opcional) ativa piso PROPORCIONAL ao
+    # stop do trade (StopPct * L4DistToSlFractionOfStop) em vez do fixo 2.5.
+    # Ausente (StopPct<=0, default) = comportamento 100% preservado (fixo 2.5).
+    Context "Layer 4 com StopPct -- piso proporcional ao stop do trade" {
+        It "StopPct ausente (default): comportamento identico ao fixo 2.5% (regressao)" {
+            $d = Resolve-ExitAutoDecision -Closes $closesUp -Current 1.02 -Entry 0.90 -Sl 1.00 -RealQty 1000
+            $d.action | Should Be 'SELL'
+            $d.layer  | Should Be 4
+        }
+        It "com StopPct fornecido, threshold vira StopPct*L4DistToSlFractionOfStop (default 0.5) em vez de 2.5 fixo" {
+            # stop_pct do trade = 3% -> piso = 3*0.5 = 1.5%. distToSL real = 1.96% (>1.5) -> NAO dispara L4.
+            # Entry 1.01 (ganho ~1%) mantem L2 (piso 8%) e L3 (piso 15%) fora de jogo -- isola o L4.
+            $d = Resolve-ExitAutoDecision -Closes $closesUp -Current 1.02 -Entry 1.01 -Sl 1.00 -RealQty 1000 -StopPct 3.0
+            $d.action | Should Not Be 'SELL'
+        }
+        It "com StopPct fornecido e preco mais perto do SL (dentro do piso proporcional), dispara normalmente" {
+            # stop_pct = 3% -> piso = 1.5%. preco 1.005, SL 1.00 -> distToSL=(1.005-1.00)/1.005=0.497% (<=1.5) -> dispara
+            $d = Resolve-ExitAutoDecision -Closes $closesUp -Current 1.005 -Entry 1.001 -Sl 1.00 -RealQty 1000 -StopPct 3.0
+            $d.action | Should Be 'SELL'
+            $d.layer  | Should Be 4
+        }
+        It "L4DistToSlFractionOfStop e configuravel" {
+            # stop_pct=3%, fraction=1.0 -> piso=3.0%. distToSL real=1.96% (<=3.0) -> dispara
+            $d = Resolve-ExitAutoDecision -Closes $closesUp -Current 1.02 -Entry 1.01 -Sl 1.00 -RealQty 1000 -StopPct 3.0 -L4DistToSlFractionOfStop 1.0
+            $d.action | Should Be 'SELL'
+            $d.layer  | Should Be 4
+        }
+        It "StopPct=0 (ausente) preserva o fixo 2.5% mesmo passando L4DistToSlFractionOfStop" {
+            $d = Resolve-ExitAutoDecision -Closes $closesUp -Current 1.02 -Entry 1.01 -Sl 1.00 -RealQty 1000 -L4DistToSlFractionOfStop 0.1
+            $d.action | Should Be 'SELL'
+            $d.layer  | Should Be 4
+        }
+    }
+
     Context "Layer 3 - reversal com ganho -> vende 70%" {
         It "dispara SELL 70% em reversal + ganho (longe do SL)" {
             $d = Resolve-ExitAutoDecision -Closes $closesRev -Current 1.12 -Entry 0.80 -Sl 0.50 -RealQty 1000

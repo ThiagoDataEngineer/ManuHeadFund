@@ -247,6 +247,29 @@ $global:GEM_TARGET_MOMENTUM  = $global:GEM_STOP_MOMENTUM  * $global:GEM_MIN_RR  
 $global:GEM_CAPITAL_DISCOVERY = $global:RISK_MAX_PCT_PER_TRADE / $global:GEM_STOP_DISCOVERY  # 2%
 $global:GEM_CAPITAL_MOMENTUM  = $global:RISK_MAX_PCT_PER_TRADE / $global:GEM_STOP_MOMENTUM   # 3.33%
 
+# 2026-08-25 FIX (owner: "muito stop desnecessario", investigado com dado real
+# Supabase trade_outcomes): TRIGGER/TORI_SHORT/TORI_LONG/TORI_*_15M (scripts/
+# gem_loop.ps1) nunca populavam stop_pct/target_pct no sizing -> caiam no
+# fallback de emergencia de Resolve-StopTargetPct (2%/10%), nunca pensado como
+# stop de producao. Dado real: 114/149 trades GEM fechados usavam esse 2%,
+# equivalente a so 1.47x o ATR/14 real medido (~1.36% em 1h nos mercados mais
+# frequentes) -- abaixo do piso de 1.5-3x ATR (stop batia por ruido normal, nao
+# por invalidacao de tese). Grupo phantom_reconciliation (82% dos fechamentos)
+# tinha so 21% de acerto com esse stop. NAO usar GEM_STOP_MOMENTUM/DISCOVERY
+# aqui -- aqueles sao calibrados pra swings de dias/semanas (22x-37x o ATR de
+# 1h medido), estourariam o R:R de um sinal de 1h/15m. Dois grupos por
+# timeframe real (TORI_SHORT/LONG=1h via Test-ToriConfluence, TORI_*_15M=
+# BTCUSDT 15m, TRIGGER=sem TF fixo no jsonl -> tratado como grupo 1h, mesmo
+# perfil de risco que TORI 1h): stop = ~2x ATR medido, arredondado.
+$global:GEM_STOP_TRIGGER_1H  = 0.03   # -3% (TRIGGER + TORI_SHORT/LONG, ~2x ATR/14 1h medido)
+$global:GEM_STOP_TRIGGER_15M = 0.01   # -1% (TORI_SHORT_15M/TORI_LONG_15M, BTCUSDT, ~2x ATR/14 15m medido)
+
+$global:GEM_TARGET_TRIGGER_1H  = $global:GEM_STOP_TRIGGER_1H  * $global:GEM_MIN_RR
+$global:GEM_TARGET_TRIGGER_15M = $global:GEM_STOP_TRIGGER_15M * $global:GEM_MIN_RR
+
+$global:GEM_CAPITAL_TRIGGER_1H  = $global:RISK_MAX_PCT_PER_TRADE / $global:GEM_STOP_TRIGGER_1H
+$global:GEM_CAPITAL_TRIGGER_15M = $global:RISK_MAX_PCT_PER_TRADE / $global:GEM_STOP_TRIGGER_15M
+
 # Duracao maxima de posicao (dias corridos)
 $global:GEM_MAX_DAYS_DISC    = 30
 $global:GEM_MAX_DAYS_MOM     = 21

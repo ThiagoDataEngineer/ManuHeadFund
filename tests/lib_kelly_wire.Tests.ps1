@@ -72,6 +72,69 @@ Describe "Resolve-AdaptiveSizing" {
         $r = Resolve-AdaptiveSizing -Market "L" -Mode "TIER_A" -Capital 10000 -OutcomePath $outcomeFile
         $r.size_usd | Should Be 0
     }
+
+    It "-OutcomePath explicito marca source=local_jsonl (nunca tenta Supabase, regressao)" {
+        foreach ($i in 1..7) {
+            Add-TradeOutcome -OutcomePath $outcomeFile -Market "SRC" -Side "LONG" -Mode "TIER_A" `
+                -EntryPrice 100 -ExitPrice 115 -StopPrice 90 -TargetPrice 120 -R 1.5 -Pnl 15 -DurationDays 2 `
+                -ExitReason "target" -Regime "BULL"
+        }
+        foreach ($i in 1..3) {
+            Add-TradeOutcome -OutcomePath $outcomeFile -Market "SRC" -Side "LONG" -Mode "TIER_A" `
+                -EntryPrice 100 -ExitPrice 90 -StopPrice 90 -TargetPrice 120 -R -1 -Pnl -10 -DurationDays 1 `
+                -ExitReason "stop_atingido" -Regime "BULL"
+        }
+        $r = Resolve-AdaptiveSizing -Market "SRC" -Mode "TIER_A" -Capital 10000 -OutcomePath $outcomeFile
+        $r.source | Should Be "local_jsonl"
+    }
+}
+
+# 2026-08-25: fix real -- Kelly nunca acumulava historico porque a unica
+# fonte era o jsonl local (efemero no GitHub Actions + confirmado contaminado
+# 47%, ver memoria feedback_trade_outcomes_jsonl_contaminated_2026_08_21).
+# Sem -OutcomePath explicito, Resolve-AdaptiveSizing agora tenta Supabase
+# primeiro (via Get-TradeOutcomesFromSupabase, mockada aqui).
+Describe "Resolve-AdaptiveSizing -- fonte Supabase (sem -OutcomePath explicito)" {
+    BeforeEach {
+        $script:emptyOutcomeFile = Join-Path $tmp ("empty_$([guid]::NewGuid()).jsonl")
+        $global:JOURNAL_DIR = $tmp
+        Remove-Item $emptyOutcomeFile -ErrorAction SilentlyContinue
+    }
+
+    It "Supabase configurado + >=MinTrades: usa Supabase, ignora jsonl local vazio" {
+        Mock Test-StateBackend { return "supabase" }
+        Mock Get-TradeOutcomesFromSupabase {
+            $out = @()
+            foreach ($i in 1..7) { $out += [PSCustomObject]@{ market="Y"; mode="GEM"; r=1.5 } }
+            foreach ($i in 1..3) { $out += [PSCustomObject]@{ market="Y"; mode="GEM"; r=-1.0 } }
+            return $out
+        }
+        $r = Resolve-AdaptiveSizing -Market "Y" -Mode "GEM" -Capital 10000
+        $r.fallback | Should Be $false
+        $r.source   | Should Be "supabase"
+        $r.n_trades | Should Not Be 0
+    }
+
+    It "Supabase configurado mas retorna < MinTrades: cai pro jsonl local (fail-soft)" {
+        Mock Test-StateBackend { return "supabase" }
+        Mock Get-TradeOutcomesFromSupabase { return @([PSCustomObject]@{ market="Z"; mode="GEM"; r=1.0 }) }
+        $r = Resolve-AdaptiveSizing -Market "Z" -Mode "GEM" -Capital 10000
+        $r.fallback | Should Be $true
+        $r.source   | Should Be "local_jsonl"
+    }
+
+    It "Supabase indisponivel (Test-StateBackend='local'): nao tenta Supabase, cai direto pro jsonl (fail-soft)" {
+        Mock Test-StateBackend { return "local" }
+        $r = Resolve-AdaptiveSizing -Market "W" -Mode "GEM" -Capital 10000
+        $r.fallback | Should Be $true
+        $r.source   | Should Be "local_jsonl"
+    }
+
+    It "Get-TradeOutcomesFromSupabase lanca excecao: fail-soft, cai pro jsonl sem propagar erro" {
+        Mock Test-StateBackend { return "supabase" }
+        Mock Get-TradeOutcomesFromSupabase { throw "network error" }
+        { Resolve-AdaptiveSizing -Market "ERR" -Mode "GEM" -Capital 10000 } | Should Not Throw
+    }
 }
 
 Remove-Item $tmp -Recurse -Force -ErrorAction SilentlyContinue

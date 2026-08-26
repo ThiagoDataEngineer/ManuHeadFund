@@ -40,6 +40,18 @@ if ((Test-Path (Join-Path $journalDir "LOCAL_TRADING_DISABLED.flag")) -and -not 
     exit 0
 }
 
+# 2026-08-25 FIX: USE_KELLY_SIZING.flag so era lido por scan_master.ps1 --
+# gem_loop.ps1 (chamado direto pelo workflow, .github/workflows/trading-
+# pipeline.yml linha ~1407, NAO passa por scan_master) nunca setava a flag,
+# entao TRIGGER/TORI_* (executados via gem_executor.ps1 chamado daqui) nunca
+# usavam Kelly de verdade mesmo com a flag presente -- mesmo padrao "feature
+# pronta, nunca conectada" ja visto no projeto. Mesmo mecanismo/arquivo que
+# scan_master.ps1 ja usa.
+if (Test-Path (Join-Path $journalDir "USE_KELLY_SIZING.flag")) {
+    $global:USE_KELLY_SIZING = $true
+    Write-Host "[Kelly] Flag detectada -- USE_KELLY_SIZING=ON"
+}
+
 function Write-GemLog {
     param([string]$Level, [string]$Message)
     $ts = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
@@ -188,6 +200,17 @@ try {
     Write-GemLog "WARN" "Falha ao carregar tech_agent_ai (fallback gem_executor): $($_.Exception.Message)"
 }
 
+# 2026-08-25 FIX: gem_executor.ps1 chama Get-ExecutorSize (linha ~917) via
+# Get-Command -ErrorAction SilentlyContinue -- fail-soft demais pra avisar
+# que a lib nunca foi carregada. USE_KELLY_SIZING.flag jamais teria efeito
+# aqui (cairia sempre no legacy_pct silenciosamente) sem este dot-source.
+# Ordem importa: adaptive (Get-KellyFraction/Get-AdaptiveSize) -> wire
+# (Resolve-AdaptiveSizing, consome adaptive) -> executor_sizing
+# (Get-ExecutorSize, consome wire).
+. (Join-Path $agentsDir "lib_kelly_adaptive.ps1") -ErrorAction SilentlyContinue
+. (Join-Path $agentsDir "lib_kelly_wire.ps1") -ErrorAction SilentlyContinue
+. (Join-Path $agentsDir "lib_executor_sizing.ps1") -ErrorAction SilentlyContinue
+
 # Gem agents (GemAgent DEVE vir antes de gem_executor)
 try {
     . (Join-Path $agentsDir "gem_agent.ps1") -ErrorAction Stop
@@ -312,7 +335,14 @@ function Invoke-GemCycle-Once {
                         mode = "TRIGGER"
                         signal = $sig.signal
                         direction = $sig.direction
-                        sizing = @{sizing_pct = 0.02}  # 2% default para triggers
+                        # 2026-08-25 FIX: sizing sem stop_pct/target_pct caia no fallback
+                        # de emergencia (2%/10%) de Resolve-StopTargetPct -- ver config.ps1
+                        # GEM_STOP_TRIGGER_1H para o achado completo (dado real Supabase).
+                        sizing = @{
+                            sizing_pct = $global:GEM_CAPITAL_TRIGGER_1H
+                            stop_pct   = $global:GEM_STOP_TRIGGER_1H
+                            target_pct = $global:GEM_TARGET_TRIGGER_1H
+                        }
                     }
                     $triggerGems += $gem
                     Write-GemLog "TRIGGER" "$($sig.market) signal=$($sig.signal) conviction=$($sig.conviction)"
@@ -361,7 +391,13 @@ function Invoke-GemCycle-Once {
                                     direction  = "SHORT"
                                     conviction = [int]$tc.confluence_score
                                     signal     = ("tori:" + (@($tc.signals_fired) -join '+'))
-                                    sizing     = [PSCustomObject]@{ sizing_pct = 0.02 }
+                                    # 2026-08-25 FIX: ver config.ps1 GEM_STOP_TRIGGER_1H (achado
+                                    # real Supabase -- fallback 2%/10% batia por ruido de ATR).
+                                    sizing     = [PSCustomObject]@{
+                                        sizing_pct = $global:GEM_CAPITAL_TRIGGER_1H
+                                        stop_pct   = $global:GEM_STOP_TRIGGER_1H
+                                        target_pct = $global:GEM_TARGET_TRIGGER_1H
+                                    }
                                 }
                                 Write-GemLog "TORI_SHORT" "$m confluence=$($tc.confluence_score) signals=$(@($tc.signals_fired) -join '+')"
                             }
@@ -422,7 +458,13 @@ function Invoke-GemCycle-Once {
                                     direction  = "LONG"
                                     conviction = [int]$tc.confluence_score
                                     signal     = ("tori:" + (@($tc.signals_fired) -join '+'))
-                                    sizing     = [PSCustomObject]@{ sizing_pct = 0.02 }
+                                    # 2026-08-25 FIX: ver config.ps1 GEM_STOP_TRIGGER_1H (achado
+                                    # real Supabase -- fallback 2%/10% batia por ruido de ATR).
+                                    sizing     = [PSCustomObject]@{
+                                        sizing_pct = $global:GEM_CAPITAL_TRIGGER_1H
+                                        stop_pct   = $global:GEM_STOP_TRIGGER_1H
+                                        target_pct = $global:GEM_TARGET_TRIGGER_1H
+                                    }
                                 }
                                 Write-GemLog "TORI_LONG" "$m confluence=$($tc.confluence_score) signals=$(@($tc.signals_fired) -join '+')"
                             }
@@ -469,7 +511,13 @@ function Invoke-GemCycle-Once {
                         direction  = "SHORT"
                         conviction = [int]$btcTc15Short.confluence_score
                         signal     = ("tori15m:" + (@($btcTc15Short.signals_fired) -join '+'))
-                        sizing     = [PSCustomObject]@{ sizing_pct = 0.02 }
+                        # 2026-08-25 FIX: grupo 15m tem ATR real bem menor que 1h (~0.31%
+                        # vs ~1.36% medido) -- ver config.ps1 GEM_STOP_TRIGGER_15M.
+                        sizing     = [PSCustomObject]@{
+                            sizing_pct = $global:GEM_CAPITAL_TRIGGER_15M
+                            stop_pct   = $global:GEM_STOP_TRIGGER_15M
+                            target_pct = $global:GEM_TARGET_TRIGGER_15M
+                        }
                     }
                     Write-GemLog "TORI_SHORT_15M" "BTCUSDT confluence=$($btcTc15Short.confluence_score) signals=$(@($btcTc15Short.signals_fired) -join '+')"
                 }
@@ -486,7 +534,12 @@ function Invoke-GemCycle-Once {
                             direction  = "LONG"
                             conviction = [int]$btcTc15Long.confluence_score
                             signal     = ("tori15m:" + (@($btcTc15Long.signals_fired) -join '+'))
-                            sizing     = [PSCustomObject]@{ sizing_pct = 0.02 }
+                            # 2026-08-25 FIX: ver config.ps1 GEM_STOP_TRIGGER_15M.
+                            sizing     = [PSCustomObject]@{
+                                sizing_pct = $global:GEM_CAPITAL_TRIGGER_15M
+                                stop_pct   = $global:GEM_STOP_TRIGGER_15M
+                                target_pct = $global:GEM_TARGET_TRIGGER_15M
+                            }
                         }
                         Write-GemLog "TORI_LONG_15M" "BTCUSDT confluence=$($btcTc15Long.confluence_score) signals=$(@($btcTc15Long.signals_fired) -join '+')"
                     }
