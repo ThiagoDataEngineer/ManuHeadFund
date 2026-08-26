@@ -101,6 +101,11 @@ try {
     # EXECUTION" abaixo. Gated por journal/PARTIAL_EXIT_EXECUTION_ENABLED.flag
     # (ausencia = so log, comportamento identico a antes).
     . (Join-Path $agentsDir "lib_trailing_partial_exit.ps1")
+    # 2026-08-26: mesmo problema, mas para SPOT (achado real: BMTUSDT +12.34%,
+    # PARTIAL recomendado, nada executou -- flag acima so cobre FUTURES).
+    # Gated por journal/PARTIAL_EXIT_EXECUTION_SPOT_ENABLED.flag, separada da
+    # de FUTURES (mecanismo diferente: venda a mercado, nao ladder nativo).
+    . (Join-Path $agentsDir "lib_trailing_spot_partial_exit.ps1")
 
     # ═══════════════════════════════════════════════════════════════════════════════
     # 2026-07-07 WIRED: LOAD SUPABASE INTEGRATION LIBS
@@ -504,6 +509,49 @@ try {
                                 }
                             } catch {
                                 Write-CrossPlatformLog "  UNIFIED ${tuMarket}: partial/exit execution EXCECAO: $_" -Level WARN -LogFile "trailing_stop_monitor.log"
+                            }
+                        }
+
+                        # 2026-08-26: mesmo mecanismo para SPOT (achado real:
+                        # BMTUSDT +12.34%, PARTIAL recomendado, nada executava --
+                        # ver lib_trailing_spot_partial_exit.ps1). Flag PROPRIA
+                        # (nao reusa a de FUTURES -- mecanismo diferente, venda a
+                        # mercado em vez de ladder nativo). Ausencia = so log,
+                        # comportamento identico a antes.
+                        $tuSpotPartialFlag = Join-Path $tuJournalDir "PARTIAL_EXIT_EXECUTION_SPOT_ENABLED.flag"
+                        if ((-not $tuIsFutures) -and (Test-Path $tuSpotPartialFlag) -and (Get-Command CoinEx-Get -ErrorAction SilentlyContinue)) {
+                            try {
+                                $tuBaseCcy = if ($tuMarket -match "USDT$") { $tuMarket.Substring(0, $tuMarket.Length - 4) } else { $tuMarket }
+                                $tuBal = CoinEx-Get "/v2/assets/spot/balance"
+                                $tuRealQty = 0.0
+                                if ($tuBal -and $tuBal.code -eq 0) {
+                                    $tuCoin = $tuBal.data | Where-Object { "$($_.ccy)".ToUpper() -eq $tuBaseCcy.ToUpper() } | Select-Object -First 1
+                                    if ($tuCoin) { $tuRealQty = [double]$tuCoin.available }
+                                }
+
+                                if ($tuDecision.action -eq "EXIT") {
+                                    # EXIT = tese acabou -- vende 100% do saldo real e
+                                    # reconcilia (mesmo padrao ja usado em Layer 2-4,
+                                    # lib_exit_intelligence_auto.ps1:290-298).
+                                    if ($tuRealQty -gt 0 -and (Get-Command CoinEx-PlaceSpotOrder -ErrorAction SilentlyContinue)) {
+                                        $tuSpotSellQty = [math]::Floor($tuRealQty * 0.997 * 1e6) / 1e6
+                                        if ($tuSpotSellQty -gt 0) {
+                                            $tuSpotResp = CoinEx-PlaceSpotOrder -Market $tuMarket -Side "sell" -Type "market" -Amount $tuSpotSellQty
+                                            Write-CrossPlatformLog "  UNIFIED ${tuMarket}: EXIT total SPOT -> qty=$tuSpotSellQty resp=$($tuSpotResp | ConvertTo-Json -Compress -Depth 3)" -LogFile "trailing_stop_monitor.log"
+                                            if (Get-Command Close-TrailingPosition -ErrorAction SilentlyContinue) {
+                                                try { Close-TrailingPosition -Market $tuMarket -Reason "trailing_unified_exit_spot" -ExitPrice $tuPrice | Out-Null } catch {}
+                                            }
+                                            if (Get-Command Remove-SpotPartialExitState -ErrorAction SilentlyContinue) {
+                                                try { Remove-SpotPartialExitState -Market $tuMarket | Out-Null } catch {}
+                                            }
+                                        }
+                                    }
+                                } elseif ($tuDecision.action -eq "PARTIAL" -and (Get-Command Register-SpotPartialExit -ErrorAction SilentlyContinue)) {
+                                    $tuSpotResult = Register-SpotPartialExit -Market $tuMarket -SizePct ([double]$tuDecision.size_pct) -RealQty $tuRealQty -Reason $tuDecision.reason
+                                    Write-CrossPlatformLog "  UNIFIED ${tuMarket}: partial exit SPOT -> success=$($tuSpotResult.success) reason=$($tuSpotResult.reason) sold_qty=$($tuSpotResult.sold_qty)" -LogFile "trailing_stop_monitor.log"
+                                }
+                            } catch {
+                                Write-CrossPlatformLog "  UNIFIED ${tuMarket}: partial/exit SPOT execution EXCECAO: $_" -Level WARN -LogFile "trailing_stop_monitor.log"
                             }
                         }
                     } else {
