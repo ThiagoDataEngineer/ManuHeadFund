@@ -165,7 +165,7 @@ $__gatesDriftPath = Join-Path $PSScriptRoot "lib_gates_drift_wire.ps1"
 if (Test-Path $__gatesDriftPath) { . $__gatesDriftPath }
 
 # 2026-06-18: TDD rebuild — all critical libs
-foreach ($__tddLib in @("lib_sizing_centralized.ps1","lib_leverage_cap.ps1","lib_tori_simplified.ps1","lib_fqs_default_quality.ps1","lib_entry_conviction_ensemble.ps1")) {
+foreach ($__tddLib in @("lib_sizing_centralized.ps1","lib_leverage_cap.ps1","lib_tori_simplified.ps1","lib_fqs_default_quality.ps1","lib_entry_conviction_ensemble.ps1","lib_no_fundamental_sizing.ps1")) {
     $__tddPath = Join-Path $PSScriptRoot $__tddLib
     if (Test-Path $__tddPath) {
         try { . $__tddPath }
@@ -2316,6 +2316,31 @@ function Invoke-GemExecute {
             }
         } catch {
             Write-Host "  [STRUCTURAL GATE WARN] Test-TokenStructuralQuality falhou (nao bloqueante): $_" -ForegroundColor Yellow
+        }
+    }
+
+    # ── Gate de sizing p/ ausencia TOTAL de fundamental (2026-08-26) ─────
+    # Achado real: HUMAUSDT (descoberto via radar dinamico, nunca curado)
+    # abriu LONG SPOT com fqs=UNKNOWN -- Invoke-FqsLazyEnrich (linha ~418)
+    # falhou porque o market nem esta mapeado em MARKET_TO_CG, e isso virava
+    # bonus=0 (neutro) SO no birth_score de auditoria (linha ~2707), nunca
+    # afetando sizing real -- token sem NENHUMA curadoria (nao sabemos
+    # supply/utility/concentracao/eventos como unlock de token) entrava com
+    # o MESMO peso de risco que um token QUALITY/BLUE_CHIP avaliado de
+    # verdade. Nao BLOQUEIA (ausencia de dado nao prova token ruim, so
+    # falta de informacao) -- so reduz sizing, mesmo piso do gate de
+    # liquidez fina acima (consistencia de escala entre 2 gates de cautela
+    # por dado incompleto). So penaliza quando a causa e ausencia REAL de
+    # curadoria (not_in_MARKET_TO_CG), nunca por falha temporaria/rede.
+    if (Get-Command Resolve-NoFundamentalSizingPenalty -ErrorAction SilentlyContinue) {
+        try {
+            $__noFundPenalty = Resolve-NoFundamentalSizingPenalty -FqsLazyEnrichResult $fqsResult
+            if ($__noFundPenalty.apply_penalty) {
+                $usd_size = [math]::Round($usd_size * [double]$__noFundPenalty.penalty_fraction, 2)
+                Write-Host "  [NO FUNDAMENTAL CAUTION] $mkt -- $($__noFundPenalty.reason) -- sizing reduzido (`$$usd_size)" -ForegroundColor Yellow
+            }
+        } catch {
+            Write-Host "  [NO FUNDAMENTAL GATE WARN] Resolve-NoFundamentalSizingPenalty falhou (nao bloqueante): $_" -ForegroundColor Yellow
         }
     }
 
