@@ -1,0 +1,7 @@
+2026-08-26: ativado apos achado real (BMTUSDT +12.34%, PARTIAL recomendado pelo motor de trailing unificado, nada executava em SPOT ate este fix -- ver commit 5640a68, agents/lib_trailing_spot_partial_exit.ps1).
+
+Comportamento com o flag presente (so SPOT, quando o motor unificado NAO detecta FUTURES):
+  - action=PARTIAL -> vende a fracao ADICIONAL (sobre o que ja foi vendido por este mecanismo) a mercado via CoinEx-PlaceSpotOrder. Idempotente por fracao acumulada em manuheadfund.spot_partial_exits -- nao repete a mesma venda a cada ciclo de 5min.
+  - action=EXIT -> vende 100% do saldo real e reconcilia via Close-TrailingPosition.
+
+Kill-switch: deletar este arquivo + commit + push. Volta imediatamente ao comportamento so-log (zero execucao real em SPOT).
