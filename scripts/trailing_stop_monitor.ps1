@@ -547,7 +547,20 @@ try {
                                         }
                                     }
                                 } elseif ($tuDecision.action -eq "PARTIAL" -and (Get-Command Register-SpotPartialExit -ErrorAction SilentlyContinue)) {
-                                    $tuSpotResult = Register-SpotPartialExit -Market $tuMarket -SizePct ([double]$tuDecision.size_pct) -RealQty $tuRealQty -Reason $tuDecision.reason
+                                    # 2026-08-28 FIX: sem MinAmount real, sellQty calculado
+                                    # sobre posicoes pequenas cai abaixo do lote minimo do
+                                    # par -- CoinEx rejeita com "amount too small" (3127) e
+                                    # a posicao fica SEM NENHUMA protecao (achado real: 5/8
+                                    # tentativas falhando em producao). Get-MarketPrecision
+                                    # ja tem cache de 1h, sem custo extra por ciclo.
+                                    $tuSpotMinAmount = $null
+                                    if (Get-Command Get-MarketPrecision -ErrorAction SilentlyContinue) {
+                                        try {
+                                            $tuPrec = Get-MarketPrecision -Market $tuMarket -MarketType "spot"
+                                            if ($tuPrec -and $tuPrec.min_amount) { $tuSpotMinAmount = [double]$tuPrec.min_amount }
+                                        } catch {}
+                                    }
+                                    $tuSpotResult = Register-SpotPartialExit -Market $tuMarket -SizePct ([double]$tuDecision.size_pct) -RealQty $tuRealQty -Reason $tuDecision.reason -MinAmount $tuSpotMinAmount
                                     Write-CrossPlatformLog "  UNIFIED ${tuMarket}: partial exit SPOT -> success=$($tuSpotResult.success) reason=$($tuSpotResult.reason) sold_qty=$($tuSpotResult.sold_qty)" -LogFile "trailing_stop_monitor.log"
                                 }
                             } catch {

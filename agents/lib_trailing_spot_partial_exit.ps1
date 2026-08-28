@@ -126,6 +126,11 @@ function Register-SpotPartialExit {
     Motivo da decisao (profile_selected/reason de Resolve-TrailingDecision),
     so para log/auditoria.
 
+    .PARAMETER MinAmount
+    Lote minimo REAL do par na CoinEx (Get-MarketPrecision -Market X
+    -MarketType spot -> .min_amount). Opcional -- ausente preserva
+    comportamento anterior (so guard de qty<=0, sem piso real de mercado).
+
     .OUTPUTS
     PSCustomObject { success, reason, sold_qty }
     reason: "ok" | "already_covered" | "qty_zero" | "sell_failed" | erro
@@ -135,7 +140,8 @@ function Register-SpotPartialExit {
         [Parameter(Mandatory)] [string] $Market,
         [Parameter(Mandatory)] [double] $SizePct,
         [Parameter(Mandatory)] [double] $RealQty,
-        [string] $Reason = ""
+        [string] $Reason = "",
+        [Nullable[double]] $MinAmount = $null
     )
 
     if ($SizePct -le 0) {
@@ -167,6 +173,32 @@ function Register-SpotPartialExit {
         return [PSCustomObject]@{ success = $false; reason = "qty_zero_apos_arredondamento"; sold_qty = 0.0 }
     }
 
+    # 2026-08-28 FIX (achado real em producao: 5 de 8 tentativas de PARTIAL
+    # SPOT falhando com "SpotOrder error [3127]: amount too small" -- o
+    # calculo da fracao ADICIONAL sobre posicoes pequenas gera uma qty
+    # abaixo do lote minimo real do par, a CoinEx rejeita a ordem inteira e
+    # a posicao fica sem NENHUMA protecao, exatamente o problema que este
+    # motor foi criado pra resolver). MinAmount (opcional, Get-MarketPrecision)
+    # aplica o mesmo piso ja usado por Test-SpotStopPlaceable
+    # (lib_spot_stop_guard.ps1): se sellQty < MinAmount, vende o RESTANTE
+    # do saldo real inteiro (nunca "sobe" a fracao arbitrariamente -- ou
+    # vende o que ja da pra vender de forma valida, ou fica poeira mesmo).
+    # 2026-08-28: $MinAmount e' [Nullable[double]] mas o PowerShell "desembrulha"
+    # pra double puro assim que tem valor (confirmado: $MinAmount.GetType().Name
+    # -eq "Double" aqui dentro, .Value fica vazio/$null nesse estado) -- usar
+    # -ne $null + cast direto [double], nao .Value (esse padrao TEM o mesmo bug
+    # em Test-SpotStopPlaceable/lib_spot_stop_guard.ps1, mas ali o caller sempre
+    # passa via -MinAmount $minAmt com $minAmt double simples, nunca aciona o
+    # caminho tipado -- aqui o parametro do teste aciona o bug de verdade).
+    $__minAmountVal = if ($null -ne $MinAmount) { [double]$MinAmount } else { 0.0 }
+    if ($__minAmountVal -gt 0 -and $sellQty -lt $__minAmountVal) {
+        if ($RealQty -ge $__minAmountVal) {
+            $sellQty = [math]::Floor($RealQty * 1e6) / 1e6
+        } else {
+            return [PSCustomObject]@{ success = $false; reason = "abaixo_lote_minimo_par"; sold_qty = 0.0 }
+        }
+    }
+
     if (-not (Get-Command CoinEx-PlaceSpotOrder -ErrorAction SilentlyContinue)) {
         return [PSCustomObject]@{ success = $false; reason = "coinex_placespotorder_unavailable"; sold_qty = 0.0 }
     }
@@ -178,7 +210,12 @@ function Register-SpotPartialExit {
         return [PSCustomObject]@{ success = $false; reason = "sell_failed: $($_.Exception.Message)"; sold_qty = 0.0 }
     }
 
-    Save-SpotPartialExitState -Market $Market -CumulativePct $SizePct -Reason $Reason | Out-Null
+    # SizePct efetivo persistido: se vendemos o RESTANTE inteiro por causa
+    # do lote minimo (sellQty > o que o fracOfCurrentBalance original pedia),
+    # a cobertura real e' 100%, nao o SizePct recomendado -- registrar o
+    # recomendado subestimaria o que ja foi de fato realizado.
+    $__effectiveCumulativePct = if ($sellQty -ge ([math]::Floor($RealQty * 1e6) / 1e6)) { 1.0 } else { $SizePct }
+    Save-SpotPartialExitState -Market $Market -CumulativePct $__effectiveCumulativePct -Reason $Reason | Out-Null
 
     return [PSCustomObject]@{ success = $true; reason = "ok"; sold_qty = $filled }
 }

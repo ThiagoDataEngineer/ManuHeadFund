@@ -183,7 +183,15 @@ function Test-SpotStopPlaceable {
     if ($Price -le 0)                   { return @{ placeable=$false; reason="sem_preco" } }
     if ($Price -lt 1e-7)                { return @{ placeable=$false; reason="preco_sub_nano" } }
     if (($Qty * $Price) -lt $MinNotionalUsd) { return @{ placeable=$false; reason="poeira" } }
-    if ($MinAmount -and $MinAmount.Value -gt 0 -and $Qty -lt $MinAmount.Value) {
+    # 2026-08-28 FIX: [Nullable[double]] "desembrulha" pra double puro assim
+    # que tem valor (confirmado: $MinAmount.GetType().Name -eq "Double" aqui
+    # dentro nesse estado, .Value fica vazio/$null) -- $MinAmount.Value NUNCA
+    # era > 0, esse guard nunca bloqueava nada desde a criacao (2026-07-14).
+    # Achado real 2026-08-28: mesmo bug em Register-SpotPartialExit causou
+    # 5/8 falhas "SpotOrder error [3127]: amount too small" em producao --
+    # investigando o irmao aqui achou este tambem nunca ter funcionado.
+    $__minAmountVal = if ($null -ne $MinAmount) { [double]$MinAmount } else { 0.0 }
+    if ($__minAmountVal -gt 0 -and $Qty -lt $__minAmountVal) {
         return @{ placeable=$false; reason="abaixo_lote_minimo_par" }
     }
     return @{ placeable=$true; reason="ok" }

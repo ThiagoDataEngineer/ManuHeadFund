@@ -207,6 +207,25 @@ Describe "Test-SpotStopPlaceable - filtra poeira/sub-nano/simbolo (anti-spam)" {
         $r = Test-SpotStopPlaceable -Market "XUSDT" -Qty 100 -Price 0 -MinNotionalUsd 5
         $r.placeable | Should Be $false
     }
+
+    # 2026-08-28 FIX: [Nullable[double]] $MinAmount.Value nunca funcionava
+    # (bug real desde 2026-07-14, achado via irmao em
+    # lib_trailing_spot_partial_exit.ps1 -- 5/8 PARTIAL SPOT falhando
+    # "amount too small" em producao). Este guard nunca bloqueava por lote
+    # minimo apesar do parametro existir desde a criacao da funcao.
+    It "Qty abaixo do MinAmount real do par (notional passa, mas lote minimo nao) -> NAO placeable" {
+        $r = Test-SpotStopPlaceable -Market "XUSDT" -Qty 5 -Price 100 -MinNotionalUsd 5 -MinAmount 10.0
+        $r.placeable | Should Be $false
+        $r.reason | Should Be "abaixo_lote_minimo_par"
+    }
+    It "Qty acima do MinAmount real do par -> placeable" {
+        $r = Test-SpotStopPlaceable -Market "XUSDT" -Qty 15 -Price 100 -MinNotionalUsd 5 -MinAmount 10.0
+        $r.placeable | Should Be $true
+    }
+    It "MinAmount ausente (comportamento antigo preservado): nao bloqueia por lote minimo" {
+        $r = Test-SpotStopPlaceable -Market "XUSDT" -Qty 5 -Price 100 -MinNotionalUsd 5
+        $r.placeable | Should Be $true
+    }
 }
 
 Describe "Resolve-SpotStopActions - guardas (regra de ouro #1)" {

@@ -147,6 +147,57 @@ Describe "Register-SpotPartialExit" {
         $r.success | Should Be $false
         $r.reason | Should Be "qty_zero_apos_arredondamento"
     }
+
+    # 2026-08-28 FIX (achado real: 5/8 tentativas de PARTIAL SPOT falhando
+    # "SpotOrder error [3127]: amount too small" -- sellQty calculado ficava
+    # abaixo do lote minimo real do par, CoinEx rejeitava a ordem inteira e
+    # a posicao ficava SEM NENHUMA protecao).
+    Context "MinAmount -- piso de lote minimo real da CoinEx (fix erro 3127)" {
+        It "sellQty calculado >= MinAmount: vende normal, MinAmount nao interfere" {
+            $global:__spot_sell_amount = $null
+            $r = Register-SpotPartialExit -Market "XUSDT" -SizePct 0.75 -RealQty 1000 -MinAmount 1.0
+            $r.success | Should Be $true
+            $expected = [math]::Floor(1000 * 0.75 * 1e6) / 1e6
+            $global:__spot_sell_amount | Should Be $expected
+        }
+
+        It "sellQty calculado < MinAmount mas saldo real cobre o minimo: vende o SALDO INTEIRO (nao arredonda a fracao arbitrariamente)" {
+            # saldo real = 10, SizePct=0.05 -> sellQty calculado = 0.5, abaixo
+            # do lote minimo real (1.0) -- mas o saldo TOTAL (10) cobre o
+            # minimo, entao vende tudo em vez de deixar exposto sem protecao.
+            $global:__spot_sell_amount = $null
+            $r = Register-SpotPartialExit -Market "XUSDT" -SizePct 0.05 -RealQty 10 -MinAmount 1.0
+            $r.success | Should Be $true
+            $global:__spot_sell_amount | Should Be 10.0
+        }
+
+        It "sellQty calculado < MinAmount E saldo real tambem abaixo do minimo: reporta abaixo_lote_minimo_par, NAO tenta vender (evita repetir erro 3127)" {
+            $global:__spot_sell_amount = $null
+            $r = Register-SpotPartialExit -Market "XUSDT" -SizePct 0.05 -RealQty 0.5 -MinAmount 1.0
+            $r.success | Should Be $false
+            $r.reason | Should Be "abaixo_lote_minimo_par"
+            $global:__spot_sell_amount | Should Be $null
+        }
+
+        It "MinAmount ausente (null, comportamento antigo): nao aplica piso de lote minimo, so o guard de qty<=0" {
+            $global:__spot_sell_amount = $null
+            $r = Register-SpotPartialExit -Market "XUSDT" -SizePct 0.05 -RealQty 10
+            $r.success | Should Be $true
+            $expected = [math]::Floor(10 * 0.05 * 1e6) / 1e6
+            $global:__spot_sell_amount | Should Be $expected
+        }
+
+        It "quando vende o saldo inteiro por causa do lote minimo, registra cumulative_pct=1.0 (cobertura real), nao o SizePct recomendado" {
+            Set-Item -Path function:Save-StateRecords -Value {
+                param($Table, $Records, $PrimaryKey)
+                $global:__saved_cumulative_pct = $Records[0].cumulative_pct
+                $true
+            }
+            $r = Register-SpotPartialExit -Market "XUSDT" -SizePct 0.05 -RealQty 10 -MinAmount 1.0
+            $r.success | Should Be $true
+            $global:__saved_cumulative_pct | Should Be 1.0
+        }
+    }
 }
 
 Describe "Remove-SpotPartialExitState" {
