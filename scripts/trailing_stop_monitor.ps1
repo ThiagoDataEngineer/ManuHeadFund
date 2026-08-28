@@ -106,6 +106,10 @@ try {
     # Gated por journal/PARTIAL_EXIT_EXECUTION_SPOT_ENABLED.flag, separada da
     # de FUTURES (mecanismo diferente: venda a mercado, nao ladder nativo).
     . (Join-Path $agentsDir "lib_trailing_spot_partial_exit.ps1")
+    # 2026-08-28: piso minimo de lucro em dolar (owner pediu, ja em SPOT --
+    # estendido pra FUTURES LONG+SHORT). Usa unrealized_pnl real da CoinEx
+    # (ja correto pra ambos os lados, sem recalcular formula na mao).
+    . (Join-Path $agentsDir "lib_futures_min_profit_gate.ps1")
 
     # ═══════════════════════════════════════════════════════════════════════════════
     # 2026-07-07 WIRED: LOAD SUPABASE INTEGRATION LIBS
@@ -468,7 +472,32 @@ try {
                         $tuPartialFlag = Join-Path $tuJournalDir "PARTIAL_EXIT_EXECUTION_ENABLED.flag"
                         if ($tuIsFutures -and (Test-Path $tuPartialFlag)) {
                             try {
-                                if ($tuDecision.action -eq "EXIT") {
+                                # quantidade real (open_interest) NAO existe no journal
+                                # trailing_state -- so na posicao real da corretora. Busca
+                                # UMA vez, compartilhada entre EXIT e PARTIAL (antes so o
+                                # branch PARTIAL buscava -- EXIT nunca tinha acesso ao
+                                # unrealized_pnl real pro piso de lucro minimo abaixo).
+                                $tuRealPos = $null
+                                if (Get-Command CoinEx-GetPendingPositions -ErrorAction SilentlyContinue) {
+                                    $tuRealPos = @(CoinEx-GetPendingPositions -Market $tuMarket) | Select-Object -First 1
+                                }
+
+                                # 2026-08-28: piso minimo de lucro em dolar (owner pediu,
+                                # ja em SPOT -- estendido LONG+SHORT). unrealized_pnl real
+                                # da CoinEx (ja correto pra ambos os lados, sem recalcular
+                                # formula na mao -- evita reabrir bug de PnL invertido ja
+                                # corrigido antes no projeto). Dado ausente = fail-open
+                                # (nao bloqueia so por falta de leitura).
+                                $tuFuturesPnl = if ($tuRealPos -and $tuRealPos.PSObject.Properties['unrealized_pnl'] -and $null -ne $tuRealPos.unrealized_pnl) {
+                                    [double]$tuRealPos.unrealized_pnl
+                                } else { $null }
+                                $tuProfitGate = if (Get-Command Test-FuturesMinProfitGate -ErrorAction SilentlyContinue) {
+                                    Test-FuturesMinProfitGate -UnrealizedPnlUsd $tuFuturesPnl
+                                } else { [PSCustomObject]@{ allowed = $true; reason = "gate_indisponivel" } }
+
+                                if (-not $tuProfitGate.allowed) {
+                                    Write-CrossPlatformLog "  UNIFIED ${tuMarket}: partial/exit BLOQUEADO pelo piso de lucro minimo -- $($tuProfitGate.reason)" -LogFile "trailing_stop_monitor.log"
+                                } elseif ($tuDecision.action -eq "EXIT") {
                                     # 2026-07-31 FIX: EXIT = tese do trade acabou (reversao
                                     # confirmada ou time-stop) -- fecha a posicao INTEIRA,
                                     # nao registra ladder parcial (nao faz sentido "sair aos
@@ -488,12 +517,6 @@ try {
                                         @((Get-CurrentTrailingPolicy).partials)
                                     } else { @() }
 
-                                    # quantidade real (open_interest) NAO existe no journal
-                                    # trailing_state -- so na posicao real da corretora.
-                                    $tuRealPos = $null
-                                    if (Get-Command CoinEx-GetPendingPositions -ErrorAction SilentlyContinue) {
-                                        $tuRealPos = @(CoinEx-GetPendingPositions -Market $tuMarket) | Select-Object -First 1
-                                    }
                                     if ($tuRealPos -and [double]$tuRealPos.open_interest -gt 0) {
                                         $tuRisk = [Math]::Abs([double]$tuPos.entry - [double]$tuPos.stop)
                                         $tuLadderPos = [PSCustomObject]@{
