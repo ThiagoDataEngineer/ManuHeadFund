@@ -198,6 +198,49 @@ Describe "Register-SpotPartialExit" {
             $global:__saved_cumulative_pct | Should Be 1.0
         }
     }
+
+    # 2026-08-28: owner pediu piso minimo de lucro EM DOLAR do trade inteiro
+    # antes de liberar qualquer PARTIAL em SPOT -- teto real observado em
+    # trades SPOT recentes e ~$15-19 (nao um piso folgado), owner escolheu
+    # $5-8 (usamos $6 default) em vez de $15 (quase nunca dispararia).
+    Context "Piso minimo de lucro em dolar (Entry/CurrentPrice/MinProfitUsd)" {
+        It "Entry/CurrentPrice ausentes (0, default): comportamento antigo preservado, sem piso" {
+            $global:__spot_sell_amount = $null
+            $r = Register-SpotPartialExit -Market "XUSDT" -SizePct 0.75 -RealQty 1000
+            $r.success | Should Be $true
+        }
+
+        It "lucro do trade inteiro ABAIXO do piso ($6 default): bloqueia, nao vende" {
+            # RealQty=100, Entry=1.00, CurrentPrice=1.03 -> lucro=(1.03-1.00)*100=$3.00 < $6
+            $global:__spot_sell_amount = $null
+            $r = Register-SpotPartialExit -Market "XUSDT" -SizePct 0.75 -RealQty 100 -Entry 1.00 -CurrentPrice 1.03
+            $r.success | Should Be $false
+            $r.reason -like "lucro_abaixo_piso_minimo*" | Should Be $true
+            $global:__spot_sell_amount | Should Be $null
+        }
+
+        It "lucro do trade inteiro ACIMA do piso: libera venda normalmente" {
+            # RealQty=100, Entry=1.00, CurrentPrice=1.10 -> lucro=(1.10-1.00)*100=$10.00 >= $6
+            $global:__spot_sell_amount = $null
+            $r = Register-SpotPartialExit -Market "XUSDT" -SizePct 0.75 -RealQty 100 -Entry 1.00 -CurrentPrice 1.10
+            $r.success | Should Be $true
+            $expected = [math]::Floor(100 * 0.75 * 1e6) / 1e6
+            $global:__spot_sell_amount | Should Be $expected
+        }
+
+        It "MinProfitUsd e configuravel" {
+            # lucro real = $3.00, piso customizado = $2.00 -> libera
+            $global:__spot_sell_amount = $null
+            $r = Register-SpotPartialExit -Market "XUSDT" -SizePct 0.75 -RealQty 100 -Entry 1.00 -CurrentPrice 1.03 -MinProfitUsd 2.0
+            $r.success | Should Be $true
+        }
+
+        It "lucro exatamente no piso: libera (>=, nao >)" {
+            $global:__spot_sell_amount = $null
+            $r = Register-SpotPartialExit -Market "XUSDT" -SizePct 0.75 -RealQty 100 -Entry 1.00 -CurrentPrice 1.06 -MinProfitUsd 6.0
+            $r.success | Should Be $true
+        }
+    }
 }
 
 Describe "Remove-SpotPartialExitState" {

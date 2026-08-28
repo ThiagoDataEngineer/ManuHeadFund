@@ -560,7 +560,11 @@ try {
                                             if ($tuPrec -and $tuPrec.min_amount) { $tuSpotMinAmount = [double]$tuPrec.min_amount }
                                         } catch {}
                                     }
-                                    $tuSpotResult = Register-SpotPartialExit -Market $tuMarket -SizePct ([double]$tuDecision.size_pct) -RealQty $tuRealQty -Reason $tuDecision.reason -MinAmount $tuSpotMinAmount
+                                    # 2026-08-28: piso minimo de lucro EM DOLAR do trade
+                                    # inteiro (owner pediu -- evita travar ganho irrisorio
+                                    # so porque o % bateu o alvo do trailing). $tuPos.entry
+                                    # e $tuPrice ja resolvidos acima neste mesmo ciclo.
+                                    $tuSpotResult = Register-SpotPartialExit -Market $tuMarket -SizePct ([double]$tuDecision.size_pct) -RealQty $tuRealQty -Reason $tuDecision.reason -MinAmount $tuSpotMinAmount -Entry ([double]$tuPos.entry) -CurrentPrice $tuPrice
                                     Write-CrossPlatformLog "  UNIFIED ${tuMarket}: partial exit SPOT -> success=$($tuSpotResult.success) reason=$($tuSpotResult.reason) sold_qty=$($tuSpotResult.sold_qty)" -LogFile "trailing_stop_monitor.log"
                                 }
                             } catch {

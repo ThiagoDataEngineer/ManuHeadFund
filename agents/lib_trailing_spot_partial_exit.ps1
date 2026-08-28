@@ -131,9 +131,27 @@ function Register-SpotPartialExit {
     -MarketType spot -> .min_amount). Opcional -- ausente preserva
     comportamento anterior (so guard de qty<=0, sem piso real de mercado).
 
+    .PARAMETER Entry
+    .PARAMETER CurrentPrice
+    Opcionais (ambos > 0 ativam o piso). Usados para calcular o LUCRO REAL
+    EM DOLAR acumulado do trade inteiro ((CurrentPrice-Entry)*RealQty,
+    LONG-only -- SPOT nunca e' SHORT) -- 2026-08-28, owner pediu piso
+    minimo de lucro antes de liberar PARTIAL (evita travar ganho irrisorio
+    so porque o % bateu o alvo do motor de trailing, sem esperar um lucro
+    real que valha a pena realizar). Ausentes (default) preserva
+    comportamento anterior (sem piso de lucro).
+
+    .PARAMETER MinProfitUsd
+    Piso minimo de lucro EM DOLAR do trade inteiro antes de liberar
+    qualquer venda parcial (default $6, meio do intervalo $5-8 decidido
+    pelo owner -- teto real observado em trades SPOT recentes e ~$15-19,
+    entao $15 fixo quase nunca dispararia; $6 fica bem abaixo do teto,
+    dispara na maioria dos trades que vao bem sem exigir movimento quase
+    impossivel pro sizing atual).
+
     .OUTPUTS
     PSCustomObject { success, reason, sold_qty }
-    reason: "ok" | "already_covered" | "qty_zero" | "sell_failed" | erro
+    reason: "ok" | "already_covered" | "qty_zero" | "sell_failed" | "lucro_abaixo_piso_minimo" | erro
     #>
     [CmdletBinding()]
     param(
@@ -141,7 +159,10 @@ function Register-SpotPartialExit {
         [Parameter(Mandatory)] [double] $SizePct,
         [Parameter(Mandatory)] [double] $RealQty,
         [string] $Reason = "",
-        [Nullable[double]] $MinAmount = $null
+        [Nullable[double]] $MinAmount = $null,
+        [double] $Entry = 0,
+        [double] $CurrentPrice = 0,
+        [double] $MinProfitUsd = 6.0
     )
 
     if ($SizePct -le 0) {
@@ -155,6 +176,18 @@ function Register-SpotPartialExit {
     $additionalPct = $SizePct - $alreadyCoveredPct
     if ($additionalPct -le 0) {
         return [PSCustomObject]@{ success = $true; reason = "already_covered"; sold_qty = 0.0 }
+    }
+
+    # 2026-08-28: piso minimo de lucro EM DOLAR do trade INTEIRO (nao so da
+    # fatia a vender) -- evita realizar ganho irrisorio (centavos) so porque
+    # o % bateu o alvo do motor de trailing. LONG-only por design (SPOT
+    # nunca e' SHORT). Ambos Entry/CurrentPrice <=0 (nao fornecidos) =
+    # comportamento anterior preservado (sem piso).
+    if ($Entry -gt 0 -and $CurrentPrice -gt 0) {
+        $__profitUsd = ($CurrentPrice - $Entry) * $RealQty
+        if ($__profitUsd -lt $MinProfitUsd) {
+            return [PSCustomObject]@{ success = $false; reason = "lucro_abaixo_piso_minimo (`$$([math]::Round($__profitUsd,2)) < `$$MinProfitUsd)"; sold_qty = 0.0 }
+        }
     }
 
     # Fracao ADICIONAL e' sobre o saldo REAL atual (nao sobre a posicao
