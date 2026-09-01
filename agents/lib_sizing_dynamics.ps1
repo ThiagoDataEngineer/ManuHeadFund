@@ -98,12 +98,33 @@ function Test-SizingValidation {
 function Resolve-StopTargetPct {
     # 2026-06-17: conserta StopPct=0 -- gems TRIGGER tem sizing sem stop_pct/target_pct
     # -> Calculate-StopTarget lancava. Aqui devolve fracoes validas com default R:R 1:5.
+    #
+    # 2026-09-01 FIX CRITICO: DefaultStop=0.02 era o MESMO fallback de emergencia
+    # que ja tinha causado o bug real corrigido em 2026-08-25 (commit 0f60b6e,
+    # GEM_STOP_TRIGGER_1H) -- aquele fix so populou stop_pct na ORIGEM (5 pontos
+    # de scripts/gem_loop.ps1: TRIGGER/TORI_SHORT/TORI_LONG/TORI_*_15M), nunca
+    # mudou o DEFAULT desta funcao central. Achado real (owner, extrato CoinEx):
+    # ARBUSDT reabriu e stopou 4x em 6h via caminho DIFERENTE (discovery scan +
+    # conviction override em gem_executor.ps1, mode=STANDARD) que tambem cai
+    # aqui sem popular sizing.stop_pct -- 4 entradas confirmadas com
+    # stop_pct=2.00% cravado, -$19.62 em 6h so nesse mercado. Mesma causa raiz,
+    # 4o caminho nao coberto pelo fix anterior. Default agora usa a MESMA
+    # constante calibrada por ATR real (GEM_STOP_TRIGGER_1H=3%, config.ps1) em
+    # vez de reintroduzir 2% hardcoded -- qualquer caminho futuro que caia no
+    # default (por nao popular stop_pct explicito) usa o valor ja validado, nao
+    # o fallback de emergencia nunca pensado como stop de producao.
     [CmdletBinding()]
     param(
         [object] $Sizing,
-        [double] $DefaultStop   = 0.02,
+        [double] $DefaultStop   = 0,   # 0 = usa $global:GEM_STOP_TRIGGER_1H se definido, senao 0.03
         [double] $DefaultTarget = 0.10   # R:R 1:5
     )
+
+    if ($DefaultStop -le 0) {
+        $DefaultStop = if ($global:GEM_STOP_TRIGGER_1H -and [double]$global:GEM_STOP_TRIGGER_1H -gt 0) {
+            [double]$global:GEM_STOP_TRIGGER_1H
+        } else { 0.03 }
+    }
 
     $stop = $null; $tgt = $null
     if ($Sizing) {

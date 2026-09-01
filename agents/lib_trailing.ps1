@@ -376,6 +376,24 @@ function Close-TrailingPosition {
                 $kwargs.StopPctUsed = [double]$script:closedPos.stop_pct_used
             }
             Add-TradeOutcome @kwargs
+
+            # 2026-09-01 FIX CRITICO: achado real (owner, extrato CoinEx) --
+            # ARBUSDT reabriu e fechou por stop 4x em 6h (gaps de 16-26min),
+            # -$19.62 no total, sem NENHUM guard impedindo a reentrada
+            # imediata no mesmo market. Registra STOPPED_OUT (fail-soft, nao
+            # bloqueia o fechamento) so quando o trade fechou no PREJUIZO
+            # (R negativo -- proxy robusto de "foi stop", nao depende do
+            # texto de $Reason, que e' "phantom_reconciliation" na maioria
+            # dos casos reais e nao distingue TP de SL). Consumido por
+            # Test-GemReentryCooldown (lib_gem_position_events.ps1) no
+            # ponto de abertura de nova posicao.
+            if ($r -lt 0 -and (Get-Command Add-GemPositionEvent -ErrorAction SilentlyContinue)) {
+                try {
+                    Add-GemPositionEvent -Market $Market -Side $side -UsdSize 0 -EventType "STOPPED_OUT" | Out-Null
+                } catch {
+                    Write-Host "  [Trailing] Add-GemPositionEvent(STOPPED_OUT) falhou (nao bloqueia): $_" -ForegroundColor DarkYellow
+                }
+            }
         } catch {
             Write-Host "  [Trailing] Add-TradeOutcome falhou (nao bloqueia): $_" -ForegroundColor DarkYellow
         }

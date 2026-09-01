@@ -109,3 +109,87 @@ function Get-RecentGemAddPositionCount {
         return 0
     }
 }
+
+# 2026-09-01 FIX CRITICO: achado real (owner, extrato CoinEx) -- ARBUSDT
+# reabriu e fechou por STOP 4x em 6h (gaps de 16-26min entre fechar e
+# reabrir), -$19.62 no total. Get-RecentGemAddPositionCount acima so cobre
+# "Add Position" (aumentar posicao EXISTENTE) -- nao existia NENHUM guard
+# que impedisse abrir uma posicao NOVA no mesmo market minutos apos um
+# stop, mesmo passando por gates de sinal individualmente validos. Fix:
+# cooldown minimo pos-stop, mesmo padrao/tabela ja em producao.
+
+function Get-MinutesSinceLastStopOut {
+    <#
+    .SYNOPSIS
+    Minutos desde o STOPPED_OUT mais recente deste market, ou $null se
+    nunca houve. Fail-soft: erro de leitura retorna $null (nao ha stop
+    recente conhecido -- comportamento conservador, nunca bloqueia por
+    erro de infra).
+    #>
+    [CmdletBinding()]
+    param([Parameter(Mandatory)] [string] $Market)
+    try {
+        if (-not (Get-Command Get-StateRecords -ErrorAction SilentlyContinue)) { return $null }
+        $prevSchema = $global:STATE_STORE_SCHEMA
+        $rows = @()
+        try {
+            $global:STATE_STORE_SCHEMA = "manuheadfund"
+            $rows = @(Get-StateRecords -Table "gem_position_events" -Filter @{ market = $Market; event_type = "STOPPED_OUT" })
+        } finally {
+            $global:STATE_STORE_SCHEMA = $prevSchema
+        }
+        if ($rows.Count -eq 0) { return $null }
+
+        $nowUtc = (Get-Date).ToUniversalTime()
+        $parsed = @($rows | ForEach-Object {
+            try {
+                [datetime]::Parse([string]$_.created_at, [System.Globalization.CultureInfo]::InvariantCulture, [System.Globalization.DateTimeStyles]::RoundtripKind)
+            } catch { $null }
+        } | Where-Object { $null -ne $_ })
+        if ($parsed.Count -eq 0) { return $null }
+
+        $mostRecent = ($parsed | Measure-Object -Maximum).Maximum
+        return [Math]::Round(($nowUtc - $mostRecent).TotalMinutes, 1)
+    } catch {
+        Write-Warning "[gem-position-events] falha ao calcular minutos desde ultimo stop (fallback null): $_"
+        return $null
+    }
+}
+
+function Test-GemReentryCooldown {
+    <#
+    .SYNOPSIS
+    Verifica se este market pode receber uma entrada NOVA agora, ou se
+    ainda esta em cooldown por ter batido stop recentemente. Fail-soft:
+    qualquer falha libera a entrada (allowed=true) -- este e um guard de
+    CAUTELA, nao de seguranca de capital (esse ja e' coberto por outros
+    gates); nunca deve travar o pipeline inteiro por erro de leitura.
+
+    .PARAMETER CooldownMinutes
+    Janela minima apos um STOPPED_OUT antes de permitir reentrada no MESMO
+    market (default 60min -- owner pediu mais cautela que os 30min iniciais).
+    Bloqueia o padrao real observado (reentradas com 16-26min de gap, todas
+    perdendo de novo) com folga, sem impedir setups genuinamente novos horas
+    depois.
+
+    .OUTPUTS
+    PSCustomObject { allowed, reason, minutes_since_stop }
+    #>
+    [CmdletBinding()]
+    param(
+        [Parameter(Mandatory)] [string] $Market,
+        [double] $CooldownMinutes = 60.0
+    )
+    $minutesSince = Get-MinutesSinceLastStopOut -Market $Market
+    if ($null -eq $minutesSince) {
+        return [PSCustomObject]@{ allowed = $true; reason = "sem_stop_recente"; minutes_since_stop = $null }
+    }
+    if ($minutesSince -lt $CooldownMinutes) {
+        return [PSCustomObject]@{
+            allowed = $false
+            reason = "cooldown_pos_stop (${minutesSince}min < ${CooldownMinutes}min)"
+            minutes_since_stop = $minutesSince
+        }
+    }
+    return [PSCustomObject]@{ allowed = $true; reason = "cooldown_expirado"; minutes_since_stop = $minutesSince }
+}

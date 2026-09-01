@@ -995,6 +995,28 @@ function Invoke-GemExecute {
         } catch { }  # API falha -> nao bloqueia (degradacao graciosa; outros gates seguem)
     }
 
+    # ── FIX 2026-09-01: COOLDOWN DE REENTRADA POS-STOP ────────────────────────
+    # Achado real (owner, extrato CoinEx): ARBUSDT reabriu do ZERO (nao Add
+    # Position -- posicao ja tinha fechado) 4x em 6h, gaps de 16-26min entre
+    # bater stop e reabrir, -$19.62 no total. O guard de cascata abaixo
+    # (CASCADING ADD POSITION PREVENTION) so cobre o caso $existingPosition
+    # existir -- quando a posicao ja fechou (existingPosition=$null), NENHUM
+    # guard verificava se esse mesmo market tinha acabado de custar dinheiro
+    # minutos antes. Cada reabertura passava pelos gates de sinal (Tori,
+    # conviction override) individualmente validos, mas sem memoria alguma
+    # do stop recente. Fail-soft: erro de leitura nunca bloqueia (mesmo
+    # principio do cascade guard).
+    if (Get-Command Test-GemReentryCooldown -ErrorAction SilentlyContinue) {
+        $__reentryCooldown = Test-GemReentryCooldown -Market $mkt
+        if (-not $__reentryCooldown.allowed) {
+            Write-Host "  [REENTRY COOLDOWN] ${mkt}: $($__reentryCooldown.reason) -- aguardando cooldown pos-stop" -ForegroundColor Red
+            if (Get-Command Add-GemRejection -ErrorAction SilentlyContinue) {
+                try { Add-GemRejection -Path (Join-Path $global:JOURNAL_DIR "gem_recent_decisions.json") -Market $mkt -Reason "reentry_cooldown:$($__reentryCooldown.reason)" } catch {}
+            }
+            return [PSCustomObject]@{ blocked = $true; blocked_by = @("reentry_cooldown_$($__reentryCooldown.minutes_since_stop)min"); market = $mkt }
+        }
+    }
+
     # ── FIX 2026-07-07: CASCADING ADD POSITION PREVENTION ────────────────────
     # BUG RAIZ: gem_executor abria 15+ Add Positions em cascata sem validação
     # Causa: sem check de posição existente, leverage acumulado, ou limite Add Positions
