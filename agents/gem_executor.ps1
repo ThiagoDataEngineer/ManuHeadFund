@@ -1245,6 +1245,22 @@ function Invoke-GemExecute {
                 $blockShort = $false
                 Write-Host "  [CENARIO NEUTRO->SHORT OK] ${mkt}: BTC chop mas momentum_30d=$($scen.momentum_30d)% negativo (moagem favorece short de alt)" -ForegroundColor DarkYellow
             }
+
+            # 2026-08-31 CENARIO BULL->SHORT OVERRIDE: achado real (owner, 3 dias de
+            # logs) -- o override de TORI>=85+momentum ativo (BREADTH GATE OVERRIDE,
+            # linha ~586) ja libera o gate de breadth, mas o gate de CENARIO (aqui,
+            # BULL bloqueia SHORT por EMA20/momentum 30d) roda DEPOIS e nunca tinha
+            # override equivalente -- SHORT passava no 1o gate e morria no 2o, 12 de
+            # 15 vezes confirmadas em 3 dias de log (0 SHORTs executados no periodo,
+            # apesar da confluencia tecnica batendo). Mesmos criterios do breadth
+            # override (ja calculados acima: $toriConfluenceStrong=score>=85,
+            # $hasActiveMomentum=Test-RecentMomentumConfirmed 1h+4h confirmando queda
+            # ATIVA agora, nao so historico) -- nao duplica logica, so estende o
+            # mesmo criterio ja validado pro 2o gate da cadeia.
+            if ($blockShort -and $scen.scenario -eq "BULL" -and $toriConfluenceStrong -and $hasActiveMomentum) {
+                $blockShort = $false
+                Write-Host "  [CENARIO BULL->SHORT OVERRIDE] ${mkt}: Tori confluence=$($Gem.score) >=85 + momentum 1h/4h confirmando queda ativa -> libera SHORT apesar de cenario=BULL" -ForegroundColor DarkYellow
+            }
             # 2026-06-30 SURF: em vez de so bloquear LONG no bear, SURFA o bear (SHORT).
             # Shadow-first: sem journal/REGIME_SURF_SHORT_LIVE.flag -> so loga; com flag -> ordem real.
             # Se executou SHORT real, retorna (nao bloqueia mais). allow_short ja confirma downtrend.
