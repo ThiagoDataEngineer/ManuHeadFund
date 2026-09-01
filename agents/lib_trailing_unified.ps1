@@ -437,6 +437,82 @@ function Resolve-TrailingDecision {
     $improved = if ($side -eq "LONG") { $calculatedStop -gt $currentStop } else { $calculatedStop -lt $currentStop }
     $improved = $improved -and ($improvementPct -ge $MIN_IMPROVEMENT_PCT)
 
+    # 2026-09-01 FIX CRITICO: achado real em producao (owner, CRVUSDT +$11.67/
+    # +8.35%, sinal de reversao FORTE detectado -- structural_rejection
+    # forca=73 -- mas HOLD "stop_calculado_nao_melhora" ciclo apos ciclo, $0
+    # realizado). Causa raiz: o enriquecimento opcional (linha ~478 abaixo,
+    # Get-ExitDecision -- unico lugar que avalia ReversalSignals/partials por
+    # R-multiple) SO rodava DEPOIS do guard "stop nao melhorou" -- se o stop
+    # base (ATR+exhaustion+trendline+support) nao melhorasse (o que acontece
+    # SEMPRE que o preco sobe, faz pico, e recua um pouco -- exatamente o
+    # padrao de exaustao que este motor deveria capturar), a funcao retornava
+    # ANTES de sequer avaliar se deveria realizar parcial/sair por reversao.
+    # O sinal de reversao era detectado e logado (WARN no console), mas
+    # estruturalmente inalcancavel pela decisao real. Fix: avalia o
+    # enriquecimento (quando $BarsHeld e' fornecido) ANTES do early-return --
+    # se ele decidir PARTIAL/EXIT, essa decisao tem PRECEDENCIA sobre "stop
+    # base nao melhorou" (realizar lucro nao depende de o trailing base ter
+    # avancado). Ausencia de $BarsHeld preserva 100% o comportamento antigo
+    # (guard roda sozinho, sem enriquecimento -- contrato dos testes originais
+    # intacto).
+    # $__enrichCache guarda o resultado de Get-ExitDecision/Resolve-ExitPolicyGated
+    # calculado UMA vez aqui -- reusado mais abaixo (bloco de enriquecimento de
+    # UPDATE) pra nao recalcular a mesma coisa 2x no mesmo ciclo quando o
+    # caminho acaba sendo UPDATE em vez de PARTIAL/EXIT.
+    $__enrichCache = $null
+    if ($null -ne $BarsHeld -and (Get-Command Get-ExitDecision -ErrorAction SilentlyContinue) -and (Get-Command Resolve-ExitPolicyGated -ErrorAction SilentlyContinue)) {
+        try {
+            $risk = $originalRDistance
+            if ($risk -gt 0) {
+                $rNow = $currentRMultiple
+                $peak = if ($Position.PSObject.Properties['peak'] -and [double]$Position.peak -gt 0) { [double]$Position.peak } else { $CurrentPrice }
+
+                $trendUp = $false
+                if ($HtfTrend -and (Get-Command Get-MultiTimeframeConviction -ErrorAction SilentlyContinue)) {
+                    $t1D = if ($HtfTrend.t1D) { [string]$HtfTrend.t1D } else { "NEUTRAL" }
+                    $t4H = if ($HtfTrend.t4H) { [string]$HtfTrend.t4H } else { "NEUTRAL" }
+                    $t1H = if ($HtfTrend.t1H) { [string]$HtfTrend.t1H } else { "NEUTRAL" }
+                    $htfConviction = Get-MultiTimeframeConviction -Trend1D $t1D -Trend4H $t4H -Trend1H $t1H -Direction $side
+                    $trendUp = ($htfConviction -ge 40)
+                }
+
+                $policy = Resolve-ExitPolicyGated -TrendUp $trendUp -Regime $Regime -Direction $side
+                $ctx = @{
+                    side = $side; entry = $entry; risk = $risk; r_now = $rNow
+                    peak = $peak; current_stop = $currentStop; remaining_size = $RemainingSizePct
+                    bars_held = $BarsHeld; signals = $ReversalSignals; atr = $atrAbs
+                }
+                $exitDec = Get-ExitDecision -Policy $policy -Context $ctx
+                $__enrichCache = @{ policy = $policy; exitDec = $exitDec }
+
+                $enrichedActionEarly = switch ($exitDec.action) {
+                    "exit"    { "EXIT" }
+                    "partial" { "PARTIAL" }
+                    default   { "HOLD" }
+                }
+                if ($enrichedActionEarly -in @("PARTIAL","EXIT")) {
+                    $enrichedNewStopEarly = if ($null -ne $exitDec.new_stop) {
+                        $stopImprovesEarly = if ($side -eq "LONG") { [double]$exitDec.new_stop -gt $currentStop } else { [double]$exitDec.new_stop -lt $currentStop }
+                        if ($stopImprovesEarly) { [double]$exitDec.new_stop } else { $currentStop }
+                    } else { $currentStop }
+                    return [PSCustomObject]@{
+                        action = $enrichedActionEarly; new_stop = $enrichedNewStopEarly
+                        reason = "policy_$($policy.selected)_$($policy.gate_reason)"
+                        exhaustion_score = $exhaustionScore; atr_period = $atrPeriod
+                        atr_pct = [Math]::Round($atrPct, 2); trailing_pct = [Math]::Round($effectiveTrailingPct, 2)
+                        leverage_applied = $leverageApplied
+                        trendline_factor = $trendlineFactor; trendline_reason = $trendlineReason
+                        support_factor = $supportFactor; support_reason = $supportReason
+                        size_pct = [double]$exitDec.size_pct; profile_selected = $policy.selected
+                    }
+                }
+            }
+        } catch {
+            # fail-soft: enriquecimento antecipado falhou -- segue fluxo normal
+            # abaixo (guard monotonico + enriquecimento de UPDATE, se aplicavel)
+        }
+    }
+
     if (-not $improved) {
         return (& $hold "stop_calculado_nao_melhora" @{
             exhaustion_score = $exhaustionScore; atr_period = $atrPeriod
@@ -481,84 +557,31 @@ function Resolve-TrailingDecision {
     # comportamento pre-existente (contrato dos 18 testes originais) quando
     # ausente. Fail-soft: qualquer excecao aqui devolve $baseDecision (ATR+
     # exhaustion+trendline+support), nunca quebra o ciclo do trailing.
-    if ($null -ne $BarsHeld -and (Get-Command Get-ExitDecision -ErrorAction SilentlyContinue) -and (Get-Command Resolve-ExitPolicyGated -ErrorAction SilentlyContinue)) {
+    #
+    # 2026-09-01: reusa $__enrichCache (calculado mais acima, ANTES do guard
+    # monotonico -- ver comentario "FIX CRITICO" la em cima) em vez de chamar
+    # Get-ExitDecision/Resolve-ExitPolicyGated de novo -- o caso PARTIAL/EXIT
+    # ja foi resolvido e retornado la; se chegou aqui, so falta ver se o
+    # enriquecimento melhora o new_stop de um UPDATE ja decidido.
+    if ($__enrichCache) {
         try {
-            # 2026-08-24 FIX CRITICO: $risk calculado com $currentStop (o stop JA
-            # MOVIDO pelo trailing) em vez do stop ORIGINAL. Assim que o trailing
-            # protege lucro suficiente pra empurrar o stop ALEM do entry (ratchet/
-            # breakeven+, comportamento correto e esperado), $risk fica NEGATIVO
-            # pra LONG (entry - currentStop < 0) -- e o r_now resultante vira um
-            # numero negativo sem sentido (ex: achado real INJUSDT: entry=4.8686,
-            # currentStop=5.1797 apos trailing, preco real +24.33% de lucro, mas
-            # r_now calculado dava -3.8). Como TODO partial exige $rNow -ge
-            # $pp.at_r (sempre positivo, minimo 1.0), a saida parcial fica
-            # estruturalmente IMPOSSIVEL de disparar assim que o trade vai bem
-            # o bastante pro trailing ja ter subido o stop -- exatamente o
-            # cenario onde faria mais sentido realizar lucro. Fix: reusa
-            # $originalRDistance/$currentRMultiple (ja calculados acima, linha
-            # ~249-255, com o stop ORIGINAL da posicao, sempre positivo via Abs())
-            # -- mesma fonte de verdade que ja protege contra sair cedo demais
-            # (profitFloorReached), agora tambem alimentando corretamente quando
-            # DEVE realizar parcial/sair.
-            $risk = $originalRDistance
-            if ($risk -gt 0) {
-                $rNow = $currentRMultiple
-                $peak = if ($Position.PSObject.Properties['peak'] -and [double]$Position.peak -gt 0) { [double]$Position.peak } else { $CurrentPrice }
+            $policy = $__enrichCache.policy
+            $exitDec = $__enrichCache.exitDec
 
-                $trendUp = $false
-                if ($HtfTrend -and (Get-Command Get-MultiTimeframeConviction -ErrorAction SilentlyContinue)) {
-                    $t1D = if ($HtfTrend.t1D) { [string]$HtfTrend.t1D } else { "NEUTRAL" }
-                    $t4H = if ($HtfTrend.t4H) { [string]$HtfTrend.t4H } else { "NEUTRAL" }
-                    $t1H = if ($HtfTrend.t1H) { [string]$HtfTrend.t1H } else { "NEUTRAL" }
-                    $htfConviction = Get-MultiTimeframeConviction -Trend1D $t1D -Trend4H $t4H -Trend1H $t1H -Direction $side
-                    $trendUp = ($htfConviction -ge 40)
-                }
+            $enrichedNewStop = if ($null -ne $exitDec.new_stop) {
+                $stopImproves = if ($side -eq "LONG") { [double]$exitDec.new_stop -gt $currentStop } else { [double]$exitDec.new_stop -lt $currentStop }
+                if ($stopImproves) { [double]$exitDec.new_stop } else { $currentStop }
+            } else { $currentStop }
 
-                $policy = Resolve-ExitPolicyGated -TrendUp $trendUp -Regime $Regime -Direction $side
-                $ctx = @{
-                    side = $side; entry = $entry; risk = $risk; r_now = $rNow
-                    peak = $peak; current_stop = $currentStop; remaining_size = $RemainingSizePct
-                    bars_held = $BarsHeld; signals = $ReversalSignals; atr = $atrAbs
-                }
-                $exitDec = Get-ExitDecision -Policy $policy -Context $ctx
-
-                $enrichedAction = switch ($exitDec.action) {
-                    "exit"    { "EXIT" }
-                    "partial" { "PARTIAL" }
-                    default   { "HOLD" }
-                }
-                $enrichedNewStop = if ($null -ne $exitDec.new_stop) {
-                    $stopImproves = if ($side -eq "LONG") { [double]$exitDec.new_stop -gt $currentStop } else { [double]$exitDec.new_stop -lt $currentStop }
-                    if ($stopImproves) { [double]$exitDec.new_stop } else { $currentStop }
-                } else { $currentStop }
-
-                # So substitui o veredito base se o motor enriquecido decidir
-                # algo ACIONAVEL (PARTIAL/EXIT, ou UPDATE com stop melhor que
-                # o ja calculado por ATR/exhaustion/trendline/support) --
-                # nunca AFROUXA em relacao ao $baseDecision (ratchet preservado
-                # em ambas as camadas).
-                if ($enrichedAction -in @("PARTIAL","EXIT")) {
-                    return [PSCustomObject]@{
-                        action = $enrichedAction; new_stop = $enrichedNewStop
-                        reason = "policy_$($policy.selected)_$($policy.gate_reason)"
-                        exhaustion_score = $exhaustionScore; atr_period = $atrPeriod
-                        atr_pct = [Math]::Round($atrPct, 2); trailing_pct = [Math]::Round($effectiveTrailingPct, 2)
-                        leverage_applied = $leverageApplied
-                        trendline_factor = $trendlineFactor; trendline_reason = $trendlineReason
-                        support_factor = $supportFactor; support_reason = $supportReason
-                        size_pct = [double]$exitDec.size_pct; profile_selected = $policy.selected
-                    }
-                }
-                # profile_selected reflete o perfil AVALIADO (runner/atual),
-                # independente do stop enriquecido vencer ou nao o ja calculado
-                # -- e' informacao de contexto (qual regra decidiu), nao uma
-                # decisao condicional. So o new_stop/reason mudam condicionalmente.
-                $baseDecision.profile_selected = $policy.selected
-                $enrichedImproves = if ($side -eq "LONG") { $enrichedNewStop -gt $calculatedStop } else { $enrichedNewStop -lt $calculatedStop }
-                if ($enrichedImproves) {
-                    $baseDecision.new_stop = $enrichedNewStop
-                    $baseDecision.reason = "policy_$($policy.selected)_$($reason)"
-                }
+            # profile_selected reflete o perfil AVALIADO (runner/atual),
+            # independente do stop enriquecido vencer ou nao o ja calculado
+            # -- e' informacao de contexto (qual regra decidiu), nao uma
+            # decisao condicional. So o new_stop/reason mudam condicionalmente.
+            $baseDecision.profile_selected = $policy.selected
+            $enrichedImproves = if ($side -eq "LONG") { $enrichedNewStop -gt $calculatedStop } else { $enrichedNewStop -lt $calculatedStop }
+            if ($enrichedImproves) {
+                $baseDecision.new_stop = $enrichedNewStop
+                $baseDecision.reason = "policy_$($policy.selected)_$($reason)"
             }
         } catch {
             # fail-soft: mantem $baseDecision (ATR+exhaustion+trendline+support)

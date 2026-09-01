@@ -626,6 +626,38 @@ Describe "Resolve-TrailingDecision -- enriquecimento opcional multi-TF + perfil 
         ($r.size_pct -gt 0) | Should Be $true
     }
 
+    It "2026-09-01 FIX CRITICO: preco fez PICO e RECUOU (stop base NAO melhora) mas ainda assim dispara PARTIAL por R-multiple -- achado real CRVUSDT" {
+        # Achado real em producao (owner, 2026-09-01): CRVUSDT entry=0.340348,
+        # peak=0.370792 (testou resistencia, sinal de reversao FORTE -- struct-
+        # ural_rejection forca=73), preco RECUOU pra ~0.367 -- $11.67/+8.35% de
+        # lucro real, PARTIAL nunca disparava. Causa raiz: o guard "stop_
+        # calculado_nao_melhora" (baseado no CurrentPrice ATUAL, que ja recuou
+        # do peak) sempre `return`ava ANTES do bloco de enriquecimento
+        # (Get-ExitDecision/partials por R-multiple) rodar -- mesmo com R real
+        # MUITO acima do piso de partial. Reproduzido aqui: peak(130) > preco
+        # atual(120), calculatedStop baseado em 120 fica ABAIXO do stopCurrent
+        # ja fixado em 110 (nao melhora) -- ANTES do fix isso retornava HOLD
+        # "stop_calculado_nao_melhora" sem nunca avaliar o R-multiple real
+        # (usa o stop ORIGINAL=95, nao o stopCurrent=110 ja movido -- mesmo
+        # criterio do fix de 2026-08-24 logo abaixo).
+        $candles = New-HealthyUptrendCandles -Count 30
+        $pos = [PSCustomObject]@{
+            market="PEAKPULLBACKUSDT"; side="LONG"; entry=100.0
+            stop=95.0; stopCurrent=118.0   # stop ORIGINAL=95, ja movido bem alem do entry
+            origin = @{ asset_class="FUTURES"; trade_style="SWING" }
+            leverage = 1; peak = 130.0     # peak MUITO acima do preco atual -- pico ja testado
+        }
+        # CurrentPrice=120 (recuou do peak=130) -- FUTURES leverage=1 usa
+        # trailingPct base=4.5% (_Get-BaseTrailingPct), calculatedStop =
+        # 120*(1-0.045) = ~114.6, ABAIXO de stopCurrent=118 -> improved=false
+        # GARANTIDO. SEM o fix isso caia no early-return "stop_calculado_nao_
+        # melhora" antes de avaliar r_now=(120-100)/(100-95)=4.0 (bem acima do
+        # piso de 1R/2R que deveria disparar PARTIAL).
+        $r = Resolve-TrailingDecision -Position $pos -CurrentPrice 120.0 -Candles $candles -BarsHeld 3
+        $r.action | Should Be "PARTIAL"
+        ($r.size_pct -gt 0) | Should Be $true
+    }
+
     It "excecao dentro do enriquecimento (Get-ExitDecision indisponivel) -- fail-soft, mantem baseDecision (ATR+exhaustion+trendline+support)" {
         if (Get-Command Get-ExitDecision -ErrorAction SilentlyContinue) {
             Remove-Item function:Get-ExitDecision -ErrorAction SilentlyContinue
