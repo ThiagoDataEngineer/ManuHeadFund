@@ -595,7 +595,16 @@ try {
                             }
                         }
                     } else {
-                        Write-CrossPlatformLog "  UNIFIED $tuMarket [$($tuPos.side)]: HOLD ($($tuDecision.reason))" -LogFile "trailing_stop_monitor.log"
+                        # 2026-09-01 FIX: exhaustion_score/trendline_factor/support_factor JA
+                        # sao calculados e retornados por Resolve-TrailingDecision mesmo em HOLD
+                        # (lib_trailing_unified.ps1:431-438), mas o log so imprimia $reason --
+                        # achado real (owner, CRVUSDT com doji+wick-top real no candle, RSI 77,
+                        # score de exhaustion calculavel em 66/100) ficava invisivel no log
+                        # sempre que a decisao final era HOLD "stop_calculado_nao_melhora",
+                        # dando a falsa impressao de "sem sinal de exhaustion" quando o sinal
+                        # existia e so nao era escrito. Mostra sempre agora -- nao muda NENHUMA
+                        # decisao, so observabilidade.
+                        Write-CrossPlatformLog "  UNIFIED $tuMarket [$($tuPos.side)]: HOLD ($($tuDecision.reason)) exhaustion=$($tuDecision.exhaustion_score) trendline_factor=$($tuDecision.trendline_factor) support_factor=$($tuDecision.support_factor)" -LogFile "trailing_stop_monitor.log"
                     }
                     # 2026-07-19: persiste no Supabase (nao so log local, que o runner
                     # efemero do GH Actions descarta a cada ciclo) -- mantido apos a
