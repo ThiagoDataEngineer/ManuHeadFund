@@ -216,7 +216,16 @@ function Resolve-TrailingDecision {
         [Nullable[int]] $BarsHeld = $null,
         [double] $RemainingSizePct = 1.0,
         [int] $ReversalSignals = 0,
-        [double] $MinProfitRMultipleToTighten = 0.3
+        # 2026-09-01: owner pediu travar lucro MUITO mais cedo/agressivo em
+        # trades futuros ("nao podem tomar stop loss como todos os outros")
+        # apos ver ARBUSDT/CRVUSDT com lucro real (+$6 a +$10) sem nenhuma
+        # protecao ainda ativa por causa deste piso -- reduzido de 0.3R (30%
+        # da distancia ate o stop original) pra 0.1R. Ainda nao e' 0 (zero) de
+        # proposito: um piso minimo evita sufocar o trade com ruido normal de
+        # candle logo na abertura (mesmo achado 2026-08-11 que criou este
+        # parametro, LTCUSDT apertando com o preco ainda no vermelho) -- so
+        # exige MENOS confirmacao de lucro real antes de comecar a proteger.
+        [double] $MinProfitRMultipleToTighten = 0.1
     )
 
     if (-not $Position.origin -or -not $Position.origin.asset_class -or -not $Position.origin.trade_style) {

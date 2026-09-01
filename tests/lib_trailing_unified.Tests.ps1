@@ -291,10 +291,20 @@ Describe "Resolve-TrailingDecision -- piso de lucro minimo (R-multiple) antes de
         # candle traz exhaustion (wick+vol seco). CurrentPrice fica proximo
         # do entry, garantindo R baixo (diferente de New-ExhaustedTopCandles
         # com StepPct default, que ja sobe ~15% antes do topo exausto).
+        # 2026-09-01: cada candle de New-HealthyUptrendCandles fecha 0.8% acima
+        # do open (Close=price*1.008) -- com StepPct=0.0 o PRECO base nao sobe,
+        # mas o close de cada candle individual sim, entao o ultimo close antes
+        # do candle de exhaustion ja fica em ~100.8, nao 100. Com o piso
+        # reduzido pra 0.1 (MinProfitRMultipleToTighten), R baseado nesse
+        # lastClose ficaria ~0.16, ja ACIMA do piso -- CurrentPrice fixado
+        # direto em 100.05 (R=0.01, bem abaixo de 0.1) pra continuar testando
+        # de fato "R baixo", independente do close dos candles anteriores
+        # (Candles so alimentam exhaustion/ATR, CurrentPrice e' quem decide o
+        # R real via Position.entry/stop).
         $flatCandles = @(New-HealthyUptrendCandles -Count 29 -StartPrice 100 -StepPct 0.0)
         $lastClose = [double]$flatCandles[-1].close
         $flatCandles += New-Candle -Open $lastClose -High ($lastClose * 1.05) -Low ($lastClose * 0.998) -Close ($lastClose * 1.001) -Volume 200
-        $priceNearEntry = [double]$flatCandles[-1].close
+        $priceNearEntry = 100.05
 
         # entry=100, stop original=95 (5R=5), preco mal andou (perto do entry) -- R baixo
         $pos = [PSCustomObject]@{
