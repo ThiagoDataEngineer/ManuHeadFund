@@ -15,8 +15,15 @@ function Get-CurrentTrailingPolicy {
             @{ at_r = 2.0; pct = 0.25 }
         )
         time_stop_bars = 60
-        reversal_exit_signals = 3
-        reversal_tighten_signals = 2
+        # 2026-09-02 FIX CRITICO: 3/2 -> 2/1 -- ver comentario completo em
+        # lib_trailing_policy.ps1 (achado real: max de sinais simultaneos
+        # observado em producao foi 2, threshold de 3 nunca disparava EXIT).
+        reversal_exit_signals = 2
+        reversal_tighten_signals = 1
+        # PARTIAL por reversao isolada + lucro real, mesmo sem R=1.0 (achado
+        # real: maioria dos trades nunca chega la antes de reverter -- esta
+        # e' a policy "atual", a mais usada em producao real).
+        reversal_partial_pct = 0.3
     }
 }
 

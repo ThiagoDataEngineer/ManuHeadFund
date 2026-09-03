@@ -97,6 +97,79 @@ Describe "Get-ExitDecision -- regras puras" {
         $d = Get-ExitDecision -Policy $pol -Context $ctx
         $d.new_stop | Should Be 100
     }
+
+    # 2026-09-02 FIX CRITICO: achado real (owner, "toma muito stop") -- 59
+    # execucoes reais confirmaram que o max de sinais de reversao simultaneos
+    # observado em producao e' 2, nunca 3. reversal_exit_signals=3 (antigo)
+    # era estruturalmente quase inatingivel, e PARTIAL por R-multiple sozinho
+    # nunca disparava porque a maioria dos trades reverte ANTES de chegar em
+    # R=1.0. Estas 4 provas cobrem o novo criterio 3b (reversal_partial_pct).
+    Context "PARTIAL por reversao isolada (2026-09-02, criterio 3b)" {
+        It "1 sinal de reversao (tighten) + lucro real + reversal_partial_pct definido -> partial" {
+            $pol = @{ breakeven_at_r=0; trail_method="none"; partials=@(@{at_r=1.0;pct=0.5}); time_stop_bars=0; reversal_exit_signals=2; reversal_tighten_signals=1; reversal_partial_pct=0.3 }
+            $ctx = @{ side="LONG"; entry=100; risk=10; r_now=0.4; peak=104; current_stop=98; remaining_size=1.0; bars_held=2; signals=1; atr=0 }
+            $d = Get-ExitDecision -Policy $pol -Context $ctx
+            $d.action | Should Be "partial"
+            $d.size_pct | Should Be 0.3
+        }
+
+        It "sem lucro real (r_now<=0), mesmo com sinal de reversao: NAO realiza (nunca vende no prejuizo por ruido)" {
+            $pol = @{ breakeven_at_r=0; trail_method="none"; partials=@(); time_stop_bars=0; reversal_exit_signals=2; reversal_tighten_signals=1; reversal_partial_pct=0.3 }
+            $ctx = @{ side="LONG"; entry=100; risk=10; r_now=-0.2; peak=99; current_stop=95; remaining_size=1.0; bars_held=2; signals=1; atr=0 }
+            $d = Get-ExitDecision -Policy $pol -Context $ctx
+            $d.action | Should Not Be "partial"
+        }
+
+        It "reversal_partial_pct AUSENTE (policy antiga, opt-in nao ativado): comportamento antigo preservado, nunca realiza so por sinal isolado" {
+            $pol = @{ breakeven_at_r=0; trail_method="none"; partials=@(); time_stop_bars=0; reversal_exit_signals=2; reversal_tighten_signals=1 }
+            $ctx = @{ side="LONG"; entry=100; risk=10; r_now=0.4; peak=104; current_stop=98; remaining_size=1.0; bars_held=2; signals=1; atr=0 }
+            $d = Get-ExitDecision -Policy $pol -Context $ctx
+            $d.action | Should Not Be "partial"
+        }
+
+        It "ja houve PARTIAL anterior (remaining<1.0): criterio 3b nao repete (so dispara uma vez, antes de qualquer realizacao)" {
+            $pol = @{ breakeven_at_r=0; trail_method="none"; partials=@(); time_stop_bars=0; reversal_exit_signals=2; reversal_tighten_signals=1; reversal_partial_pct=0.3 }
+            $ctx = @{ side="LONG"; entry=100; risk=10; r_now=0.4; peak=104; current_stop=98; remaining_size=0.7; bars_held=2; signals=1; atr=0 }
+            $d = Get-ExitDecision -Policy $pol -Context $ctx
+            $d.action | Should Not Be "partial"
+        }
+
+        It "2 sinais (>=exit_n) tem PRECEDENCIA sobre o criterio 3b -- vira exit, nao partial" {
+            $pol = @{ breakeven_at_r=0; trail_method="none"; partials=@(); time_stop_bars=0; reversal_exit_signals=2; reversal_tighten_signals=1; reversal_partial_pct=0.3 }
+            $ctx = @{ side="LONG"; entry=100; risk=10; r_now=0.4; peak=104; current_stop=98; remaining_size=1.0; bars_held=2; signals=2; atr=0 }
+            $d = Get-ExitDecision -Policy $pol -Context $ctx
+            $d.action | Should Be "exit"
+        }
+
+        It "SHORT: mesmo criterio funciona espelhado (r_now>0 = lucro real em SHORT)" {
+            $pol = @{ breakeven_at_r=0; trail_method="none"; partials=@(); time_stop_bars=0; reversal_exit_signals=2; reversal_tighten_signals=1; reversal_partial_pct=0.3 }
+            $ctx = @{ side="SHORT"; entry=100; risk=10; r_now=0.4; peak=96; current_stop=102; remaining_size=1.0; bars_held=2; signals=1; atr=0 }
+            $d = Get-ExitDecision -Policy $pol -Context $ctx
+            $d.action | Should Be "partial"
+        }
+    }
+
+    # 2026-09-02: as policies REAIS (Resolve-ExitPolicy/Get-CurrentTrailingPolicy)
+    # agora usam reversal_exit_signals=2 (nao mais 3) -- prova de que o
+    # threshold real de producao mudou, nao so a funcao pura isolada.
+    Context "Thresholds reais das policies (2026-09-02, causa raiz do 'toma muito stop')" {
+        It "Resolve-ExitPolicy standard: reversal_exit_signals=2 (nao mais 3 -- max real observado em producao e' 2)" {
+            $p = Resolve-ExitPolicy -TradeType "standard" -Direction "LONG"
+            $p.reversal_exit_signals | Should Be 2
+            $p.reversal_tighten_signals | Should Be 1
+        }
+        It "Resolve-ExitPolicy standard/scalp/swing tem reversal_partial_pct definido (opt-in ativo)" {
+            (Resolve-ExitPolicy -TradeType "standard" -Direction "LONG").reversal_partial_pct | Should Be 0.3
+            (Resolve-ExitPolicy -TradeType "scalp" -Direction "LONG").reversal_partial_pct | Should Be 0.3
+            (Resolve-ExitPolicy -TradeType "swing" -Direction "LONG").reversal_partial_pct | Should Be 0.3
+        }
+        It "Get-CurrentTrailingPolicy (policy 'atual', a mais usada em producao real): reversal_exit_signals=2 + reversal_partial_pct ativo" {
+            $p = Get-CurrentTrailingPolicy
+            $p.reversal_exit_signals | Should Be 2
+            $p.reversal_tighten_signals | Should Be 1
+            $p.reversal_partial_pct | Should Be 0.3
+        }
+    }
 }
 
 Describe "Resolve-ExitPolicyGated -- gate validado (uptrend->runner)" {

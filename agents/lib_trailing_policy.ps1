@@ -5,8 +5,25 @@
 #   (2) Resolve-ExitPolicy: scalp/swing/short/long/runner -> parametros proprios.
 #   (1) Get-ExitDecision: dado os params + contexto da barra, decide
 #       HOLD / TIGHTEN(aperta stop) / PARTIAL / EXIT, incluindo o ladder de
-#       reversao: 0-1 sinais=HOLD, =tighten_n aperta (nao vende no fundo,
+#       reversao: 0 sinais=HOLD, >=tighten_n aperta (nao vende no fundo,
 #       trava ganhos -0.5R), >=exit_n sai. Espelhado p/ SHORT.
+#
+# 2026-09-02 FIX CRITICO: reversal_exit_signals=3 (tighten=2) nunca disparava
+# EXIT em producao real -- achado apos o fix de ordem de execucao de ontem
+# (2026-09-01, commit 92a4bff) nao resolver o "toma muito stop" reportado
+# pelo owner. Investigacao com 59 execucoes reais do Trailing Stop Monitor
+# confirmou: o MAXIMO de sinais de reversao simultaneos ja observado em
+# qualquer posicao real (CRVUSDT, SKYUSDT, etc) foi 2 -- nunca 3. O detector
+# de padroes (lib_chart_patterns.ps1/lib_auto_market_analysis.ps1) raramente
+# confirma mais de 2 sinais tecnicos ao mesmo tempo na pratica, entao o
+# threshold de 3 era estruturalmente quase inatingivel -- o motor so apertava
+# o stop (tighten, sempre ativo com 2 sinais) e nunca chegava a EXIT/realizar,
+# deixando o trade correr ate o stop apertado bater na corretora (mesmo
+# resultado pratico de "sempre stop", so que via ordem normal em vez de saida
+# proativa por reversao real ja confirmada). Reduzido pra exit=2/tighten=1 --
+# 1 sinal isolado ja aperta o stop (protege lucro sem vender no fundo por
+# ruido), 2 sinais simultaneos (o teto real observado) ja e' confirmacao
+# suficiente pra sair de fato.
 #
 # Plugga no harness: PolicyFn = { param($ctx) Get-ExitDecision -Policy $p -Context $ctx }
 # PS 5.1 safe. PURO.
@@ -28,7 +45,11 @@ function Resolve-ExitPolicy {
                 trail_method   = "chandelier"; trail_atr_mult = 1.5
                 partials       = @(@{ at_r = 1.0; pct = 0.6 })
                 time_stop_bars = 8
-                reversal_exit_signals = 3; reversal_tighten_signals = 2
+                reversal_exit_signals = 2; reversal_tighten_signals = 1
+                # 2026-09-02: PARTIAL por reversao isolada + lucro real, mesmo
+                # sem chegar em R=1.0 (achado real: maioria dos trades nunca
+                # chega la antes de reverter). Ver comentario completo acima.
+                reversal_partial_pct = 0.3
             }
         }
         "swing" {
@@ -37,7 +58,8 @@ function Resolve-ExitPolicy {
                 trail_method   = "chandelier"; trail_atr_mult = $(if ($isShort) { 2.0 } else { 3.0 })
                 partials       = $(if ($isShort) { @(@{ at_r=1.0; pct=0.5 }) } else { @(@{ at_r=1.0; pct=0.33 }, @{ at_r=2.0; pct=0.33 }) })
                 time_stop_bars = $(if ($isShort) { 40 } else { 60 })
-                reversal_exit_signals = 3; reversal_tighten_signals = 2
+                reversal_exit_signals = 2; reversal_tighten_signals = 1
+                reversal_partial_pct = 0.3
             }
         }
         "runner" {
@@ -48,7 +70,7 @@ function Resolve-ExitPolicy {
                 trail_method   = "chandelier"; trail_atr_mult = 4.0
                 partials       = @()
                 time_stop_bars = 0
-                reversal_exit_signals = 3; reversal_tighten_signals = 2
+                reversal_exit_signals = 2; reversal_tighten_signals = 1
             }
         }
         default {
@@ -58,7 +80,8 @@ function Resolve-ExitPolicy {
                 trail_method   = "chandelier"; trail_atr_mult = $(if ($isShort) { 2.0 } else { 2.5 })
                 partials       = @(@{ at_r=1.0; pct=0.5 })
                 time_stop_bars = 30
-                reversal_exit_signals = 3; reversal_tighten_signals = 2
+                reversal_exit_signals = 2; reversal_tighten_signals = 1
+                reversal_partial_pct = 0.3
             }
         }
     }
@@ -175,6 +198,25 @@ function Get-ExitDecision {
         }
         if ($null -ne $bestTarget -and $remaining -gt ($bestTarget + 0.001)) {
             $sz = [math]::Round($remaining - $bestTarget, 4)
+            return @{ action = "partial"; new_stop = $newStop; size_pct = $sz }
+        }
+    }
+    # 3b. parcial por REVERSAO ISOLADA (2026-09-02 FIX CRITICO): achado real
+    # -- a maioria dos trades reais NUNCA chega a R=1.0 (piso dos partials
+    # acima) antes de reverter e bater o stop, entao PARTIAL por R-multiple
+    # sozinho nunca disparava na pratica. Se ha lucro real (rNow>0) e pelo
+    # menos $tightenN sinais de reversao (o mesmo piso que ja apertava o
+    # stop sem vender, achado 2026-09-02: max real observado e' 2, exit_n
+    # agora=2), realiza uma fatia CONSERVADORA (default 30%) mesmo sem R=1.0
+    # -- trava parte do lucro que ja existe em vez de deixar reverter tudo
+    # pro stop. So dispara se ainda nao houve NENHUM partial por R-multiple
+    # (remaining=1.0 -- se ja realizou parcial acima, essa camada nao repete).
+    # Opt-in via $Policy.reversal_partial_pct (ausente/0 preserva 100% o
+    # comportamento antigo -- so as policies que setarem esse campo ativam).
+    $reversalPartialPct = if ($Policy.ContainsKey('reversal_partial_pct')) { [double]$Policy.reversal_partial_pct } else { 0.0 }
+    if ($reversalPartialPct -gt 0 -and $tightenN -gt 0 -and $signals -ge $tightenN -and $rNow -gt 0 -and $remaining -ge 0.999) {
+        $sz = [math]::Round([Math]::Min($remaining, $reversalPartialPct), 4)
+        if ($sz -gt 0) {
             return @{ action = "partial"; new_stop = $newStop; size_pct = $sz }
         }
     }
