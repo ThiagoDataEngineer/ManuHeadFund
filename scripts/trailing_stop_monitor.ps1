@@ -491,8 +491,31 @@ try {
                                 $tuFuturesPnl = if ($tuRealPos -and $tuRealPos.PSObject.Properties['unrealized_pnl'] -and $null -ne $tuRealPos.unrealized_pnl) {
                                     [double]$tuRealPos.unrealized_pnl
                                 } else { $null }
+
+                                # 2026-09-03 FIX CRITICO: achado real (auditoria pos-3-dias-
+                                # sem-resultado) -- EXIT por reversao CONFIRMADA (2+ sinais)
+                                # era bloqueado 9/9 vezes pelo piso em dolar fixo (trades
+                                # pequenos ~$90-150 de margem tem lucro em $ baixo mesmo
+                                # quando o sinal aparece cedo o bastante pra ser util -- os
+                                # 2 gates se anulavam por construcao). R-multiple calculado
+                                # com o stop ORIGINAL (Position.stop, nao stopCurrent ja
+                                # movido -- mesmo criterio ja usado em Resolve-TrailingDecision/
+                                # $originalRDistance, evita reabrir o bug de R negativo apos
+                                # trailing ja ter subido o stop, achado 2026-08-24).
+                                $tuOriginalStopForR = if ($tuPos.PSObject.Properties['stop'] -and [double]$tuPos.stop -gt 0) { [double]$tuPos.stop } else { $null }
+                                $tuRMultiple = $null
+                                if ($tuOriginalStopForR -and [double]$tuPos.entry -gt 0) {
+                                    $tuRiskForR = [Math]::Abs([double]$tuPos.entry - $tuOriginalStopForR)
+                                    if ($tuRiskForR -gt 0) {
+                                        $tuRMultiple = if ($tuPos.side -eq "SHORT") {
+                                            ([double]$tuPos.entry - $tuPrice) / $tuRiskForR
+                                        } else {
+                                            ($tuPrice - [double]$tuPos.entry) / $tuRiskForR
+                                        }
+                                    }
+                                }
                                 $tuProfitGate = if (Get-Command Test-FuturesMinProfitGate -ErrorAction SilentlyContinue) {
-                                    Test-FuturesMinProfitGate -UnrealizedPnlUsd $tuFuturesPnl
+                                    Test-FuturesMinProfitGate -UnrealizedPnlUsd $tuFuturesPnl -Action $tuDecision.action -RMultiple $tuRMultiple
                                 } else { [PSCustomObject]@{ allowed = $true; reason = "gate_indisponivel" } }
 
                                 if (-not $tuProfitGate.allowed) {
