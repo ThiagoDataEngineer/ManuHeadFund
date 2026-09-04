@@ -63,14 +63,24 @@ function Resolve-ExitPolicy {
             }
         }
         "runner" {
-            # pos-parcial / em breakeven: ja e "dinheiro da casa". Sem novas parciais.
-            # So sai em reversao confirmada; trail largo p/ deixar correr.
+            # pos-parcial / em breakeven: ja e "dinheiro da casa". Sem novas parciais
+            # ESTRUTURAIS (por R-multiple). So sai em reversao confirmada; trail
+            # largo p/ deixar correr.
+            # 2026-09-03: reversal_partial_pct adicionado -- achado da auditoria
+            # profunda pos-fix-do-piso-em-R (64eba60): "runner" e o perfil mais
+            # escolhido pra LONG saudavel em uptrend (Resolve-ExitPolicyGated),
+            # exatamente o caso mais comum de "sobe bem e depois volta tudo". Sem
+            # este campo, so tinha 2 saidas possiveis: EXIT total (2+ sinais) ou
+            # nada -- perdendo 100% do lucro enquanto so 1 sinal de reversao
+            # isolado aparecia. Mesmo valor (0.3) usado nas outras policies;
+            # nao muda a filosofia de "deixa correr" (so ativa com sinal real).
             $p = @{
                 breakeven_at_r = 0.0
                 trail_method   = "chandelier"; trail_atr_mult = 4.0
                 partials       = @()
                 time_stop_bars = 0
                 reversal_exit_signals = 2; reversal_tighten_signals = 1
+                reversal_partial_pct = 0.3
             }
         }
         default {

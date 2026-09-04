@@ -163,6 +163,26 @@ Describe "Get-ExitDecision -- regras puras" {
             (Resolve-ExitPolicy -TradeType "scalp" -Direction "LONG").reversal_partial_pct | Should Be 0.3
             (Resolve-ExitPolicy -TradeType "swing" -Direction "LONG").reversal_partial_pct | Should Be 0.3
         }
+
+        # 2026-09-03: achado da auditoria profunda pos-fix-do-piso-em-R (64eba60)
+        # -- "runner" e o perfil mais escolhido pra LONG saudavel em uptrend
+        # (Resolve-ExitPolicyGated), exatamente o caso mais comum de "sobe bem
+        # e depois volta tudo". Sem reversal_partial_pct, so tinha 2 saidas
+        # possiveis: EXIT total (2+ sinais) ou nada -- perdendo 100% do lucro
+        # com so 1 sinal de reversao isolado (o caso mais comum, ver Context
+        # acima "2 sinais tem PRECEDENCIA").
+        It "Resolve-ExitPolicy runner TAMBEM tem reversal_partial_pct definido (2026-09-03 -- perfil mais comum p/ LONG saudavel nao pode ficar sem rede de seguranca)" {
+            $p = Resolve-ExitPolicy -TradeType "runner" -Direction "LONG"
+            $p.reversal_partial_pct | Should Be 0.3
+        }
+
+        It "runner com 1 sinal de reversao + lucro real: realiza PARTIAL (nao so EXIT-ou-nada)" {
+            $p = Resolve-ExitPolicy -TradeType "runner" -Direction "LONG"
+            $ctx = @{ side="LONG"; entry=100; risk=10; r_now=0.4; peak=104; current_stop=98; remaining_size=1.0; bars_held=5; signals=1; atr=0 }
+            $d = Get-ExitDecision -Policy $p -Context $ctx
+            $d.action | Should Be "partial"
+            $d.size_pct | Should Be 0.3
+        }
         It "Get-CurrentTrailingPolicy (policy 'atual', a mais usada em producao real): reversal_exit_signals=2 + reversal_partial_pct ativo" {
             $p = Get-CurrentTrailingPolicy
             $p.reversal_exit_signals | Should Be 2
