@@ -2,6 +2,11 @@ name: Diag PnL One-Shot
 
 on:
   workflow_dispatch:
+    inputs:
+      script:
+        description: 'Path to diag script to run'
+        required: false
+        default: ''
 
 permissions:
   contents: read
@@ -23,6 +28,10 @@ jobs:
           $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
           Set-Content -Path "agents/config.local.ps1" -Value $content
 
-      - name: Run diag_weekly_pnl_crosscheck
+      - name: Run diag script
         shell: pwsh
-        run: pwsh -File scripts/diag_weekly_pnl_crosscheck_2026_07_20.ps1
+        env:
+          DIAG_SCRIPT: ${{ github.event.inputs.script != '' && github.event.inputs.script || 'scripts/diag_weekly_pnl_crosscheck_2026_07_20.ps1' }}
+        run: pwsh -File "$env:DIAG_SCRIPT"
+
+  # Usage: gh workflow run diag-pnl-oneshot.yml -f script=scripts/diag_stoploss_rootcause_2026_09_08.ps1
