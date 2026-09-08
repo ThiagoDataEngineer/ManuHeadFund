@@ -6,6 +6,7 @@
 
 param(
     [string]$JournalDir = "journal",
+    [string]$ConfigDir = "config",
     [string]$SupabaseUrl = $env:SUPABASE_URL,
     [string]$SupabaseKey = $env:SUPABASE_SERVICE_KEY
 )
@@ -36,6 +37,7 @@ $gates = $null
 if ($SupabaseUrl -and $SupabaseKey) {
     try {
         $headers = @{
+            "apikey" = $SupabaseKey
             "Authorization" = "Bearer $SupabaseKey"
             "Content-Type" = "application/json"
             "Prefer" = "return=representation"
@@ -120,6 +122,7 @@ $updated_supabase = $false
 if ($SupabaseUrl -and $SupabaseKey) {
     try {
         $headers = @{
+            "apikey" = $SupabaseKey
             "Authorization" = "Bearer $SupabaseKey"
             "Content-Type" = "application/json"
             "Prefer" = "return=representation"
