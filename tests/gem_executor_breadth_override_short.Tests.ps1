@@ -33,9 +33,9 @@ Describe "GEM Executor -- Breadth Gate Override SHORT em BULL" {
             @($short_blocked) | Should Be $true
         }
 
-        It "libera SHORT quando breadth NEUTRO + TORI>=85 + momentum confirmado" {
+        It "libera SHORT quando breadth NEUTRO + TORI>=78 + momentum confirmado (threshold ajustado 2026-09-08, ver gem_executor_short_override_threshold_unreachable.Tests.ps1)" {
             # Arrange: Mesma situacao acima, mas com TORI forte
-            $tori_score_strong = 85
+            $tori_score_strong = 78
             $gem_with_tori = @{
                 market = "XAUTUSDT"
                 symbol = "XAUT"
@@ -49,7 +49,7 @@ Describe "GEM Executor -- Breadth Gate Override SHORT em BULL" {
 
             # Simulate: breadth gate override logic
             $breadth_gate_original = @{ allow_short = $false; breadth_trend = "neutral"; btc_scenario = "BULL"; reason = "bull_blocks_short" }
-            if (-not $breadth_gate_original.allow_short -and ($tori_score_strong -ge 85) -and $has_active_momentum) {
+            if (-not $breadth_gate_original.allow_short -and ($tori_score_strong -ge 78) -and $has_active_momentum) {
                 $breadth_gate_overridden = $true
             } else {
                 $breadth_gate_overridden = $false
@@ -59,25 +59,25 @@ Describe "GEM Executor -- Breadth Gate Override SHORT em BULL" {
             @($breadth_gate_overridden) | Should Be $true
         }
 
-        It "nao libera SHORT com TORI<85 mesmo com momentum confirmado" {
+        It "nao libera SHORT com TORI<78 mesmo com momentum confirmado" {
             # Arrange: TORI score abaixo do threshold
-            $tori_score_weak = 75  # < 85
+            $tori_score_weak = 66  # < 78 (max real observado em regime BULL sem climax e 66-81)
             $has_active_momentum = $true
 
             # Simulate
-            $should_override = ($tori_score_weak -ge 85) -and $has_active_momentum
+            $should_override = ($tori_score_weak -ge 78) -and $has_active_momentum
 
             # Assert: override NAO dispara
             @($should_override) | Should Be $false
         }
 
-        It "nao libera SHORT com TORI>=85 mas sem momentum confirmado" {
+        It "nao libera SHORT com TORI>=78 mas sem momentum confirmado" {
             # Arrange: TORI forte mas momentum nao confirmado
-            $tori_score_strong = 85
+            $tori_score_strong = 78
             $has_active_momentum = $false  # Test-RecentMomentumConfirmed falhou
 
             # Simulate
-            $should_override = ($tori_score_strong -ge 85) -and $has_active_momentum
+            $should_override = ($tori_score_strong -ge 78) -and $has_active_momentum
 
             # Assert
             @($should_override) | Should Be $false
@@ -85,12 +85,12 @@ Describe "GEM Executor -- Breadth Gate Override SHORT em BULL" {
 
         It "diferencia TORI_SHORT (override) de TORI_LONG (sem override)" {
             # Arrange: Mesmo TORI score, mas mode diferente
-            $gem_short = @{ score = 85; mode = "TORI_SHORT" }
-            $gem_long = @{ score = 85; mode = "TORI_LONG" }
+            $gem_short = @{ score = 81; mode = "TORI_SHORT" }
+            $gem_long = @{ score = 81; mode = "TORI_LONG" }
 
             # Simulate
-            $short_qualifies = ($gem_short.mode -match "TORI_SHORT") -and ($gem_short.score -ge 85)
-            $long_qualifies = ($gem_long.mode -match "TORI_SHORT") -and ($gem_long.score -ge 85)
+            $short_qualifies = ($gem_short.mode -match "TORI_SHORT") -and ($gem_short.score -ge 78)
+            $long_qualifies = ($gem_long.mode -match "TORI_SHORT") -and ($gem_long.score -ge 78)
 
             # Assert: so SHORT dispara
             @($short_qualifies) | Should Be $true
@@ -98,26 +98,27 @@ Describe "GEM Executor -- Breadth Gate Override SHORT em BULL" {
         }
     }
 
-    Context "Threshold comparison: TORI>=85 vs TORI>=90 (pump gate)" {
-        It "breadth gate usa threshold 85 (menos extremo que pump gate 90)" {
-            # Breadth gate: >=85 (justificado porque breadth e mais conservadora)
-            $breadth_threshold = 85
-            $score_mid = 87
+    Context "Threshold comparison: TORI>=78 vs TORI>=85 (pump gate) -- ajustado 2026-09-08" {
+        It "breadth gate usa threshold 78 (menos extremo que pump gate 85)" {
+            # Breadth gate: >=78 (justificado porque breadth e mais conservadora, mas
+            # alcancavel pelo teto real observado de 81, ver Test-ToriConfluence threshold=65)
+            $breadth_threshold = 78
+            $score_mid = 80
 
             @($score_mid -ge $breadth_threshold) | Should Be $true
         }
 
-        It "pump gate usa threshold 90 (mais extremo)" {
-            $pump_threshold = 90
-            $score_mid = 87
+        It "pump gate usa threshold 85 (mais extremo)" {
+            $pump_threshold = 85
+            $score_mid = 80
 
             @($score_mid -ge $pump_threshold) | Should Be $false
         }
 
-        It "mesmo score entre 85-90 passa breadth override, falha pump override" {
-            $score = 87
-            $breadth_pass = $score -ge 85
-            $pump_pass = $score -ge 90
+        It "mesmo score entre 78-85 passa breadth override, falha pump override" {
+            $score = 80
+            $breadth_pass = $score -ge 78
+            $pump_pass = $score -ge 85
 
             @($breadth_pass) | Should Be $true
             @($pump_pass) | Should Be $false
@@ -139,12 +140,12 @@ Describe "GEM Executor -- Breadth Gate Override SHORT em BULL" {
             # Cenario: BULL vigente, mas uma moeda cai forte (queda isolada)
             $scenario = "BULL"
             $change_24h = -35.0
-            $tori_score = 85
+            $tori_score = 81
             $has_momentum = $true
             $breadth_blocks = $true
 
             # Simulate override
-            $override_applies = $breadth_blocks -and ($tori_score -ge 85) -and $has_momentum
+            $override_applies = $breadth_blocks -and ($tori_score -ge 78) -and $has_momentum
 
             # Assert: override libera SHORT
             @($override_applies) | Should Be $true

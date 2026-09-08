@@ -85,9 +85,9 @@ Describe "GEM Executor -- Cenario BULL->SHORT Override (TORI>=85 + momentum ativ
     }
 
     Context "Consistencia com o BREADTH GATE OVERRIDE ja existente (mesmos criterios, gates diferentes)" {
-        It "usa o MESMO threshold (85) e MESMA exigencia de momentum ativo que o breadth override" {
-            $breadthThreshold = 85
-            $cenarioThreshold = 85
+        It "usa o MESMO threshold (78, ajustado 2026-09-08 -- ver gem_executor_short_override_threshold_unreachable.Tests.ps1) e MESMA exigencia de momentum ativo que o breadth override" {
+            $breadthThreshold = 78
+            $cenarioThreshold = 78
             @($breadthThreshold) | Should Be $cenarioThreshold
         }
 

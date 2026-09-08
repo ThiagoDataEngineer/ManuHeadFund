@@ -553,8 +553,26 @@ function Invoke-GemExecute {
     # se AINDA esta caindo. Fix: reusa Test-RecentMomentumConfirmed (mesma
     # funcao criada hoje pro breadth gate) -- exige momentum de 1h E 4h
     # confirmando queda ATIVA agora, nao so historico de dias.
-    $toriConfluenceExtreme = ($Gem.mode -match "TORI_SHORT") -and ($null -ne $Gem.score) -and ([int]$Gem.score -ge 90)
-    $toriConfluenceStrong = ($Gem.mode -match "TORI_SHORT") -and ($null -ne $Gem.score) -and ([int]$Gem.score -ge 85)
+    # 2026-09-08 FIX CRITICO (achado real, 10 runs live/~90 candidatos avaliados,
+    # 2026-09-08): os thresholds >=90/>=85 abaixo eram calibrados contra uma
+    # escala antiga do detector de confluencia. Test-ToriConfluence (gate de
+    # ENTRADA, lib_tori_gate_wrapper.ps1) foi recalibrado em 2026-08-20 pra
+    # threshold=65 -- comentario la mesmo confirma que a maioria dos sinais reais
+    # em BULL/NEUTRO nao passa de FRACTAL+baseline=65. Distribuicao real medida
+    # (10 runs trading-pipeline.yml, 2026-09-08): score=65 (73x), score=66 (12x),
+    # score=81 (2x) -- NUNCA >=85. Resultado: os 3 overrides desenhados pra
+    # destravar SHORT com sinal forte (breadth aqui, pump abaixo, cenario BULL
+    # linha ~1282) nunca disparavam em producao (grep "OVERRIDE" = 0 ocorrencias
+    # em todos os 10 runs), mesmo com "BLOQUEADO GATES: breadth_short_blocked"
+    # aparecendo dezenas de vezes por ciclo -- o unico caminho de fallback
+    # (Test-MentorOverride, LLM cascade) tambem falha quase sempre (MESA_DEGRADED
+    # 0/3 drones, ou budget de 10 overrides/ciclo esgotado por gates de LONG
+    # antes de chegar em SHORT). Novo threshold (78/85) alcancavel pelo teto real
+    # observado (81) e pelo teto teorico de stack completo de sinais (105),
+    # continua estritamente ACIMA do piso de entrada (65) -- preserva a intencao
+    # original de exigir sinal MAIS forte que o minimo, sem ser inalcancavel.
+    $toriConfluenceExtreme = ($Gem.mode -match "TORI_SHORT") -and ($null -ne $Gem.score) -and ([int]$Gem.score -ge 85)
+    $toriConfluenceStrong = ($Gem.mode -match "TORI_SHORT") -and ($null -ne $Gem.score) -and ([int]$Gem.score -ge 78)
     $hasActiveMomentum = $false
     if ($toriConfluenceStrong -and (Get-Command Test-RecentMomentumConfirmed -ErrorAction SilentlyContinue)) {
         try { $hasActiveMomentum = Test-RecentMomentumConfirmed -Market $mkt -Direction "lt" } catch { $hasActiveMomentum = $false }
@@ -572,7 +590,7 @@ function Invoke-GemExecute {
             reason              = "tori_confluence_override_$($Gem.score)_momentum_ativo (era: $origReason)"
             source              = $pumpGate.source
         }
-        Write-Host "  [PUMP GATE OVERRIDE] ${mkt}: Tori confluence=$($Gem.score) >=90 + momentum 1h/4h confirmando queda ativa -> libera SHORT apesar de pump_class=$($pumpGate.pump_class)" -ForegroundColor DarkYellow
+        Write-Host "  [PUMP GATE OVERRIDE] ${mkt}: Tori confluence=$($Gem.score) >=85 + momentum 1h/4h confirmando queda ativa -> libera SHORT apesar de pump_class=$($pumpGate.pump_class)" -ForegroundColor DarkYellow
     }
 
     # 2026-08-20: BREADTH GATE OVERRIDE (SHORT FORTE EM BULL)
@@ -602,7 +620,7 @@ function Invoke-GemExecute {
             source = "breadth_gate_override"
             reason = "tori_confluence_override_$($Gem.score)_momentum_ativo (era: $origReason)"
         }
-        Write-Host "  [BREADTH GATE OVERRIDE] ${mkt}: Tori confluence=$($Gem.score) >=85 + momentum 1h/4h confirmando queda ativa -> libera SHORT apesar de breadth=neutral" -ForegroundColor DarkYellow
+        Write-Host "  [BREADTH GATE OVERRIDE] ${mkt}: Tori confluence=$($Gem.score) >=78 + momentum 1h/4h confirmando queda ativa -> libera SHORT apesar de breadth=neutral" -ForegroundColor DarkYellow
     }
 
     # Gate #2: Entry timing (RSI 15M)
@@ -1281,7 +1299,7 @@ function Invoke-GemExecute {
             # mesmo criterio ja validado pro 2o gate da cadeia.
             if ($blockShort -and $scen.scenario -eq "BULL" -and $toriConfluenceStrong -and $hasActiveMomentum) {
                 $blockShort = $false
-                Write-Host "  [CENARIO BULL->SHORT OVERRIDE] ${mkt}: Tori confluence=$($Gem.score) >=85 + momentum 1h/4h confirmando queda ativa -> libera SHORT apesar de cenario=BULL" -ForegroundColor DarkYellow
+                Write-Host "  [CENARIO BULL->SHORT OVERRIDE] ${mkt}: Tori confluence=$($Gem.score) >=78 + momentum 1h/4h confirmando queda ativa -> libera SHORT apesar de cenario=BULL" -ForegroundColor DarkYellow
             }
             # 2026-06-30 SURF: em vez de so bloquear LONG no bear, SURFA o bear (SHORT).
             # Shadow-first: sem journal/REGIME_SURF_SHORT_LIVE.flag -> so loga; com flag -> ordem real.
