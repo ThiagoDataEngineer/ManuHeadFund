@@ -1,0 +1,28 @@
+name: Diag PnL One-Shot
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  diag:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Write config.local.ps1 from secrets
+        shell: pwsh
+        run: |
+          $content = "`$env:COINEX_ACCESS_ID = '${{ secrets.COINEX_ACCESS_ID }}'" + "`n"
+          $content += "`$env:COINEX_SECRET_KEY = '${{ secrets.COINEX_SECRET_KEY }}'" + "`n"
+          $content += "`$env:COINEX_PASSPHRASE = '${{ secrets.COINEX_PASSPHRASE }}'" + "`n"
+          $content += "`$env:SUPABASE_URL = '${{ secrets.SUPABASE_URL }}'" + "`n"
+          $content += "`$env:SUPABASE_SERVICE_KEY = '${{ secrets.SUPABASE_SERVICE_KEY }}'" + "`n"
+          Set-Content -Path "agents/config.local.ps1" -Value $content
+
+      - name: Run diag_weekly_pnl_crosscheck
+        shell: pwsh
+        run: pwsh -File scripts/diag_weekly_pnl_crosscheck_2026_07_20.ps1
