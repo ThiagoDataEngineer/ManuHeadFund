@@ -102,6 +102,7 @@ $cutoffMs = [DateTimeOffset]::UtcNow.AddDays(-14).ToUnixTimeMilliseconds()
 $totalRealizedSpotApprox = 0.0
 $totalUnrealizedSpotLatent = 0.0
 $spotSummary = @()
+$shapePrinted = $false
 
 foreach ($h in $spotHoldings) {
     $ccy = $h.ccy
@@ -119,25 +120,29 @@ foreach ($h in $spotHoldings) {
         while ($keepGoing) {
             $r = CoinEx-Get "/v2/spot/finished-order?market=$mkt&market_type=SPOT&page=$page&limit=100" -EA SilentlyContinue
             if ($r.code -ne 0 -or $r.data.Count -eq 0) { break }
+            if (-not $shapePrinted) {
+                Write-Host "  RAW SHAPE spot finished-order (1o registro real encontrado):" -ForegroundColor DarkGray
+                Write-Host "    $($r.data[0] | ConvertTo-Json -Compress -Depth 5)"
+                $shapePrinted = $true
+            }
             foreach ($o in $r.data) {
                 $ts = $null
                 foreach ($tf in @('created_at','create_time','ctime')) {
                     if ($o.PSObject.Properties.Name -contains $tf) { $ts = [long]$o.$tf; break }
                 }
-                if ($ts -and $ts -lt $cutoffMs -and $ts -lt ($cutoffMs / 1000)) { continue }
-                if ($ts -and $ts -gt 999999999999) {
-                    if ($ts -lt $cutoffMs) { continue }
-                } elseif ($ts) {
-                    if ($ts -lt ($cutoffMs / 1000)) { continue }
+                if ($ts) {
+                    $tsMs = if ($ts -gt 999999999999) { $ts } else { $ts * 1000 }
+                    if ($tsMs -lt $cutoffMs) { continue }
                 }
                 $orderCount++
                 $side = $o.side
                 $dealAmount = 0.0; $dealValue = 0.0; $fee = 0.0
-                foreach ($f in @('deal_amount','filled_amount','base_fee')) {
-                    if ($o.PSObject.Properties.Name -contains $f -and $f -eq 'deal_amount') { $dealAmount = [double]$o.$f }
+                foreach ($f in @('deal_amount','filled_amount','base_amount','amount')) {
+                    if ($o.PSObject.Properties.Name -contains $f) { $dealAmount = [double]$o.$f; break }
                 }
-                if ($o.PSObject.Properties.Name -contains 'deal_amount') { $dealAmount = [double]$o.deal_amount }
-                if ($o.PSObject.Properties.Name -contains 'deal_money') { $dealValue = [double]$o.deal_money }
+                foreach ($f in @('deal_money','filled_value','quote_amount','deal_value')) {
+                    if ($o.PSObject.Properties.Name -contains $f) { $dealValue = [double]$o.$f; break }
+                }
                 if ($o.PSObject.Properties.Name -contains 'quote_fee') { $fee += [double]$o.quote_fee }
                 if ($o.PSObject.Properties.Name -contains 'base_fee') { $fee += [double]$o.base_fee }
 
