@@ -24,8 +24,9 @@ if (Test-Path $configLocalPath) { . $configLocalPath }
 Write-Host "=== DIAG RECONCILIACAO DE SALDO TOTAL (READ-ONLY) ===" -ForegroundColor Cyan
 Write-Host ""
 
-$cutoffMs = [DateTimeOffset]::UtcNow.AddDays(-14).ToUnixTimeMilliseconds()
-$cutoffSec = [DateTimeOffset]::UtcNow.AddDays(-14).ToUnixTimeSeconds()
+$windowDays = 21
+$cutoffMs = [DateTimeOffset]::UtcNow.AddDays(-$windowDays).ToUnixTimeMilliseconds()
+$cutoffSec = [DateTimeOffset]::UtcNow.AddDays(-$windowDays).ToUnixTimeSeconds()
 
 function Get-TsMs($obj, [string[]]$fields) {
     foreach ($f in $fields) {
