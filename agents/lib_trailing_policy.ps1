@@ -43,7 +43,13 @@ function Resolve-ExitPolicy {
             $p = @{
                 breakeven_at_r = 0.5
                 trail_method   = "chandelier"; trail_atr_mult = 1.5
-                partials       = @(@{ at_r = 1.0; pct = 0.6 })
+                # 2026-09-08: at_r 1.0 -> 1.25 -- achado real via MFE (candles 1min,
+                # 40 trades reais 21d): vencedores tiveram 27.3% de movimento medio
+                # a favor durante a vida do trade, vs so 8.8% nos perdedores antes
+                # de reverter. Evidencia de upside real deixado na mesa por realizar
+                # cedo demais. Ajuste conservador (scalp sobe menos que swing/standard
+                # por ser perfil de trade rapido por design).
+                partials       = @(@{ at_r = 1.25; pct = 0.6 })
                 time_stop_bars = 8
                 reversal_exit_signals = 2; reversal_tighten_signals = 1
                 # 2026-09-02: PARTIAL por reversao isolada + lucro real, mesmo
@@ -56,7 +62,11 @@ function Resolve-ExitPolicy {
             $p = @{
                 breakeven_at_r = 1.0
                 trail_method   = "chandelier"; trail_atr_mult = $(if ($isShort) { 2.0 } else { 3.0 })
-                partials       = $(if ($isShort) { @(@{ at_r=1.0; pct=0.5 }) } else { @(@{ at_r=1.0; pct=0.33 }, @{ at_r=2.0; pct=0.33 }) })
+                # 2026-09-08: at_r 1.0/2.0 -> 1.5/2.5 -- mesmo achado real do
+                # perfil scalp acima (MFE medio 27.3% em vencedores vs 8.8% em
+                # perdedores, 40 trades reais 21d). Perfil swing/standard sobe
+                # mais que scalp por ter mais espaco de tempo pra deixar correr.
+                partials       = $(if ($isShort) { @(@{ at_r=1.5; pct=0.5 }) } else { @(@{ at_r=1.5; pct=0.33 }, @{ at_r=2.5; pct=0.33 }) })
                 time_stop_bars = $(if ($isShort) { 40 } else { 60 })
                 reversal_exit_signals = 2; reversal_tighten_signals = 1
                 reversal_partial_pct = 0.3
@@ -88,7 +98,10 @@ function Resolve-ExitPolicy {
             $p = @{
                 breakeven_at_r = 1.0
                 trail_method   = "chandelier"; trail_atr_mult = $(if ($isShort) { 2.0 } else { 2.5 })
-                partials       = @(@{ at_r=1.0; pct=0.5 })
+                # 2026-09-08: at_r 1.0 -> 1.5 -- mesmo achado real (MFE 27.3%
+                # vencedores vs 8.8% perdedores, 40 trades reais 21d). Ver
+                # comentario completo no perfil "scalp" acima.
+                partials       = @(@{ at_r=1.5; pct=0.5 })
                 time_stop_bars = 30
                 reversal_exit_signals = 2; reversal_tighten_signals = 1
                 reversal_partial_pct = 0.3

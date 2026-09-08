@@ -19,11 +19,11 @@ Describe "Resolve-ExitPolicy -- seletor por tipo" {
         $p.time_stop_bars | Should BeLessThan 20
     }
 
-    It "swing LONG: chandelier + parciais em 1R e 2R" {
+    It "swing LONG: chandelier + parciais em 1.5R e 2.5R (2026-09-08: MFE real mostrou espaco deixado na mesa em 1R)" {
         $p = Resolve-ExitPolicy -TradeType "swing" -Direction "LONG"
         $p.trail_method | Should Be "chandelier"
         @($p.partials).Count | Should BeGreaterThan 1
-        ($p.partials[0].at_r) | Should Be 1.0
+        ($p.partials[0].at_r) | Should Be 1.5
     }
 
     It "swing SHORT mais apertado que swing LONG (trail_atr_mult menor)" {

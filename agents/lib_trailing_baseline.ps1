@@ -10,9 +10,15 @@ function Get-CurrentTrailingPolicy {
         breakeven_at_r = 1.0
         trail_method = "chandelier"
         trail_atr_mult = 2.5
+        # 2026-09-08: at_r 1.0/2.0 -> 1.5/2.5 -- achado real via MFE (candles
+        # 1min, 40 trades reais 21d): vencedores tiveram 27.3% de movimento
+        # medio a favor durante a vida do trade, vs so 8.8% nos perdedores
+        # antes de reverter -- evidencia de upside real deixado na mesa por
+        # realizar cedo demais. Mesmo ajuste aplicado em Resolve-ExitPolicy
+        # (lib_trailing_policy.ps1, perfis scalp/swing/standard).
         partials = @(
-            @{ at_r = 1.0; pct = 0.5 },
-            @{ at_r = 2.0; pct = 0.25 }
+            @{ at_r = 1.5; pct = 0.5 },
+            @{ at_r = 2.5; pct = 0.25 }
         )
         time_stop_bars = 60
         # 2026-09-02 FIX CRITICO: 3/2 -> 2/1 -- ver comentario completo em

@@ -591,15 +591,18 @@ Describe "Resolve-TrailingDecision -- enriquecimento opcional multi-TF + perfil 
         $r.action | Should Be "EXIT"
     }
 
-    It "R-multiple >= 1.0 com policy swing (partials [1R=0.33, 2R=0.33]) -- retorna action=PARTIAL com size_pct > 0" {
+    It "R-multiple >= 1.5 com policy swing (partials [1.5R=0.33, 2.5R=0.33]) -- retorna action=PARTIAL com size_pct > 0" {
+        # 2026-09-08: at_r 1.0/2.0 -> 1.5/2.5 (achado real via MFE, ver
+        # lib_trailing_policy.ps1) -- preco/candles ajustados pra bater o novo
+        # 1o nivel de parcial.
         $candles = New-HealthyUptrendCandles -Count 30
         $pos = [PSCustomObject]@{
             market="PARTIALUSDT"; side="LONG"; entry=100.0; stopCurrent=95.0
             origin = @{ asset_class="FUTURES"; trade_style="SWING" }
-            leverage = 1; peak = 105.0
+            leverage = 1; peak = 107.5
         }
-        # r_now = (105-100)/(100-95) = 1.0 -> bate o 1o nivel de parcial (1R, 0.33)
-        $r = Resolve-TrailingDecision -Position $pos -CurrentPrice 105.0 -Candles $candles -BarsHeld 3
+        # r_now = (107.5-100)/(100-95) = 1.5 -> bate o 1o nivel de parcial (1.5R, 0.33)
+        $r = Resolve-TrailingDecision -Position $pos -CurrentPrice 107.5 -Candles $candles -BarsHeld 3
         $r.action | Should Be "PARTIAL"
         ($r.size_pct -gt 0) | Should Be $true
     }
