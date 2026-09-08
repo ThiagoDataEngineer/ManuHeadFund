@@ -212,7 +212,18 @@ if ($allOrdersNoMarketFilter -and $allOrdersNoMarketFilter.code -eq 0 -and $allO
             if ($tsMs -and $tsMs -lt $cutoffMs) { continue }
             $fee = 0.0
             if ($o.PSObject.Properties.Name -contains 'quote_fee') { $fee += [double]$o.quote_fee }
-            if ($o.PSObject.Properties.Name -contains 'base_fee') { $fee += [double]$o.base_fee }
+            # base_fee vem denominado na moeda BASE do mercado (ex: WEN, BONK), nao em USDT --
+            # somar cru inflava o total em ordens de compra de moedas de preco unitario minusculo
+            # (achado real: WENUSDT base_fee=7940 = 7940 WEN, nao $7940). Converte usando o preco
+            # implicito da propria ordem (filled_value/filled_amount, ja em USDT).
+            if ($o.PSObject.Properties.Name -contains 'base_fee' -and [double]$o.base_fee -gt 0) {
+                $filledAmount = [double]$o.filled_amount
+                $filledValue = [double]$o.filled_value
+                if ($filledAmount -gt 0) {
+                    $unitPrice = $filledValue / $filledAmount
+                    $fee += [double]$o.base_fee * $unitPrice
+                }
+            }
             $mkt = $o.market
             if (-not $feesByMarket.ContainsKey($mkt)) { $feesByMarket[$mkt] = 0.0 }
             $feesByMarket[$mkt] += $fee
@@ -249,7 +260,14 @@ if ($allOrdersNoMarketFilter -and $allOrdersNoMarketFilter.code -eq 0 -and $allO
                 if ($tsMs -and $tsMs -lt $cutoffMs) { continue }
                 $fee = 0.0
                 if ($o.PSObject.Properties.Name -contains 'quote_fee') { $fee += [double]$o.quote_fee }
-                if ($o.PSObject.Properties.Name -contains 'base_fee') { $fee += [double]$o.base_fee }
+                if ($o.PSObject.Properties.Name -contains 'base_fee' -and [double]$o.base_fee -gt 0) {
+                    $filledAmount = [double]$o.filled_amount
+                    $filledValue = [double]$o.filled_value
+                    if ($filledAmount -gt 0) {
+                        $unitPrice = $filledValue / $filledAmount
+                        $fee += [double]$o.base_fee * $unitPrice
+                    }
+                }
                 $mktFee += $fee
             }
             if ($r.data.Count -lt 100) { $keepGoing = $false }
