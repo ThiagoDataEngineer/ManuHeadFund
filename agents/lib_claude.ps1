@@ -771,9 +771,9 @@ function Invoke-MentorCascade {
             $r = Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
                 -Model "claude-haiku-4-5-20251001" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
             if ($r) { $script:LAST_CASCADE_PROVIDER = "anthropic_haiku"; return $r }
-            Write-Warning "  [$Agent] Haiku final respondeu vazio (sem excecao) -- cascade esgotada"
+            Write-Host "  [$Agent] Haiku final respondeu vazio (sem excecao) -- cascade esgotada, tamanho da resposta: $($r.Length)" -ForegroundColor Red
         } catch {
-            Write-Warning "  [$Agent] Haiku final falhou: $($_.Exception.Message)"
+            Write-Host "  [$Agent] Haiku final falhou: $($_.Exception.GetType().FullName) -- $($_.Exception.Message) -- $($_.ScriptStackTrace)" -ForegroundColor Red
         }
     }
     return $null
