@@ -718,12 +718,26 @@ function Invoke-MentorCascade {
     # Economia: Sonnet so para Mentor. Triagem/Mesa/Tech usam Groq/Gemini/Haiku.
     $script:LAST_CASCADE_PROVIDER = $null
 
+    # 2026-09-10 FIX: cascade inteira podia falhar 100% SILENCIOSAMENTE --
+    # achado real pos-reset do teto Anthropic (owner aumentou o limite, mas
+    # Test-MentorOverride continuava negando todo override de SHORT com
+    # "Mentor indisponivel", MESMO com mesa_termal/mesa_radar -- cascade
+    # SEPARADA, lib_mesa_*.ps1 -- respondendo normalmente no mesmo ciclo).
+    # Causa: cada passo so logava no bloco `catch` (excecao real). Se
+    # Invoke-Claude/Groq/Mistral retornasse com SUCESSO mas `$r` vazio/nulo
+    # (ex: Sonnet-5 truncando ou devolvendo bloco nao-texto num prompt JSON
+    # grande), o `if ($r)` falhava sem exception, caindo pro proximo passo
+    # SEM NENHUM LOG -- os 4 passos podiam esvaziar em sequencia e o unico
+    # sintoma era "Mentor indisponivel" no fim, sem pista de qual passo/por
+    # que. Fix: log explicito no caminho "sucesso mas vazio" de cada passo,
+    # igual ja existia pro caminho de excecao.
     # 1. Anthropic Sonnet (primary — JSON estruturado confiavel)
     if ($env:ANTHROPIC_API_KEY) {
         try {
             $r = Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
                 -Model $AnthropicModel -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
             if ($r) { $script:LAST_CASCADE_PROVIDER = "anthropic_sonnet"; return $r }
+            Write-Host "  [$Agent] Sonnet respondeu vazio (sem excecao), fallback Groq" -ForegroundColor DarkYellow
         } catch {
             Write-Host "  [$Agent] Sonnet falhou, fallback Groq: $($_.Exception.Message.Substring(0,[Math]::Min(200,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
@@ -734,6 +748,7 @@ function Invoke-MentorCascade {
             $r = Invoke-Groq -SystemPrompt $SystemPrompt -UserContent $UserContent `
                 -Model "llama-3.3-70b-versatile" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
             if ($r) { $script:LAST_CASCADE_PROVIDER = "groq_llama70b"; return $r }
+            Write-Host "  [$Agent] Groq respondeu vazio (sem excecao), fallback Mistral" -ForegroundColor DarkYellow
         } catch {
             Write-Host "  [$Agent] Groq falhou, fallback Mistral: $($_.Exception.Message.Substring(0,[Math]::Min(200,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
@@ -745,6 +760,7 @@ function Invoke-MentorCascade {
             $r = Invoke-Mistral -SystemPrompt $SystemPrompt -UserContent $UserContent `
                 -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
             if ($r) { $script:LAST_CASCADE_PROVIDER = "mistral_small"; return $r }
+            Write-Host "  [$Agent] Mistral respondeu vazio (sem excecao), fallback Haiku" -ForegroundColor DarkYellow
         } catch {
             Write-Host "  [$Agent] Mistral falhou, fallback Haiku: $($_.Exception.Message.Substring(0,[Math]::Min(200,$_.Exception.Message.Length)))" -ForegroundColor DarkYellow
         }
@@ -755,6 +771,7 @@ function Invoke-MentorCascade {
             $r = Invoke-Claude -SystemPrompt $SystemPrompt -UserContent $UserContent `
                 -Model "claude-haiku-4-5-20251001" -MaxTokens $MaxTokens -Temperature $Temperature -Agent $Agent
             if ($r) { $script:LAST_CASCADE_PROVIDER = "anthropic_haiku"; return $r }
+            Write-Warning "  [$Agent] Haiku final respondeu vazio (sem excecao) -- cascade esgotada"
         } catch {
             Write-Warning "  [$Agent] Haiku final falhou: $($_.Exception.Message)"
         }

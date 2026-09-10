@@ -104,6 +104,37 @@ Describe "Cascade routing - Mentor Anthropic->Groq->Mistral" {
         $r | Should Be $null
     }
 
+    # 2026-09-10 FIX CRITICO: achado real pos-reset do teto Anthropic --
+    # Test-MentorOverride negava TODO override de SHORT com "Mentor
+    # indisponivel", mas nenhum log de excecao aparecia em NENHUM dos 4
+    # passos (Sonnet/Groq/Mistral/Haiku). Causa: os 4 provedores podem
+    # retornar com SUCESSO (sem excecao) mas com valor vazio/falsy -- o
+    # `if ($r)` cai pro proximo passo em silencio total, sem log. Estes
+    # testes cobrem esse caminho "sucesso mas vazio", que antes do fix
+    # nao emitia NENHUMA mensagem em nenhum dos 4 passos.
+    It "Sonnet retorna vazio SEM excecao: loga fallback e tenta Groq mesmo assim" {
+        Mock Invoke-Claude {
+            param($Model)
+            if ($Model -like "*haiku*") { return "from-haiku" }
+            return ""   # sucesso, sem excecao, mas vazio
+        } -ModuleName $null
+        Mock Invoke-Groq    { return "from-groq" } -ModuleName $null
+        Mock Invoke-Mistral { return "from-mistral" } -ModuleName $null
+        $out = Invoke-MentorCascade -SystemPrompt "s" -UserContent "u" 6>&1 | Out-String
+        $out | Should Match "respondeu vazio"
+    }
+
+    It "TODOS os 4 provedores retornam vazio SEM excecao: retorna null e loga em cada passo (nao fica mudo)" {
+        Mock Invoke-Claude  { return "" } -ModuleName $null
+        Mock Invoke-Groq    { return "" } -ModuleName $null
+        Mock Invoke-Mistral { return "" } -ModuleName $null
+        $out = Invoke-MentorCascade -SystemPrompt "s" -UserContent "u" 3>&1 6>&1 | Out-String
+        $out | Should Match "Sonnet respondeu vazio"
+        $out | Should Match "Groq respondeu vazio"
+        $out | Should Match "Mistral respondeu vazio"
+        $out | Should Match "Haiku final respondeu vazio"
+    }
+
     It "Provider trace: Anthropic OK -> LAST_CASCADE_PROVIDER=anthropic_sonnet" {
         Mock Invoke-Claude { return "from-claude" } -ModuleName $null
         $script:LAST_CASCADE_PROVIDER = $null

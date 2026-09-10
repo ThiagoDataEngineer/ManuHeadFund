@@ -169,8 +169,20 @@ function Get-FractalPattern {
     .PARAMETER Closes
         Array of close prices
 
+    .PARAMETER SetupType
+        "LONG" ou "SHORT". 2026-09-10 FIX CRITICO: sem este parametro, a
+        funcao pontuava QUALQUER fractal encontrado (bearish OU bullish) a
+        favor de QUALQUER setup -- achado real via auditoria (INJUSDT abriu
+        LONG com fractal BEARISH detectado, +15 pontos ajudando o score de
+        confluencia LONG passar do threshold, apesar do sinal ser
+        estruturalmente contra a direcao do trade). As outras 2 funcoes de
+        sinal direcional (Get-RSIExtreme, Get-StructuralBreak) ja isolam por
+        SetupType -- esta era a excecao. Fractal incoerente com o setup
+        agora conta como "sem sinal" (points=0), nunca como prova a favor.
+
     .OUTPUTS
-        PSCustomObject with fractal_type (string), index (int), and points
+        PSCustomObject com fractal_type (string, so preenchido quando
+        coerente com SetupType), index (int) e points
     #>
     [CmdletBinding()]
     param(
@@ -184,7 +196,10 @@ function Get-FractalPattern {
         [double[]]$Lows,
 
         [Parameter(Mandatory=$true)]
-        [double[]]$Closes
+        [double[]]$Closes,
+
+        [ValidateSet("LONG", "SHORT")]
+        [string]$SetupType = ""
     )
 
     $fractalType = ""
@@ -206,18 +221,26 @@ function Get-FractalPattern {
         # Bearish fractal: High[i] > High[i-1] AND High[i] > High[i-2] AND High[i] > High[i+1] AND High[i] > High[i+2]
         if ($Highs[$i] -gt $Highs[$i - 1] -and $Highs[$i] -gt $Highs[$i - 2] -and
             $Highs[$i] -gt $Highs[$i + 1] -and $Highs[$i] -gt $Highs[$i + 2]) {
-            $fractalType = "BEARISH"
-            $fractalIndex = $i
-            $points = 15
+            # bearish fractal so conta pra SHORT (ou quando SetupType nao
+            # informado -- chamador antigo, preserva comportamento previo)
+            if ($SetupType -ne "LONG") {
+                $fractalType = "BEARISH"
+                $fractalIndex = $i
+                $points = 15
+            }
             break
         }
 
         # Bullish fractal: Low[i] < Low[i-1] AND Low[i] < Low[i-2] AND Low[i] < Low[i+1] AND Low[i] < Low[i+2]
         if ($Lows[$i] -lt $Lows[$i - 1] -and $Lows[$i] -lt $Lows[$i - 2] -and
             $Lows[$i] -lt $Lows[$i + 1] -and $Lows[$i] -lt $Lows[$i + 2]) {
-            $fractalType = "BULLISH"
-            $fractalIndex = $i
-            $points = 15
+            # bullish fractal so conta pra LONG (ou quando SetupType nao
+            # informado -- chamador antigo, preserva comportamento previo)
+            if ($SetupType -ne "SHORT") {
+                $fractalType = "BULLISH"
+                $fractalIndex = $i
+                $points = 15
+            }
             break
         }
     }
@@ -498,7 +521,10 @@ function Get-ConfluenceScoreEnhanced {
     }
 
     # Signal 3: Fractal Pattern
-    $fractal = Get-FractalPattern -Opens $opens -Highs $highs -Lows $lows -Closes $closes
+    # 2026-09-10 FIX CRITICO: -SetupType agora passado -- ver comentario
+    # completo em Get-FractalPattern. Sem isso, um fractal BEARISH somava
+    # pontos a favor de um setup LONG (achado real: INJUSDT).
+    $fractal = Get-FractalPattern -Opens $opens -Highs $highs -Lows $lows -Closes $closes -SetupType $SetupType
     if ($fractal.fractal_type -ne "") {
         $breakdown["fractal_pattern"] = $fractal.points
         $totalScore += $fractal.points

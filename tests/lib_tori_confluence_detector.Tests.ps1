@@ -111,6 +111,71 @@ Describe "lib_tori_confluence_detector" {
             $result.fractal_type | Should Be ""
             $result.points | Should Be 0
         }
+
+        # 2026-09-10 FIX CRITICO: achado real via auditoria pos "quase todos
+        # LONGs perdedores" -- INJUSDT abriu LONG com fractal BEARISH
+        # detectado, e a funcao somava +15 pontos ao score de confluencia
+        # LONG mesmo assim (nunca checava -SetupType, diferente de
+        # Get-RSIExtreme/Get-StructuralBreak que ja isolam por direcao).
+        It "fractal BEARISH com SetupType=LONG: NAO pontua (sinal contra a direcao do setup)" {
+            $opens = @(100, 102, 104, 103, 101)
+            $highs = @(100, 103, 110, 105, 102)  # Index 2 e pico bearish
+            $lows = @(99, 101, 108, 102, 100)
+            $closes = @(99, 102, 109, 104, 101)
+
+            $result = Get-FractalPattern -Opens $opens -Highs $highs -Lows $lows -Closes $closes -SetupType "LONG"
+
+            $result.fractal_type | Should Be ""
+            $result.points | Should Be 0
+        }
+
+        It "fractal BEARISH com SetupType=SHORT: pontua normalmente (coerente com a direcao)" {
+            $opens = @(100, 102, 104, 103, 101)
+            $highs = @(100, 103, 110, 105, 102)
+            $lows = @(99, 101, 108, 102, 100)
+            $closes = @(99, 102, 109, 104, 101)
+
+            $result = Get-FractalPattern -Opens $opens -Highs $highs -Lows $lows -Closes $closes -SetupType "SHORT"
+
+            $result.fractal_type | Should Be "BEARISH"
+            $result.points | Should Be 15
+        }
+
+        It "fractal BULLISH com SetupType=SHORT: NAO pontua (sinal contra a direcao do setup)" {
+            $opens = @(100, 102, 100, 103, 101)
+            $highs = @(100, 103, 102, 105, 102)
+            $lows = @(99, 101, 90, 102, 100)  # Index 2 e fundo bullish
+            $closes = @(99, 102, 91, 104, 101)
+
+            $result = Get-FractalPattern -Opens $opens -Highs $highs -Lows $lows -Closes $closes -SetupType "SHORT"
+
+            $result.fractal_type | Should Be ""
+            $result.points | Should Be 0
+        }
+
+        It "fractal BULLISH com SetupType=LONG: pontua normalmente (coerente com a direcao)" {
+            $opens = @(100, 102, 100, 103, 101)
+            $highs = @(100, 103, 102, 105, 102)
+            $lows = @(99, 101, 90, 102, 100)
+            $closes = @(99, 102, 91, 104, 101)
+
+            $result = Get-FractalPattern -Opens $opens -Highs $highs -Lows $lows -Closes $closes -SetupType "LONG"
+
+            $result.fractal_type | Should Be "BULLISH"
+            $result.points | Should Be 15
+        }
+
+        It "SetupType ausente (chamador antigo): comportamento previo preservado, pontua qualquer fractal" {
+            $opens = @(100, 102, 104, 103, 101)
+            $highs = @(100, 103, 110, 105, 102)
+            $lows = @(99, 101, 108, 102, 100)
+            $closes = @(99, 102, 109, 104, 101)
+
+            $result = Get-FractalPattern -Opens $opens -Highs $highs -Lows $lows -Closes $closes
+
+            $result.fractal_type | Should Be "BEARISH"
+            $result.points | Should Be 15
+        }
     }
 
     Context "Get-StructuralBreak" {
@@ -220,6 +285,26 @@ Describe "lib_tori_confluence_detector" {
             $result.total_score | Should BeGreaterThan 0
             ($result.total_score -le 100) | Should Be $true
             $result.breakdown | Should Not BeNullOrEmpty
+        }
+
+        # 2026-09-10 FIX CRITICO: caso real INJUSDT -- candles com fractal
+        # BEARISH nao devem mais somar pontos "fractal_pattern" a um setup
+        # LONG (o fractal so conta pra SHORT). Antes do fix, breakdown
+        # ["fractal_pattern"] seria 15 mesmo aqui.
+        It "setup LONG com fractal BEARISH nos candles: fractal_pattern NAO soma pontos (sinal contra a direcao)" {
+            $candles = @(
+                [PSCustomObject]@{ open=100; high=100; low=99; close=99; volume=100 },
+                [PSCustomObject]@{ open=102; high=103; low=101; close=102; volume=100 },
+                [PSCustomObject]@{ open=104; high=110; low=108; close=109; volume=100 },
+                [PSCustomObject]@{ open=103; high=105; low=102; close=104; volume=100 },
+                [PSCustomObject]@{ open=101; high=102; low=100; close=101; volume=100 }
+            )
+
+            $result = Get-ConfluenceScoreEnhanced -Candles $candles -SetupType "LONG" `
+                -TrendlineStartPrice 100 -TrendlineTouches 2
+
+            $result.breakdown["fractal_pattern"] | Should Be 0
+            ($result.signals_fired -match "FRACTAL_BEARISH").Count | Should Be 0
         }
 
         It "includes trendline touch bonus" {

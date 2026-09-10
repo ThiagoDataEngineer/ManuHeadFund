@@ -147,7 +147,28 @@ Describe "Confluence Scoring" {
     }
 
     It "Should fire multiple signals" {
-        $candles = CoinEx-GetFuturesCandles -market "BTCUSDT" -period "4H" -limit 100
+        # 2026-09-10: candles randomicos (Get-Random sem seed, ver mock no
+        # topo do arquivo) ficaram flaky (~20% falha) apos o fix critico de
+        # Get-FractalPattern respeitar -SetupType (agentes/lib_tori_confluence_detector.ps1,
+        # achado real INJUSDT) -- o fix corretamente reduz a chance de
+        # QUALQUER fractal contar a favor de um lado so, entao um teste sem
+        # sinal garantido as vezes fecha com signals_fired vazio por sorte
+        # dos dados. Fix do teste: candles deterministicos com queda
+        # constante -> RSI oversold garantido, sinal que independe do
+        # fractal aleatorio.
+        $candles = @()
+        $basePrice = 63000
+        for ($i = 0; $i -lt 30; $i++) {
+            $p = $basePrice * (1.0 - ($i * 0.01))
+            $candles += [PSCustomObject]@{
+                ts = [long]([DateTime]::UtcNow.AddHours(-(30 - $i))).Ticks
+                open = $p * 1.002
+                high = $p * 1.004
+                low = $p * 0.998
+                close = $p
+                volume = 10000
+            }
+        }
 
         $confluence = Get-ConfluenceScoreEnhanced -Candles $candles -SetupType "LONG" -TrendlineStartPrice 63000
 
