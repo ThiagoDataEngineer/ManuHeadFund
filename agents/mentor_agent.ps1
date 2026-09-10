@@ -1069,7 +1069,22 @@ JSON: { "decision":"APROVAR"|"VETAR", "confianca":0-100, "mentor_mensagem":"2-3 
             try {
                 $cleaned = $raw -replace '```json\s*','' -replace '```\s*','' -replace '^\s+','' -replace '\s+$',''
                 $result = $cleaned | ConvertFrom-Json
-            } catch { $result = $null }
+            } catch {
+                # 2026-09-10 FIX CRITICO: achado real -- cascade retornava com
+                # sucesso (raw nao-vazio, LAST_CASCADE_PROVIDER=anthropic_haiku
+                # confirmado via mesa_termal no mesmo ciclo), mas o parse JSON
+                # falhava aqui e era engolido em silencio ($result=$null sem
+                # log nenhum), indistinguivel de "cascade falhou de verdade"
+                # pro Test-MentorOverride -- toda decisao virava "Mentor
+                # indisponivel - VETO por seguranca" sem pista de que na
+                # verdade o LLM respondeu, so nao em JSON valido. Log com
+                # preview do raw pra diagnosticar a proxima ocorrencia real.
+                $result = $null
+                $__rawPreview = $raw.Substring(0, [Math]::Min(200, $raw.Length))
+                Write-Host "  [MentorDebate] cascade respondeu (provider=$($script:LAST_CASCADE_PROVIDER)) mas JSON invalido: $__rawPreview" -ForegroundColor Red
+            }
+        } else {
+            Write-Host "  [MentorDebate] cascade retornou vazio (todos os provedores esgotados)" -ForegroundColor Yellow
         }
     } else {
         $result = Invoke-ClaudeJson -SystemPrompt $mentorDebateSystemDynamic -UserContent $userPrompt `

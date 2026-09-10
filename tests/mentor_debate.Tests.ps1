@@ -100,6 +100,24 @@ Describe "Invoke-MentorDebate - contrato basico" {
         ($out.confianca) | Should Be 0
     }
 
+    # 2026-09-10 FIX CRITICO: achado real -- cascade podia responder com
+    # SUCESSO (raw nao-vazio, ex: via Haiku apos o teto Anthropic ser
+    # resolvido) mas com JSON malformado/truncado, e o catch engolia isso
+    # em silencio (`$result=$null` sem nenhum log) -- indistinguivel de
+    # "cascade falhou de verdade" no log real. Owner reportou 0 shorts
+    # mesmo com Anthropic reativado; este era o ultimo elo silencioso.
+    It "VETAR de seguranca quando cascade responde com JSON invalido (nao so quando retorna null)" {
+        function global:Invoke-MentorCascade {
+            param($SystemPrompt,$UserContent,$AnthropicModel,$MaxTokens,$Temperature,$Agent)
+            $script:LAST_CASCADE_PROVIDER = "anthropic_haiku"
+            return "isso nao e JSON valido {{{"
+        }
+        $out = Invoke-MentorDebate -Market "BTCUSDT" -TriagemResult (New-Triagem) `
+            -MesaResult (New-Mesa) -Setup (New-Setup) -KnowledgeContext "mock"
+        ($out.decision) | Should Be "VETAR"
+        ($out.confianca) | Should Be 0
+    }
+
     It "mentor_mensagem nunca vazia mesmo em fallback" {
         $global:MOCK_MENTOR_RESPONSE = $null
         $out = Invoke-MentorDebate -Market "BTCUSDT" -TriagemResult (New-Triagem) `
