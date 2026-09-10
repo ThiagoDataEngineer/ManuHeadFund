@@ -106,8 +106,8 @@ Describe "Invoke-MentorDebate - contrato basico" {
     # em silencio (`$result=$null` sem nenhum log) -- indistinguivel de
     # "cascade falhou de verdade" no log real. Owner reportou 0 shorts
     # mesmo com Anthropic reativado; este era o ultimo elo silencioso.
-    It "VETAR de seguranca quando cascade responde com JSON invalido (nao so quando retorna null)" {
-        function global:Invoke-MentorCascade {
+    It "VETAR de seguranca quando cascade responde com JSON genuinamente invalido (nao so quando retorna null)" {
+        function Invoke-MentorCascade {
             param($SystemPrompt,$UserContent,$AnthropicModel,$MaxTokens,$Temperature,$Agent)
             $script:LAST_CASCADE_PROVIDER = "anthropic_haiku"
             return "isso nao e JSON valido {{{"
@@ -116,6 +116,35 @@ Describe "Invoke-MentorDebate - contrato basico" {
             -MesaResult (New-Mesa) -Setup (New-Setup) -KnowledgeContext "mock"
         ($out.decision) | Should Be "VETAR"
         ($out.confianca) | Should Be 0
+    }
+
+    # 2026-09-10 FIX CRITICO (causa raiz REAL confirmada em producao, apos
+    # 2 rodadas de diagnostico): Haiku (fallback usado apos o teto Anthropic
+    # ser resolvido) responde com sucesso mas no formato ```json {...} ```
+    # SEGUIDO de prosa extra (ex: analise em texto livre) -- o parse antigo
+    # (regex removendo so os fences) falhava com QUALQUER texto sobrando
+    # apos o JSON, e isso era engolido em silencio. Mesmo padrao ja
+    # resolvido em mesa_agent.ps1 (Mesa drones) via brace-matching --
+    # portado pro Mentor. Este teste prova que a extracao agora TOLERA
+    # prosa depois do bloco JSON (nao so que veta com seguranca quando
+    # falha de verdade).
+    It "PARSEIA com sucesso quando cascade responde com JSON valido SEGUIDO de prosa extra (formato real do Haiku)" {
+        function Invoke-MentorCascade {
+            param($SystemPrompt,$UserContent,$AnthropicModel,$MaxTokens,$Temperature,$Agent)
+            $script:LAST_CASCADE_PROVIDER = "anthropic_haiku"
+            return @"
+```json
+{"decision":"APROVAR","confianca":75,"mentor_mensagem":"Setup valido","knowledge_cited":["MENTOR.md:x"],"veredicto_5tier":"EXECUTAR"}
+```
+
+**ANALISE DETALHADA:**
+O setup apresenta confluencia tecnica solida...
+"@
+        }
+        $out = Invoke-MentorDebate -Market "BTCUSDT" -TriagemResult (New-Triagem) `
+            -MesaResult (New-Mesa) -Setup (New-Setup) -KnowledgeContext "mock"
+        ($out.decision) | Should Be "APROVAR"
+        ($out.confianca) | Should Be 75
     }
 
     It "mentor_mensagem nunca vazia mesmo em fallback" {

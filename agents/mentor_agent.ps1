@@ -1067,21 +1067,40 @@ JSON: { "decision":"APROVAR"|"VETAR", "confianca":0-100, "mentor_mensagem":"2-3 
         $raw = Invoke-MentorCascade -SystemPrompt $mentorDebateSystemDynamic -UserContent $userPrompt -Temperature 0.3 -MaxTokens 1200 -Agent "mentor"
         if ($raw) {
             try {
-                $cleaned = $raw -replace '```json\s*','' -replace '```\s*','' -replace '^\s+','' -replace '\s+$',''
+                # 2026-09-10 FIX CRITICO: achado real via diagnostico em producao
+                # -- a cascade respondia com SUCESSO (via fallback Haiku, apos o
+                # owner resolver o teto de uso Anthropic), mas o parse regex
+                # antigo ('```json\s*' etc) falhava toda vez que a resposta do
+                # Haiku vinha com ```json ... ``` SEGUIDO de prosa extra (ex:
+                # "**ANALISE DETALHADA:** ..."), porque sobra texto apos o
+                # ConvertFrom-Json tentar interpretar o bloco inteiro. Mesmo
+                # padrao ja documentado e resolvido em mesa_agent.ps1 (Mesa
+                # drones) com extracao via brace-matching -- portado aqui.
+                # Antes do fix, isso era engolido em silencio (catch generico
+                # setava $result=$null sem log), indistinguivel de "cascade
+                # falhou de verdade" -- toda decisao de override de SHORT virava
+                # "Mentor indisponivel - VETO por seguranca" mesmo com o LLM
+                # respondendo corretamente.
+                $clean = $raw.Trim()
+                $startIdx = $clean.IndexOf('{')
+                if ($startIdx -lt 0) { throw "resposta sem '{' -- nao e JSON" }
+                $depth = 0; $endIdx = -1; $inStr = $false; $esc = $false
+                for ($i = $startIdx; $i -lt $clean.Length; $i++) {
+                    $ch = $clean[$i]
+                    if ($esc) { $esc = $false; continue }
+                    if ($ch -eq '\') { $esc = $true; continue }
+                    if ($ch -eq '"') { $inStr = -not $inStr; continue }
+                    if ($inStr) { continue }
+                    if ($ch -eq '{') { $depth++ }
+                    elseif ($ch -eq '}') { $depth--; if ($depth -eq 0) { $endIdx = $i; break } }
+                }
+                if ($endIdx -lt 0) { throw "chave de fechamento '}' nao encontrada (JSON truncado?)" }
+                $cleaned = $clean.Substring($startIdx, $endIdx - $startIdx + 1)
                 $result = $cleaned | ConvertFrom-Json
             } catch {
-                # 2026-09-10 FIX CRITICO: achado real -- cascade retornava com
-                # sucesso (raw nao-vazio, LAST_CASCADE_PROVIDER=anthropic_haiku
-                # confirmado via mesa_termal no mesmo ciclo), mas o parse JSON
-                # falhava aqui e era engolido em silencio ($result=$null sem
-                # log nenhum), indistinguivel de "cascade falhou de verdade"
-                # pro Test-MentorOverride -- toda decisao virava "Mentor
-                # indisponivel - VETO por seguranca" sem pista de que na
-                # verdade o LLM respondeu, so nao em JSON valido. Log com
-                # preview do raw pra diagnosticar a proxima ocorrencia real.
                 $result = $null
-                $__rawPreview = $raw.Substring(0, [Math]::Min(200, $raw.Length))
-                Write-Host "  [MentorDebate] cascade respondeu (provider=$($script:LAST_CASCADE_PROVIDER)) mas JSON invalido: $__rawPreview" -ForegroundColor Red
+                $__rawPreview = $raw.Substring(0, [Math]::Min(600, $raw.Length)) -replace "`n"," | " -replace "`r",""
+                Write-Host "  [MentorDebate] cascade respondeu (provider=$($script:LAST_CASCADE_PROVIDER), len=$($raw.Length)) mas JSON invalido ($($_.Exception.Message)): $__rawPreview" -ForegroundColor Red
             }
         } else {
             Write-Host "  [MentorDebate] cascade retornou vazio (todos os provedores esgotados)" -ForegroundColor Yellow
