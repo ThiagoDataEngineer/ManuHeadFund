@@ -1,9 +1,9 @@
 {
   "gates": {
-    "mesa_score_strong": 60,
-    "conviction_threshold": 50
+    "conviction_threshold": 50,
+    "mesa_score_strong": 60
   },
-  "last_calibration_date": "2026-09-11T02:04:14.2797213+00:00",
+  "last_calibration_date": "2026-09-11T03:03:24.8441216+00:00",
   "last_calibration_action": "MAINTAIN",
   "last_calibration_reason": "Stable"
 }
